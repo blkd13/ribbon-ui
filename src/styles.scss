@@ -1,0 +1,56 @@
+/* You can add global styles to this file, and also import other style files */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+.mat-primary {
+    // slider
+    --mdc-slider-hover-handle-color: #10a37f;
+    --mdc-slider-focus-handle-color: #10a37f;
+    --mdc-slider-handle-color: #10a37f;
+    --mdc-slider-active-track-color: #10a37f;
+
+    // fab
+    --mat-fab-foreground-color: #10a37f;
+    --mat-fab-state-layer-color: #10a37f;
+}
+
+.mat-mdc-raised-button:not(:disabled) {
+    --mdc-protected-button-label-text-color: #10a37f;
+}
+
+html>body {
+
+    // アコーディオン
+    .mat-expanded {
+        .mat-expansion-panel-header-description {
+            visibility: hidden;
+        }
+    }
+
+    .mat-expansion-panel-header-description {
+        min-width: 0;
+    }
+
+    .mat-expansion-panel-header-title {
+        flex-grow: 0;
+        width: 100px;
+        flex-basis: auto;
+    }
+}

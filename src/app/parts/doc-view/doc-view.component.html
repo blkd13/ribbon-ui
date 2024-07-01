@@ -1,0 +1,20 @@
+<h3>{{content.image_url.label}}</h3>
+@if(type==='image'){
+<img [src]="content.image_url.url" />
+}@else if(type==='text'){
+<select [(ngModel)]="encode" (change)="decode()" style="margin:0 20px;background-color: #303030;">
+    <option value="UTF-8">UTF-8</option>
+    <option value="SHIFT_JIS">Shift-JIS(Windows-31J)</option>
+    <option value="EUC-JP">EUC-JP</option>
+</select>
+<markdown katex mermaid clipboard [data]="brackets.pre+text+brackets.post"></markdown>
+}@else if(type==='audio'){
+<audio [src]="content.image_url.url" controls></audio>
+}@else if(type==='video'){
+<video [src]="content.image_url.url" controls></video>
+}@else if(type==='pdf'){
+<iframe width="800" style="height:90vh;" [src]="pdfUrl"></iframe>
+}@else {
+{{content.image_url.url.substring(0,content.image_url.url.indexOf(','))}}
+<div>このコンテンツは表示できません</div>
+}

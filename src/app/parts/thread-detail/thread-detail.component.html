@@ -1,0 +1,34 @@
+<style>
+    .thread-form-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 16px;
+    }
+
+    mat-form-field {
+        width: 100%;
+        margin-bottom: 16px;
+    }
+
+    button {
+        text-align: right;
+    }
+</style>
+<div class="thread-form-container">
+    <form [formGroup]="threadForm" (ngSubmit)="onSubmit()">
+        <mat-form-field appearance="fill">
+            <mat-label>タイトル</mat-label>
+            <input matInput formControlName="title" required>
+            @if(threadForm.get('title')?.hasError('required')){
+            <mat-error>タイトルは必須です</mat-error>
+            }
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+            <mat-label>説明</mat-label>
+            <textarea matInput formControlName="description"></textarea>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" [disabled]="!threadForm.valid">保存</button>
+    </form>
+</div>

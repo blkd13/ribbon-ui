@@ -1,0 +1,146 @@
+<style>
+    :host {
+        position: relative;
+    }
+
+    .message {
+        line-height: 1.5;
+        background-color: #313131;
+        border-radius: 5px;
+    }
+
+    .message-header {
+        select {
+            padding: 2px 5px;
+            border-radius: 4px;
+            background-color: #292929;
+            cursor: pointer;
+            margin-left: 2px;
+        }
+    }
+
+    .chat-input {
+        display: flex;
+        padding: 0;
+        width: 100%;
+        align-items: center;
+        gap: 20px;
+
+        textarea {
+            flex-grow: 1;
+            padding: 10px;
+            border: 2px solid #c0c0c0;
+            border-radius: 4px;
+            /* resize: none; */
+            min-height: 60px;
+            /* max-height: 300px; */
+            background-color: #303030;
+        }
+    }
+
+
+    .system .message-title {
+        font-weight: bold;
+    }
+
+    .message.user {
+        background-color: #293330;
+    }
+
+    .user {
+        .message-title {
+            color: #5bdfbe;
+        }
+
+        textarea {
+            border-color: #10a37f;
+        }
+    }
+
+    .message.assistant {
+        background-color: rgb(56, 53, 49);
+    }
+
+    .assistant {
+        .message-title {
+            color: #BFAE9D;
+        }
+
+        textarea {
+            border-color: #BFAE9D;
+        }
+    }
+</style>
+
+<mat-expansion-panel class="message" [ngClass]="message.role" [expanded]="true" #exPanel>
+    <mat-expansion-panel-header class="message-header">
+        <mat-panel-title class="message-title">
+            <!-- {{message.role}} -->
+            @if(message.role==='system'){
+            {{message.role}}
+            }@else{
+            <select [(ngModel)]="message.role" (click)="stopPropagation($event)">
+                <option value="user">user</option>
+                <option value="assistant">assistant</option>
+            </select>
+            }
+        </mat-panel-title>
+        <style>
+            .truncate {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        </style>
+        <mat-panel-description>
+            <div class="truncate">{{chatService.messageToText(message).substring(0, 500)}}</div>
+        </mat-panel-description>
+        <div style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;">
+            <button mat-icon-button (click)="copyToClipboard($event)">
+                <mat-icon>content_copy</mat-icon>
+            </button>
+            <button mat-icon-button (click)="setEdit($event)">
+                @if(message.editable){
+                <mat-icon>check_circle</mat-icon>
+                }@else{
+                <mat-icon>edit</mat-icon>
+                }
+            </button>
+            <button mat-icon-button (click)="remove($event)"
+                [ngStyle]="{visibility:message.role!=='system'?'visible':'hidden'}">
+                <mat-icon>close</mat-icon>
+            </button>
+        </div>
+    </mat-expansion-panel-header>
+
+    <!-- ファイル -->
+    @if(message.content.length>1){
+    <div style="display: flex;justify-content: left;gap: 10px;width: 100%;padding: 20px;overflow-x: auto;">
+        @for(content of message.content; track $index){
+        @if(content.type==='text'){
+        }@else{
+        <app-doc-tag [content]="content" (remove)="removeDoc($index)"></app-doc-tag>
+        }
+        }
+    </div>
+    }
+
+    <!-- メッセージ -->
+    @for(content of message.content; track $index){
+    @if(content.type==='text'){
+    <div class="chat-input" [hidden]="!message.editable">
+        <textarea [hidden]="!message.editable" (keydown)="onKeyDown($event)" (blur)="onBlur()" (load)="onLoad()"
+            [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text"
+            (change)="onChange()"></textarea>
+    </div>
+    <div style="display: block;overflow-y: auto;" [ngStyle]="{'max-height': message.role==='assistant'?'auto':'70vh'}"
+        #textBodyElem>
+        <markdown [hidden]="message.editable" katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post">
+        </markdown>
+    </div>
+    }@else{
+    <!-- text 以外はファイル -->
+    }
+    }
+</mat-expansion-panel>
+<!-- <div class="chat-messages"></div> -->
