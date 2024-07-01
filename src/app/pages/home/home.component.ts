@@ -15,7 +15,7 @@ import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompleti
 import { ChatService, CountTokensResponse } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
-import { Observable, tap, toArray } from 'rxjs';
+import { Observable, forkJoin, tap, toArray } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { DomUtils } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
@@ -99,28 +99,36 @@ export class HomeComponent {
   files: FileList | null = null;
   isHovered = false;
   onFilesDropped(files: FileList) {
+    const subjects = [];
     this.files = files;
     for (let i = 0; i < files.length; i++) {
       console.log(files[i].name);
       const part = { type: 'image_url', image_url: { url: '', label: files[i].name } } as ChatCompletionContentPartImage;
-      this.readFile(files[i], part);
+      subjects.push(this.readFile(files[i], part));
     }
+    // 複数ファイルを纏めて追加したときは全部読み込み終わってからカウントする。
+    this.tokenObj.totalTokens = -1;
+    forkJoin(subjects).subscribe({ next: next => this.onChange() });
   }
-  readFile(file: File, part: ChatCompletionContentPartImage) {
-    const reader = new FileReader();
-    reader.onload = (() => {
-      const base64String = reader.result as string;
-      const imagePart = part as ChatCompletionContentPartImage;
-      imagePart.image_url.url = base64String;
+  readFile(file: File, part: ChatCompletionContentPartImage): Observable<string> {
+    return new Observable<string>(observable => {
+      const reader = new FileReader();
+      reader.onload = (() => {
+        const base64String = reader.result as string;
+        const imagePart = part as ChatCompletionContentPartImage;
+        imagePart.image_url.url = base64String;
 
-      const contents = this.inputArea.content as ChatCompletionContentPart[];
-      contents.push(part);
-      // console.log(reader.result);
-      // readFile(file: File, part: ChatCompletionContentPartImage) {
-      // part.image_url.url = `data:image/${metaInfo.type === 'jpg' ? 'jpeg' : metaInfo.type};base64,${data.toString('base64')}`;
-      this.onChange();
-    }).bind(this);
-    reader.readAsDataURL(file);
+        const contents = this.inputArea.content as ChatCompletionContentPart[];
+        contents.push(part);
+        // console.log(reader.result);
+        // readFile(file: File, part: ChatCompletionContentPartImage) {
+        // part.image_url.url = `data:image/${metaInfo.type === 'jpg' ? 'jpeg' : metaInfo.type};base64,${data.toString('base64')}`;
+        // this.onChange();
+        observable.next(base64String);
+        observable.complete();
+      }).bind(this);
+      reader.readAsDataURL(file);
+    });
   }
 
   onFilesHovered(isHovered: boolean) {
