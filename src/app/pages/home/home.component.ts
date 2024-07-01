@@ -343,7 +343,8 @@ export class HomeComponent {
 
   removeDoc(content: ChatCompletionContentPart[], $index: number): void {
     content.splice($index, 1);
-    this.onChange();
+    clearTimeout(this.timeoutId);
+    this.timeoutId = setTimeout(() => this.onChange(), 500);
   }
   removeMessage($index: number): void {
     // if (confirm(`削除しますか？`)) {
