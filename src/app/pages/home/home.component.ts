@@ -81,8 +81,8 @@ export class HomeComponent {
   }
 
   initInDto(): ChatCompletionStreamInDto {
-    return Object.assign({
-      args: {
+    return {
+      args: Object.assign({
         messages: [
           { role: 'system', content: [{ type: 'text', text: 'assistant AI.' }], status: 2 } as Message,
         ],
@@ -92,8 +92,8 @@ export class HomeComponent {
         top_p: 1,
         max_tokens: 1024,
         stream: true,
-      },
-    }, JSON.parse(localStorage.getItem('settings-v1.0') || '{}'))
+      }, JSON.parse(localStorage.getItem('settings-v1.0') || '{}')),
+    }
   }
 
   files: FileList | null = null;
