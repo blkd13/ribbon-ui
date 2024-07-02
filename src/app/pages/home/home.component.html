@@ -148,8 +148,8 @@
         }
     </div>
 
-    <div class="drop-zone" appFileDrop (filesDropped)="onFilesDropped($event)" (filesHovered)="onFilesHovered($event)"
-        [class.hovered]="isHovered">
+    <div class="drop-zone" appFileDrop (drop)="onDrop($event)" (filesDropped)="onFilesDropped($event)"
+        (filesHovered)="onFilesHovered($event)" [class.hovered]="isHovered">
 
         <div
             style="width: 100%; display: flex;gap: 10px;padding: 20px;padding-bottom: 0;align-items: center;justify-content: space-between;">

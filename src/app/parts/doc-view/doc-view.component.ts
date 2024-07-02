@@ -35,7 +35,7 @@ export class DocViewComponent {
     const label = (this.content.image_url.label || '').toLowerCase();
     if (this.content.image_url.url.startsWith('data:image/')) {
       this.type = 'image';
-    } else if (this.content.image_url.url.startsWith('data:text/')) {
+    } else if (this.content.image_url.url.startsWith('data:text/') || this.content.image_url.url.startsWith('data:application/octet-stream')) {
       this.type = 'text';
       try {
         const base64Binary = atob(this.content.image_url.url.substring(this.content.image_url.url.indexOf(',') + 1));
@@ -54,7 +54,9 @@ export class DocViewComponent {
           this.encode = 'SHIFT_JIS';
         }
         const decodedString = this.decode();
-        const trg = label.replace(/.*\./g, '');
+        let trg = label.replace(/.*\./g, '');
+        trg = { cob: 'cobol', cbl: 'cobol', pco: 'cobol' }[trg] || trg;
+        console.log(`${trg}:${this.content.image_url.label}`);
         this.text = `\`\`\`${trg}\n${decodedString}\`\`\``;
         // this.inDto.args.messages.push({ role: 'user', content: [{ type: 'text', text: covered }] });
       } catch (e) {
@@ -69,40 +71,6 @@ export class DocViewComponent {
     } else if (this.content.image_url.url.startsWith('data:application/pdf')) {
       this.type = 'pdf';
       this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.content.image_url.url);
-    } else if (this.content.image_url.url.startsWith('data:application/octet-stream')) {
-
-      if (label.endsWith('.java') || label.endsWith('.csh') || label.endsWith('.md')
-      ) {
-        this.type = 'text';
-        try {
-          const base64Binary = atob(this.content.image_url.url.substring(this.content.image_url.url.indexOf(',') + 1));
-          // バイナリ文字列をUint8Arrayに変換
-          const len = base64Binary.length;
-          this.bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            this.bytes[i] = base64Binary.charCodeAt(i);
-          }
-
-          // 自動エンコーディングを使う
-          const detectedEncoding = detect(base64Binary);
-          console.log("Detected encoding:", detectedEncoding.encoding);
-          this.encode = detectedEncoding.encoding as 'UTF-8' | 'SHIFT_JIS' | 'EUC-JP';
-          if (detectedEncoding.encoding === 'ISO-8859-2') {
-            this.encode = 'SHIFT_JIS';
-          }
-          const decodedString = this.decode();
-          const trg = label.replace(/.*\./g, '');
-          if (trg === 'md') {
-            this.text = `${decodedString}`;
-          } else {
-            this.text = `\`\`\`${trg}\n${decodedString}\`\`\``;
-          }
-        } catch (e) {
-          console.log(e);
-        }
-      } else {
-        this.type = 'other';
-      }
     } else {
       this.type = 'other';
     }

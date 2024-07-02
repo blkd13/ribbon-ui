@@ -1,3 +1,9 @@
+<style>
+    :host {
+        display: block;
+        padding: 20px;
+    }
+</style>
 <h3>{{content.image_url.label}}</h3>
 @if(type==='image'){
 <img [src]="content.image_url.url" />
@@ -7,7 +13,9 @@
     <option value="SHIFT_JIS">Shift-JIS(Windows-31J)</option>
     <option value="EUC-JP">EUC-JP</option>
 </select>
-<markdown katex mermaid clipboard [data]="brackets.pre+text+brackets.post"></markdown>
+<div style="height: calc(100vh - 200px);overflow: auto;">
+    <markdown katex mermaid clipboard [data]="brackets.pre+text+brackets.post"></markdown>
+</div>
 }@else if(type==='audio'){
 <audio [src]="content.image_url.url" controls></audio>
 }@else if(type==='video'){

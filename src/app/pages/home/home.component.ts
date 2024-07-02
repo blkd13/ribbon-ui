@@ -1,3 +1,4 @@
+import { from, mergeMap, of } from 'rxjs';
 import { Component, ComponentRef, ElementRef, QueryList, ViewChild, ViewChildren, viewChild } from '@angular/core';
 import { ChatPanelComponent } from '../../parts/chat/chat-panel.component';
 import { FormsModule } from '@angular/forms';
@@ -98,6 +99,59 @@ export class HomeComponent {
 
   files: FileList | null = null;
   isHovered = false;
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // const observables: Observable<ChatCompletionContentPartImage>[] = [];
+    // const items = event.dataTransfer?.items;
+    // if (items) {
+    //   for (let i = 0; i < items.length; i++) {
+    //     const item = items[i].webkitGetAsEntry();
+    //     if (item && item.isDirectory) {
+    //       observables.push(this.processFolder(item));
+    //     }
+    //   }
+    // }
+    // // 複数ファイルを纏めて追加したときは全部読み込み終わってからカウントする。
+    // this.tokenObj.totalTokens = -1;
+    // forkJoin(observables).subscribe({
+    //   next: next => {
+    //     console.log(`onChange:${observables.length}`);
+    //     this.onChange();
+    //   }
+    // });
+  }
+  processFolder(item: any): Observable<ChatCompletionContentPartImage> {
+    return new Observable(observer => {
+      this.traverseFileTree(item, observer);
+    });
+  }
+  traverseFileTree(item: any, observer: any) {
+    if (item.isFile) {
+      item.file((file: File) => {
+        console.log(`file=${file.name}`);
+        const part = { type: 'image_url', image_url: { url: '', label: file.name } } as ChatCompletionContentPartImage;
+        this.readFile(file, part).subscribe({
+          next: next => {
+            observer.next(part);
+            observer.complete();
+          }
+        });
+      });
+    } else if (item.isDirectory) {
+      const dirReader = item.createReader();
+      dirReader.readEntries((entries: any[]) => {
+        from(entries).pipe(
+          mergeMap(entry => this.processFolder(entry))
+        ).subscribe({
+          next: (file) => observer.next(file),
+          complete: () => observer.complete()
+        });
+      });
+    }
+  }
+
   onFilesDropped(files: FileList) {
     const subjects = [];
     this.files = files;
@@ -312,16 +366,16 @@ export class HomeComponent {
     }
   }
 
+  charCount = 0;
   tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0 };
   onChange(): void {
+    this.charCount = 0;
     this.tokenObj.totalTokens = -1;
     const req = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
     const inputArea = JSON.parse(JSON.stringify(this.inputArea)) as Message;
     req.args.messages.push(inputArea);
     this.chatServce.countTokens(req).subscribe({
-      next: next => {
-        this.tokenObj = next;
-      }
+      next: next => this.tokenObj = next
     });
   }
 
