@@ -315,6 +315,15 @@ export class HomeComponent {
     this.isLock = true;
 
 
+    // 終了後処理
+    const afterFunc = (() => {
+      // db更新
+      this.save(this.selectedThread).subscribe();
+
+      this.isLock = false;
+      res.status = 2;
+      setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+    }).bind(this);
     for (const a in [0]) {
       this.chatServce.chatCompletionObservableStream(inDto).subscribe({
         next: text => {
@@ -328,14 +337,12 @@ export class HomeComponent {
         },
         error: error => {
           // TODO エラーになったらオブジェクトを戻す。
+          alert(`原因不明のエラーです\n${JSON.stringify(error)}`);
+          // observableはPromise.then/catch/finallyのfinallyとは違って、エラーになったらcompleteは呼ばれないので自分で呼ぶ。
+          afterFunc();
         },
         complete: () => {
-          // db更新
-          this.save(this.selectedThread).subscribe();
-
-          this.isLock = false;
-          res.status = 2;
-          setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+          afterFunc();
         }
       });
     }

@@ -112,6 +112,25 @@ export class ChatService {
                     // その他のメッセージ受信時
                     console.log(line);
                   }
+                } else if (line.startsWith('error: ')) {
+                  line = line.replace(/^error: /gm, '');
+                  const threadId = line.split(' ')[0];
+                  line = line.substring(threadId.length + 1);
+                  console.error(line);
+                  // エラー通知
+                  this.subscriberMap[threadId].error(line);
+
+                  // 監視オブジェクトを削除
+                  delete this.subscriberMap[threadId];
+
+                  // ストリームが存在しなくなったら、XHRを中断する
+                  if (Object.keys(this.subscriberMap).length === 0) {
+                    xhr.abort();
+                    // チャットスレッド用にUUIDを生成
+                    this.clientId = Utils.generateUUID();
+                  } else {
+                    // 何もしない
+                  }
                 } else if (line) {
                   // その他のメッセージ受信時
                   console.log(line);
@@ -172,7 +191,7 @@ export class ChatService {
             error: (error) => {
               // Handle error
               console.error(error);
-              observer.error();
+              observer.error(error);
             },
           });
       });
