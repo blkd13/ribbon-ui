@@ -79,6 +79,7 @@ export class HomeComponent {
     this.selectedThread = null;
     this.inDto = this.initInDto();
     this.onChange();
+    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
   }
 
   initInDto(): ChatCompletionStreamInDto {
@@ -225,6 +226,7 @@ export class HomeComponent {
       // 一番下まで下げる
       setTimeout(() => { DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement); }, 100);
     }
+    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
   }
 
   save(thread: Thread | null): Observable<Thread> {
@@ -374,7 +376,7 @@ export class HomeComponent {
   }
 
   charCount = 0;
-  tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0 };
+  tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
   onChange(): void {
     this.charCount = 0;
     this.tokenObj.totalTokens = -1;

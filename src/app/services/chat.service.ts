@@ -245,4 +245,9 @@ export declare interface CountTokensResponse {
    * instances from the request.
    */
   totalBillableCharacters?: number;
+
+  text: number;
+  audio: number;
+  video: number;
+  image: number;
 }
