@@ -53,8 +53,18 @@ export class HomeComponent {
 
   bitCounter = 0; // chatPanelにイベントを送るためだけのカウンタ
 
-
   allExpandCollapseFlag = true;
+
+  priceMap: Record<string, number[]> = {
+    'gemini-1.0-pro': [0.000125, 0.000375, 0.000125, 0.000375],
+    'gemini-1.0-pro-vision': [0.000125, 0.000375, 0.000125, 0.000375],
+    'gemini-1.5-flash': [0.000125, 0.000375, 0.00025, 0.00075],
+    'gemini-1.5-flash-001': [0.000125, 0.000375, 0.00025, 0.00075],
+    'gemini-1.5-pro': [0.00125, 0.00375, 0.0025, 0.0075],
+    'gemini-1.5-pro-001': [0.00125, 0.00375, 0.0025, 0.0075],
+    'claude-3-5-sonnet@20240620': [0.00125, 0.00375, 0.0025, 0.0075],
+  };
+  isCost = true;
   constructor(
     private chatServce: ChatService,
     private dbService: NgxIndexedDBService,
@@ -199,6 +209,15 @@ export class HomeComponent {
 
   createCache(): void {
 
+  }
+
+  calcCost(): number {
+    const contextSize = (this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video);
+    if (contextSize > 128000) {
+      return contextSize / 1000 * this.priceMap[this.inDto.args.model || 'gemini-1.5-pro'][2];
+    } else {
+      return contextSize / 1000 * this.priceMap[this.inDto.args.model || 'gemini-1.5-pro'][0];
+    }
   }
 
   isLock = false;

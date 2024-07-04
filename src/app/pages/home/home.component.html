@@ -103,7 +103,7 @@
 
 <div style="display: flex;width: 100%;">
     <!-- スレッドリスト -->
-    <div style="height: 100%;width:300px;padding-top:20px;">
+    <div style="height: 100%;width: 240px;padding-top:20px;">
         <div class="add-thread" (click)="clearInDto()">
             <button mat-icon-button matTooltip="Create new thread">
                 <mat-icon>add_circle</mat-icon>
@@ -118,8 +118,8 @@
                 (change)="renameThread($event, thread, false, $index)"
                 (blur)="renameThread($event, thread, false, $index)" />
             }@else{
-            <div style="padding:5px 10px;border-bottom: 1px solid #a0a0a0;cursor: pointer;"
-                (click)="selectThread(thread)">
+            <div style="padding:5px 10px;border-bottom: 1px solid #a0a0a0;cursor: pointer;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;"
+                (click)="selectThread(thread)" [title]="thread.title">
                 {{thread.title}}
             </div>
             }
@@ -152,56 +152,70 @@
         (filesHovered)="onFilesHovered($event)" [class.hovered]="isHovered">
 
         <div
-            style="width: 100%; display: flex;gap: 10px;padding: 20px;padding-bottom: 0;align-items: center;justify-content: space-between;">
-            <div style="display: flex;gap: 10px;align-items: center;">
-                <!-- モデル選択 -->
-                <select [(ngModel)]="inDto.args.model" class="model-select">
-                    <option value="gemini-1.0-pro">gemini-1.0-pro</option>
-                    <option value="gemini-1.0-pro-vision">gemini-1.0-pro-vision</option>
-                    <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-                    <option value="gemini-1.5-flash-001">gemini-1.5-flash-001</option>
-                    <option value="gemini-1.5-pro-001">gemini-1.5-pro-001</option>
-                </select>
-                <div style="width: 20px;"></div>
-                temperature: {{inDto.args.temperature|number:'0.1'}}
-                <mat-slider min="0" max="2" step="0.1">
+            style="width: 100%; display: flex;gap: 30px;padding: 0 20px;align-items: center;justify-content: space-between;">
+            <!-- モデル選択 -->
+            <select [(ngModel)]="inDto.args.model" class="model-select">
+                <option value="gemini-1.0-pro">gemini-1.0-pro</option>
+                <option value="gemini-1.0-pro-vision">gemini-1.0-pro-vision</option>
+                <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                <option value="gemini-1.5-flash-001">gemini-1.5-flash-001</option>
+                <option value="gemini-1.5-pro-001">gemini-1.5-pro-001</option>
+                <option value="claude-3-5-sonnet@20240620">claude-3-5-sonnet&#64;20240620</option>
+            </select>
+            <div style="position: relative;top: 6px;">
+                <div style="position: absolute;">temperature: {{inDto.args.temperature|number:'0.1'}}</div>
+                <mat-slider min="0" max="2" step="0.1" style="margin-top: 10px;">
                     <input matSliderThumb [(ngModel)]="inDto.args.temperature">
                 </mat-slider>
-                <div style="width: 20px;"></div>
-                maxTokens: <div style="width: 45px;text-align: right;">{{inDto.args.max_tokens|number}}</div>
-                <mat-slider min="10" max="8192" step="1">
+            </div>
+            <div style="position: relative;top: 6px;">
+                <div style="position: absolute;display: flex;"> maxTokens:
+                    <div style="width: 45px;text-align: right;">{{inDto.args.max_tokens|number}}</div>
+                </div>
+                <mat-slider min="10" max="8192" step="1" style="margin-top: 10px;">
                     <input matSliderThumb [(ngModel)]="inDto.args.max_tokens">
                 </mat-slider>
-                <div style="width: 20px;"></div>
-                <button mat-raised-button color="primary" (click)="saveSettingsAsDefault()">save as default</button>
             </div>
+            <button mat-raised-button color="primary" (click)="saveSettingsAsDefault()" style="line-height: 16px;;">
+                save as<br />default</button>
             <button mat-icon-button (click)="toggleAllExpandCollapse()">
                 <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
             </button>
+            <div style="min-width: 0;flex-grow: 1;"></div>
             <style>
                 /* CSS Grid Layout */
                 .grid-layout {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                 }
+
                 .grid-item {
                     text-align: right;
                 }
             </style>
-            <div class="grid-layout">
-                <div class="grid-item">totalTokens : </div>
+            <div class="grid-layout" (click)="isCost=!isCost" style="cursor: pointer;">
+                <div class="grid-item" style="font-size: 11px;">totalTokens : </div>
                 <div class="grid-item">
                     @if(tokenObj.totalTokens ==-1){ wait.. } @else {
                     {{tokenObj.totalTokens|number}}
                     }
                 </div>
-                <div class="grid-item">totalChars :</div>
+                @if(isCost){
+                <div class="grid-item" style="font-size: 11px;">totalCost :</div>
                 <div class="grid-item">
                     @if(tokenObj.totalTokens ==-1){ wait.. } @else {
-                    {{(tokenObj.text + tokenObj.image + tokenObj.audio + tokenObj.video)|number}}
+                    $ {{calcCost()|number:'1.2-2'}}
                     }
                 </div>
+                } @else {
+                <div class="grid-item" style="font-size: 11px;">totalChars :</div>
+                <div class="grid-item">
+                    @if(tokenObj.totalTokens ==-1){ wait.. } @else {
+                    {{(this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video)|number}}
+                    }
+                </div>
+                }
             </div>
         </div>
 
