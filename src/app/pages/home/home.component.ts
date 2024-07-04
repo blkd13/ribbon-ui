@@ -301,9 +301,16 @@ export class HomeComponent {
     const inDto = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
     inDto.args.messages = inDto.args.messages.map(obj => ({ role: obj.role, content: obj.content }));
 
+    if (this.selectedThread) {
+    } else {
+      return;
+    }
+    const selectedThread = this.selectedThread;
+
     // db更新
-    this.save(this.selectedThread).subscribe({
+    this.save(selectedThread).subscribe({
       next: next => {
+        console.log(`next.title====${next}`);
         if (next.title) {
         } else {
           // タイトルが無かったら入力分からタイトルを作る
@@ -318,9 +325,9 @@ export class HomeComponent {
                 { role: 'user', content: `この書き出しで始まるチャットにタイトルをつけてください。短く適当でいいです。タイトルだけを返してください。タイトル以外の説明などはつけてはいけません。\n\n\`\`\`markdown\n\n${inputText}\n\`\`\`` } as any
               ]
             }
-          }).pipe(tap(text => next.title += text)).subscribe({
+          }).pipe(tap(text => selectedThread.title += text)).subscribe({
             next: next => {
-              this.save(this.selectedThread).subscribe();
+              this.save(selectedThread).subscribe();
             }
           });
         }
@@ -339,7 +346,7 @@ export class HomeComponent {
     // 終了後処理
     const afterFunc = (() => {
       // db更新
-      this.save(this.selectedThread).subscribe();
+      this.save(selectedThread).subscribe();
 
       this.isLock = false;
       res.status = 2;
