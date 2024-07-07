@@ -195,21 +195,21 @@
                 }
             </style>
             <div class="grid-layout" (click)="isCost=!isCost" style="cursor: pointer;">
-                <div class="grid-item" style="font-size: 11px;">totalTokens : </div>
+                <div class="grid-item" style="font-size: 11px;">Tokens : </div>
                 <div class="grid-item">
                     @if(tokenObj.totalTokens ==-1){ wait.. } @else {
                     {{tokenObj.totalTokens|number}}
                     }
                 </div>
                 @if(isCost){
-                <div class="grid-item" style="font-size: 11px;">totalCost :</div>
+                <div class="grid-item" style="font-size: 11px;">Cost :</div>
                 <div class="grid-item">
                     @if(tokenObj.totalTokens ==-1){ wait.. } @else {
                     $ {{calcCost()|number:'1.2-2'}}
                     }
                 </div>
                 } @else {
-                <div class="grid-item" style="font-size: 11px;">totalChars :</div>
+                <div class="grid-item" style="font-size: 11px;">Chars :</div>
                 <div class="grid-item">
                     @if(tokenObj.totalTokens ==-1){ wait.. } @else {
                     {{(this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video)|number}}

@@ -12,7 +12,7 @@ export type GPTModels = 'gpt-4-vision-preview' | 'gemini-1.5-flash' | 'gemini-1.
 
 export type ChatCompletionContentPart = ChatCompletionContentPartText | ChatCompletionContentPartImage;
 export interface ChatCompletionContentPartImage { image_url: ChatCompletionContentPartImage.ImageURL; type: 'image_url'; }
-export namespace ChatCompletionContentPartImage { export interface ImageURL { url: string; detail?: 'auto' | 'low' | 'high'; label?: string } }
+export namespace ChatCompletionContentPartImage { export interface ImageURL { url: string; detail?: 'auto' | 'low' | 'high'; label?: string, second?: number } }
 export interface ChatCompletionContentPartText { text: string; type: 'text'; }
 
 // export type Message = ({ role: 'system', content: string } | { role: 'user' | 'assistant', content: string | ChatCompletionContentPart[] });

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject, Subscriber, first, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, Subscriber, first, forkJoin, map, of, tap } from 'rxjs';
 import { ChatCompletionStreamInDto, GPTModels, Message } from '../models/models';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
@@ -226,6 +226,46 @@ export class ChatService {
     return this.http.post<CountTokensResponse>(`${environment.apiUrl}${this.baseUrl}/count-tokens`, inDto, { headers: this.authService.getHeaders() });
   }
 
+  /**
+   * VertexAI Gemini用コンテキストキャッシュ作成API
+   */
+  createCache(inDto: ChatCompletionStreamInDto): Observable<ContentCache> {
+    return this.http.post<ContentCache>(`${environment.apiUrl}${this.baseUrl}/create-cache`, inDto, { headers: this.authService.getHeaders() });
+  }
+
+  calcDuration(inDto: ChatCompletionStreamInDto): Observable<ChatCompletionStreamInDto> {
+    return forkJoin(inDto.args.messages.map(message => {
+      return forkJoin(message.content.map(part => {
+        return new Observable<void>((observerBit) => {
+          if (part.type === 'image_url') {
+            const base64String = part.image_url.url;
+            if (base64String.startsWith('data:audio/') || base64String.startsWith('data:video/')) {
+              const media = document.createElement(base64String.startsWith('audio/') ? 'audio' : 'video');
+              media.preload = 'metadata';
+              media.onloadedmetadata = () => {
+                if (part.type === 'image_url') {
+                  part.image_url.second = media.duration;
+                } else { }
+                observerBit.next();
+                observerBit.complete();
+              }
+              media.src = base64String;
+            } else {
+              observerBit.next();
+              observerBit.complete();
+            }
+            // return part.image_url.second;
+          } else {
+            observerBit.next();
+            observerBit.complete();
+            // return part.text.length;
+          }
+        });
+      })
+      );
+    })).pipe(map(() => inDto));
+  }
+
   messageToText(message: Message): string {
     return (typeof message.content === 'string')
       ? message.content
@@ -251,3 +291,21 @@ export declare interface CountTokensResponse {
   video: number;
   image: number;
 }
+
+// https://us-central1-aiplatform.googleapis.com/v1beta1/projects/rock-task-159120/locations/us-central1/publishers/google/models/gemini-1.5-pro-001:generateContent
+// https://us-central1-aiplatform.googleapis.com/v1beta1/projects/rock-task-159120/locations/us-central1/publishers/google/models/gemini-1.5-pro-001:generateContent
+
+export interface ContentCache {
+  name: string;
+  model: string;
+  createTime: string;
+  updateTime: string;
+  expireTime: string;
+}
+// const contentCache = {
+//   "name": "projects/975232773373/locations/us-central1/cachedContents/8457056412760014848",
+//   "model": "projects/rock-task-159120/locations/us-central1/publishers/google/models/gemini-1.5-flash-001",
+//   "createTime": "2024-07-07T14:21:18.552684Z",
+//   "updateTime": "2024-07-07T14:21:18.552684Z",
+//   "expireTime": "2024-07-07T15:21:18.543829Z"
+// };

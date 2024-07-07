@@ -1,10 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, ComponentRef, ElementRef, EventEmitter, Input, Output, ViewChild, viewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatAccordion, MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
+import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
 
 import { ChatCompletionContentPartText, Message } from '../../models/models';
 import { ChatService } from '../../services/chat.service';

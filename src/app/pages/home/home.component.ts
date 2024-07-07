@@ -1,5 +1,5 @@
 import { from, mergeMap, of } from 'rxjs';
-import { Component, ComponentRef, ElementRef, QueryList, ViewChild, ViewChildren, viewChild } from '@angular/core';
+import { Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ChatPanelComponent } from '../../parts/chat/chat-panel.component';
 import { FormsModule } from '@angular/forms';
 
@@ -9,10 +9,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
-import { MatMenu, MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
-import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionStreamInDto, Message, Thread } from '../../models/models';
+import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionStreamInDto, Message, Thread } from '../../models/models';
 import { ChatService, CountTokensResponse } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
@@ -175,20 +175,25 @@ export class HomeComponent {
     this.tokenObj.totalTokens = -1;
     forkJoin(subjects).subscribe({ next: next => this.onChange() });
   }
+
   readFile(file: File, part: ChatCompletionContentPartImage): Observable<string> {
     return new Observable<string>(observable => {
       const reader = new FileReader();
       reader.onload = (() => {
         const base64String = reader.result as string;
-        const imagePart = part as ChatCompletionContentPartImage;
+        const imagePart = part;
+        // const extMap: Record<string, string[]> = {
+        //   audio: ["mp3", "wav", "flac", "aac", "ogg", "wma", "m4a", "aiff", "alac", "opus", "amr", "mid", "midi", "ac3", "dts", "pcm", "aif", "au", "ra", "mp2", "mka", "tta"],
+        //   image: ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp", "svg", "ico", "heic", "heif", "psd", "raw", "cr2", "nef", "orf", "sr2", "raf", "dng", "arw", "pef", "3fr", "rwl", "srw", "k25", "kdc", "dcr", "mos", "mef", "x3f", "erf", "nrw"],
+        //   video: ["mp4", "mkv", "mov", "avi", "wmv", "flv", "webm", "mpeg", "mpg", "m4v", "3gp", "3g2", "ogg", "ogv", "mts", "m2ts", "ts", "mxf", "rm", "rmvb", "vob", "f4v", "divx", "xvid"],
+        // };
+        // const ext = file.name.replace(/.*\./g, '').toLowerCase();
+        // const mediaType = Object.keys(extMap).find(mediaType => extMap[mediaType].includes(ext));
+        // // imagePart.image_url.url = `data:${mediaType}/${ext};base64,${base64String}`;;
         imagePart.image_url.url = base64String;
 
         const contents = this.inputArea.content as ChatCompletionContentPart[];
         contents.push(part);
-        // console.log(reader.result);
-        // readFile(file: File, part: ChatCompletionContentPartImage) {
-        // part.image_url.url = `data:image/${metaInfo.type === 'jpg' ? 'jpeg' : metaInfo.type};base64,${data.toString('base64')}`;
-        // this.onChange();
         observable.next(base64String);
         observable.complete();
       }).bind(this);
@@ -208,16 +213,26 @@ export class HomeComponent {
   }
 
   createCache(): void {
-
+    // 32768トークン以上ないとキャッシュ作成できない
+    if (this.tokenObj.totalTokens < 32768) {
+      alert(`コンテキストキャッシュを作るには 32,768 トークン以上必要です。\n現在${this.tokenObj.totalTokens} トークンしかありません。`);
+      return;
+    }
+    const req = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
+    const inputArea = JSON.parse(JSON.stringify(this.inputArea)) as Message;
+    req.args.messages.push(inputArea);
+    this.chatServce.createCache(req).subscribe({
+      next: next => {
+        console.log(next);
+      }
+    });
   }
 
   calcCost(): number {
-    const contextSize = (this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video);
-    if (contextSize > 128000) {
-      return contextSize / 1000 * this.priceMap[this.inDto.args.model || 'gemini-1.5-pro'][2];
-    } else {
-      return contextSize / 1000 * this.priceMap[this.inDto.args.model || 'gemini-1.5-pro'][0];
-    }
+    const charCount = (this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video);
+    const isLarge = this.tokenObj.totalTokens > 128000 ? 2 : 0;
+    const cost = charCount / 1000 * this.priceMap[this.inDto.args.model || 'gemini-1.5-pro'][isLarge];
+    return cost;
   }
 
   isLock = false;
@@ -301,17 +316,11 @@ export class HomeComponent {
     const inDto = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
     inDto.args.messages = inDto.args.messages.map(obj => ({ role: obj.role, content: obj.content }));
 
-    if (this.selectedThread) {
-    } else {
-      return;
-    }
-    const selectedThread = this.selectedThread;
-
-    // db更新
-    this.save(selectedThread).subscribe({
-      next: next => {
-        console.log(`next.title====${next}`);
-        if (next.title) {
+    // 新スレッド化既存スレッドか
+    (this.selectedThread ? of(this.selectedThread) : this.save(this.selectedThread)).subscribe({
+      next: selectedThread => {
+        this.selectedThread = selectedThread;
+        if (selectedThread.title) {
         } else {
           // タイトルが無かったら入力分からタイトルを作る
           const inputText = inDto.args.messages
@@ -325,55 +334,55 @@ export class HomeComponent {
                 { role: 'user', content: `この書き出しで始まるチャットにタイトルをつけてください。短く適当でいいです。タイトルだけを返してください。タイトル以外の説明などはつけてはいけません。\n\n\`\`\`markdown\n\n${inputText}\n\`\`\`` } as any
               ]
             }
-          }).pipe(tap(text => selectedThread.title += text)).subscribe({
+          }).pipe(tap(text => selectedThread.title += text), toArray()).subscribe({
             next: next => {
               this.save(selectedThread).subscribe();
             }
           });
         }
-      }
-    });
 
-    // 入力エリアをクリア
-    this.inputArea = { role: 'user', content: [{ type: 'text', text: '' }], editable: 1, status: 2 } as Message;
+        // 入力エリアをクリア
+        this.inputArea = { role: 'user', content: [{ type: 'text', text: '' }], editable: 1, status: 2 } as Message;
 
-    // レスポンス受け用オブジェクトを作っておく
-    const res = { role: 'assistant', content: [{ type: 'text', text: '' }], status: 0 };
-    this.inDto.args.messages.push(res as Message);
-    this.isLock = true;
+        // レスポンス受け用オブジェクトを作っておく
+        const res = { role: 'assistant', content: [{ type: 'text', text: '' }], status: 0 };
+        this.inDto.args.messages.push(res as Message);
+        this.isLock = true;
 
+        // 終了後処理
+        const afterFunc = (() => {
+          // db更新
+          this.save(selectedThread).subscribe();
 
-    // 終了後処理
-    const afterFunc = (() => {
-      // db更新
-      this.save(selectedThread).subscribe();
-
-      this.isLock = false;
-      res.status = 2;
-      setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
-    }).bind(this);
-    for (const a in [0]) {
-      this.chatServce.chatCompletionObservableStream(inDto).subscribe({
-        next: text => {
-          res.content[0].text += text;
-          res.status = 1;
-          this.bitCounter++;
-          // console.log(res.content);
-          // this.allExpandCollapseFlag = true;
-          // this.toggleAllExpandCollapse();
-          DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
-        },
-        error: error => {
-          // TODO エラーになったらオブジェクトを戻す。
-          alert(`原因不明のエラーです\n${JSON.stringify(error)}`);
-          // observableはPromise.then/catch/finallyのfinallyとは違って、エラーになったらcompleteは呼ばれないので自分で呼ぶ。
-          afterFunc();
-        },
-        complete: () => {
-          afterFunc();
+          this.isLock = false;
+          res.status = 2;
+          setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+        }).bind(this);
+        for (const a in [0]) {
+          this.chatServce.chatCompletionObservableStream(inDto).subscribe({
+            next: text => {
+              res.content[0].text += text;
+              res.status = 1;
+              this.bitCounter++;
+              // console.log(res.content);
+              // this.allExpandCollapseFlag = true;
+              // this.toggleAllExpandCollapse();
+              DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
+            },
+            error: error => {
+              // TODO エラーになったらオブジェクトを戻す。
+              alert(`原因不明のエラーです\n${JSON.stringify(error)}`);
+              // observableはPromise.then/catch/finallyのfinallyとは違って、エラーになったらcompleteは呼ばれないので自分で呼ぶ。
+              afterFunc();
+            },
+            complete: () => {
+              afterFunc();
+            }
+          });
         }
-      });
-    }
+
+      },
+    });
   }
 
   saveSettingsAsDefault(): void {
