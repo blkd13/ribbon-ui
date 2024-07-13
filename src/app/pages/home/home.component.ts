@@ -1,5 +1,5 @@
 import { from, mergeMap, of } from 'rxjs';
-import { Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
 import { ChatPanelComponent } from '../../parts/chat/chat-panel.component';
 import { FormsModule } from '@angular/forms';
 
@@ -12,7 +12,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
-import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionStreamInDto, Message, Thread } from '../../models/models';
+import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionStreamInDto, Message, MessageForView, Thread } from '../../models/models';
 import { ChatService, CountTokensResponse } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
@@ -21,6 +21,9 @@ import { CommonModule } from '@angular/common';
 import { DomUtils } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.component';
+import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
+import { DialogComponent } from '../../parts/dialog/dialog.component';
 
 @Component({
   selector: 'app-home',
@@ -29,6 +32,7 @@ import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.c
     CommonModule, FormsModule, ChatPanelComponent, FileDropDirective, DocTagComponent,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule, MatSliderModule,
     MatMenuModule, MatDialogModule,
+    DialogComponent,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
@@ -36,25 +40,36 @@ import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.c
 export class HomeComponent {
 
   // chatPanelList = viewChild.required(ChatPanelComponent);
+
+  // メッセージ表示ボックスのリスト
   @ViewChildren(ChatPanelComponent)
   chatPanelList!: QueryList<ChatPanelComponent>;
 
+  // 
   @ViewChild('textAreaElem')
   textAreaElem!: ElementRef<HTMLTextAreaElement>;
 
   @ViewChild('textBodyElem')
   textBodyElem!: ElementRef<HTMLDivElement>;
 
-  inputArea: Message & { editable?: number, status?: number } = { role: 'user', content: [{ type: 'text', text: '' }] };
+  inputArea: MessageForView = { role: 'user', content: [{ type: 'text', text: '' }] };
   inDto: ChatCompletionStreamInDto = this.initInDto();
 
+  // スレッドリスト
   threadList: Thread[] = [];
+  // 現在のスレッド
   selectedThread: Thread | null = null;
 
   bitCounter = 0; // chatPanelにイベントを送るためだけのカウンタ
 
+  // メッセージの枠を全部一気に開くか閉じるかのフラグ
   allExpandCollapseFlag = true;
 
+  /**
+   * gemini は 1,000 [文字] あたりの料金
+   * claude は 1,000 [トークン] あたりの料金
+   * 入力、出力、128kトークン以上時の入力、128kトークン以上時の出力
+   */
   priceMap: Record<string, number[]> = {
     'gemini-1.0-pro': [0.000125, 0.000375, 0.000125, 0.000375],
     'gemini-1.0-pro-vision': [0.000125, 0.000375, 0.000125, 0.000375],
@@ -62,14 +77,17 @@ export class HomeComponent {
     'gemini-1.5-flash-001': [0.000125, 0.000375, 0.00025, 0.00075],
     'gemini-1.5-pro': [0.00125, 0.00375, 0.0025, 0.0075],
     'gemini-1.5-pro-001': [0.00125, 0.00375, 0.0025, 0.0075],
-    'claude-3-5-sonnet@20240620': [0.00125, 0.00375, 0.0025, 0.0075],
+    'claude-3-5-sonnet@20240620': [0.003, 0.015, 0.003, 0.015],
   };
   isCost = true;
-  constructor(
-    private chatServce: ChatService,
-    private dbService: NgxIndexedDBService,
-    private dialog: MatDialog
-  ) {
+
+  readonly authServce: AuthService = inject(AuthService);
+  readonly chatServce: ChatService = inject(ChatService);
+  readonly dbService: NgxIndexedDBService = inject(NgxIndexedDBService);
+  readonly dialog: MatDialog = inject(MatDialog);
+  readonly router: Router = inject(Router);
+
+  constructor() {
     this.dbService.getAll<Thread>('threadList').subscribe({
       next: next => {
         this.threadList = next;
@@ -85,6 +103,31 @@ export class HomeComponent {
       }
     });
   }
+
+  export(threadIndex: number): void {
+    if (threadIndex < 0) {
+      this.dbService.getAll('threadList').subscribe(obj => {
+        const text = JSON.stringify(obj);
+        const blob = new Blob([text], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'threadList.json';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      });
+    } else {
+      const text = JSON.stringify(this.threadList[threadIndex]);
+      const blob = new Blob([text], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `thread-${threadIndex}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+  }
+
   clearInDto(): void {
     this.selectedThread = null;
     this.inDto = this.initInDto();
@@ -93,7 +136,7 @@ export class HomeComponent {
   }
 
   initInDto(): ChatCompletionStreamInDto {
-    return {
+    const inDto = {
       args: Object.assign({
         messages: [
           { role: 'system', content: [{ type: 'text', text: 'assistant AI.' }], status: 2 } as Message,
@@ -105,7 +148,8 @@ export class HomeComponent {
         max_tokens: 1024,
         stream: true,
       }, JSON.parse(localStorage.getItem('settings-v1.0') || '{}')),
-    }
+    };
+    return inDto;
   }
 
   files: FileList | null = null;
@@ -223,7 +267,10 @@ export class HomeComponent {
     req.args.messages.push(inputArea);
     this.chatServce.createCache(req).subscribe({
       next: next => {
-        console.log(next);
+        // 
+        this.inDto.args.messages.forEach(message => (message as MessageForView).cached = 1);
+        this.inDto.args.cachedContent = next;
+        this.save(this.selectedThread);
       }
     });
   }
@@ -268,7 +315,7 @@ export class HomeComponent {
       thread.timestamp = Date.now();
       // 整形用にディープコピー
       const inDto = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
-      inDto.args.messages = inDto.args.messages.map(obj => ({ role: obj.role, content: obj.content }));
+      // inDto.args.messages = inDto.args.messages.map(obj => ({ role: obj.role, content: obj.content }));
       thread.body = JSON.stringify(inDto);
       return this.dbService.update('threadList', thread);
     } else {
@@ -288,7 +335,8 @@ export class HomeComponent {
   renameThread($event: Event, thread: Thread, flag: boolean, $index: number): void {
     if (flag) {
       thread.isEdit = true;
-      setTimeout(() => document.getElementById(`thread-title-${$index}`), 100);
+      // 遅延でフォーカスさせる
+      setTimeout(() => (document.getElementById(`thread-title-${$index}`) as HTMLInputElement)?.select(), 100);
     } else {
       thread.isEdit = false
       thread.title = thread.title || 'No name';
@@ -297,7 +345,7 @@ export class HomeComponent {
   }
 
   duplicate($event: MouseEvent, thread: Thread): void {
-    this.stopPropagation($event);
+    // this.stopPropagation($event);
     const dupli = JSON.parse(JSON.stringify(thread)) as Thread;
     dupli.isEdit = false;
     dupli.title = thread.title + '_copy';
@@ -306,15 +354,23 @@ export class HomeComponent {
   }
 
   send(): void {
+    // this.cachedContents = {
+    //   "name": "projects/458302438887/locations/us-central1/cachedContents/8300204481988001792",
+    //   "model": "projects/gcp-cloud-shosys-ai-002/locations/us-central1/publishers/google/models/gemini-1.5-flash-001",
+    //   "createTime": "2024-07-11T02:49:34.968254Z",
+    //   "updateTime": "2024-07-11T02:49:34.968254Z",
+    //   "expireTime": "2024-07-11T03:49:34.958554Z",
+    // };
+
     // 入力エリアに何も書かれていない場合はスルーする
     if (this.inputArea.content[0].type === 'text' && this.inputArea.content[0].text) {
-      this.inputArea.editable = 0;
+      this.inputArea.editing = 0;
       this.inDto.args.messages.push(this.inputArea);
     } else { }
 
     // 整形用にディープコピー
     const inDto = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
-    inDto.args.messages = inDto.args.messages.map(obj => ({ role: obj.role, content: obj.content }));
+    inDto.args.messages = inDto.args.messages.filter(message => !(message as MessageForView).cached).map(obj => ({ role: obj.role, content: obj.content }));
 
     // 新スレッド化既存スレッドか
     (this.selectedThread ? of(this.selectedThread) : this.save(this.selectedThread)).subscribe({
@@ -342,11 +398,12 @@ export class HomeComponent {
         }
 
         // 入力エリアをクリア
-        this.inputArea = { role: 'user', content: [{ type: 'text', text: '' }], editable: 1, status: 2 } as Message;
+        this.inputArea = { role: 'user', content: [{ type: 'text', text: '' }], editing: 1, status: 2 } as Message;
 
         // レスポンス受け用オブジェクトを作っておく
         const res = { role: 'assistant', content: [{ type: 'text', text: '' }], status: 0 };
-        this.inDto.args.messages.push(res as Message);
+
+        let isFirst = true;
         this.isLock = true;
 
         // 終了後処理
@@ -358,9 +415,14 @@ export class HomeComponent {
           res.status = 2;
           setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
         }).bind(this);
+        // 
         for (const a in [0]) {
           this.chatServce.chatCompletionObservableStream(inDto).subscribe({
             next: text => {
+              if (isFirst) {
+                this.inDto.args.messages.push(res as Message);
+                isFirst = false;
+              } else { }
               res.content[0].text += text;
               res.status = 1;
               this.bitCounter++;
@@ -396,12 +458,16 @@ export class HomeComponent {
 
   private timeoutId: any;
   onKeyDown($event: KeyboardEvent): void {
+    setTimeout(() => {
+      // textAreaの縦幅更新。遅延打ちにしないとvalueが更新されていない。
+      const lineCount = this.textAreaElem.nativeElement.value.split('\n').length;
+      this.textAreaElem.nativeElement.style.height = `${Math.min(15, Math.max(2, lineCount)) * 26 + 20}px`;
+    }, 0);
     if ($event.key === 'Enter') {
-      if ($event.ctrlKey) {
-        this.send();
-      } else {
-        // 改行のタイミングでトークンカウント
+      if ($event.shiftKey) {
         this.onChange();
+      } else {
+        this.send();
       }
     } else {
       // 最後のキー入力から1000秒後にonChangeが動くようにする。1000秒経たずにここに来たら前回のタイマーをキャンセルする
@@ -451,23 +517,33 @@ export class HomeComponent {
     this.inDto.args.messages.splice($index, 1);
     this.onChange();
   }
+
   removeThread($event: MouseEvent, $index: number, thread: Thread): void {
-    this.stopPropagation($event);
-    if (confirm(`このスレッドを削除しますか？\n${thread.title}`)) {
-      this.dbService.deleteByKey('threadList', (thread as any).id).subscribe({
-        next: next => {
-          this.threadList.splice($index, 1);
-          if (thread === this.selectedThread) {
-            this.clearInDto();
-          }
-        }
-      });
-    } else { /** 削除キャンセル */ }
+    // this.stopPropagation($event);
+    this.dialog.open(DialogComponent, { data: { title: 'スレッド削除', message: `このスレッドを削除しますか？\n「${thread.title.replace(/\n/g, '')}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
+      next: next => {
+        if (next === 0) {
+          this.dbService.deleteByKey('threadList', (thread as any).id).subscribe({
+            next: next => {
+              this.threadList.splice($index, 1)
+              if (thread === this.selectedThread) {
+                this.clearInDto()
+              } else { }
+            }
+          })
+        } else { /** 削除キャンセル */ }
+      }
+    });
   }
 
   /** イベント伝播しないように止める */
   stopPropagation($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
+  }
+
+  logout(): void {
+    this.authServce.logout();
+    this.router.navigate(['/login']);
   }
 }

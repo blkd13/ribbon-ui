@@ -1,0 +1,124 @@
+<div class="login-container">
+
+    <div class="flex items-center gap-5 mb-10 pb-7">
+        <!-- <img class="block w-[96px] h-[96px]" src="/image/ribbon-full.png"> -->
+        <img class="block w-[96px] h-[96px]" src="./image/ribbon-mid.png">
+        <h1 class="!m-0">Ribbon UI</h1>
+    </div>
+    @switch (loginState) {
+    @case ('login') {
+
+    <h2 class="login-title">Login</h2>
+
+    <form [formGroup]="loginForm" class="login-form" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+            <label for="email">email</label>
+            <input formControlName="email" type="text" id="email" name="email"
+                placeholder="Enter email. ex: user@example.com">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input formControlName="password" type="password" id="password" name="password"
+                placeholder="Enter password">
+        </div>
+        <button type="submit" class="login-button">Login</button>
+        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+            Forgot Password?
+        </a>
+        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+            Sign up
+        </a>
+    </form>
+    }
+    @case ('sendmail') {
+    <h2 class="login-title">Email confirm</h2>
+    <form [formGroup]="sendMailForm" class="login-form" (submit)="onSend()">
+        <div class="form-group">
+            <label for="email">email</label>
+            <input formControlName="email" type="text" id="email" name="email"
+                placeholder="Enter email. ex: user@example.com">
+        </div>
+        <button type="submit" class="login-button">Send</button>
+        <a href="javascript:void(0)" (click)="loginState='login'" class="forgot-password">
+            Back
+        </a>
+    </form>
+    }
+    @case ('sendmailfine') {
+    <h2 class="login-title">Email confirm</h2>
+    <div class="text-left">
+        メールを送信しました。<br />
+        メールからパスワード設定してください。<br />
+        有効期限は5分です。
+    </div>
+    }
+    @case ('password-reset') {
+    <h2 class="login-title">Password reset</h2>
+    <style>
+        /* 警告スタイル */
+        .warning {
+            /* 背景色：薄い黄色 */
+            background-color: #fff3cd;
+            /* 文字色：濃い茶色 */
+            color: #856404;
+            /* 枠線色：薄いオレンジ */
+            border: 1px solid #ffeeba;
+            /* 内側の余白 */
+            padding: 10px;
+            /* 角を少し丸くする */
+            border-radius: 4px;
+            /* 文字サイズ */
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+    </style>
+    @if(errorMessageList.length>0){
+    <mat-card appearance="outlined" class="warning">
+        <mat-card-content>
+            @for(errorMessage of errorMessageList; track $index){
+            <div class="text-left">{{errorMessage}}</div>
+            }
+        </mat-card-content>
+    </mat-card>
+    }
+
+    <form [formGroup]="passwordResetForm" class="login-form" (ngSubmit)="onReset()">
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input formControlName="password" type="password" id="password" name="password"
+                placeholder="Enter password">
+        </div>
+        <div class="form-group">
+            <label for="passwordConfirm">Password confirm</label>
+            <input formControlName="passwordConfirm" type="password" id="passwordConfirm" name="passwordConfirm"
+                placeholder="Enter password confirm">
+        </div>
+        <button type="submit" class="login-button">Reset</button>
+        <a href="javascript:void(0)" (click)="loginState='login'" class="forgot-password">
+            Login
+        </a>
+        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+            Forgot Password?
+        </a>
+        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+            Sign up
+        </a>
+    </form>
+    }
+    @default {
+    Default case.
+    }
+    }
+    <!-- 
+    <ng-container [ngSwitch]="loginState">
+        <ng-container *ngSwitchCase="'login'">
+        </ng-container>
+        <ng-container *ngSwitchCase="'sendmail'">
+        </ng-container>
+        <ng-container *ngSwitchCase="'password-reset'">
+        </ng-container>
+    </ng-container>
+    -->
+    <!-- sample@example.com -->
+    <!-- e1jfasd3 -->
+</div>

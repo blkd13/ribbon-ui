@@ -70,14 +70,26 @@
             border-color: #BFAE9D;
         }
     }
+
+    .message.cached {
+        background-color: #313131;
+    }
+
+    .cached {
+        .message-title {
+            color: #c0c0c0;
+        }
+    }
 </style>
 
-<mat-expansion-panel class="message" [ngClass]="message.role" [expanded]="true" #exPanel>
+<mat-expansion-panel class="message" [ngClass]="[message.cached?'cached':'', message.role]" [expanded]="true" #exPanel>
     <mat-expansion-panel-header class="message-header">
-        <mat-panel-title class="message-title">
+        <mat-panel-title class="message-title" style="font-weight: normal;">
             <!-- {{message.role}} -->
             @if(message.role==='system'){
             {{message.role}}
+            } @else if(message.cached){
+            キャッシュ
             }@else{
             <select [(ngModel)]="message.role" (click)="stopPropagation($event)">
                 <option value="user">user</option>
@@ -99,15 +111,16 @@
             <button mat-icon-button (click)="copyToClipboard($event)">
                 <mat-icon>content_copy</mat-icon>
             </button>
-            <button mat-icon-button (click)="setEdit($event)">
-                @if(message.editable){
+            <button mat-icon-button (click)="setEdit($event)"
+                [ngStyle]="{visibility: message.cached?'hidden':'visible'}">
+                @if(message.editing){
                 <mat-icon>check_circle</mat-icon>
                 }@else{
                 <mat-icon>edit</mat-icon>
                 }
             </button>
             <button mat-icon-button (click)="remove($event)"
-                [ngStyle]="{visibility:message.role!=='system'?'visible':'hidden'}">
+                [ngStyle]="{visibility: message.cached?'hidden':'visible'}">
                 <mat-icon>close</mat-icon>
             </button>
         </div>
@@ -115,11 +128,11 @@
 
     <!-- ファイル -->
     @if(message.content.length>1){
-    <div style="display: flex;justify-content: left;gap: 10px;width: 100%;padding: 20px;overflow-x: auto;">
+    <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
         @for(content of message.content; track $index){
         @if(content.type==='text'){
         }@else{
-        <app-doc-tag [content]="content" (remove)="removeDoc($index)"></app-doc-tag>
+        <app-doc-tag [content]="content" (remove)="message.cached||removeDoc($index)"></app-doc-tag>
         }
         }
     </div>
@@ -128,14 +141,14 @@
     <!-- メッセージ -->
     @for(content of message.content; track $index){
     @if(content.type==='text'){
-    <div class="chat-input" [hidden]="!message.editable">
-        <textarea [hidden]="!message.editable" (keydown)="onKeyDown($event)" (blur)="onBlur()" (load)="onLoad()"
+    <div class="chat-input" [hidden]="!message.editing">
+        <textarea [hidden]="!message.editing" (keydown)="onKeyDown($event)" (blur)="onBlur()" (load)="onLoad()"
             [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text"
             (change)="onChange()"></textarea>
     </div>
     <div style="display: block;overflow-y: auto;" [ngStyle]="{'max-height': message.role==='assistant'?'auto':'70vh'}"
         #textBodyElem>
-        <markdown [hidden]="message.editable" katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post">
+        <markdown [hidden]="message.editing" katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post">
         </markdown>
     </div>
     }@else{

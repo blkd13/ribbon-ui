@@ -1,8 +1,22 @@
+@use '@angular/material'as mat;
+@use '@angular/material/core/m2'as m2;
+
+// Use the default configuration.
+// $my-typography: m2.define-typography-config($font-family: '"M PLUS 1P"');
+// $my-typography: m2.define-typography-config($font-family: '"Noto Sans JP"');
+// @include mat.typography-hierarchy($my-typography);
+
 /* You can add global styles to this file, and also import other style files */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+// @font-face {
+//     font-family: 'Noto Sans Mono CJK JP';
+//     src: url('path/to/NotoSansMonoCJKjp-Regular.otf') format('opentype');
+// }
 
 html,
 body {
@@ -68,7 +82,7 @@ markdown {
     table {
         display: block;
         width: auto;
-
+        margin-bottom: 1.25rem;
         overflow-x: auto;
 
         th,
@@ -96,7 +110,13 @@ markdown {
             }
         }
     }
+
     .mermaid{
         background-color: #e7e7e7;
+    }
+
+    code[class*=language-],
+    pre[class*=language-] {
+        font-family: 'M PLUS 1 Code', monospace, Roboto, "Helvetica Neue", sans-serif;
     }
 }

@@ -20,7 +20,7 @@
             padding: 10px;
             border: 2px solid #10a37f;
             border-radius: 4px;
-            /* resize: none; */
+            resize: none;
             min-height: 60px;
             max-height: 300px;
             background-color: #303030;
@@ -101,9 +101,9 @@
     }
 </style>
 
-<div style="display: flex;width: 100%;">
+<div class="flex w-full">
     <!-- スレッドリスト -->
-    <div style="height: 100%;width: 240px;padding-top:20px;">
+    <div class="h-full w-60 pt-5">
         <div class="add-thread" (click)="clearInDto()">
             <button mat-icon-button matTooltip="Create new thread">
                 <mat-icon>add_circle</mat-icon>
@@ -114,12 +114,12 @@
         <div style="position:relative" [ngStyle]="{'background-color':thread===selectedThread?'#303030':'inherit'}">
             @if(thread.isEdit){
             <input [(ngModel)]="thread.title" name="thread-title-{{$index}}" id="thread-title-{{$index}}"
-                style="color: #303030;margin: 4px;padding-left: 7px;"
-                (change)="renameThread($event, thread, false, $index)"
+                class="h-7 m-1 pl-2 text-[#303030]" (change)="renameThread($event, thread, false, $index)"
                 (blur)="renameThread($event, thread, false, $index)" />
             }@else{
-            <div style="padding:5px 10px;border-bottom: 1px solid #a0a0a0;cursor: pointer;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;"
-                (click)="selectThread(thread)" [title]="thread.title">
+            <div class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis"
+                style="padding:5px 10px;border-bottom: 1px solid #a0a0a0;" (click)="selectThread(thread)"
+                [title]="thread.title">
                 {{thread.title}}
             </div>
             }
@@ -135,7 +135,7 @@
                     <mat-icon>file_copy</mat-icon>
                     <span>複製</span>
                 </button>
-                <button mat-menu-item>
+                <button mat-menu-item (click)="export($index)">
                     <mat-icon>download</mat-icon>
                     <span>エクスポート</span>
                 </button>
@@ -146,13 +146,12 @@
             </mat-menu>
         </div>
         }
+        <button (click)="export(-1)">export all</button>
     </div>
 
     <div class="drop-zone" appFileDrop (drop)="onDrop($event)" (filesDropped)="onFilesDropped($event)"
         (filesHovered)="onFilesHovered($event)" [class.hovered]="isHovered">
-
-        <div
-            style="width: 100%; display: flex;gap: 30px;padding: 0 20px;align-items: center;justify-content: space-between;">
+        <div class="w-full flex items-center justify-between gap-5 px-5">
             <!-- モデル選択 -->
             <select [(ngModel)]="inDto.args.model" class="model-select">
                 <option value="gemini-1.0-pro">gemini-1.0-pro</option>
@@ -163,21 +162,21 @@
                 <option value="gemini-1.5-pro-001">gemini-1.5-pro-001</option>
                 <option value="claude-3-5-sonnet@20240620">claude-3-5-sonnet&#64;20240620</option>
             </select>
-            <div style="position: relative;top: 6px;">
-                <div style="position: absolute;">temperature: {{inDto.args.temperature|number:'0.1'}}</div>
+            <div class="relative top-2">
+                <div class="absolute">temperature: {{inDto.args.temperature|number:'0.1'}}</div>
                 <mat-slider min="0" max="2" step="0.1" style="margin-top: 10px;">
                     <input matSliderThumb [(ngModel)]="inDto.args.temperature">
                 </mat-slider>
             </div>
-            <div style="position: relative;top: 6px;">
-                <div style="position: absolute;display: flex;"> maxTokens:
-                    <div style="width: 45px;text-align: right;">{{inDto.args.max_tokens|number}}</div>
+            <div class="relative top-2">
+                <div class="absolute flex"> maxTokens:
+                    <div class="text-right w-11">{{inDto.args.max_tokens|number}}</div>
                 </div>
                 <mat-slider min="10" max="8192" step="1" style="margin-top: 10px;">
                     <input matSliderThumb [(ngModel)]="inDto.args.max_tokens">
                 </mat-slider>
             </div>
-            <button mat-raised-button color="primary" (click)="saveSettingsAsDefault()" style="line-height: 16px;;">
+            <button mat-raised-button color="primary" (click)="saveSettingsAsDefault()" style="line-height: 16px;">
                 save as<br />default</button>
             <button mat-icon-button (click)="toggleAllExpandCollapse()">
                 <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
@@ -217,11 +216,22 @@
                 </div>
                 }
             </div>
+            <div>
+                <button mat-icon-button color="primary" [matMenuTriggerFor]="userMenu">
+                    <mat-icon>circle</mat-icon>
+                </button>
+                <mat-menu #userMenu="matMenu">
+                    <button mat-menu-item (click)="logout()">
+                        <mat-icon>logout</mat-icon>
+                        <span>ログアウト</span>
+                    </button>
+                </mat-menu>
+
+            </div>
         </div>
 
         <!-- チャットエリア -->
-        <div #textBodyElem
-            style="height: calc(100vh - 68px);overflow-y: auto;width: 100%; display: flex;flex-direction: column;gap: 10px;padding: 20px;">
+        <div #textBodyElem class="overflow-y-auto w-full flex flex-col gap-2 p-5" style="height: calc(100vh - 68px);">
             @for(message of inDto.args.messages; track $index){
             <app-chat-panel #chatPanel [message]="message" [bitCounter]="bitCounter"
                 (removeDoc)="removeDoc(message.content, $event)" (remove)="removeMessage($index)"
@@ -233,7 +243,7 @@
         <!-- 入力エリア -->
         <div class="bottom">
             <!-- ファイル一覧 -->
-            <div style="display: flex;justify-content: left;gap: 10px;width: 100%;padding:20px;overflow-x: auto;">
+            <div class="flex justify-start gap-3 w-full p-5 overflow-x-auto">
                 @for(content of inputArea.content; track $index){
                 @if(content.type==='text'){
                 }@else{
@@ -252,6 +262,18 @@
                     (click)="send()">
                     <mat-icon>send</mat-icon>
                 </button>
+
+                <!-- <button mat-fab color="primary" aria-label="Send"
+                    [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
+                    (click)="openFileDialog(fileInput)">
+                    <mat-icon>folder_open</mat-icon>
+                </button>
+                <button mat-fab color="primary" aria-label="Send"
+                    [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
+                    (click)="createCache()">
+                    <mat-icon>memory</mat-icon>
+                </button>
+                 -->
                 <button mat-icon-button color="primary" [matMenuTriggerFor]="menu">
                     <mat-icon>more_vert</mat-icon>
                 </button>
@@ -263,7 +285,7 @@
                     </button>
                     <button mat-menu-item (click)="createCache()">
                         <mat-icon>upload</mat-icon>
-                        <span>コンテキストキャッシュ化</span>
+                        <span>コンテキストキャッシュ作成</span>
                     </button>
                 </mat-menu>
                 }@else{

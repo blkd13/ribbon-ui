@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
 
-import { ChatCompletionContentPartText, Message } from '../../models/models';
+import { ChatCompletionContentPartText, Message, MessageForView } from '../../models/models';
 import { ChatService } from '../../services/chat.service';
 import { DomUtils } from '../../utils/dom-utils';
 import { MarkdownComponent } from 'ngx-markdown';
@@ -25,7 +25,7 @@ import { DocTagComponent } from '../doc-tag/doc-tag.component';
 export class ChatPanelComponent {
 
   @Input() // status 0:未開始 1:実行中 2:完了
-  message!: Message & { status?: number, editable?: number };
+  message!: MessageForView;
 
   @ViewChild('textBodyElem')
   textBodyElem!: ElementRef<HTMLDivElement>;
@@ -100,12 +100,17 @@ export class ChatPanelComponent {
   remove($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
-
+    if (this.message.role === 'system') {
+      // systemは行消さずに中身消すだけにする。
+      this.message.content = [{ type: 'text', text: '' }];
+      this.exPanel.close();
+    } else {
     this.removeEmitter.emit(this.message);
+  }
   }
 
   onBlur(): void {
-    this.message.editable = 0;
+    this.message.editing = 0;
   }
 
   timeoutId: any;
@@ -133,12 +138,12 @@ export class ChatPanelComponent {
     $event.stopImmediatePropagation();
     $event.preventDefault();
 
-    if (this.message.editable) {
+    if (this.message.editing) {
     } else {
       this.exPanel.open();
       this.height = `${this.textBodyElem.nativeElement.clientHeight}px`;
     }
-    this.message.editable = this.message.editable === 1 ? 0 : 1;
+    this.message.editing = this.message.editing === 1 ? 0 : 1;
   }
 
   /** イベント伝播しないように止める */

@@ -1,5 +1,5 @@
 export const environment = {
     production: true,
-    apiUrl: '/chatbot-ui/api/dummy',
+    apiUrl: '/api',
     // apiUrl: 'http://localhost:3000/api',
 };

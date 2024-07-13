@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { GService } from './services/g.service';
 
 @Component({
   selector: 'app-root',
@@ -9,5 +10,11 @@ import { RouterOutlet } from '@angular/router';
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
-  title = 'chatbot-ui';
+  title = 'Ribbon UI';
+
+  constructor(
+    // ここでgを初期化しておかないとqueryパラメータが取得できなくなるのでここで読んでおく。
+    public g: GService,
+  ) {
+  }
 }

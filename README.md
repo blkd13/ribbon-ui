@@ -1,4 +1,4 @@
-# ChatBotUI
+# RibbonUI
 
 このプロジェクトは [openai-api-wrapper](./openai-api-wrapper)用のUIです。
 

@@ -1,0 +1,88 @@
+.login-container {
+    position: relative;
+    width: 550px;
+    margin: 50px auto;
+    padding: 20px;
+    border-radius: 8px;
+    background: #333;
+    color: #ccc;
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.login-title {
+    text-align: left;
+}
+
+// .login-container::before {
+//     content: '';
+//     border-radius: 8px;
+//     background-image: url("/image/ribbon-mid.png") !important;
+//     background-repeat: no-repeat;
+//     background-position: center;
+//     background-size: 400px 400px;
+//     position: absolute;
+//     top: 0;
+//     left: 0;
+//     right: 0;
+//     bottom: 0;
+//     z-index: -1;
+//     opacity: 0.50;
+//     /* 透明度を50%に設定 */
+// }
+
+.login-logo img {
+    max-width: 100px;
+    margin-bottom: 20px;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    text-align: left;
+    color: #ccc;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #333;
+    color: #ccc;
+}
+
+.login-button {
+    background-color: #0056b3;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.login-button:hover {
+    background-color: #003d7a;
+}
+
+.forgot-password {
+    display: block;
+    margin-top: 20px;
+    color: #0099ff;
+    text-decoration: underline;
+    text-align: right;
+}
+
+.forgot-password:hover {
+    color: #007bff;
+}

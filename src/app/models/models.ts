@@ -1,5 +1,28 @@
 // ./src/app/models.ts
 
+export enum UserRole {
+    ADMIN = 'ADMIN',
+    USER = 'USER',
+    GUEST = 'GUEST'
+}
+
+export class User {
+    constructor(
+        public id: number,
+        public name: string,
+        public email: string,
+        // public role: UserRole,
+        // public profilePictureUrl: string
+    ) { }
+}
+export class TwoFactorAuthDetails {
+    constructor(
+        public userId: number,
+        public secret: string,
+        public qrCodeUrl: string
+    ) { }
+}
+
 export interface Thread {
     title: string;
     timestamp: number;
@@ -17,6 +40,15 @@ export interface ChatCompletionContentPartText { text: string; type: 'text'; }
 
 // export type Message = ({ role: 'system', content: string } | { role: 'user' | 'assistant', content: string | ChatCompletionContentPart[] });
 export type Message = { role: 'system' | 'user' | 'assistant', content: ChatCompletionContentPart[] };
+export type MessageForView = Message & { editing?: number, status?: number, cached?: number };
+
+export interface CachedContent {
+    name: string;
+    model: string;
+    createTime: string;
+    updateTime: string;
+    expireTime: string;
+}
 
 export interface ChatCompletionStreamInDto {
     args: {
@@ -102,7 +134,8 @@ export interface ChatCompletionStreamInDto {
          */
         stop?: string | null | Array<string>;
 
-
+        // Gemini用:コンテキストキャッシュ
+        cachedContent?: CachedContent,
     };
     options?: {
         idempotencyKey: string

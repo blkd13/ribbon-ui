@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject, Subscriber, first, forkJoin, map, of, tap } from 'rxjs';
-import { ChatCompletionStreamInDto, GPTModels, Message } from '../models/models';
+import { BehaviorSubject, Observable, Subject, Subscriber, first, forkJoin, map } from 'rxjs';
+import { CachedContent, ChatCompletionStreamInDto, Message } from '../models/models';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 import { Utils } from '../utils';
@@ -15,12 +15,6 @@ import { Utils } from '../utils';
  */
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-
-
-  // private baseUrl = `${location.protocol}//${location.hostname}:3000`; // Replace with actual API base URL
-  protected baseUrl = ``;
-  // private baseUrl = `${location.protocol}//${location.hostname}`; // Replace with actual API base URL
-  // private baseUrl = `..`; // Replace with actual API base URL
 
   protected clientId!: string
 
@@ -56,7 +50,7 @@ export class ChatService {
         // チャットスレッド用にUUIDを生成
         this.clientId = Utils.generateUUID();
         // ここはhttpclientを通さないからインターセプターが効かないので自分でパス設定する
-        xhr.open('GET', `${environment.apiUrl}${this.baseUrl}/event?connectionId=${this.clientId}`, true);
+        xhr.open('GET', `${environment.apiUrl}/user/event?connectionId=${this.clientId}`, true);
         xhr.setRequestHeader('Accept', 'text/event-stream');
         xhr.setRequestHeader('Authorization', `Bearer ${this.authService.getToken()}`);
         let cursor = 0;
@@ -180,7 +174,7 @@ export class ChatService {
 
       // EventSourceを開く
       this.open().subscribe((result) => {
-        this.http.post<string>(`${environment.apiUrl}${this.baseUrl}/chat-completion?connectionId=${this.clientId}&threadId=${threadId}`,
+        this.http.post<string>(`/user/chat-completion?connectionId=${this.clientId}&threadId=${threadId}`,
           inDto,
           { headers: this.authService.getHeaders() }).subscribe({
             next: (result) => {
@@ -223,14 +217,14 @@ export class ChatService {
    * VertexAI Gemini用トークン数カウントAPI
    */
   countTokens(inDto: ChatCompletionStreamInDto): Observable<CountTokensResponse> {
-    return this.http.post<CountTokensResponse>(`${environment.apiUrl}${this.baseUrl}/count-tokens`, inDto, { headers: this.authService.getHeaders() });
+    return this.http.post<CountTokensResponse>(`/count-tokens`, inDto, { headers: this.authService.getHeaders() });
   }
 
   /**
    * VertexAI Gemini用コンテキストキャッシュ作成API
    */
-  createCache(inDto: ChatCompletionStreamInDto): Observable<ContentCache> {
-    return this.http.post<ContentCache>(`${environment.apiUrl}${this.baseUrl}/create-cache`, inDto, { headers: this.authService.getHeaders() });
+  createCache(inDto: ChatCompletionStreamInDto): Observable<CachedContent> {
+    return this.http.post<CachedContent>(`/user/create-cache`, inDto, { headers: this.authService.getHeaders() });
   }
 
   calcDuration(inDto: ChatCompletionStreamInDto): Observable<ChatCompletionStreamInDto> {
@@ -291,21 +285,3 @@ export declare interface CountTokensResponse {
   video: number;
   image: number;
 }
-
-// https://us-central1-aiplatform.googleapis.com/v1beta1/projects/rock-task-159120/locations/us-central1/publishers/google/models/gemini-1.5-pro-001:generateContent
-// https://us-central1-aiplatform.googleapis.com/v1beta1/projects/rock-task-159120/locations/us-central1/publishers/google/models/gemini-1.5-pro-001:generateContent
-
-export interface ContentCache {
-  name: string;
-  model: string;
-  createTime: string;
-  updateTime: string;
-  expireTime: string;
-}
-// const contentCache = {
-//   "name": "projects/975232773373/locations/us-central1/cachedContents/8457056412760014848",
-//   "model": "projects/rock-task-159120/locations/us-central1/publishers/google/models/gemini-1.5-flash-001",
-//   "createTime": "2024-07-07T14:21:18.552684Z",
-//   "updateTime": "2024-07-07T14:21:18.552684Z",
-//   "expireTime": "2024-07-07T15:21:18.543829Z"
-// };
