@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
@@ -56,11 +56,7 @@ export class ChatPanelComponent {
   // Jsonの場合は```jsonで囲むための文字列
   brackets = { pre: '', post: '' };
 
-  constructor(
-    public chatService: ChatService,
-  ) {
-
-  }
+  readonly chatService: ChatService = inject(ChatService);
 
   ngOnInit(): void {
     // TODO スクローラを一番下に
@@ -105,8 +101,8 @@ export class ChatPanelComponent {
       this.message.content = [{ type: 'text', text: '' }];
       this.exPanel.close();
     } else {
-    this.removeEmitter.emit(this.message);
-  }
+      this.removeEmitter.emit(this.message);
+    }
   }
 
   onBlur(): void {

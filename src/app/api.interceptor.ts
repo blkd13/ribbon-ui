@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpHandlerFn, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Observable, catchError, finalize, throwError } from 'rxjs';
 import { environment } from '../environments/environment';
@@ -10,11 +10,8 @@ export class ApiInterceptor implements HttpInterceptor {
 
     private httpConnectCount = 0;
     // private lastRun: number = Date.now();
-    constructor(
-        private g: GService,
-        private router: Router,
-    ) {
-    }
+    readonly g: GService = inject(GService);
+    readonly router: Router = inject(Router);
 
     intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
         let url;
@@ -68,7 +65,7 @@ export class ApiInterceptor implements HttpInterceptor {
                         // 未認証の場合、ログインページにリダイレクト
                         this.router.navigate(['/login']);
                     }
-                    return throwError(error);
+                    return throwError(() => error);
                 }),
                 finalize(() => {
                     // ローディング表示をするためにリクエストの開始と終了を通知する

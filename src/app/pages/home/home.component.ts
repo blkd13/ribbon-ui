@@ -1,7 +1,9 @@
 import { from, mergeMap, of } from 'rxjs';
-import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
+import { Component, ElementRef, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
 import { ChatPanelComponent } from '../../parts/chat/chat-panel.component';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,17 +14,17 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
-import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionContentPartText, ChatCompletionStreamInDto, Message, MessageForView, Thread } from '../../models/models';
+import { v4 as uuidv4 } from 'uuid';
+
+import { ChatCompletionContentPart, ChatCompletionContentPartImage, ChatCompletionStreamInDto, Message, MessageForView, SafetyRating, Thread, safetyRatingLabelMap } from '../../models/models';
 import { ChatService, CountTokensResponse } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Observable, forkJoin, tap, toArray } from 'rxjs';
-import { CommonModule } from '@angular/common';
 import { DomUtils } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.component';
 import { AuthService } from '../../services/auth.service';
-import { Router } from '@angular/router';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
 
 @Component({
@@ -39,20 +41,21 @@ import { DialogComponent } from '../../parts/dialog/dialog.component';
 })
 export class HomeComponent {
 
-  // chatPanelList = viewChild.required(ChatPanelComponent);
-
   // メッセージ表示ボックスのリスト
   @ViewChildren(ChatPanelComponent)
   chatPanelList!: QueryList<ChatPanelComponent>;
 
-  // 
+  // チャット入力欄
   @ViewChild('textAreaElem')
   textAreaElem!: ElementRef<HTMLTextAreaElement>;
 
+  // チャット表示欄
   @ViewChild('textBodyElem')
   textBodyElem!: ElementRef<HTMLDivElement>;
 
-  inputArea: MessageForView = { role: 'user', content: [{ type: 'text', text: '' }] };
+  // export type MessageForView = Message & { editing: number, status: number, cached: number, selected: boolean, id: number, chil: number[] };
+  inputArea: MessageForView = { role: 'user', content: [{ type: 'text', text: '' }], editing: 1, status: 2, cached: 0, selected: false };
+  // inputArea: MessageForView = { role: 'user', content: [{ type: 'text', text: '' }], editing: 0, status: 0, cached: 0, selected: false, id: -1, chil: [] };
   inDto: ChatCompletionStreamInDto = this.initInDto();
 
   // スレッドリスト
@@ -102,6 +105,7 @@ export class HomeComponent {
         }
       }
     });
+    
   }
 
   export(threadIndex: number): void {
@@ -139,7 +143,7 @@ export class HomeComponent {
     const inDto = {
       args: Object.assign({
         messages: [
-          { role: 'system', content: [{ type: 'text', text: 'assistant AI.' }], status: 2 } as Message,
+          { role: 'system', content: [{ type: 'text', text: 'assistant AI.' }], status: 2 } as MessageForView,
         ],
         model: 'gemini-1.5-flash',
         // model: 'gemini-1.5-pro',
@@ -263,12 +267,12 @@ export class HomeComponent {
       return;
     }
     const req = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
-    const inputArea = JSON.parse(JSON.stringify(this.inputArea)) as Message;
+    const inputArea = JSON.parse(JSON.stringify(this.inputArea)) as MessageForView;
     req.args.messages.push(inputArea);
     this.chatServce.createCache(req).subscribe({
       next: next => {
         // 
-        this.inDto.args.messages.forEach(message => (message as MessageForView).cached = 1);
+        this.inDto.args.messages.forEach(message => message.cached = 1);
         this.inDto.args.cachedContent = next;
         this.save(this.selectedThread);
       }
@@ -370,7 +374,7 @@ export class HomeComponent {
 
     // 整形用にディープコピー
     const inDto = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
-    inDto.args.messages = inDto.args.messages.filter(message => !(message as MessageForView).cached).map(obj => ({ role: obj.role, content: obj.content }));
+    inDto.args.messages = inDto.args.messages.filter(message => !message.cached).map(obj => ({ role: obj.role, content: obj.content, status: obj.status, cached: obj.cached, editing: obj.editing, selected: obj.selected }));
 
     // 新スレッド化既存スレッドか
     (this.selectedThread ? of(this.selectedThread) : this.save(this.selectedThread)).subscribe({
@@ -398,11 +402,15 @@ export class HomeComponent {
         }
 
         // 入力エリアをクリア
-        this.inputArea = { role: 'user', content: [{ type: 'text', text: '' }], editing: 1, status: 2 } as Message;
+        // this.inputArea = { role: 'user', content: [{ type: 'text', text: '' }], editing: 1, status: 2 } as Message;
+        this.inputArea = { role: 'user', content: [{ type: 'text', text: '' }], editing: 1, status: 2, cached: 0, selected: false };
+        // inputArea: MessageForView = { role: 'user', content: [{ type: 'text', text: '' }], editing: 0, status: 0, cached: 0, selected: false, id: -1, next: [] };
+
 
         // レスポンス受け用オブジェクトを作っておく
         const res = { role: 'assistant', content: [{ type: 'text', text: '' }], status: 0 };
 
+        // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
         let isFirst = true;
         this.isLock = true;
 
@@ -417,30 +425,106 @@ export class HomeComponent {
         }).bind(this);
         // 
         for (const a in [0]) {
-          this.chatServce.chatCompletionObservableStream(inDto).subscribe({
-            next: text => {
-              if (isFirst) {
-                this.inDto.args.messages.push(res as Message);
-                isFirst = false;
-              } else { }
-              res.content[0].text += text;
-              res.status = 1;
-              this.bitCounter++;
-              // console.log(res.content);
-              // this.allExpandCollapseFlag = true;
-              // this.toggleAllExpandCollapse();
-              DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
-            },
-            error: error => {
-              // TODO エラーになったらオブジェクトを戻す。
-              alert(`原因不明のエラーです\n${JSON.stringify(error)}`);
-              // observableはPromise.then/catch/finallyのfinallyとは違って、エラーになったらcompleteは呼ばれないので自分で呼ぶ。
-              afterFunc();
-            },
-            complete: () => {
-              afterFunc();
+          this.chatServce.chatCompletionObservableStreamNew(inDto).subscribe({
+            next: meta => {
+              console.log(meta);
+              meta.observer.subscribe({
+                next: text => {
+                  if (isFirst) {
+                    this.inDto.args.messages.push(res as MessageForView);
+                    isFirst = false;
+                  } else { }
+                  res.content[0].text += text;
+                  res.status = 1;
+                  this.bitCounter++;
+                  // console.log(res.content);
+                  // this.allExpandCollapseFlag = true;
+                  // this.toggleAllExpandCollapse();
+                  DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
+                },
+                error: error => {
+                  if (typeof error === 'string') {
+                    // TODO エラーになったらオブジェクトを戻す。
+                    try {
+                      const errObj = JSON.parse(error);
+                      if (errObj.candidate && Array.isArray(errObj.candidate.safetyRatings)) {
+                        const blocked = (errObj.candidate.safetyRatings as SafetyRating[]).find(rating => rating.blocked);
+                        if (blocked) {
+                          alert(`このメッセージは安全性の理由でブロックされました。\n${blocked.category} （${safetyRatingLabelMap[blocked.category]}）\nprobability（該当度） ${blocked.probability} : ${blocked.probabilityScore}\nseverity（深刻度） ${blocked.severity} : ${blocked.severityScore}`);
+                        } else {
+                          throw new Error(error);
+                        }
+                      } else {
+                        throw new Error(error);
+                      }
+                    } catch (e) {
+                      alert(`原因不明のエラーです\n${JSON.stringify(error)}`);
+                    }
+                  } else {
+                    if (error.status === 401) {
+                      // 認証エラー。インターセプターでログイン画面に飛ばすようにしているのでここでは何もしない。
+                      alert(`認証エラー: ${error.message}`);
+                    } else {
+                      alert(`原因不明のエラーです\n${JSON.stringify(error)}`);
+                    }
+                  }
+                  // observableはPromise.then/catch/finallyのfinallyとは違って、エラーになったらcompleteは呼ばれないので自分で呼ぶ。
+                  afterFunc();
+                },
+                complete: () => {
+                  afterFunc();
+                }
+              })
             }
           });
+
+          // this.chatServce.chatCompletionObservableStream(inDto).subscribe({
+          //   next: text => {
+          //     if (isFirst) {
+          //       this.inDto.args.messages.push(res as MessageForView);
+          //       isFirst = false;
+          //     } else { }
+          //     res.content[0].text += text;
+          //     res.status = 1;
+          //     this.bitCounter++;
+          //     // console.log(res.content);
+          //     // this.allExpandCollapseFlag = true;
+          //     // this.toggleAllExpandCollapse();
+          //     DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
+          //   },
+          //   error: error => {
+          //     if (typeof error === 'string') {
+          //       // TODO エラーになったらオブジェクトを戻す。
+          //       try {
+          //         const errObj = JSON.parse(error);
+          //         if (errObj.candidate && Array.isArray(errObj.candidate.safetyRatings)) {
+          //           const blocked = (errObj.candidate.safetyRatings as SafetyRating[]).find(rating => rating.blocked);
+          //           if (blocked) {
+          //             alert(`このメッセージは安全性の理由でブロックされました。\n${blocked.category} （${safetyRatingLabelMap[blocked.category]}）\nprobability（該当度） ${blocked.probability} : ${blocked.probabilityScore}\nseverity（深刻度） ${blocked.severity} : ${blocked.severityScore}`);
+          //           } else {
+          //             throw new Error(error);
+          //           }
+          //         } else {
+          //           throw new Error(error);
+          //         }
+          //       } catch (e) {
+          //         alert(`原因不明のエラーです\n${JSON.stringify(error)}`);
+          //       }
+          //     } else {
+          //       if (error.status === 401) {
+          //         // 認証エラー。インターセプターでログイン画面に飛ばすようにしているのでここでは何もしない。
+          //         alert(`認証エラー: ${error.message}`);
+          //       } else {
+          //         alert(`原因不明のエラーです\n${JSON.stringify(error)}`);
+          //       }
+          //     }
+          //     // observableはPromise.then/catch/finallyのfinallyとは違って、エラーになったらcompleteは呼ばれないので自分で呼ぶ。
+          //     afterFunc();
+          //   },
+          //   complete: () => {
+          //     afterFunc();
+          //   }
+          // });
         }
 
       },
@@ -482,7 +566,7 @@ export class HomeComponent {
     this.charCount = 0;
     this.tokenObj.totalTokens = -1;
     const req = JSON.parse(JSON.stringify(this.inDto)) as ChatCompletionStreamInDto;
-    const inputArea = JSON.parse(JSON.stringify(this.inputArea)) as Message;
+    const inputArea = JSON.parse(JSON.stringify(this.inputArea)) as MessageForView;
     req.args.messages.push(inputArea);
     this.chatServce.countTokens(req).subscribe({
       next: next => this.tokenObj = next

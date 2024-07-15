@@ -75,6 +75,12 @@
     background-color: #003d7a;
 }
 
+.login-button:disabled {
+    background-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+}
+
 .forgot-password {
     display: block;
     margin-top: 20px;

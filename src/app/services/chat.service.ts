@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject, Subscriber, first, forkJoin, map } from 'rxjs';
-import { CachedContent, ChatCompletionStreamInDto, Message } from '../models/models';
+import { BehaviorSubject, Observable, Subject, Subscriber, defer, finalize, first, forkJoin, from, map, switchMap, tap } from 'rxjs';
+import { CachedContent, ChatCompletionStreamInDto, Message, MessageForView } from '../models/models';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 import { Utils } from '../utils';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * チャットサービス
@@ -20,6 +21,8 @@ export class ChatService {
 
   // データストリーム監視用のマップ
   protected subscriberMap: { [key: string]: Subscriber<string> } = {};
+
+  protected subjectMap: { [key: string]: Subject<string> } = {};
 
   // 作成したデータストリームのテキストを保持するマップ
   protected textMap: { [key: string]: string } = {};
@@ -39,16 +42,16 @@ export class ChatService {
    * SSEを受け取ってスレッドID毎に選り分けて投げる
    * @returns 
    */
-  private open(): Observable<boolean> {
-    return new Observable<boolean>((observer) => {
-      if (Object.keys(this.subscriberMap).length > 1) {
+  private open(): Observable<string> {
+    return new Observable<string>((observer) => {
+      if (Object.keys(this.subjectMap).length > 1) {
         console.log('Already exists stream');
-        observer.next(true);
+        observer.next(this.clientId);
         observer.complete();
       } else {
         const xhr = new XMLHttpRequest();
         // チャットスレッド用にUUIDを生成
-        this.clientId = Utils.generateUUID();
+        this.clientId = uuidv4();
         // ここはhttpclientを通さないからインターセプターが効かないので自分でパス設定する
         xhr.open('GET', `${environment.apiUrl}/user/event?connectionId=${this.clientId}`, true);
         xhr.setRequestHeader('Accept', 'text/event-stream');
@@ -61,7 +64,7 @@ export class ChatService {
           } else if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
             // ヘッダー受信時のロジック
             console.log('Connected on headers received');
-            observer.next(true);
+            observer.next(this.clientId);
             observer.complete();
           } else if (xhr.readyState === XMLHttpRequest.LOADING) {
             // データ受信中のロジック（onmessage）
@@ -73,7 +76,7 @@ export class ChatService {
                     // json object 受信時
                     try {
                       const data = JSON.parse(line) as { data: { threadId: string, content: string } };
-                      this.subscriberMap[data.data.threadId].next(data.data.content);
+                      this.subjectMap[data.data.threadId].next(data.data.content);
                       this.textMap[data.data.threadId] += data.data.content;
                     } catch (e) {
                       // json parse error. エラー吐いてとりあえず無視
@@ -88,15 +91,15 @@ export class ChatService {
                     // console.log(this.textMap[threadId]);
 
                     // 終了通知
-                    this.subscriberMap[threadId].complete();
+                    this.subjectMap[threadId].complete();
 
                     // 監視オブジェクトを削除
-                    delete this.subscriberMap[threadId];
+                    delete this.subjectMap[threadId];
                     // ストリームが存在しなくなったら、XHRを中断する
-                    if (Object.keys(this.subscriberMap).length === 0) {
+                    if (Object.keys(this.subjectMap).length === 0) {
                       xhr.abort();
                       // チャットスレッド用にUUIDを生成
-                      this.clientId = Utils.generateUUID();
+                      this.clientId = uuidv4();
                     } else {
                       // 何もしない
                     }
@@ -112,16 +115,16 @@ export class ChatService {
                   line = line.substring(threadId.length + 1);
                   console.error(line);
                   // エラー通知
-                  this.subscriberMap[threadId].error(line);
+                  this.subjectMap[threadId].error(line);
 
                   // 監視オブジェクトを削除
-                  delete this.subscriberMap[threadId];
+                  delete this.subjectMap[threadId];
 
                   // ストリームが存在しなくなったら、XHRを中断する
-                  if (Object.keys(this.subscriberMap).length === 0) {
+                  if (Object.keys(this.subjectMap).length === 0) {
                     xhr.abort();
                     // チャットスレッド用にUUIDを生成
-                    this.clientId = Utils.generateUUID();
+                    this.clientId = uuidv4();
                   } else {
                     // 何もしない
                   }
@@ -139,13 +142,14 @@ export class ChatService {
             }
           } else if (xhr.readyState === XMLHttpRequest.DONE) {
             console.log('Connected on done');
-            observer.next(true);
+            observer.next(this.clientId);
             observer.complete();
             // リクエスト完了時のロジック（onerror または oncomplete）
-            Object.entries(this.subscriberMap).forEach(([key, value]) => {
+            Object.entries(this.subjectMap).forEach(([key, value]) => {
               if (value.closed) {
               } else {
-                value.error();
+                // value.error();
+                value.error('Connection closed');
               }
             });
           } else {
@@ -191,6 +195,37 @@ export class ChatService {
       });
     });
   }
+
+
+  /**
+   * リクエストを投げる。戻りはEventSourceから来る
+   * @param inDto 
+   * @param taskId 
+   * @returns 
+   */
+  chatCompletionObservableStreamNew(inDto: ChatCompletionStreamInDto): Observable<{
+    clientId: string,
+    threadId: string,
+    meta: { message?: MessageForView, status: string },
+    observer: Observable<string>
+  }> {
+    const threadId = uuidv4();
+    // ストリーム受け取り用のSubjectを生成
+    const subject = new Subject<string>();
+    this.subjectMap[threadId] = subject;
+    this.textMap[threadId] = '';
+    const streamObservable = subject.asObservable();
+
+    return this.open().pipe(
+      switchMap(clientId => this.http.post<{ message?: MessageForView, status: string }>(
+        `/user/chat-completion?connectionId=${clientId}&threadId=${threadId}`,
+        inDto,
+        { headers: this.authService.getHeaders() }
+      )),
+      map(meta => ({ clientId: this.clientId, threadId, meta, observer: streamObservable }))
+    );
+  }
+
 
   /**
    * 翻訳タスク用の固定リクエストフォーム

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -6,11 +6,12 @@ import { MatCardModule } from '@angular/material/card';
 
 import { AuthService } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, MatSnackBarModule, MatCardModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatSnackBarModule, MatCardModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
@@ -22,15 +23,13 @@ export class LoginComponent {
   sendMailForm!: FormGroup;
   passwordResetForm!: FormGroup;
 
-  constructor(
-    public g: GService,
-    private formBuilder: FormBuilder,
-    private authService: AuthService,
-    private router: Router,
-    private activatedRoute: ActivatedRoute,
-    private snackBar: MatSnackBar,
-  ) {
-  }
+  readonly authServce: AuthService = inject(AuthService);
+  readonly g: GService = inject(GService);
+  readonly formBuilder: FormBuilder = inject(FormBuilder);
+  readonly authService: AuthService = inject(AuthService);
+  readonly router: Router = inject(Router);
+  readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
+  readonly snackBar: MatSnackBar = inject(MatSnackBar);
 
   ngOnInit(): void {
     const onetimeToken = this.activatedRoute.snapshot.paramMap.get('onetimeToken');
@@ -85,6 +84,7 @@ export class LoginComponent {
           this.router.navigate(['/home']);
         },
         error: (error) => {
+          this.errorMessageList = ['認証に失敗しました。'];
           console.log(error);
         },
       });
@@ -96,7 +96,7 @@ export class LoginComponent {
   onSend(): void {
     console.log(this.loginForm.value);
 
-    if (this.sendMailForm.value.email) {
+    if (this.sendMailForm.valid) {
       this.authService.requestForPasswordReset(this.sendMailForm.value.email).subscribe({
         next: (user) => {
           console.log(user);

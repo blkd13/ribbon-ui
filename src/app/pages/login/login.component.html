@@ -1,3 +1,32 @@
+<style>
+    /* 警告スタイル */
+    .warning {
+        /* 背景色：薄い黄色 */
+        background-color: #fff3cd;
+        /* 文字色：濃い茶色 */
+        color: #856404;
+        /* 枠線色：薄いオレンジ */
+        border: 1px solid #ffeeba;
+        /* 内側の余白 */
+        padding: 10px;
+        /* 角を少し丸くする */
+        border-radius: 4px;
+        /* 文字サイズ */
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+</style>
+<ng-template #errorArea>
+    @if(errorMessageList.length>0){
+    <mat-card appearance="outlined" class="warning">
+        <mat-card-content>
+            @for(errorMessage of errorMessageList; track $index){
+            <div class="text-left">{{errorMessage}}</div>
+            }
+        </mat-card-content>
+    </mat-card>
+    }
+</ng-template>
 <div class="login-container">
 
     <div class="flex items-center gap-5 mb-10 pb-7">
@@ -9,7 +38,7 @@
     @case ('login') {
 
     <h2 class="login-title">Login</h2>
-
+    <ng-container *ngTemplateOutlet="errorArea"></ng-container>
     <form [formGroup]="loginForm" class="login-form" (ngSubmit)="onSubmit()">
         <div class="form-group">
             <label for="email">email</label>
@@ -21,7 +50,7 @@
             <input formControlName="password" type="password" id="password" name="password"
                 placeholder="Enter password">
         </div>
-        <button type="submit" class="login-button">Login</button>
+        <button type="submit" class="login-button" [disabled]="loginForm.invalid">Login</button>
         <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
             Forgot Password?
         </a>
@@ -32,13 +61,14 @@
     }
     @case ('sendmail') {
     <h2 class="login-title">Email confirm</h2>
+    <ng-container *ngTemplateOutlet="errorArea"></ng-container>
     <form [formGroup]="sendMailForm" class="login-form" (submit)="onSend()">
         <div class="form-group">
             <label for="email">email</label>
             <input formControlName="email" type="text" id="email" name="email"
                 placeholder="Enter email. ex: user@example.com">
         </div>
-        <button type="submit" class="login-button">Send</button>
+        <button type="submit" class="login-button" [disabled]="sendMailForm.invalid">Send</button>
         <a href="javascript:void(0)" (click)="loginState='login'" class="forgot-password">
             Back
         </a>
@@ -46,6 +76,7 @@
     }
     @case ('sendmailfine') {
     <h2 class="login-title">Email confirm</h2>
+    <ng-container *ngTemplateOutlet="errorArea"></ng-container>
     <div class="text-left">
         メールを送信しました。<br />
         メールからパスワード設定してください。<br />
@@ -54,33 +85,7 @@
     }
     @case ('password-reset') {
     <h2 class="login-title">Password reset</h2>
-    <style>
-        /* 警告スタイル */
-        .warning {
-            /* 背景色：薄い黄色 */
-            background-color: #fff3cd;
-            /* 文字色：濃い茶色 */
-            color: #856404;
-            /* 枠線色：薄いオレンジ */
-            border: 1px solid #ffeeba;
-            /* 内側の余白 */
-            padding: 10px;
-            /* 角を少し丸くする */
-            border-radius: 4px;
-            /* 文字サイズ */
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-    </style>
-    @if(errorMessageList.length>0){
-    <mat-card appearance="outlined" class="warning">
-        <mat-card-content>
-            @for(errorMessage of errorMessageList; track $index){
-            <div class="text-left">{{errorMessage}}</div>
-            }
-        </mat-card-content>
-    </mat-card>
-    }
+    <ng-container *ngTemplateOutlet="errorArea"></ng-container>
 
     <form [formGroup]="passwordResetForm" class="login-form" (ngSubmit)="onReset()">
         <div class="form-group">
@@ -93,7 +98,7 @@
             <input formControlName="passwordConfirm" type="password" id="passwordConfirm" name="passwordConfirm"
                 placeholder="Enter password confirm">
         </div>
-        <button type="submit" class="login-button">Reset</button>
+        <button type="submit" class="login-button" [disabled]="passwordResetForm.invalid">Reset</button>
         <a href="javascript:void(0)" (click)="loginState='login'" class="forgot-password">
             Login
         </a>
