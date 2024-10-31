@@ -1,0 +1,131 @@
+<div class="p-5 flex flex-col gap-4" style="height: calc(100vh - 60px);">
+    <!-- <h1>{{data.mmChannel.display_name||data.mmChannel.name}}</h1> -->
+    <h1>タイムライン{{id?'編集':'作成'}}</h1>
+
+    <mat-form-field appearance="fill" class="full-width">
+        <mat-label>タイムライン名</mat-label>
+        <input type="text" matInput [(ngModel)]="title" />
+    </mat-form-field>
+
+    <div class="flex-grow h-0 custom-scroll">
+        <mat-accordion class="accordion custom-scroll"
+            style="min-width: 0;width: 330px;height: calc(100vh - 100px);overflow-y: scroll;">
+            @for(mmTeam of mmTeamList; track $index){
+            @if(mmTeam.id!=='timeline'){
+            <mat-expansion-panel [expanded]="$index===2">
+                <mat-expansion-panel-header>
+                    <mat-panel-title style="width: 100%;">
+                        <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;">
+                            <app-mm-team-logo [mmTeam]="mmTeam"></app-mm-team-logo>
+                            <mat-icon class="team-check" (click)="checkTeam($event,mmTeam)"
+                                [ngClass]="{'team-check-checked': mmTeam.isChecked===2, 'team-check-bar': mmTeam.isChecked===1}">
+                                {{['','remove','check'][mmTeam.isChecked]}}
+                            </mat-icon>
+                            {{mmTeam.display_name}}
+                        </div>
+                    </mat-panel-title>
+                </mat-expansion-panel-header>
+
+                <div class="grid-container">
+                    @for(mmChannel of mmTeam.channelList; track $index){
+                    @if(!mmChannel.delete_at){
+                    <div class="channel cursor-pointer" (click)="checkChannel(mmChannel)">
+                        <mat-checkbox color="primary" [checked]="mmChannel.isChecked">
+                            {{mmChannel.display_name||mmChannel.name}}
+                        </mat-checkbox>
+                    </div>
+                    }
+                    }
+                </div>
+                <!-- lazyにしたければtemplateで囲って matExpansionPanelContent をつけるだけ-->
+                <!-- <ng-template matExpansionPanelContent></ng-template> -->
+            </mat-expansion-panel>
+            }
+            }
+        </mat-accordion>
+    </div>
+
+    <div class="flex justify-between">
+        <button type="button" (click)="removeTimeline()" [ngStyle]="{vidibility:id?'visible':'hidden'}">削除</button>
+        <button type="button" (click)="registTimeline()">{{id?'更新':'登録'}}</button>
+    </div>
+</div>
+
+<style>
+    form {
+        height: 100%;
+        margin: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .textarea-field {
+        flex-grow: 1;
+        height: 1px;
+    }
+
+    button {
+        padding: 10px 20px;
+        border-radius: 5px;
+        border: none;
+        background-color: #666666;
+        color: #ffffff;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    button:hover {
+        background-color: #222;
+    }
+
+    .team-check-container {
+        position: absolute;
+        left: -10px;
+        top: -10px;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 34px;
+        height: 34px;
+    }
+
+    .team-check {
+        position: relative;
+        cursor: pointer;
+        opacity: 0;
+        color: #000;
+        background-color: transparent;
+        border: 2px solid #ccc;
+        border-radius: 30px;
+        width: 0;
+        height: 0;
+        font-size: 32px;
+        /* filter: blur(50px); */
+        transform: scale(0, 0);
+        transform-origin: 50% 50%;
+        transition: all 0.2s 0s ease-in-out;
+
+        transform: scale(1, 1);
+        opacity: 1;
+        width: 34px;
+        height: 34px;
+    }
+
+    .team-check-bar,
+    .team-check-checked {
+        transform: scale(1, 1);
+        background-color: #69b8cd;
+        border: 2px solid #69b8cd;
+        /* color: #00dddd; */
+        /* opacity: 1; */
+        filter: blur(0);
+        width: 34px;
+        height: 34px;
+    }
+
+    * {
+        user-select: none;
+    }
+</style>

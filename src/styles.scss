@@ -31,27 +31,95 @@ body {
 body.dark-mode {
     background-color: #121212;
     color: #e0e0e0;
+
+    background: linear-gradient(135deg, #121212 0%, rgb(15, 24, 30) 80%, rgb(2, 2, 2) 100%);
+    background-attachment: fixed;
+}
+
+// body {
+//     background-image: url('/image.webp');
+//     background-size: cover;
+//     background-position: center;
+//     background-repeat: no-repeat;
+//     background-attachment: fixed;
+//     min-height: 100vh;
+//     /* ぼかし効果を追加 */
+//     // backdrop-filter: blur(10px);
+//     // -webkit-backdrop-filter: blur(10px);
+// }
+
+// body::before {
+//     content: "";
+//     position: fixed;
+//     top: 0;
+//     left: 0;
+//     width: 100%;
+//     height: 100%;
+//     background-color: rgba(0, 0, 0, 0.90);
+//     /* 透明度を調整 */
+//     z-index: -1;
+// }
+
+.mdc-label {
+    cursor: pointer;
+}
+
+.mat-mdc-snack-bar-label.mdc-snackbar__label {
+    word-break: break-all;
 }
 
 .mat-primary {
     // slider
-    --mdc-slider-hover-handle-color: #10a37f;
-    --mdc-slider-focus-handle-color: #10a37f;
-    --mdc-slider-handle-color: #10a37f;
-    --mdc-slider-active-track-color: #10a37f;
+    --mdc-slider-hover-handle-color: rgb(105 184 205);
+    --mdc-slider-focus-handle-color: rgb(105 184 205);
+    --mdc-slider-handle-color: rgb(105 184 205);
+    --mdc-slider-active-track-color: rgb(105 184 205);
 
     // fab
-    --mat-fab-foreground-color: #10a37f;
-    --mat-fab-state-layer-color: #10a37f;
+    --mat-fab-foreground-color: rgb(105 184 205);
+    --mat-fab-state-layer-color: rgb(105 184 205);
+
+    // radio
+    --mdc-radio-selected-focus-icon-color: rgb(105 184 205);
+    --mdc-radio-selected-hover-icon-color: rgb(105 184 205);
+    --mdc-radio-selected-icon-color: rgb(105 184 205);
+    --mdc-radio-selected-pressed-icon-color: rgb(105 184 205);
+    --mat-radio-checked-ripple-color: rgb(105 184 205);
+
+    --mat-stepper-header-selected-state-icon-background-color: rgb(105 184 205);
+    --mat-stepper-header-selected-state-icon-foreground-color: #003737;
+    --mat-stepper-header-edit-state-icon-background-color: rgb(105 184 205);
+    --mat-stepper-header-edit-state-icon-foreground-color: #003737;
+
+    --mdc-checkbox-selected-focus-icon-color: rgb(105 184 205);
+    --mdc-checkbox-selected-hover-icon-color: rgb(105 184 205);
+    --mdc-checkbox-selected-icon-color: rgb(105 184 205);
+
+    --mdc-filled-button-container-color: rgb(105 184 205);
+
+    // text input
+    --mat-form-field-focus-select-arrow-color: rgb(105 184 205);
+    --mdc-outlined-text-field-caret-color: rgb(105 184 205);
+    --mdc-outlined-text-field-focus-outline-color: rgb(105 184 205);
+    --mdc-outlined-text-field-focus-label-text-color: rgb(105 184 205);
 }
 
-.mat-mdc-raised-button:not(:disabled) {
-    --mdc-protected-button-label-text-color: #10a37f;
+.mat-mdc-button .mat-mdc-button-persistent-ripple::before {
+    --mat-text-button-state-layer-color: rgb(105 184 205);
+    // background-color: var(--mat-text-button-state-layer-color);
+}
+
+.mat-mdc-raised-button:not(:disabled),
+.mat-mdc-button:not(:disabled) {
+    --mdc-protected-button-label-text-color: rgb(105 184 205);
+    --mdc-text-button-label-text-color: rgb(105 184 205);
 }
 
 html>body {
 
     // アコーディオン
+    // --mat-expansion-container-text-font: 'Noto Sans JP', Roboto, "Helvetica Neue", sans-serif;
+
     .mat-expanded {
         .mat-expansion-panel-header-description {
             visibility: hidden;
@@ -70,6 +138,69 @@ html>body {
 
     --mat-dialog-container-max-width:auto;
     --mat-dialog-container-min-width:auto;
+
+    a {
+        color: lightblue;
+        text-decoration: underline;
+    }
+
+    --mdc-fab-container-color: rgba(105, 184, 205, 20%);
+
+    .mat-primary.mat-mdc-button-base {
+        --mdc-icon-button-icon-color: rgb(105 184 205);
+        --mat-icon-button-state-layer-color: rgb(105 184 205);
+        --mat-icon-button-ripple-color: rgb(105 184 205);
+    }
+
+    /* カスタムスクロールバー */
+    .custom-scroll {
+        overflow-y: auto;
+        overflow-x: hidden;
+        transition: all 0.3s 0s ease;
+
+        scrollbar-color: rgb(26, 54, 61) rgb(11, 18, 20);
+
+        &::-webkit-scrollbar {
+            width: 17px;
+        }
+
+        // バーの背景色
+        &::-webkit-scrollbar-track {
+            border-radius: 10px;
+            background-color: rgb(11, 18, 20);
+            transition: background-color 0.3s 0.3s;
+        }
+
+        // バーの色
+        &::-webkit-scrollbar-thumb {
+            // background: rgb(6, 13, 15);
+            border-radius: 10px;
+            background-color: rgb(26, 54, 61);
+            transition: background-color 0.3s 0.3s;
+        }
+
+        &:hover {
+            scrollbar-color: rgb(59, 108, 121) rgb(11, 18, 20);
+
+            &::-webkit-scrollbar {}
+
+            &::-webkit-scrollbar-track {
+                background-color: rgb(11, 18, 20);
+            }
+
+            &::-webkit-scrollbar-thumb {
+                background-color: rgb(59, 108, 121);
+            }
+        }
+
+        &--thin {
+            scrollbar-width: thin;
+
+            &::-webkit-scrollbar {
+                width: 5px;
+            }
+        }
+    }
 }
 
 
@@ -87,31 +218,59 @@ markdown {
 
         th,
         td {
-            border-bottom-width: 1px;
             border-color: rgba(0, 0, 0, .15);
             border-color: var(--border-medium);
             padding: .25rem .75rem;
-            border-left-width: 1px;
         }
+
+        th,
+        td {
+            &:not(:first-child) {
+                border-left-color: #444;
+                border-left-width: 2px;
+                border-left-style: dotted;
+            }
+        }
+
+        // tr:not(:last-child) td {
+        //     border-bottom-width: 1px;
+        // }
+
+        tr:last-child td {
+            &:first-child {
+                border-bottom-left-radius: 1em;
+            }
+
+            &:last-child {
+                border-bottom-right-radius: 1em;
+            }
+        }
+
 
         td {
             white-space: nowrap;
+            background-color: #3b3b3b;
+        }
+
+        tr:nth-child(odd) td {
+            background-color: transparent;
         }
 
         th {
             background-color: rgba(0, 0, 0, .1);
             background-color: var(--border-light);
 
-            border-top-width: 1px;
+            &:first-child {
+                border-top-left-radius: 1em;
+            }
 
             &:last-child {
-                border-right-width: 1px;
-                border-top-right-radius: .375rem;
+                border-top-right-radius: 1em;
             }
         }
     }
 
-    .mermaid{
+    .mermaid {
         background-color: #e7e7e7;
     }
 
@@ -119,4 +278,33 @@ markdown {
     pre[class*=language-] {
         font-family: 'M PLUS 1 Code', monospace, Roboto, "Helvetica Neue", sans-serif;
     }
+}
+
+// グラデーション文字のお試し
+h1,
+.gradient-texxt {
+    background-image: linear-gradient(135deg,
+            rgb(175, 210, 219) 0%,
+            rgb(236, 255, 255) 8%,
+            rgb(166, 214, 228) 80%,
+            rgba(255, 255, 255, 1));
+    // font-weight: bold !important;
+    // font-family: 'Noto Sans Mono CJK JP' !important;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.loading-cover {
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin: auto;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #00000088;
+    z-index: 30;
 }

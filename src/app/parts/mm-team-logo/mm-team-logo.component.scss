@@ -1,0 +1,37 @@
+:host {
+    position: relative;
+}
+
+.logo {
+    text-align: center;
+    background-color: #333;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.mark-mention {
+    position: absolute;
+    color: black;
+    text-align: center;
+    width: 24px;
+    height: 24px;
+    background: rgb(154, 201, 214);
+    border-radius: 100px;
+    font-size: 12px;
+    top: -5px;
+    right: -5px;
+}
+
+.mark-unread {
+    position: absolute;
+    color: black;
+    text-align: center;
+    border: 3px solid #333;
+    width: 14px;
+    height: 14px;
+    background: rgb(59, 213, 255);
+    border-radius: 100px;
+    font-size: 12px;
+    top: -3px;
+    right: -3px;
+}

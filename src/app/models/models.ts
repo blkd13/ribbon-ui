@@ -1,17 +1,40 @@
 // ./src/app/models.ts
 
+import { UUID } from "./project-models";
+
+export enum UserStatus {
+    // アクティブ系
+    Active = "Active",                // アクティブ状態
+    Inactive = "Inactive",            // 非アクティブ状態
+
+    // セキュリティ系
+    Suspended = "Suspended",          // アクセス停止
+    Locked = "Locked",                // アカウントロック
+    Banned = "Banned",                // アクセス禁止
+
+    // アカウントの状態系
+    Deleted = "Deleted",              // 削除済み
+    Archived = "Archived",            // アーカイブ済み
+}
+
 export enum UserRole {
-    ADMIN = 'ADMIN',
-    USER = 'USER',
-    GUEST = 'GUEST'
+    Maintainer = 'Maintainer', // メンテナ
+    User = 'User', // ユーザー
+
+    Owner = 'Owner', // 所有者
+    Admin = 'Admin', // 管理者（オーナーに統合したので今は使わない）
+    Member = 'Member', // メンバー（スレッドの作成、編集、削除ができる）
+    Viewer = 'Viewer', // 閲覧者（スレッドの閲覧のみ）
+    Guest = 'Guest', // ゲスト（スレッドの閲覧のみ）
 }
 
 export class User {
     constructor(
-        public id: number,
+        public id: string,
         public name: string,
         public email: string,
-        // public role: UserRole,
+        public role: UserRole,
+        public status: UserStatus,
         // public profilePictureUrl: string
     ) { }
 }
@@ -23,14 +46,6 @@ export class TwoFactorAuthDetails {
     ) { }
 }
 
-export interface Thread {
-    title: string;
-    timestamp: number;
-    description: string;
-    body: string;
-    isEdit: boolean;
-}
-
 export type GPTModels = 'gpt-4-vision-preview' | 'gemini-1.5-flash' | 'gemini-1.5-pro' | 'gemini-1.0-pro' | 'gemini-1.0-pro-vision';
 
 export type ChatCompletionContentPart = ChatCompletionContentPartText | ChatCompletionContentPartImage;
@@ -39,10 +54,11 @@ export namespace ChatCompletionContentPartImage { export interface ImageURL { ur
 export interface ChatCompletionContentPartText { text: string; type: 'text'; }
 
 // export type Message = ({ role: 'system', content: string } | { role: 'user' | 'assistant', content: string | ChatCompletionContentPart[] });
-export type Message = { role: 'system' | 'user' | 'assistant', content: ChatCompletionContentPart[] };
-export type MessageForView = Message & { editing: number, status: number, cached: number, selected: boolean };
+type Message = { role: 'system' | 'user' | 'assistant', content: ChatCompletionContentPart[] };
+type MessageForView = Message & { editing: number, status: number, cacheId?: string, selected: boolean, previousMessageId: string, id: UUID };
 
 export interface CachedContent {
+    id: string;
     name: string;
     model: string;
     createTime: string;
@@ -152,7 +168,7 @@ export interface ChatCompletionCreateParamsBase {
      * A list of messages comprising the conversation so far.
      * [Example Python code](https://cookbook.openai.com/examples/how_to_format_inputs_to_chatgpt_models).
      */
-    messages: MessageForView[];
+    messages: (MessageForView | { role: ChatCompletionRole, messageId: UUID, cacheId?: string })[];
 
     /**
      * ID of the model to use. See the
@@ -334,6 +350,8 @@ export interface ChatCompletionCreateParamsBase {
     // Gemini用:コンテキストキャッシュ
     cachedContent?: CachedContent,
 
+    // Gemini用:安全性設定
+    safetySettings?: SafetyRating[],
 }
 
 export interface ChatCompletionStreamInDto {
@@ -361,7 +379,7 @@ export interface SafetyRating {
 
 
 export type MessageGroupType = 'SINGLE' | 'PARALLEL' | 'REGENERATED';
-export type MessageGroup = { seq: number, id: string, parentId: string, type: MessageGroupType, messages: MessageForView[], selected: boolean, };
+// export type MessageGroup = { seq: number, id: string, previousMessageId: string, type: MessageGroupType, messages: MessageForView[], selected: boolean, };
 
 export interface ChatInputDto {
     messageList: MessageForView[];
@@ -371,7 +389,13 @@ export interface ChatInputDto {
     top_p?: number | null;
 
     // Gemini用:コンテキストキャッシュ
-    cachedContent?: CachedContent,
+    cachedContent?: CachedContent;
+    // Gemini用:安全性設定
     safetySettings?: SafetyRating[];
 }
 
+
+export interface GenerateContentRequestForCache {
+    ttl?: { seconds: number, nanos: number };
+    expire_time?: string; // "expire_time":"2024-06-30T09:00:00.000000Z"
+}

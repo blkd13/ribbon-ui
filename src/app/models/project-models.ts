@@ -1,3 +1,5 @@
+import { ChatCompletionCreateParamsBase, ChatCompletionStreamInDto, UserStatus } from "./models";
+
 // 共通の型定義
 export type UUID = string;
 
@@ -29,6 +31,11 @@ export enum ThreadVisibility {
     Temporary = 'Temporary'
 }
 
+export enum MessageClusterType {
+    Single = 'Single',
+    Parallel = 'Parallel',
+    Regenerated = 'Regenerated'
+}
 export enum MessageGroupType {
     Single = 'Single',
     Parallel = 'Parallel',
@@ -36,10 +43,11 @@ export enum MessageGroupType {
 }
 
 export enum ContentPartType {
-    TEXT = 'text',
-    BASE64 = 'base64',
-    URL = 'url',
-    FILE = 'file'
+    Text = 'text',
+    Error = 'error',
+    Base64 = 'base64',
+    Url = 'url',
+    File = 'file',
 }
 
 // Team DTOs
@@ -115,15 +123,19 @@ export interface ProjectResponseDto {
 
 // Thread DTOs
 export interface ThreadCreateDto {
+    // projectId: string;
     title: string;
     description: string;
     visibility: ThreadVisibility;
+    inDtoJson: string;
 }
 
 export interface ThreadUpdateDto {
     title?: string;
     description?: string;
     visibility?: ThreadVisibility;
+    seq?: number;
+    inDtoJson?: string;
 }
 
 export interface ThreadResponseDto {
@@ -131,35 +143,47 @@ export interface ThreadResponseDto {
     projectId: UUID;
     title: string;
     description: string;
+    lastUpdate: Date;
+    seq: number;
+    inDtoJson: string;
     visibility: ThreadVisibility;
     createdAt: Date;
     updatedAt: Date;
 }
 
 // MessageGroup and Message DTOs
-export interface ContentPartDto {
-    type: ContentPartType;
-    content: string;
-}
+// export interface ContentPartDto {
+//     type: ContentPartType;
+//     content: string;
+// }
 
 export interface MessageUpsertDto {
+    messageClusterId?: UUID; // 更新の場合に使用
+    messageGroupId?: UUID; // 更新の場合に使用
     messageId?: UUID; // 更新の場合に使用
-    groupType: MessageGroupType;
+    messageClusterType: MessageClusterType;
+    messageGroupType: MessageGroupType;
     role: string;
     label: string;
-    parentId?: UUID;
-    contents: ContentPartDto[];
+    previousMessageId?: UUID;
+    contents: ContentPart[];
 }
 
 export interface MessageGroupResponseDto {
     id: UUID;
     threadId: UUID;
-    type: MessageGroupType;
-    role: string;
+    messageClusterId: UUID;
+    messageClusterType: MessageClusterType;
+    messageGroupType: MessageGroupType;
+    role: 'system' | 'user' | 'assistant';
     label: string;
-    parentId?: UUID;
+    seq: number;
+    lastUpdate: Date;
+    previousMessageId?: UUID;
+    selectedIndex: number;
     createdAt: Date;
     updatedAt: Date;
+    messages: MessageForView[];
 }
 
 export interface MessageResponseDto {
@@ -180,9 +204,9 @@ export interface ContentPartResponseDto {
     updatedAt: Date;
 }
 
-export interface MessageGroupDetailsResponseDto {
+export interface MessageUpsertResponseDto {
     messageGroup: MessageGroupResponseDto;
-    message: MessageResponseDto;
+    message: MessageForView;
     contentParts: ContentPartResponseDto[];
 }
 
@@ -198,8 +222,6 @@ export interface MessageGroupListResponseDto {
 
 
 
-
-
 export interface BaseEntity {
     id: UUID;
     createdBy: UUID;
@@ -208,56 +230,33 @@ export interface BaseEntity {
     updatedAt: Date;
 }
 
-
-// import { UUID, TeamType, TeamMemberRoleType, ProjectVisibility, ThreadVisibility, MessageGroupType, ContentPartType } from './dto-types';
-
-export interface ITeam extends BaseEntity {
+export interface Team extends BaseEntity {
     name: string;
     label: string;
     description?: string;
     teamType: TeamType;
+    members: TeamMemberForView[];
+}
+export interface TeamForView extends Team {
+    projects: Project[];
 }
 
-export class Team implements ITeam {
-    constructor(
-        public id: UUID,
-        public name: string,
-        public label: string,
-        public teamType: TeamType,
-        public createdBy: UUID,
-        public updatedBy: UUID,
-        public createdAt: Date,
-        public updatedAt: Date,
-        public description?: string,
-    ) { }
-
-    get isPersonal(): boolean {
-        return this.teamType === TeamType.Alone;
-    }
-}
-
-export interface ITeamMember {
-    id: UUID;
+export interface TeamMember extends BaseEntity {
     userId: UUID;
     teamId: UUID;
     role: TeamMemberRoleType;
 }
-
-export class TeamMember implements ITeamMember {
-    constructor(
-        public id: UUID,
-        public userId: UUID,
-        public teamId: UUID,
-        public role: TeamMemberRoleType,
-    ) { }
-
-    get canManageTeam(): boolean {
-        return this.role === TeamMemberRoleType.Owner || this.role === TeamMemberRoleType.Admin;
+export interface TeamMemberForView extends TeamMember {
+    user: {
+        id: UUID;
+        name: string;
+        email: string;
+        role: TeamMemberRoleType;
+        status: UserStatus;
     }
 }
 
-export interface IProject {
-    id: UUID;
+export interface Project extends BaseEntity {
     name: string;
     label: string;
     description?: string;
@@ -265,103 +264,46 @@ export interface IProject {
     teamId: UUID;
 }
 
-export class Project implements IProject {
-    constructor(
-        public id: UUID,
-        public name: string,
-        public label: string,
-        public visibility: ProjectVisibility,
-        public teamId: UUID,
-        public description?: string
-    ) { }
-
-    get isPublic(): boolean {
-        return this.visibility === ProjectVisibility.Public;
-    }
-}
-
-export interface IThread {
-    id: UUID;
+export interface Thread extends BaseEntity {
     projectId: UUID;
     title: string;
     description: string;
     visibility: ThreadVisibility;
+    lastUpdate: Date;
+    seq: number;
+    inDto: ChatCompletionStreamInDto;
 }
 
-export class Thread implements IThread {
-    constructor(
-        public id: UUID,
-        public projectId: UUID,
-        public title: string,
-        public description: string,
-        public visibility: ThreadVisibility,
-    ) { }
-
-    get isPublic(): boolean {
-        return this.visibility === ThreadVisibility.Public;
-    }
-}
-
-export interface IMessageGroup {
-    id: UUID;
+export interface MessageGroup extends BaseEntity {
     threadId: UUID;
     type: MessageGroupType;
+    seq: number;
+    lastUpdate: Date;
     role: string;
     label: string;
-    parentId?: UUID;
+    previousMessageId?: UUID;
 }
 
-export class MessageGroup implements IMessageGroup {
-    constructor(
-        public id: UUID,
-        public threadId: UUID,
-        public type: MessageGroupType,
-        public role: string,
-        public label: string,
-        public parentId?: UUID
-    ) { }
-
-    get isParallel(): boolean {
-        return this.type === MessageGroupType.Parallel;
-    }
-}
-
-export interface IMessage {
-    id: UUID;
+export interface Message extends BaseEntity {
     messageGroupId: UUID;
+    seq: number;
+    lastUpdate: Date;
     label: string;
+    cacheId?: string;
 }
 
-export class Message implements IMessage {
-    constructor(
-        public id: UUID,
-        public messageGroupId: UUID,
-        public label: string,
-    ) { }
+export interface MessageForView extends Message {
+    editing: number;
+    status: number;
+    selected: boolean;
+    contents: ContentPart[];
 }
 
-export interface IContentPart {
-    id: UUID;
+export interface ContentPart extends BaseEntity {
     messageId: UUID;
     type: ContentPartType;
-    content: string;
+    // content: string;
     seq: number;
-}
-
-export class ContentPart implements IContentPart {
-    constructor(
-        public id: UUID,
-        public messageId: UUID,
-        public type: ContentPartType,
-        public content: string,
-        public seq: number,
-    ) { }
-
-    get isText(): boolean {
-        return this.type === ContentPartType.TEXT;
-    }
-
-    get isFile(): boolean {
-        return this.type === ContentPartType.FILE;
-    }
+    text?: string;
+    fileId?: string;
 }

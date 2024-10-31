@@ -21,14 +21,19 @@ export class ApiInterceptor implements HttpInterceptor {
         // console.log(`${method} ${url}`);
         // 開発環境の場合はローカルのjsonファイルに向ける
         // !environment.production ||
-        if (this.g.queries['isMock']) {
+        if (request.url.endsWith('.json')) {
+            // .jsonとかはassets系だと思われるので何もしない。
+            return next.handle(request);
+        } else if (this.g.queries['isMock']) {
             url = request.url.replace(/https?:\/\/[^/]+/g, '').replace('//', '/').replace(/^\//g, '').replace(/\/$/, '');
             url = `assets/mock/api/${url}-${request.method}.json`;
             method = 'GET';
-        } else {
+        } else if (request.url.startsWith('/')) {
             // 本番環境の場合は環境変数で指定したAPIのエンドポイントに向ける
             url = `${environment.apiUrl}/${request.url}`.replaceAll(/\/\/*/g, '/');
             // console.log(`intercepted:${url}`);
+        } else {
+            // request.headers.set('Authorization', 'wyfru3nthbf9zg6iagycfbt64a');
         }
         request = request.clone({ url, method });
 
@@ -61,7 +66,7 @@ export class ApiInterceptor implements HttpInterceptor {
             .pipe(
                 // ログインページにリダイレクトするために401エラーをキャッチする
                 catchError((error: HttpErrorResponse) => {
-                    if (error.status === 401) {
+                    if (this.g.autoRedirectToLoginPageIfAuthError && error.status === 401) {
                         // 未認証の場合、ログインページにリダイレクト
                         this.router.navigate(['/login']);
                     }

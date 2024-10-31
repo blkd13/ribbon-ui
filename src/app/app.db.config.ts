@@ -22,7 +22,7 @@ export const dbConfig2: DBConfig = {
         store: 'threadList',
         storeConfig: { keyPath: 'id', autoIncrement: true },
         storeSchema: [
-            { name: 'seq', keypath: 'seq', options: { unique: true, multiEntry: false, index: true } }, // •À‚Ñ‡
+            { name: 'seq', keypath: 'seq', options: { unique: true, multiEntry: false, index: true } }, // ä¸¦ã³é †
             { name: 'title', keypath: 'title', options: { unique: false, multiEntry: false, index: true } },
             { name: 'timestamp', keypath: 'timestamp', options: { unique: false, multiEntry: false, index: true } },
             { name: 'description', keypath: 'description', options: { unique: false, multiEntry: false, index: false } },
@@ -33,17 +33,17 @@ export const dbConfig2: DBConfig = {
         storeConfig: { keyPath: 'id', autoIncrement: true },
         storeSchema: [
             { name: 'role', keypath: 'role', options: { unique: false, multiEntry: false, index: false } },
-            { name: 'state', keypath: 'state', options: { unique: false, multiEntry: false, index: false } }, // ƒƒbƒZ[ƒWóM’†‚©‚Ç‚¤‚©‚Æ‚©B‚±‚ê‚Í‚ ‚ñ‚Ü‚èg‚í‚È‚¢‚©‚àB
-            { name: 'isExpanded', keypath: 'isExpanded', options: { unique: false, multiEntry: false, index: false } }, // L‚°‚é‚©•Â‚¶‚é‚©
-            { name: 'isCached', keypath: 'isCached', options: { unique: false, multiEntry: false, index: false } }, // ƒRƒ“ƒeƒLƒXƒgƒLƒƒƒbƒVƒ…‰»‚³‚ê‚Ä‚¢‚é‚©‚Ç‚¤‚©iƒƒbƒN‚ğŠ|‚¯‚é•K—v‚ª‚ ‚é‚Ì‚Åj
-            { name: 'title', keypath: 'title', options: { unique: false, multiEntry: false, index: false } }, // ƒGƒLƒXƒpƒ“ƒVƒ‡ƒ“‚ğ•Â‚¶‚½‚Æ‚«‚ÌƒeƒLƒXƒgBbody‚Ì“ª300•¶š‚Å—Ç‚¢‚Æv‚¤B
+            { name: 'state', keypath: 'state', options: { unique: false, multiEntry: false, index: false } }, // ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸å—ä¿¡ä¸­ã‹ã©ã†ã‹ã¨ã‹ã€‚ã“ã‚Œã¯ã‚ã‚“ã¾ã‚Šä½¿ã‚ãªã„ã‹ã‚‚ã€‚
+            { name: 'isExpanded', keypath: 'isExpanded', options: { unique: false, multiEntry: false, index: false } }, // åºƒã’ã‚‹ã‹é–‰ã˜ã‚‹ã‹
+            { name: 'isCached', keypath: 'isCached', options: { unique: false, multiEntry: false, index: false } }, // ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆã‚­ãƒ£ãƒƒã‚·ãƒ¥åŒ–ã•ã‚Œã¦ã„ã‚‹ã‹ã©ã†ã‹ï¼ˆãƒ­ãƒƒã‚¯ã‚’æ›ã‘ã‚‹å¿…è¦ãŒã‚ã‚‹ã®ã§ï¼‰
+            { name: 'title', keypath: 'title', options: { unique: false, multiEntry: false, index: false } }, // ã‚¨ã‚­ã‚¹ãƒ‘ãƒ³ã‚·ãƒ§ãƒ³ã‚’é–‰ã˜ãŸã¨ãã®ãƒ†ã‚­ã‚¹ãƒˆã€‚bodyã®é ­300æ–‡å­—ã§è‰¯ã„ã¨æ€ã†ã€‚
             { name: 'bodyId', keypath: 'bodyId', options: { unique: false, multiEntry: false, index: false } },
         ]
     }, {
         store: 'messageBodyList',
         storeConfig: { keyPath: 'id', autoIncrement: true },
         storeSchema: [
-            { name: 'body', keypath: 'body', options: { unique: false, multiEntry: false, index: false } }, // ƒfƒJ‚¢‚Ì‚Å‚±‚ê’P“Æ‚Ìstore‚É‚µ‚Ä‚¨‚­B
+            { name: 'body', keypath: 'body', options: { unique: false, multiEntry: false, index: false } }, // ãƒ‡ã‚«ã„ã®ã§ã“ã‚Œå˜ç‹¬ã®storeã«ã—ã¦ãŠãã€‚
         ]
     }]
 };

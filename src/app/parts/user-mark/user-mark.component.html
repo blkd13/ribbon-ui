@@ -1,0 +1,18 @@
+<div style="position: absolute;top: 5px; right: 5px;z-index: 20;">
+    <button mat-icon-button color="primary" [matMenuTriggerFor]="userMenu">
+        <mat-icon>circle</mat-icon>
+    </button>
+    <mat-menu #userMenu="matMenu">
+        <button mat-menu-item (click)="openHistory()">
+            <mat-icon>browse_activity</mat-icon>
+            <span>利用履歴</span>
+        </button>
+        <mat-divider></mat-divider>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="authService.logout()">
+            <mat-icon>logout</mat-icon>
+            <span>ログアウト</span>
+        </button>
+        <!-- <a href="'/api/oauth/mattermost/login'">mattermost連携</a> -->
+    </mat-menu>
+</div>

@@ -1,4 +1,5 @@
-import { Directive, HostListener, EventEmitter, Output } from '@angular/core';
+import { Directive, HostListener, EventEmitter, Output, HostBinding, inject } from '@angular/core';
+import { FileManagerService, FullPathFile } from '../services/file-manager.service';
 
 @Directive({
   selector: '[appFileDrop]',
@@ -6,29 +7,68 @@ import { Directive, HostListener, EventEmitter, Output } from '@angular/core';
 })
 export class FileDropDirective {
 
-  @Output() filesDropped = new EventEmitter<FileList>();
+  readonly fileManagerService: FileManagerService = inject(FileManagerService);
+
+  @Output() filesDropped = new EventEmitter<FullPathFile[]>();
   @Output() filesHovered = new EventEmitter<boolean>();
+
+  @HostBinding('class.hovered') public isHovered = false;
 
   @HostListener('dragover', ['$event']) onDragOver(evt: DragEvent) {
     evt.preventDefault();
     evt.stopPropagation();
     this.filesHovered.emit(true);
+    this.isHovered = true;
   }
 
-  @HostListener('dragleave', ['$event']) onDragLeave(evt: DragEvent) {
+  @HostListener('dragend', ['$event']) onDragEnd(evt: DragEvent) {
     evt.preventDefault();
     evt.stopPropagation();
     this.filesHovered.emit(false);
+    this.isHovered = false;
   }
 
-  @HostListener('drop', ['$event']) onDrop(evt: DragEvent) {
+  @HostListener('drop', ['$event']) async onDrop(evt: DragEvent) {
     evt.preventDefault();
     evt.stopPropagation();
     this.filesHovered.emit(false);
+    this.isHovered = false;
 
-    const files = evt.dataTransfer?.files;
-    if (files && files.length > 0) {
+    const items = evt.dataTransfer?.items;
+    if (!items) return;
+
+    this.fileManagerService.onFileOrFolderMultipleForDragAndDrop(items).then(files => {
       this.filesDropped.emit(files);
-    }
+    });
+  }
+
+  @HostListener('paste', ['$event']) async onPaste($event: ClipboardEvent) {
+    if ($event.clipboardData) {
+      const items = $event.clipboardData.items;
+      const fileList = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file') {
+          fileList.push(items[i].getAsFile());
+        } else { }
+      }
+      if (items.length === fileList.length && fileList.length > 0) {
+        // ファイルがペーストされた場合はDrag＆Dropとして扱う。
+        // this.onFilesDropped(fileList);
+        this.fileManagerService.onFileOrFolderMultipleForDragAndDrop(items).then(files => {
+          this.filesDropped.emit(files);
+        });
+        this.stopPropagation($event);
+      } else { }
+    } else { }
+  }
+
+  onFilesDropped(fileList: FullPathFile[]) {
+    this.filesDropped.emit(fileList);
+  }
+
+  /** イベント伝播しないように止める */
+  stopPropagation($event: Event): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
   }
 }

@@ -1,0 +1,14 @@
+<style>
+    :host {
+        display: block;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .content {
+        max-height: calc(100vh - 200px);
+        margin: auto;
+    }
+</style>
+<h3>{{data.fileName}}</h3>
+<img class="content" [src]="data.imageBase64String" />

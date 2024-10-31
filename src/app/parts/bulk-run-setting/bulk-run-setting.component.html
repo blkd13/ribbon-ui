@@ -1,0 +1,73 @@
+<div class="container" appFileDrop (filesDropped)="onFilesDropped($event)">
+    <div>
+        <h1>一括実行設定</h1>
+
+        <mat-radio-group color="primary" class="pb-10" [(ngModel)]="data.mode">
+            <mat-radio-button title="未実装" disabled value="parallel">並列実行（スピード重視）</mat-radio-button>
+            <mat-radio-button value="serial">直列実行（一貫性重視）</mat-radio-button>
+        </mat-radio-group>
+
+        <mat-form-field class="textarea-field w-full mt-5">
+            <mat-label>指示ひな形</mat-label>
+            <textarea matInput type="text" name="prompt" placeholder="指示ひな形" #promptTemplateElement="ngModel"
+                [(ngModel)]="promptTemplate" (change)="validatePromptTemplate(promptTemplateElement)"
+                (focus)="onFocus($event)" required>
+            </textarea>
+            <!-- エラーメッセージの部分 -->
+            @if(promptTemplateElement.errors&&promptTemplateElement.errors['required']){
+            <mat-error>このフィールドは必須です。</mat-error>
+            }
+            {{promptTemplateElement.errors&&promptTemplateElement.errors['invalidWord']}}
+            @if(promptTemplateElement.errors&&promptTemplateElement.errors['invalidWord']){
+            <mat-error>"{{'${value}'}}"という単語を含めてください。</mat-error>
+            }
+        </mat-form-field>
+        <div class="mb-5">※変数の代入先は "{{'${value}'}}" です。</div>
+
+
+        <!-- 編集可能なテーブル -->
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z8 mb-10">
+
+            <ng-container matColumnDef="no">
+                <th mat-header-cell *matHeaderCellDef>No.</th>
+                <td mat-cell *matCellDef="let element; let i = index" style="text-align: right;">{{i+1}}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="question">
+                <th mat-header-cell *matHeaderCellDef>値</th>
+                <td mat-cell *matCellDef="let element; let i = index">
+                    <mat-form-field appearance="outline" class="full-width">
+                        <input matInput (paste)="onPaste($event,i)" [(ngModel)]="dataSource[i].text"
+                            placeholder="複数行の貼付け可能" (focus)="onFocus($event)" (keydown)="onKeyDown($event,i)"
+                            #valueElement />
+                    </mat-form-field>
+                </td>
+            </ng-container>
+
+            <!-- アクション列（行の削除） -->
+            <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>削除</th>
+                <td mat-cell *matCellDef="let element; let i = index">
+                    <button mat-icon-button color="warn" (click)="removeRow(i)">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </td>
+            </ng-container>
+
+            <!-- ヘッダーと行の定義 -->
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <!-- 行の追加 -->
+        <button mat-button (click)="addRow()" class="add-row-button">
+            <mat-icon>add</mat-icon> 行を追加
+        </button>
+
+    </div>
+
+    <!-- 一括実行ボタン -->
+    <button mat-raised-button color="primary" (click)="executeBatch()" [disabled]="isLock || !hasValidInput()">
+        実行
+    </button>
+</div>

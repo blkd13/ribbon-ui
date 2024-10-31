@@ -138,6 +138,23 @@ export class Utils {
     }
 
     /**
+     * Date型、またはDate型に変換可能な文字列をDate型に変換する。
+     * 変換できない場合は undefined を返す。
+     * 
+     * @param value 変換する値
+     * @returns Dateオブジェクト、または undefined
+     */
+    static toDateIfValid(value: Date | string | undefined): Date | undefined {
+        if (value instanceof Date) {
+            return value; // Date型の場合はそのまま返す
+        } else if (typeof value === 'string' && !isNaN(Date.parse(value))) {
+            return new Date(value); // Date型に変換可能な文字列の場合は変換して返す
+        } else {
+            return undefined; // それ以外はnullを返す
+        }
+    }
+
+    /**
      * 配列を指定されたサイズごとに分割する関数
      * 
      * @param arr 分割する配列
@@ -537,6 +554,28 @@ export class Utils {
         }
     }
 
+    static splitCodeBlock(text: string): string[] {
+        let split = text.split(/```/, -1);
+        // if (text.startsWith('```')) {
+        //     split.unshift('');
+        // } else { }
+        return split;
+    }
+
+    static replaceExtension(path: string, extension: string): string {
+        const splitPath = path.split('/');
+        const splitName = splitPath[splitPath.length - 1].split('.');
+        // ファイル名が拡張子付きの場合と拡張子無しの場合で分ける。
+        if (splitName.length > 1) {
+            splitName[splitName.length - 1] = extension;
+            splitPath[splitPath.length - 1] = splitName.join('.');
+            path = splitPath.join('/');
+        } else {
+            path = `${path}.${extension}`;
+        }
+        return path;
+    }
+
 
     /**
      * json形式だったら```json```で囲む。
@@ -552,5 +591,9 @@ export class Utils {
             } catch (e) { /** json変換できないものはjson扱いにしない。 */ }
         } else { /** 最初と最後の文字で仮判定。 */ }
         return text;
+    }
+
+    static clone<T>(obj: T): T {
+        return JSON.parse(JSON.stringify(obj)) as T;
     }
 }

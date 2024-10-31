@@ -15,13 +15,19 @@
         font-size: 16px;
         margin-bottom: 20px;
     }
+
+    .eye {
+        position: absolute;
+        margin-top: 10px;
+        right: 36px;
+    }
 </style>
 <ng-template #errorArea>
     @if(errorMessageList.length>0){
     <mat-card appearance="outlined" class="warning">
         <mat-card-content>
             @for(errorMessage of errorMessageList; track $index){
-            <div class="text-left">{{errorMessage}}</div>
+            <div class="text-left">{{ errorMessage | translate }}</div>
             }
         </mat-card-content>
     </mat-card>
@@ -32,98 +38,115 @@
     <div class="flex items-center gap-5 mb-10 pb-7">
         <!-- <img class="block w-[96px] h-[96px]" src="/image/ribbon-full.png"> -->
         <img class="block w-[96px] h-[96px]" src="./image/ribbon-mid.png">
-        <h1 class="!m-0">Ribbon UI</h1>
+        <h1 class="!m-0">{{ 'RIBBON_UI' | translate }}</h1>
     </div>
     @switch (loginState) {
     @case ('login') {
 
-    <h2 class="login-title">Login</h2>
+    <h2 class="login-title">{{ 'LOGIN' | translate }}</h2>
     <ng-container *ngTemplateOutlet="errorArea"></ng-container>
     <form [formGroup]="loginForm" class="login-form" (ngSubmit)="onSubmit()">
-        <div class="form-group">
-            <label for="email">email</label>
-            <input formControlName="email" type="text" id="email" name="email"
-                placeholder="Enter email. ex: user@example.com">
-        </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input formControlName="password" type="password" id="password" name="password"
-                placeholder="Enter password">
-        </div>
-        <button type="submit" class="login-button" [disabled]="loginForm.invalid">Login</button>
-        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
-            Forgot Password?
+        <a class="login-button federation" href="/api/oauth/mattermost/login/home">
+            <img src="./image/mattermost-logo.svg">Mattermost認証
         </a>
+        <!-- 
+        <a class="login-button federation" href="/api/oauth/box/login/home">
+            <img src="./image/box-logo.svg">box認証
+        </a>
+        <a class="login-button federation" href="/api/oauth/gitea/login">
+            <img src="./image/gitea-logo.svg">Gitea認証
+        </a>
+        <a class="login-button federation" href="/api/oauth/gitlab/login">
+            <img src="./image/gitlab-logo.svg">GitLab認証
+        </a>
+        -->
+
+        <div class="w-full my-10" style="border: 1px solid gray;"></div>
+        <h3 class="text-left">個別認証</h3>
+        <div class="form-group">
+            <label for="email">{{ 'EMAIL' | translate }}</label>
+            <input formControlName="email" type="text" id="email" name="email"
+                placeholder="{{ 'ENTER_EMAIL' | translate }}">
+        </div>
+        <div class="form-group">
+            <label for="password">{{ 'PASSWORD' | translate }}</label>
+            <input formControlName="password" [type]="hidePassword?'password':'text'" id="password" name="password"
+                placeholder="{{ 'ENTER_PASSWORD' | translate }}">
+            <mat-icon class="eye" (click)="hidePassword=!hidePassword">visibility{{hidePassword?'':'_off'}}</mat-icon>
+        </div>
+        <button type="submit" class="login-button" [disabled]="loginForm.invalid">{{ 'LOGIN' | translate }}</button>
         <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
-            Sign up
+            {{ 'FORGOT_PASSWORD' | translate }}
+        </a>
+        <!-- <a href="javascript:void(0)" (click)="guestLogin()" class="forgot-password">
+            {{ 'GUEST_USER' | translate }}
+        </a> -->
+        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+            {{ 'SIGN_UP' | translate }}
         </a>
     </form>
     }
     @case ('sendmail') {
-    <h2 class="login-title">Email confirm</h2>
+    <h2 class="login-title">{{ 'EMAIL_CONFIRM' | translate }}</h2>
     <ng-container *ngTemplateOutlet="errorArea"></ng-container>
     <form [formGroup]="sendMailForm" class="login-form" (submit)="onSend()">
         <div class="form-group">
-            <label for="email">email</label>
+            <label for="email">{{ 'EMAIL' | translate }}</label>
             <input formControlName="email" type="text" id="email" name="email"
-                placeholder="Enter email. ex: user@example.com">
+                placeholder="{{ 'ENTER_EMAIL' | translate }}">
         </div>
-        <button type="submit" class="login-button" [disabled]="sendMailForm.invalid">Send</button>
+        <button type="submit" class="login-button" [disabled]="sendMailForm.invalid">{{ 'SEND' | translate }}</button>
         <a href="javascript:void(0)" (click)="loginState='login'" class="forgot-password">
-            Back
+            {{ 'BACK' | translate }}
         </a>
     </form>
+
     }
     @case ('sendmailfine') {
-    <h2 class="login-title">Email confirm</h2>
+    <h2 class="login-title">{{ 'EMAIL_CONFIRM' | translate }}</h2>
     <ng-container *ngTemplateOutlet="errorArea"></ng-container>
     <div class="text-left">
-        メールを送信しました。<br />
-        メールからパスワード設定してください。<br />
-        有効期限は5分です。
+        {{ 'EMAIL_SENT_MESSAGE' | translate }}
     </div>
     }
     @case ('password-reset') {
-    <h2 class="login-title">Password reset</h2>
+    <h2 class="login-title">{{ 'PASSWORD_RESET' | translate }}</h2>
+    <div class="text-left">
+        <p>16文字以上。大文字、小文字、数字、記号を含めること。</p>
+        <p><a href="javascript:void(0)" (click)="onGeneratePassword()">自動生成</a>時は必ずパスワードをメモしてください。</p>
+    </div>
     <ng-container *ngTemplateOutlet="errorArea"></ng-container>
 
     <form [formGroup]="passwordResetForm" class="login-form" (ngSubmit)="onReset()">
         <div class="form-group">
-            <label for="password">Password</label>
-            <input formControlName="password" type="password" id="password" name="password"
-                placeholder="Enter password">
+            <label for="password">{{ 'PASSWORD' | translate }}</label>
+            <input formControlName="password" [type]="hidePassword?'password':'text'" id="password" name="password"
+                placeholder="{{ 'ENTER_PASSWORD' | translate }}">
+            <mat-icon class="eye" (click)="hidePassword=!hidePassword">visibility{{hidePassword?'':'_off'}}</mat-icon>
         </div>
         <div class="form-group">
-            <label for="passwordConfirm">Password confirm</label>
-            <input formControlName="passwordConfirm" type="password" id="passwordConfirm" name="passwordConfirm"
-                placeholder="Enter password confirm">
+            <label for="passwordConfirm">{{ 'PASSWORD_CONFIRM' | translate }}</label>
+            <input formControlName="passwordConfirm" [type]="hidePasswordConfirm?'password':'text'" id="passwordConfirm"
+                name="passwordConfirm" placeholder="{{ 'ENTER_PASSWORD_CONFIRM' | translate }}">
+            <mat-icon class="eye"
+                (click)="hidePasswordConfirm=!hidePasswordConfirm">visibility{{hidePasswordConfirm?'':'_off'}}</mat-icon>
         </div>
-        <button type="submit" class="login-button" [disabled]="passwordResetForm.invalid">Reset</button>
+        <button type="submit" class="login-button" [disabled]="passwordResetForm.invalid">
+            {{ 'RESET' | translate}}
+        </button>
         <a href="javascript:void(0)" (click)="loginState='login'" class="forgot-password">
-            Login
+            {{ 'LOGIN' | translate }}
         </a>
         <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
-            Forgot Password?
+            {{ 'FORGOT_PASSWORD' | translate }}
         </a>
         <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
-            Sign up
+            {{ 'SIGN_UP' | translate }}
         </a>
     </form>
     }
     @default {
-    Default case.
+    {{ 'DEFAULT_CASE' | translate }}
     }
     }
-    <!-- 
-    <ng-container [ngSwitch]="loginState">
-        <ng-container *ngSwitchCase="'login'">
-        </ng-container>
-        <ng-container *ngSwitchCase="'sendmail'">
-        </ng-container>
-        <ng-container *ngSwitchCase="'password-reset'">
-        </ng-container>
-    </ng-container>
-    -->
-    <!-- sample@example.com -->
-    <!-- e1jfasd3 -->
 </div>

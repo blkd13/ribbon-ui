@@ -7,11 +7,15 @@ import { MatCardModule } from '@angular/material/card';
 import { AuthService } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
 import { CommonModule } from '@angular/common';
+import { DialogComponent } from '../../parts/dialog/dialog.component';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { TranslateModule } from '@ngx-translate/core';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatSnackBarModule, MatCardModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatSnackBarModule, MatCardModule, MatDialogModule, DialogComponent, TranslateModule, MatIconModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
@@ -23,15 +27,23 @@ export class LoginComponent {
   sendMailForm!: FormGroup;
   passwordResetForm!: FormGroup;
 
-  readonly authServce: AuthService = inject(AuthService);
-  readonly g: GService = inject(GService);
-  readonly formBuilder: FormBuilder = inject(FormBuilder);
+  firstView = '/home';
+
+  errorMessageList: string[] = [];
+  hidePassword = true;
+  hidePasswordConfirm = true;
+
   readonly authService: AuthService = inject(AuthService);
+  readonly formBuilder: FormBuilder = inject(FormBuilder);
   readonly router: Router = inject(Router);
   readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
+  readonly dialog: MatDialog = inject(MatDialog);
+  readonly g: GService = inject(GService);
 
   ngOnInit(): void {
+    document.title = `Ribbon UI`;
+
     const onetimeToken = this.activatedRoute.snapshot.paramMap.get('onetimeToken');
     if (onetimeToken) {
       // ワンタイムトークンが設定されていたらパスワードリセット
@@ -50,7 +62,7 @@ export class LoginComponent {
       this.authService.getUser().subscribe({
         next: next => {
           console.log(next);
-          this.router.navigate(['/home']);
+          this.router.navigate([this.firstView]);
         },
         error: error => {
           // 未ログイン
@@ -81,7 +93,7 @@ export class LoginComponent {
       this.authService.login(this.loginForm.value.email || '', this.loginForm.value.password || '').subscribe({
         next: (user) => {
           console.log(user);
-          this.router.navigate(['/home']);
+          this.router.navigate([this.firstView]);
         },
         error: (error) => {
           this.errorMessageList = ['認証に失敗しました。'];
@@ -91,6 +103,29 @@ export class LoginComponent {
     } else {
       console.log('invalid');
     }
+  }
+
+  guestLogin(): void {
+    this.authService.guestLogin().subscribe({
+      next: user => {
+        console.log(user);
+        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `ゲストモードは全ての履歴が他のゲストと共有されます。\n使い終わったらスレッドを消すようにしてください。`, options: ['OK', 'キャンセル'] } }).afterClosed().subscribe({
+          next: next => {
+            if (next === 0) {
+              // OKならログイン
+              this.router.navigate([this.firstView]);
+            } else {
+              // キャンセルならログアウト
+              this.authService.logout();
+            }
+          }
+        });
+      },
+      error: (error) => {
+        this.errorMessageList = ['ゲストモードは現在停止中です。'];
+        console.log(error);
+      },
+    });
   }
 
   onSend(): void {
@@ -103,6 +138,7 @@ export class LoginComponent {
           this.loginState = 'sendmailfine';
         },
         error: (error) => {
+          this.snackBar.open(`無効なメールアドレスです。\n${JSON.stringify(error)}`, 'close', { duration: 3000 });
           console.log(error);
         },
       });
@@ -111,7 +147,6 @@ export class LoginComponent {
     }
   }
 
-  errorMessageList: string[] = [];
   onReset(): void {
     const password = this.passwordResetForm.value.password;
     this.errorMessageList = [];
@@ -120,9 +155,9 @@ export class LoginComponent {
       this.errorMessageList.push('パスワードが一致していません。');
       return;
     }
-    if (password.length >= 16) {
+    if (password.length >= 15) {
     } else {
-      this.errorMessageList.push('パスワードは16文字以上にしてください。');
+      this.errorMessageList.push('パスワードは15文字以上にしてください。');
     }
 
     const hasUpperCase = /[A-Z]/.test(password);
@@ -140,7 +175,7 @@ export class LoginComponent {
       this.errorMessageList.push('パスワードには少なくとも1つの数字を含めてください。');
     }
     if (!hasSpecialChar) {
-      this.errorMessageList.push('パスワードには少なくとも1つの特殊文字を含めてください。');
+      this.errorMessageList.push('パスワードには少なくとも1つの記号を含めてください。');
     }
 
     if (this.errorMessageList.length == 0) {
@@ -151,7 +186,7 @@ export class LoginComponent {
     this.authService.passwordReset(this.passwordResetForm.value.password, this.passwordResetForm.value.passwordConfirm).subscribe({
       next: (user) => {
         console.log(user);
-        this.router.navigate(['/home']);
+        this.router.navigate([this.firstView]);
       },
       error: (error) => {
         console.log(error);
@@ -163,5 +198,39 @@ export class LoginComponent {
         // this.snackBar.open(`${error.error.errors.join('\n')}`);
       },
     });
+  }
+
+  onGeneratePassword(): void {
+    const password = this.generatePassword();
+    this.passwordResetForm.patchValue({ password: password, passwordConfirm: password, });
+    this.hidePassword = false;
+    this.hidePasswordConfirm = false;
+  }
+  generatePassword(): string {
+    const upperCaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowerCaseChars = 'abcdefghijklmnopqrstuvwxyz';
+    const numberChars = '0123456789';
+    const specialChars = '!@#$%^&*(),.?":{}|<>';
+
+    const allChars = upperCaseChars + lowerCaseChars + numberChars + specialChars;
+    const passwordLength = 15;
+
+    let password = '';
+
+    // Ensure the password meets all requirements
+    password += upperCaseChars.charAt(Math.floor(Math.random() * upperCaseChars.length));
+    password += lowerCaseChars.charAt(Math.floor(Math.random() * lowerCaseChars.length));
+    password += numberChars.charAt(Math.floor(Math.random() * numberChars.length));
+    password += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+
+    // Fill the rest of the password length with random characters
+    for (let i = password.length; i < passwordLength; i++) {
+      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+    }
+
+    // Shuffle the password to avoid predictable patterns
+    password = password.split('').sort(() => 0.5 - Math.random()).join('');
+
+    return password;
   }
 }

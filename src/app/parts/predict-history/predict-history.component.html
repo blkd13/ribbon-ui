@@ -1,0 +1,69 @@
+<style>
+    :host {
+        display: block;
+        padding: 20px;
+        height: calc(100vh - 50px);
+    }
+    
+
+    table {
+        width: 100%;
+
+        td {
+            padding: 5px 10px;
+        }
+    }
+</style>
+<div class="flex flex-col h-full">
+    <p>{{member?.label}}</p>
+    <div class="monthly-summary min-h-0 mb-5">
+        <h3>月次集計</h3>
+        <table>
+            <tr>
+                <th>月</th>
+                <th>総コスト[円]</th>
+                <th>総入力トークン</th>
+                <th>総出力トークン</th>
+                <th>利用回数</th>
+            </tr>
+            <tbody>
+                @for(summary of monthlySummary;track summary.month){
+                <tr>
+                    <td>{{summary.month}}</td>
+                    <td style="text-align: right;">{{summary.totalCost|number:'0.2-2'}}</td>
+                    <td style="text-align: right;">{{summary.totalReqTokens|number}}</td>
+                    <td style="text-align: right;">{{summary.totalResTokens|number}}</td>
+                    <td style="text-align: right;">{{summary.count}}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="scroll-container custom-scroll flex-grow h-0">
+        <h3>詳細履歴</h3>
+        <table>
+            <tr>
+                <th>No.</th>
+                <th>時刻</th>
+                <th>モデル</th>
+                <th>コスト[円]</th>
+                <th>入力</th>
+                <th>出力</th>
+                <th>ステータス</th>
+            </tr>
+            <tbody>
+                @for(predict of predictHistory;track $index){
+                <tr>
+                    <td style="text-align: right;">{{$index+1}}</td>
+                    <td>{{predict.created_at|date:'YYYY-MM-dd HH:mm:ss'}}</td>
+                    <td>{{predict.model}}</td>
+                    <td style="text-align: right;">{{predict.cost*150|number:'0.2-2'}}</td>
+                    <td style="text-align: right;">{{predict.req_token|number}}</td>
+                    <td style="text-align: right;">{{predict.res_token|number}}</td>
+                    <td>{{predict.status}}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

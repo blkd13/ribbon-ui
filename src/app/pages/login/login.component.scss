@@ -62,17 +62,18 @@
 }
 
 .login-button {
-    background-color: #0056b3;
+    background-color: darken(rgb(105 184 205), 10%);
     color: white;
     padding: 10px 20px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     margin-top: 10px;
+    transition: all 0.3s 0s ease;
 }
 
 .login-button:hover {
-    background-color: #003d7a;
+    background-color: darken(rgb(105 184 205), 5%);
 }
 
 .login-button:disabled {
@@ -84,11 +85,29 @@
 .forgot-password {
     display: block;
     margin-top: 20px;
-    color: #0099ff;
-    text-decoration: underline;
+    // color: #0099ff;
+    // text-decoration: underline;
     text-align: right;
 }
 
 .forgot-password:hover {
-    color: #007bff;
+    opacity: 0.8;
+}
+
+.federation {
+    display: flex;
+    justify-content: center;
+    color: black;
+    background-color: white;
+    gap: 10px;
+    text-decoration: none;
+    margin-top: 20px;
+    img {
+        height: 24px;
+        width: auto;
+    }
+
+    &:hover {
+        background-color: #eee;
+    }
 }

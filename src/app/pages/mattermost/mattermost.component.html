@@ -1,0 +1,406 @@
+<div class="flex flex-col h-full overflow-hidden pt-2 relative">
+    <div class="h-0 flex-grow w-full flex gap-2">
+        <div
+            class="flex flex-col gap-1 p-2 team-sidebar custom-scroll custom-scroll--thin h-full w-[77px] items-center">
+            <a class="home" [routerLink]="['/home']">
+                <mat-icon>home</mat-icon>
+            </a>
+            @for(mmTeam of mmTeamList; track $index){
+            <!-- ダイレクト用のチームは必要かと思ったけど使ってみたら要らなかったので消す。でもデータごと消すと影響が大きいのでフィルター掛ける。-->
+            @if(mmTeam&&mmTeam.display_name&&mmTeam.id!=='direct'){
+            <!-- TODO 本来は mmTeam が null になってるのはおかしいので後で調べるべき -->
+            <app-mm-team-logo [mmTeam]="mmTeam" [routerLink]="['/mattermost', mmTeam.id, 'default']"
+                [ngClass]="{'selected': selectedTeam===mmTeam}" [title]="mmTeam?.display_name">
+            </app-mm-team-logo>
+            }
+            }
+            <div class="min-h-24"></div>
+        </div>
+
+        @if(selectedTeam){
+
+        <div class="custom-scroll custom-scroll--thin h-full relative" [ngStyle]="{'width': (250+p.x)+'px'}">
+            @if(mmCategoriesList){
+
+            <!-- Unread -->
+            @if(isUnread){
+            <h6>Unread</h6>
+            @for(channelId of unreadChannelIds;track $index){
+            @if(messageCountMas[channelId] && messageCountMas[channelId].unread_count){
+            <ng-container
+                *ngTemplateOutlet="channelTemplate; context: { channelId, teamId: selectedTeam.id }"></ng-container>
+            } @else {
+            }
+            }
+            }
+
+            <!-- ダイレクトチームを選択した場合はダイレクト系も表示する。それ以外はダイレクト系は表示しない。 -->
+            <!-- @if( selectedTeam.id ==='direct' || ['P','O'].includes(mmChannelMas[channelId].type)){ -->
+            @for(mmCate of mmCategoriesList; track $index) {
+
+            @if(mmCate.type==='unreads' && mmCate.channel_ids.length===0){
+            <!-- 未読カテゴリは中身が無ければ出さない -->
+            } @else {
+            <h5>{{mmCate.display_name}}</h5>
+            }
+            <!-- {{selectedChannelIds}} -->
+            @if(mmCate.type==='timeline'){
+
+            @for(timeline of mmTimelineList;track $index){
+
+            <div class="flex items-center relative text-gray-400" [title]="timeline.title"
+                [ngClass]="{selected: selectedTimeline===timeline}">
+
+                <mat-radio-group name="sel" [value]="radioSelectedId" (change)="radioChange($event)"
+                    class="flex flex-col">
+
+                    <mat-radio-button [value]="timeline.id" class="channel timeline-name" color="primary">
+                        {{timeline.title}}
+                    </mat-radio-button>
+                    <button class="channel-menu flex items-center" style="right: 0;top: 5px;position: absolute;"
+                        mat-icon-button [matMenuTriggerFor]="onEditTimeline">
+                        <mat-icon class="cursor-pointer mr-2">more_vert</mat-icon>
+                    </button>
+                    <mat-menu #onEditTimeline="matMenu">
+                        <button mat-menu-item (click)="editTimeline(timeline)">
+                            <mat-icon>edit</mat-icon>編集
+                        </button>
+                    </mat-menu>
+                    @for(channel of timeline.channels; track $index){
+                    <div class="flex" style="padding-left: 10px;"
+                        title="[{{mmTeamMas[mmChannelMas[channel.channelId].team_id].display_name}}] {{mmChannelMas[channel.channelId].display_name||mmChannelMas[channel.channelId].name}}">
+                        <button mat-icon-button matTooltip="ミュート" matTooltipPosition="left"
+                            (click)="setMute(channel, !channel.isMute)"
+                            [ngStyle]="{visibility: (selectedTimeline?.id===timeline.id && radioSelectedId===timeline.id)?'visible':'hidden'}">
+
+                            <mat-icon
+                                [ngClass]="channel.isMute?'text-yellow-600':'text-gray-400'">hide_source</mat-icon>
+                        </button>
+                        <mat-radio-button [value]="channel.id" color="primary"
+                            class="relative channel-name text-nowrap overflow-ellipsis" [ngClass]="{
+                                        selected: radioSelectedId===channel.id, 
+                                        unread: mmTimelineUnread[channel.id],
+                                        'opacity-30': channel.isMute,
+                                    }">
+
+                            <div style="font-size: 10px;line-height:12px;color: #aaa;">
+                                [{{mmTeamMas[mmChannelMas[channel.channelId].team_id].display_name}}]
+                            </div>
+                            <div>
+                                {{mmChannelMas[channel.channelId].display_name||mmChannelMas[channel.channelId].name}}
+                            </div>
+                        </mat-radio-button>
+                    </div>
+                    }
+                </mat-radio-group>
+            </div>
+            }
+
+            <button class="mt-5 ml-10" mat-raised-button (click)="createTimeline()">タイムラインを作る</button>
+
+            } @else {
+
+            @for(channelId of mmCate.channel_ids;track $index){
+
+            @if(messageCountMas[channelId] && messageCountMas[channelId].unread_count){
+            } @else {
+            <ng-container
+                *ngTemplateOutlet="channelTemplate; context: { channelId, teamId: selectedTeam.id }"></ng-container>
+            }
+
+            }
+
+            }
+            }
+
+
+            }
+            <div class="min-h-24"></div>
+        </div>
+        }
+
+        <div class="flex items-center cursor-ew-resize" appDragDelta (dragging)="p=$event">
+            <mat-icon class="rotate-90 ">drag_handle</mat-icon>
+        </div>
+
+        <div class="relative flex-grow min-w-1 w-1 z-10">
+            <div class="absolute right-14 top-2 z-10">
+                <button mat-raised-button (click)="sendToAI(undefined)">
+                    <mat-icon>summarize</mat-icon>AI要約
+                </button>
+            </div>
+            <div class="custom-scroll h-full w-full relative" #scroll (scroll)="onScroll($event)">
+                @if(viewPostCount>viewPostCountDelta){
+                <button type="button" class="scroll-to-bottom-button" (click)="scrollToBottom(true)">下端にスクロール</button>
+                }
+                @for(postGroup of mmGroupedFilteredLimitedPostList;track $index){
+
+                @if($index>0&&isSameDate(mmGroupedFilteredLimitedPostList[$index-1][0].create_at,postGroup[0].create_at)){
+                }@else{
+                <div class="sepa-row dateline">
+                    <div class="sepa-line dateline"></div>
+                    <div class="sepa dateline">{{postGroup[0].create_at|date:'yyyy-MM-dd'}}</div>
+                </div>
+                }
+
+                @if($index>0&&postGroup[0].create_at>newMessageDate&&newMessageDate>mmGroupedFilteredLimitedPostList[$index-1][0].create_at){
+                <div class="sepa-row newmessage">
+                    <div class="sepa-line newmessage"></div>
+                    <div class="sepa newmessage">New Messages
+                        <div>{{mmGroupedFilteredLimitedPostList[$index-1][0].create_at|date:'yyyy-MM-dd HH:mm:ss.SSS'}}
+                        </div>
+                        <div>{{newMessageDate|date:'yyyy-MM-dd HH:mm:ss.SSS'}}</div>
+                        <div>{{postGroup[0].create_at|date:'yyyy-MM-dd HH:mm:ss.SSS'}}</div>
+                    </div>
+                </div>
+                }@else{
+                }
+
+                <ng-container *ngTemplateOutlet="postTemplate; context: { postGroup, isThread: false }"></ng-container>
+                }
+
+                <div style="height: 160px;"></div>
+            </div>
+            <div class="textarea-wrapper">
+                <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
+                    (keydown)="onKeyDown('main', $event, selectedChannelIds[0])"
+                    (input)="onInput('main', $event, selectedChannelIds[0])" (blur)="clearMention()"
+                    [placeholder]="appFileDropList?.first?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
+                    #textAreaElemThread [(ngModel)]="inputTextMain" (change)="onChange(selectedChannelIds[0])"
+                    [disabled]="selectedChannelIds.length!==1"></textarea>
+                @if(mentionInputType==='main' && mentionPosition){
+                <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
+                }
+                <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
+                    [disabled]="!inputTextMain || inputTextMain.length===0 || isLoading"
+                    (click)="post('main', selectedChannelIds[0])">
+                    <mat-icon>send</mat-icon>
+                </button>
+            </div>
+        </div>
+
+        @if(mmThread && mmThread.length>0){
+        <div class="flex-grow w-0 flex flex-col" appFileDrop (filesDropped)="onFilesDropped($event)">
+            <div class="flex gap-5 items-center">
+                <span style="font-size: 14px;">Thread</span>
+                <button type="button" mat-icon-button (click)="mmThread=[]" style="color:#add8e6;">
+                    <mat-icon>close</mat-icon>
+                </button>
+                <span class="">[{{mmTeamMas[mmChannelMas[mmThread[0][0].channel_id].team_id].display_name}}]</span>
+                <span class="">{{mmChannelMas[mmThread[0][0].channel_id].display_name}}</span>
+            </div>
+            <div class="absolute right-14 top-2">
+                <button mat-raised-button (click)="sendToAI(mmThread)">
+                    <mat-icon>summarize</mat-icon>AI要約
+                </button>
+            </div>
+            <div class="custom-scroll" #rScroll>
+                @for(postGroup of mmThread;track $index){
+                <ng-container *ngTemplateOutlet="postTemplate; context: { postGroup, isThread: true }"></ng-container>
+                }
+
+            </div>
+            <div class="textarea-wrapper">
+                <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
+                    (keydown)="onKeyDown('thread', $event, mmThread[0][0].channel_id,mmThread[0][0].id)"
+                    (input)="onInput('thread', $event, mmThread[0][0].channel_id,mmThread[0][0].id)"
+                    [placeholder]="appFileDropList?.last?.isHovered?'ファイルドロップ':('メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
+                    #textAreaElemThread [(ngModel)]="inputTextThread"
+                    (change)="onChange(mmThread[0][0].channel_id)"></textarea>
+                @if(mentionInputType==='thread' && mentionPosition){
+                <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
+                }
+                <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
+                    [disabled]="inputTextThread.length===0 || isLoading"
+                    (click)="post('thread', mmThread[0][0].channel_id, mmThread[0][0].id)">
+                    <mat-icon>send</mat-icon>
+                </button>
+            </div>
+        </div>
+        }
+
+    </div>
+    <app-user-mark></app-user-mark>
+</div>
+
+<ng-template #mentionTemplate>
+    @if(mentionPosition){
+    <div class="custom-scroll mention-container"
+        [ngStyle]="{top: (mentionPosition.y-300)+'px', left: mentionPosition.x+'px'}">
+        @for(mention of mentionList;track $index){
+        @if($index===0 || mention.roles!==mentionList[$index-1].roles){
+        <div>{{mention.roles}}</div>
+        }
+        <div style="padding: 5px;" [ngClass]="{selected:mentionSelectorIndex===$index}"
+            (mouseenter)="mentionSelectorIndex=$index;">
+            <span>{{'@'+mention.username}}</span>
+            <span style="color: #999;margin-left: 10px;">{{mention.nickname}}</span>
+        </div>
+        }
+    </div>
+    }
+</ng-template>
+
+<ng-template #channelTemplate let-channelId="channelId" let-teamId="teamId">
+    <div class="flex items-center relative text-gray-400"
+        [ngClass]="{unread: messageCountMas[channelId] && messageCountMas[channelId].unread_count && messageCountMas[channelId].unread_count>0, selected: radioSelectedId===channelId}"
+        [title]="mmChannelMas[channelId].display_name||mmChannelMas[channelId].name">
+        <div class="channel" [routerLink]="['/mattermost', teamId, channelId]">
+            {{mmChannelMas[channelId].display_name||mmChannelMas[channelId].name}}
+        </div>
+
+        <button class="channel-menu flex items-center" mat-icon-button [matMenuTriggerFor]="threadMenu">
+            @if(messageCountMas[channelId] && messageCountMas[channelId].mention_count &&
+            messageCountMas[channelId].mention_count>0){
+            <div class="badge" style="font-weight: normal;">
+                {{messageCountMas[channelId] ? messageCountMas[channelId].mention_count:''}}
+            </div>
+            }
+            <mat-icon class="cursor-pointer mr-2">more_vert</mat-icon>
+        </button>
+        <mat-menu #threadMenu="matMenu">
+            <button mat-menu-item [matMenuTriggerFor]="sendToProjesTemplate">
+                <mat-icon>move_item</mat-icon>タイムラインにセットする
+            </button>
+        </mat-menu>
+        <mat-menu #sendToProjesTemplate="matMenu">
+            @for(mmTimeline of mmTimelineList;track $index) {
+            <button mat-menu-item (click)="addToTimeline(mmTimeline, mmChannelMas[channelId])">
+                {{mmTimeline.title}}
+            </button>
+            }
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="createTimeline(mmChannelMas[channelId])">
+                <mat-icon>add</mat-icon>新規タイムライン
+            </button>
+        </mat-menu>
+    </div>
+</ng-template>
+
+<ng-template #postTemplate let-postGroup="postGroup" let-isThread="isThread">
+
+    <div style="padding: 0.75rem 20px;" class="post-group"
+        [ngClass]="{'post-group-hover-sync': postGroup[0].root_id === hoverRootId}"
+        (mouseenter)="hoverRootId=postGroup[0].root_id" (mouseleave)="hoverRootId=''">
+
+        <div class="flex items-center justify-between">
+            <div class="user-line">
+                <div class="avatar">
+                    @if(mmUserMas[postGroup[0].user_id]){
+                    <img
+                        src="/api{{apiMattermostService.baseUrl}}/users/{{mmUserMas[postGroup[0].user_id].id}}/image?_=0" />
+                    }
+                </div>
+                {{mmUserMas[postGroup[0].user_id] ? mmUserMas[postGroup[0].user_id].nickname:''}}
+                <span style="font-size: 12px;color: #999;">
+                    {{postGroup[0].create_at|date:'YYYY-MM-dd HH:mm:ss'}}
+                </span>
+            </div>
+            <div class="flex gap-5 items-center message-channel-name">
+                @if(!isThread){
+                <!-- スレッドの時は必ず1チャネルしかないのでタイトル部にチャネル名を書いておくのでここでは書かない。 -->
+                <div class="user-line">
+                    [{{mmTeamMas[mmChannelMas[postGroup[0].channel_id].team_id].display_name}}]
+                    {{mmChannelMas[postGroup[0].channel_id].display_name}}
+                </div>
+                }
+            </div>
+        </div>
+        @for(post of postGroup;track $index){
+
+        <div class="message-tooltip">
+            <img class="icon-mini" (click)="reaction(post, '+1')" src="{{mattermostOriginUri}}/static/emoji/1f44d.png">
+            <img class="icon-mini" (click)="reaction(post, 'grinning')"
+                src="{{mattermostOriginUri}}/static/emoji/1f600.png">
+            <img class="icon-mini" (click)="reaction(post, 'white_check_mark')"
+                src="{{mattermostOriginUri}}/static/emoji/2705.png">
+            @if(selectedTimeline && selectedTimeline.channels && selectedTimeline.channels.length>1){
+            <button mat-icon-button style="color:#add8e6;" class="cursor-pointer" matTooltip="1チャネル表示にする"
+                (click)="setRadioSelectedId(radioSelectedId===selectedTimeline.channelIdMas[postGroup[0].channel_id].id ? selectedTimeline.id : selectedTimeline.channelIdMas[postGroup[0].channel_id].id )">
+                <mat-icon>filter_alt{{selectedChannelIds.length===1?'_off':''}}</mat-icon>
+            </button>
+            }
+            <!-- mattermostウィンドウを作って毎回そこに向くようにリンクを貼る -->
+            <a target="mattermost" color="primary" mat-icon-button style="color:#add8e6;" matTooltip="mattermostで開く"
+                href="{{mattermostOriginUri}}/{{mmTeamMas[mmChannelMas[postGroup[0].channel_id].team_id].name}}/pl/{{postGroup[0].id}}">
+                <mat-icon>arrow_outward</mat-icon>
+            </a>
+            @if(!isThread){
+            <button mat-icon-button style="color:#add8e6;" (click)="viewThread(postGroup[0])" matTooltip="返信">
+                <mat-icon>reply</mat-icon>
+            </button>
+            }
+            <button mat-icon-button [matMenuTriggerFor]="threadMenu">
+                <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #threadMenu="matMenu">
+                <button mat-menu-item (click)="viewThread(postGroup[0])">
+                    <mat-icon>reply</mat-icon>
+                    <span>返信</span>
+                </button>
+                <button mat-menu-item
+                    (click)="copyToClipBoard(mattermostOriginUri+'/'+mmTeamMas[mmChannelMas[postGroup[0].channel_id].team_id].name+'/pl/'+postGroup[0].id)">
+                    <mat-icon>link</mat-icon>
+                    <span>リンクをコピー</span>
+                </button>
+                <button mat-menu-item (click)="copyToClipBoard(post.message)">
+                    <mat-icon>content_copy</mat-icon>
+                    <span>メッセージをコピー</span>
+                </button>
+                @if(post.user_id===mmUser.providerUserId){
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="postDelete(post)" style="color: #ff9999;">
+                    <mat-icon style="color: #ff9999;">delete</mat-icon>
+                    <span>削除</span>
+                </button>
+                }
+            </mat-menu>
+        </div>
+
+        <markdown katex mermaid clipboard [data]="post.messageForView" class="chat-message"></markdown>
+        @if(post.metadata){
+
+        @if(post.metadata.files){
+        <div class="flex gap-3">
+            @for(file of post.metadata.files;track $index){
+            @if(file.mime_type==='image/png' || file.mime_type==='image/jpeg' ){
+            <img src="/api{{apiMattermostService.baseUrl}}/files/{{file.id}}/preview" (load)="onImageLoad($event, file)"
+                (click)="imageDialog(file)" class="cursor-pointer" style="max-height: 300px;" />
+            }@else {
+            <a href="/api{{apiMattermostService.baseUrl}}/files/{{file.id}}" download>{{file.name}}</a>
+            }
+            }
+        </div>
+        }
+
+        }
+
+        @if(post.metadata.emojis){
+        <div class="flex gap-3">
+            @for(emoji of post.metadata.emojis;track $index){
+            <!-- {{emoji|json}} -->
+            @if(emoji.reactions&&emoji.reactions.length>0){
+            <button class="emoji" matTooltip="{{emoji?.reactions_text}}:{{emoji.name}}:(click to add)"
+                (click)="reaction(post, emoji.name)">
+                @if(apiMattermostService.emojiMap[emoji.name]){
+                <img
+                    src="{{mattermostOriginUri}}/static/emoji/{{apiMattermostService.emojiMap[emoji.name]}}" />{{emoji.reactions?.length}}
+                } @else {
+                <img src="/api{{apiMattermostService.baseUrl}}/emoji/{{emoji.id}}/image" />{{emoji.reactions?.length}}
+                }
+            </button>
+            }
+            }
+        </div>
+        }
+
+        }
+    </div>
+
+</ng-template>
+
+@if (isLoading){
+<div class="loading-cover">
+    <mat-spinner></mat-spinner>
+</div>
+}

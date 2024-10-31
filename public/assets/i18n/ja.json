@@ -1,0 +1,20 @@
+{
+    "RIBBON_UI": "Ribbon UI",
+    "LOGIN": "ログイン",
+    "EMAIL": "メールアドレス",
+    "PASSWORD": "パスワード",
+    "ENTER_EMAIL": "メールアドレスを入力してください。例: user@example.com",
+    "ENTER_PASSWORD": "パスワードを入力してください",
+    "FORGOT_PASSWORD": "パスワードを忘れた場合",
+    "GUEST_USER": "ゲストユーザー（登録しないで利用する）",
+    "SIGN_UP": "新規ユーザー登録する",
+    "EMAIL_CONFIRM": "メール確認",
+    "SEND": "送信",
+    "BACK": "戻る",
+    "EMAIL_SENT_MESSAGE": "メールを送信しました。メールからパスワードを設定してください。有効期限は5分です。",
+    "PASSWORD_RESET": "パスワードリセット",
+    "PASSWORD_CONFIRM": "パスワード確認",
+    "ENTER_PASSWORD_CONFIRM": "パスワード確認を入力してください",
+    "RESET": "リセット",
+    "DEFAULT_CASE": "デフォルトケース。"
+}

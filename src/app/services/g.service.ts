@@ -13,12 +13,18 @@ export class GService {
   // ローディング中のHTTP通信数
   httpConnectCount: Subject<number> = new Subject<number>();
 
+  autoRedirectToLoginPageIfAuthError: boolean = true;
+
   globalEventHandlers: Subject<Event> = new Subject<Event>();
 
   lang: Lang;
 
   info: { user: User } = { user: {} as User };
   public queries: { [key: string]: string } = {};
+
+  // 画面間遷移で大き目の情報受け渡したいとき用。
+  share: any = {};
+
   constructor() {
     //クエリパラメータを取得
     location.search.slice(1).split('&').forEach((query) => {

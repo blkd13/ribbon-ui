@@ -1,0 +1,21 @@
+<style>
+    .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    input {
+        background-color: black;
+        color: white;
+    }
+</style>
+
+<div class="p-5">
+    <div class="container">
+        <p>6桁のメール認証コードを入力してください。</p>
+        <form>
+            <input name="pincode" [(ngModel)]="pincode" />
+        </form>
+    </div>
+</div>

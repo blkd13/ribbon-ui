@@ -1,0 +1,84 @@
+<div class="frame">
+    <div class="flex flex-col justify-start gap-5">
+        <mat-form-field>
+            <mat-label>指示</mat-label>
+            <textarea matInput [(ngModel)]="systemPrompt"></textarea>
+        </mat-form-field>
+
+        <mat-form-field>
+            <mat-label>登録先プロジェクト</mat-label>
+            <mat-select [(ngModel)]="projectId">
+                @for(project of projectList;track $index){
+                <mat-option [value]="project.id">{{project.label}}</mat-option>
+                }
+            </mat-select>
+        </mat-form-field>
+
+        <mat-divider></mat-divider>
+
+        <mat-tab-group [(selectedIndex)]="selectedIndex">
+            <mat-tab label="期間指定">
+                <div class="h-5"></div>
+                <form [formGroup]="timeForm">
+                    <!-- ショートカット選択 -->
+                    <div class="form-group">
+                        <mat-label>ショートカット</mat-label>
+
+                        <div class="flex gap-2">
+                            @for(shortcut of timeShortcuts;track $index){
+                            <button mat-fab extended color="primary" (click)="onTimeShortcutChange(shortcut)">{{
+                                shortcut.label
+                                }}</button>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="h-6"></div>
+
+                    <!-- 開始時間 -->
+                    <div class="form-group">
+                        <mat-label>開始時間</mat-label>
+                        <input matInput class="date" [matDatepicker]="startPicker" formControlName="startDate" />
+                        <mat-datepicker-toggle matSuffix [for]="startPicker" class="trigger"></mat-datepicker-toggle>
+                        <mat-datepicker touchUi #startPicker></mat-datepicker>
+                        <input matInput type="time" formControlName="startTime">
+                    </div>
+
+                    <!-- 終了時間 -->
+                    <div class="form-group">
+                        <mat-label>終了時間</mat-label>
+                        <input matInput class="date" [matDatepicker]="endPicker" formControlName="endDate" />
+                        <mat-datepicker-toggle matSuffix [for]="endPicker" class="trigger"></mat-datepicker-toggle>
+                        <mat-datepicker touchUi #endPicker></mat-datepicker>
+                        <input matInput type="time" formControlName="endTime">
+                    </div>
+                </form>
+            </mat-tab>
+            <mat-tab label="件数指定">
+                <div class="h-5"></div>
+                <form [formGroup]="countForm">
+                    <div class="form-group">
+                        <mat-label>メッセージの件数</mat-label>
+                        <mat-slider min="1" [max]="200" step="1" tickInterval="5">
+                            <input matSliderThumb formControlName="messageCount">
+                        </mat-slider>
+                        @if(countForm.get('messageCount')?.hasError('min')){<mat-error>最小値は10です</mat-error>}
+                        @if(countForm.get('messageCount')?.hasError('max')){<mat-error>最大値は200です</mat-error>}
+                        @if(countForm.get('messageCount')?.hasError('required')){<mat-error>このフィールドは必須です</mat-error>}
+                        <div class="slider-value">
+                            選択した件数: {{ countForm.get('messageCount')?.value }}
+                        </div>
+                    </div>
+                </form>
+            </mat-tab>
+            <!-- <mat-tab label="定期便">作成中</mat-tab> -->
+        </mat-tab-group>
+    </div>
+
+    <button mat-fab extended color="primary" type="submit" (click)="apply()">OK</button>
+</div>
+@if (isLoading){
+<div class="loading-cover">
+    <mat-spinner></mat-spinner>
+</div>
+}

@@ -1,298 +1,133 @@
-<style>
-    .bottom {
-        width: calc(100% - 300px);
-        position: fixed;
-        bottom: 20px;
-        z-index: 1;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .chat-input {
-        display: flex;
-        padding: 0 20px;
-        width: 100%;
-        align-items: center;
-        gap: 20px;
-
-        textarea {
-            flex-grow: 1;
-            padding: 10px;
-            border: 2px solid #10a37f;
-            border-radius: 4px;
-            resize: none;
-            min-height: 60px;
-            max-height: 300px;
-            background-color: #303030;
-        }
-    }
-
-    .drop-zone {
-        display: block;
-        width: 100%;
-        height: 100%;
-        flex-grow: 1;
-        min-width: 0;
-    }
-
-    .drop-message {
-        position: absolute;
-        margin: auto;
-        width: 100%;
-        height: 100%;
-        max-height: 100vh;
-        display: none;
-        font-size: 64px;
-        padding-top: 100%;
-        text-align: center;
-        border: 5px dashed #999;
-        top: 0;
-        left: 0;
-    }
-
-    .drop-message:hover {
-        display: block;
-    }
-
-    .drop-zone.hovered {
-        opacity: 0.5;
-
-        .drop-message {
-            display: block;
-        }
-    }
-
-    .close {
-        position: absolute;
-        top: 2px;
-        right: -3px;
-        font-size: 18px;
-        color: #999;
-        cursor: pointer;
-
-        &:hover {
-            color: inherit;
-        }
-    }
-
-    .model-select {
-        width: auto;
-        padding: 10px;
-        background-color: #606060;
-        cursor: pointer;
-
-        option {
-            line-height: 30px;
-            padding: 10px;
-        }
-    }
-
-    .add-thread {
-        cursor: pointer;
-        background-color: #121212;
-        transition: all 0.1s 0s linear;
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-    .add-thread:hover {
-        background-color: #606060;
-    }
-</style>
-
-<div class="flex w-full">
-    <!-- スレッドリスト -->
-    <div class="h-full w-60 pt-5">
-        <div class="add-thread" (click)="clearInDto()">
-            <button mat-icon-button matTooltip="Create new thread">
-                <mat-icon>add_circle</mat-icon>
-            </button>
-            <div>New thread</div>
-        </div>
-        @for(thread of threadList; track $index){
-        <div style="position:relative" [ngStyle]="{'background-color':thread===selectedThread?'#303030':'inherit'}">
-            @if(thread.isEdit){
-            <input [(ngModel)]="thread.title" name="thread-title-{{$index}}" id="thread-title-{{$index}}"
-                class="h-7 m-1 pl-2 text-[#303030]" (change)="renameThread($event, thread, false, $index)"
-                (blur)="renameThread($event, thread, false, $index)" />
-            }@else{
-            <div class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis"
-                style="padding:5px 10px;border-bottom: 1px solid #a0a0a0;" (click)="selectThread(thread)"
-                [title]="thread.title">
-                {{thread.title}}
+<div class="p-5">
+    <div class="container" appFileDrop (filesDropped)="onFilesDropped($event)">
+        <div class="min-h-32"></div>
+        <div class="flex justify-between items-center w-full">
+            <h1 style="margin-top:0;">AIチャットを始める</h1>
+            <div class="flex flex-col justify-between gap-3 items-end">
+                <select [(ngModel)]="model" class="model-select" (change)="changeModel()">
+                    <option value="gemini-1.0-pro">古い：gemini-1.0-pro</option>
+                    <option value="gemini-1.0-pro-vision">古い：gemini-1.0-pro-vision</option>
+                    <option value="gemini-1.5-flash">速い：gemini-1.5-flash</option>
+                    <option value="gemini-1.5-pro">賢い：gemini-1.5-pro</option>
+                    <option value="gemini-1.5-flash-001">古い：gemini-1.5-flash-001</option>
+                    <option value="gemini-1.5-pro-001">古い：gemini-1.5-pro-001</option>
+                    <option value="gemini-1.5-flash-002">速い：gemini-1.5-flash-002</option>
+                    <option value="gemini-1.5-pro-002">賢い：gemini-1.5-pro-002</option>
+                    <option value="gemini-flash-experimental">実験：gemini-flash-experimental</option>
+                    <option value="gemini-pro-experimental">実験：gemini-pro-experimental</option>
+                    <option value="gpt-4o">賢い：GPT-4o</option>
+                    <option value="claude-3-5-sonnet@20240620">賢い：claude-3-5-sonnet&#64;20240620</option>
+                    <option value="claude-3-5-sonnet-v2@20241022">賢い：claude-3-5-sonnet-v2&#64;20241022</option>
+                    <option value="meta/llama3-405b-instruct-maas">独特：llama3-405b-instruct-maas</option>
+                </select>
             </div>
+        </div>
+        @if(systemPrompt&&systemPrompt!==staticMessageList[0].systemPrompt){
+        <h4>AIへの指示</h4>
+        <div [innerHTML]="systemPrompt|newlineToBr"></div>
+        }
+        <div class="input-area relative">
+            <!-- <label for="user-input"></label> -->
+            <textarea #textAreaElem rows="4" [placeholder]="placeholder" [(ngModel)]="inputText"
+                (keydown)="onKeyDown($event)"></textarea>
+            <button [disabled]="!inputText" style="width: 120px;position: absolute;right: 45px;bottom: 30px;"
+                color="primary" mat-fab extended (click)="submit()">
+                <mat-icon>send</mat-icon>送信
+            </button>
+        </div>
+        <a class="block text-right" href="./#/chat/">チャット画面へのリンク</a>
+
+        <!-- <h1>Prompt Shortcuts</h1> -->
+        <h1>定型文</h1>
+        <div class="button-group">
+            @for(staticMessage of staticMessageList;track $index){
+            <button class="panel" (click)="setStatic(staticMessage)">{{staticMessage.label}}</button>
             }
-            <button mat-icon-button style="position:absolute;right:0;top:-3px;" [matMenuTriggerFor]="threadMenu">
-                <mat-icon>more_vert</mat-icon>
-            </button>
-            <mat-menu #threadMenu="matMenu">
-                <button mat-menu-item (click)="renameThread($event, thread, true, $index)">
-                    <mat-icon>edit</mat-icon>
-                    <span>名前変更</span>
-                </button>
-                <button mat-menu-item (click)="duplicate($event, thread)">
-                    <mat-icon>file_copy</mat-icon>
-                    <span>複製</span>
-                </button>
-                <button mat-menu-item (click)="export($index)">
-                    <mat-icon>download</mat-icon>
-                    <span>エクスポート</span>
-                </button>
-                <button mat-menu-item (click)="removeThread($event,$index,thread)">
-                    <mat-icon style="color: #FF6666">close</mat-icon>
-                    <span style="color: #FF6666">削除</span>
-                </button>
-            </mat-menu>
+        </div>
+
+        @for(banner of bannerList;track $index){
+        <div class="banner">
+            <h1>{{banner.title}}</h1>
+            <p [innerHTML]="banner.body | newlineToBr"></p>
         </div>
         }
-        <button (click)="export(-1)">export all</button>
-    </div>
 
-    <div class="drop-zone" appFileDrop (drop)="onDrop($event)" (filesDropped)="onFilesDropped($event)"
-        (filesHovered)="onFilesHovered($event)" [class.hovered]="isHovered">
-        <div class="w-full flex items-center justify-between gap-5 px-5">
-            <!-- モデル選択 -->
-            <select [(ngModel)]="inDto.args.model" class="model-select">
-                <option value="gemini-1.0-pro">gemini-1.0-pro</option>
-                <option value="gemini-1.0-pro-vision">gemini-1.0-pro-vision</option>
-                <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-                <option value="gemini-1.5-flash-001">gemini-1.5-flash-001</option>
-                <option value="gemini-1.5-pro-001">gemini-1.5-pro-001</option>
-                <option value="claude-3-5-sonnet@20240620">claude-3-5-sonnet&#64;20240620</option>
-            </select>
-            <div class="relative top-2">
-                <div class="absolute">temperature: {{inDto.args.temperature|number:'0.1'}}</div>
-                <mat-slider min="0" max="2" step="0.1" style="margin-top: 10px;">
-                    <input matSliderThumb [(ngModel)]="inDto.args.temperature">
-                </mat-slider>
-            </div>
-            <div class="relative top-2">
-                <div class="absolute flex"> maxTokens:
-                    <div class="text-right w-11">{{inDto.args.max_tokens|number}}</div>
-                </div>
-                <mat-slider min="10" max="8192" step="1" style="margin-top: 10px;">
-                    <input matSliderThumb [(ngModel)]="inDto.args.max_tokens">
-                </mat-slider>
-            </div>
-            <button mat-raised-button color="primary" (click)="saveSettingsAsDefault()" style="line-height: 16px;">
-                save as<br />default</button>
-            <button mat-icon-button (click)="toggleAllExpandCollapse()">
-                <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
-            </button>
-            <div style="min-width: 0;flex-grow: 1;"></div>
-            <style>
-                /* CSS Grid Layout */
-                .grid-layout {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                }
-
-                .grid-item {
-                    text-align: right;
-                }
-            </style>
-            <div class="grid-layout" (click)="isCost=!isCost" style="cursor: pointer;">
-                <div class="grid-item" style="font-size: 11px;">Tokens : </div>
-                <div class="grid-item">
-                    @if(tokenObj.totalTokens ==-1){ wait.. } @else {
-                    {{tokenObj.totalTokens|number}}
-                    }
-                </div>
-                @if(isCost){
-                <div class="grid-item" style="font-size: 11px;">Cost :</div>
-                <div class="grid-item">
-                    @if(tokenObj.totalTokens ==-1){ wait.. } @else {
-                    $ {{calcCost()|number:'1.2-2'}}
-                    }
-                </div>
-                } @else {
-                <div class="grid-item" style="font-size: 11px;">Chars :</div>
-                <div class="grid-item">
-                    @if(tokenObj.totalTokens ==-1){ wait.. } @else {
-                    {{(this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video)|number}}
-                    }
-                </div>
-                }
-            </div>
-            <div>
-                <button mat-icon-button color="primary" [matMenuTriggerFor]="userMenu">
-                    <mat-icon>circle</mat-icon>
-                </button>
-                <mat-menu #userMenu="matMenu">
-                    <button mat-menu-item (click)="logout()">
-                        <mat-icon>logout</mat-icon>
-                        <span>ログアウト</span>
-                    </button>
-                </mat-menu>
-
-            </div>
-        </div>
-
-        <!-- チャットエリア -->
-        <div #textBodyElem class="overflow-y-auto w-full flex flex-col gap-2 p-5" style="height: calc(100vh - 68px);">
-            @for(message of inDto.args.messages; track $index){
-            <app-chat-panel #chatPanel [message]="message" [bitCounter]="bitCounter"
-                (removeDoc)="removeDoc(message.content, $event)" (remove)="removeMessage($index)"
-                (edit)="onChange()"></app-chat-panel>
+        <!-- <h1>Recent Chats</h1> -->
+        @if(threadList.length>0){
+        <h1>チャット履歴</h1>
+        <div class="recent-chats">
+            @for(thread of threadList;track $index){
+            @if(maxDisplay > $index || showRecentChats){
+            <a class="panel chat-item" [routerLink]="['/chat', thread.projectId,thread.id]">
+                <h3>{{thread.title}}</h3>
+                <p>{{thread.description}}</p>
+                <p>最終利用: {{ thread.updatedAt|relativeTime}}</p>
+            </a>
             }
-            <div class="spacer" style="min-height: 200px;"></div>
+            }
+        </div>
+        @if(threadList.length > 6){
+        <button class="panel mt-5 w-full" (click)="toggleRecentChats()">
+            {{ showRecentChats ? '隠す' : 'もっと見る' }}
+        </button>
+        }
+        }
+
+        <!-- <h1>Prompt Shortcuts</h1> -->
+        <h1>API連携</h1>
+        <div class="button-group">
+            <a class="panel chat-item" [routerLink]="['/mattermost']">
+                <h3><img src="./image/mattermost-logo.svg" style="width: 80px;">Mettermost</h3>
+                <p>Mattermostとデータ連携します。</p>
+                <p>複数チームにまたがるチャネルを纏めることができます。</p>
+                <p>AI要約ができます。</p>
+                <a href="./static/release-note.html">リリースノート v20240925</a>
+            </a>
+            <!-- <button class="panel chat-item" (click)="moveToExternal('box')">
+                <h3><img src="./image/box-logo.svg" style="width: 80px;">Box</h3>
+                <p>【工事中】Boxとデータ連携します。</p>
+                <p>※特に機能は無いです。</p>
+            </button> -->
         </div>
 
-        <!-- 入力エリア -->
-        <div class="bottom">
-            <!-- ファイル一覧 -->
-            <div class="flex justify-start gap-3 w-full p-5 overflow-x-auto">
-                @for(content of inputArea.content; track $index){
-                @if(content.type==='text'){
-                }@else{
-                <app-doc-tag [content]="content" (remove)="removeDoc(inputArea.content, $index)"></app-doc-tag>
-                }
-                }
-            </div>
-            <!-- メッセージ入力 -->
-            <div class="chat-input">
-                @for(content of inputArea.content; track $index){
-                @if(content.type==='text'){
-                <textarea (keydown)="onKeyDown($event)" #textAreaElem [placeholder]="isHovered?'ファイルドロップ':'メッセージを入力...'"
-                    [(ngModel)]="content.text" (change)="onChange()"></textarea>
-                <button mat-fab color="primary" aria-label="Send"
-                    [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
-                    (click)="send()">
-                    <mat-icon>send</mat-icon>
-                </button>
-
-                <!-- <button mat-fab color="primary" aria-label="Send"
-                    [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
-                    (click)="openFileDialog(fileInput)">
-                    <mat-icon>folder_open</mat-icon>
-                </button>
-                <button mat-fab color="primary" aria-label="Send"
-                    [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
-                    (click)="createCache()">
-                    <mat-icon>memory</mat-icon>
-                </button>
-                 -->
-                <button mat-icon-button color="primary" [matMenuTriggerFor]="menu">
-                    <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #menu="matMenu" #name>
-                    <input type="file" #fileInput (change)="onFileSelected($event)" style="display: none;" multiple>
-                    <button mat-menu-item (click)="openFileDialog(fileInput)">
-                        <mat-icon>attach_file</mat-icon>
-                        <span>ファイル添付</span>
-                    </button>
-                    <button mat-menu-item (click)="createCache()">
-                        <mat-icon>upload</mat-icon>
-                        <span>コンテキストキャッシュ作成</span>
-                    </button>
-                </mat-menu>
-                }@else{
-                }
-                }
-            </div>
+        <h1>プロジェクト</h1>
+        <!-- <h1>Projects</h1> -->
+        <div class="recent-chats">
+            @if(defaultProject){
+            <a class="panel chat-item" [routerLink]="['/chat', defaultProject.id]">
+                <div>
+                    <p>[個人用]</p>
+                    <h3>デフォルト</h3>
+                    <p>【編集不可】個人用のデフォルトプロジェクト。</p>
+                </div>
+                <p>最終利用: {{defaultProject.updatedAt|relativeTime}}</p>
+            </a>
+            }
+            @for(project of projectWithoutDefaultList;track $index){
+            <a class="panel chat-item" [routerLink]="['/chat', project.id]">
+                <div>
+                    <p>[{{teamMap[project.teamId].label
+                        ==='Alone'?'個人用':teamMap[project.teamId].label}}]</p>
+                    <h3>{{project.label}}</h3>
+                    <p>{{project.description}}</p>
+                </div>
+                <p>最終利用: {{ project.updatedAt|relativeTime}}</p>
+            </a>
+            }
+            <button class="panel chat-item" (click)="createProject()">新規作成</button>
         </div>
-        <!-- <div appFileDrop class="drop-message" (filesHovered)="onFilesHovered($event)">Drop</div> -->
+        <h1>チーム</h1>
+        <!-- <h1>Projects</h1> -->
+        <div class="recent-chats">
+            @for(team of teamWithoutAloneList;track $index){
+            <a class="panel chat-item" [routerLink]="['/team', team.id]">
+                <h3>{{team.label}}</h3>
+                <p>{{team.description}}</p>
+                <!-- <p>最終利用: {{ team.updatedAt|relativeTime}}</p> -->
+            </a>
+            }
+            <button class="panel chat-item" [routerLink]="['/team', 'new-team']">新規作成</button>
+        </div>
     </div>
 </div>
+<app-user-mark></app-user-mark>

@@ -1,0 +1,12 @@
+::ng-deep table .mat-mdc-form-field-subscript-wrapper.mat-mdc-form-field-bottom-align {
+    display: none;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 520px;
+    height: 700px;
+    padding: 20px;
+}

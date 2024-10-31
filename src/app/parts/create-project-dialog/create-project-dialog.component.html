@@ -1,0 +1,64 @@
+<form>
+    <mat-form-field appearance="fill" class="full-width">
+        <mat-label>プロジェクト名</mat-label>
+        <input matInput type="text" name="projectLabel" placeholder="プロジェクトの名前を決めてください。" [(ngModel)]="projectLabel">
+    </mat-form-field>
+
+    <mat-form-field>
+        <mat-label>共有範囲</mat-label>
+        <mat-select name="share" [(ngModel)]="share" [disabled]="!!targetTeam">
+            <mat-option value="Alone">自分だけ</mat-option>
+            @if(teamWithoutAloneList.length>0){
+            <mat-option value="Team">チーム内</mat-option>
+            }
+            <!-- <mat-option value="Login">ログインユーザー全員</mat-option>
+            <mat-option value="Public">無制限（誰でも見られる）</mat-option> -->
+        </mat-select>
+    </mat-form-field>
+
+    <mat-form-field>
+        <mat-label>チーム</mat-label>
+        <mat-select name="selectedTeamId" [(ngModel)]="selectedTeamId" [disabled]="share!=='Team' || !!targetTeam">
+            @for(team of teamWithoutAloneList; track team.id){
+            <mat-option [value]="team.id">{{team.label}}</mat-option>
+            }
+        </mat-select>
+    </mat-form-field>
+
+    <mat-form-field class="textarea-field">
+        <mat-label>補足</mat-label>
+        <textarea matInput type="text" name="projectDescription" placeholder="補足"
+            [(ngModel)]="projectDescription"></textarea>
+    </mat-form-field>
+
+    <button (click)="registerProject()">登録</button>
+</form>
+
+<style>
+    form {
+        height: 100%;
+        margin: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .textarea-field {
+        flex-grow: 1;
+        height: 1px;
+    }
+
+    button {
+        padding: 10px 20px;
+        border-radius: 5px;
+        border: none;
+        background-color: #666666;
+        color: #ffffff;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    button:hover {
+        background-color: #222;
+    }
+</style>

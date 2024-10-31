@@ -1,0 +1,20 @@
+{
+    "RIBBON_UI": "Ribbon UI",
+    "LOGIN": "Login",
+    "EMAIL": "Email",
+    "PASSWORD": "Password",
+    "ENTER_EMAIL": "Enter email. ex: user@example.com",
+    "ENTER_PASSWORD": "Enter password",
+    "FORGOT_PASSWORD": "Forgot Password?",
+    "GUEST_USER": "Guest User",
+    "SIGN_UP": "Sign up",
+    "EMAIL_CONFIRM": "Email confirm",
+    "SEND": "Send",
+    "BACK": "Back",
+    "EMAIL_SENT_MESSAGE": "Email has been sent. Please reset your password via the email link. The link is valid for 5 minutes.",
+    "PASSWORD_RESET": "Password reset",
+    "PASSWORD_CONFIRM": "Password confirm",
+    "ENTER_PASSWORD_CONFIRM": "Enter password confirm",
+    "RESET": "Reset",
+    "DEFAULT_CASE": "Default case."
+}

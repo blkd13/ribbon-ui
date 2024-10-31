@@ -1,0 +1,73 @@
+<style>
+    .row:hover {
+        background-color: #333;
+    }
+
+    .row {
+        transition: background-color 0.2s ease;
+    }
+</style>
+<mat-form-field>
+    <mat-label>集計期間</mat-label>
+    <mat-select name="selectedTeamId" [(ngModel)]="selectYyyyMm">
+        <mat-option value="ALL">ALL</mat-option>
+        @for(yyyyMm of yyyyMmList;track $index){
+        <mat-option [value]="yyyyMm">{{yyyyMm}}</mat-option>
+        }
+    </mat-select>
+</mat-form-field>
+
+
+<div class="m-auto flex justify-center flex-wrap">
+    @for(department of departmentList;track department.department.id){
+    @if(department.cost&&department.cost[selectYyyyMm]){
+    <div>
+        <h3>{{department.department.label}}</h3>
+        <p>コスト総計：{{department.cost[selectYyyyMm].totalCost*150|number:'1.0-0'}}円</p>
+        <p>利用量： req {{department.cost[selectYyyyMm].totalReqToken|number}}、res
+            {{department.cost[selectYyyyMm].totalResToken|number}}</p>
+        <p>海外分： req {{department.cost[selectYyyyMm].foreignModelReqToken|number}}、res
+            {{department.cost[selectYyyyMm].foreignModelResToken|number}}
+        </p>
+
+        <div class="flex h-10 row items-center p-5">
+            <div class="w-[120px]">名前</div>
+            <div class="w-[120px]">ID</div>
+            <div class="w-[120px]">Role</div>
+            <div class="w-[150px] text-center">有効/停止</div>
+            <div class="w-[100px] text-right">コスト[円]</div>
+            <div class="w-[120px] text-right">利用量</div>
+            <div class="w-[120px] text-right">（海外分）</div>
+        </div>
+        @for(member of department.members;track member.id){
+        <div class="flex h-10 row items-center p-5 cursor-pointer" (click)="detail(member)">
+            <div class="w-[120px]">{{member.label}}</div>
+            <div class="w-[120px]">{{member.name}}</div>
+            <div class="w-[120px]">{{member.departementRole}}</div>
+            @if(member.user){
+            <!-- member.user.status -->
+            <div class="w-[150px] text-center" (click)="eventCancel($event)">
+                <mat-radio-group [(ngModel)]="member.user.status" (change)="updateUserStatus(member)">
+                    <mat-radio-button value="Active">有効</mat-radio-button>
+                    <mat-radio-button value="Suspended">停止</mat-radio-button>
+                </mat-radio-group>
+            </div>
+
+            @if(member.cost && member.cost[selectYyyyMm]){
+            <div class="w-[100px] text-right">{{member.cost[selectYyyyMm].totalCost*150|number:'1.0-0'}}</div>
+            <div class="w-[120px] text-right">
+                {{member.cost[selectYyyyMm].totalReqToken+member.cost[selectYyyyMm].totalResToken|number}}</div>
+            <div class="w-[120px] text-right">
+                {{member.cost[selectYyyyMm].foreignModelReqToken+member.cost[selectYyyyMm].foreignModelResToken|number}}
+            </div>
+            }
+
+            } @else {
+            <div class="w-[150px] text-center">未登録</div>
+            }
+        </div>
+        }
+    </div>
+    }
+    }
+</div>
