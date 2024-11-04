@@ -122,6 +122,9 @@ export class MattermostComponent implements OnInit {
   isUnread = false;
   unreadChannelIds: string[] = [];
 
+  directChannelViewCountDelta = 20;
+  directChannelViewCount = this.directChannelViewCountDelta;
+
   ngOnInit(): void {
     // WebSocket接続
     this.wsConnect();
@@ -145,7 +148,7 @@ export class MattermostComponent implements OnInit {
                 let nextId = '';
                 if (targetTeamId === 'timeline') {
                   if (next.length > 0) {
-                    nextId = next[0].id;
+                    nextId = next[0].channel_ids[0];
                   } else {
                     nextId = 'new-timeline';
                   }
@@ -189,7 +192,7 @@ export class MattermostComponent implements OnInit {
         // alert(error);
         console.error(error);
         // location.href = `/api/oauth/mattermost/login/mattermost`;
-      }
+      },
     })
   }
 
@@ -305,9 +308,9 @@ export class MattermostComponent implements OnInit {
     });
   }
 
-  reloadTimeline(): Observable<void> {
+  reloadTimeline(): Observable<MattermostTimeline[]> {
     return this.mattermostTimelineService.getTimelines().pipe(
-      map(next => {
+      tap(next => {
         this.mmTimelineList = next;
         this.tlchMas = next.reduce((mas, curr) => {
           mas[curr.id] = { type: 'timeline', obj: curr };
@@ -322,8 +325,6 @@ export class MattermostComponent implements OnInit {
         }, this.tlchMas);
       }));
   }
-
-
 
   selectTeam(mmTeam: MattermostTeamForView): Observable<MattermostChannelsCategory[]> {
 
@@ -378,7 +379,7 @@ export class MattermostComponent implements OnInit {
                 display_name: `Mixed Timeline`,
                 muted: false,
                 collapsed: false,
-                channel_ids: [],
+                channel_ids: next.map(tl => tl.id),
               });
               return { categories: this.mmCategoriesList };
             }));
@@ -426,10 +427,14 @@ export class MattermostComponent implements OnInit {
             //   cateMas[id].channel_ids = cateMas[id].channel_ids.filter(channel_id => !unreadsCategory.channel_ids.includes(channel_id)).filter(id => ['O', 'P'].includes(this.mmChannelMas[id].type)).filter(id => !this.mmChannelMas[id].delete_at);
             // }
             // cateMas[id].channel_ids = cateMas[id].channel_ids.filter(channel_id => !unreadsCategory.channel_ids.includes(channel_id)).filter(id => !this.mmChannelMas[id].delete_at);
-            cateMas[id].channel_ids = cateMas[id].channel_ids.filter(id => !this.mmChannelMas[id].delete_at);
+            cateMas[id].channel_ids = cateMas[id].channel_ids.filter(id => !this.mmChannelMas[id].delete_at && ['O', 'P'].includes(this.mmChannelMas[id].type));
             return cateMas[id];
             // cate.team_idは別物が入っていることが多いのでmmTeam.idを取る。
           });//.filter(cate => (mmTeam.id === 'direct') === (cate.type === 'direct_messages'));
+          const directMessage = this.mmCategoriesList.find(cate => cate.type === 'direct_messages');
+          if (directMessage) {
+            directMessage.channel_ids = this.mmChannelList.filter(mmChannel => !mmChannel.delete_at && ['D', 'G'].includes(mmChannel.type)).sort((a, b) => b.last_post_at - a.last_post_at).map(mmChannel => mmChannel.id);
+          } else { /** ここに来ることはあり得ない */ }
 
           // this.mmCategoriesList.unshift(unreadsCategory);
 
@@ -438,7 +443,6 @@ export class MattermostComponent implements OnInit {
       }),
     );
   }
-
 
   updateUnreadAndMentionCount(post: Post, delta: number = 1): void {
     // 未読フラグ系の設定
@@ -490,8 +494,12 @@ export class MattermostComponent implements OnInit {
     this.mmCategoriesList.forEach(mmCate => {
       mmCate.channel_ids.forEach(channelId => {
         if (this.messageCountMas[channelId] && this.messageCountMas[channelId].unread_count) {
+          if (this.selectedTeam?.id === 'timeline' && !['D', 'G'].includes(this.mmChannelMas[channelId].type)) {
+            // タイムライン表示の時はダイレクトだけが対象
+          } else {
           this.isUnread = true;
           this.unreadChannelIds.push(channelId);
+          }
         } else { }
       });
     });
@@ -510,6 +518,8 @@ export class MattermostComponent implements OnInit {
           //   return;
           // }
 
+          (this.mmChannelMas[post.channel_id] ? of([]) : this.updateChannel()).subscribe({
+            next: _ => {
           // 未読フラグ系の設定
           this.updateUnreadAndMentionCount(post);
 
@@ -690,6 +700,11 @@ export class MattermostComponent implements OnInit {
               this.setPostCountFiilter(this.mmGroupedFilteredPostList);
             }),
           ).subscribe();
+            },
+            error: error => {
+              console.error(error);
+            },
+          });
         } else if (next.event === 'post_edited') {
           const post = JSON.parse(next.data.post) as Post;
 
@@ -845,8 +860,6 @@ export class MattermostComponent implements OnInit {
           } else {
           }
           // Object.values(this.mmChannelPosts).forEach(posts => posts.forEach(post => mmSerializedPostList.push(post)));
-
-
           Object.values(this.mmChannelPosts).forEach(posts => posts.forEach(post => {
             if (this.selectedChannelIds.includes(post.channel_id)) {
               // 見えてるやつだけ突っ込む
@@ -960,13 +973,14 @@ export class MattermostComponent implements OnInit {
           this.apiMattermostService.preference(),
           this.apiMattermostService.mattermostTeams(),
           this.apiMattermostService.mattermostTeamsUnread(),
-          this.apiMattermostService.userChannels(0, true),
+          // this.apiMattermostService.userChannels(0, true),
           // this.wsConnect(),
-        ]).pipe(tap(next => {
+        ]).pipe(
+          tap(next => {
           const mmPreference = next[0] as Preference[];
           const mmTeams = next[1] as MattermostTeam[];
           const mmTeamUnread = next[2] as MattermostTeamUnread[];
-          const mmUserChannels = next[3] as MattermostChannel[];
+            // const mmUserChannels = next[3] as MattermostChannel[];
 
           const preference = mmPreference.reduce((mas, curr) => {
             mas[curr.category] = curr;
@@ -1054,6 +1068,20 @@ export class MattermostComponent implements OnInit {
             res[curr.id] = curr;
             return res;
           }, {} as { [key: string]: MattermostTeamForView });
+          }))),
+          switchMap(_ => {
+            return this.updateChannel();
+          }),
+          map(_ => true)
+        );
+      } else {
+        return of(false);
+      }
+    }));
+  }
+
+  updateChannel(): Observable<MattermostChannel[]> {
+    return this.apiMattermostService.userChannels(0, true).pipe(tap(mmUserChannels => {
           this.mmChannelList = mmUserChannels.map(channel => ({ ...channel, isChecked: false })).sort((a, b) => b.last_post_at - a.last_post_at);
           this.mmChannelMas = this.mmChannelList.reduce((res, curr) => {
             res[curr.id] = curr;
@@ -1070,14 +1098,7 @@ export class MattermostComponent implements OnInit {
             }
             return res;
           }, {} as { [key: string]: MattermostChannelForView });
-
           this.mmTeamMas['direct'].channelList.sort((a, b) => b.last_post_at - a.last_post_at);
-        }))),
-          map(_ => true)
-        );
-      } else {
-        return of(false);
-      }
     }));
   }
 
@@ -1502,7 +1523,10 @@ export class MattermostComponent implements OnInit {
     } else {
       this.mmThread = this.mmThreadMas[post.root_id];
       // thread用のスクローラを最下端に持っていく
-      setTimeout(() => this.rScroll.nativeElement.scrollTop = this.rScroll.nativeElement.scrollHeight, 500);
+      setTimeout(() => {
+        this.rScroll.nativeElement.scrollTop = this.rScroll.nativeElement.scrollHeight;
+        this.textAreaElemThread.nativeElement.focus();
+      }, 500);
     }
   }
 
@@ -1514,11 +1538,17 @@ export class MattermostComponent implements OnInit {
   }
   summaryText = '';
 
+  @ViewChild('textAreaElemMain', { static: false })
+  textAreaElemMain!: ElementRef<HTMLTextAreaElement>;
+
+  @ViewChild('textAreaElemThread', { static: false })
+  textAreaElemThread!: ElementRef<HTMLTextAreaElement>;
+
   @ViewChild('scroll', { static: false })
-  scroll!: ElementRef<HTMLTextAreaElement>;
+  scroll!: ElementRef<HTMLDivElement>;
 
   @ViewChild('rScroll', { static: false })
-  rScroll!: ElementRef<HTMLTextAreaElement>;
+  rScroll!: ElementRef<HTMLDivElement>;
 
   selectChannel(mmChannelId: string): Observable<any> {
     const selectedChannels = [mmChannelId];
@@ -1604,9 +1634,9 @@ export class MattermostComponent implements OnInit {
         const inputText = type === 'main' ? this.inputTextMain : this.inputTextThread;
         const atIndex = inputText.lastIndexOf('@');
         if (type === 'main') {
-          this.inputTextMain = `${inputText.slice(0, atIndex + 1)}${this.mentionList[this.mentionSelectorIndex].username} `;
+          this.inputTextMain = `${inputText.slice(0, atIndex + 1)}${this.mentionList[this.mentionSelectorIndex].username} ${inputText.slice(atIndex + 1)}`;
         } else {
-          this.inputTextThread = `${inputText.slice(0, atIndex + 1)}${this.mentionList[this.mentionSelectorIndex].username} `;
+          this.inputTextThread = `${inputText.slice(0, atIndex + 1)}${this.mentionList[this.mentionSelectorIndex].username} ${inputText.slice(atIndex + 1)}`;
         }
         this.clearMention();
         $event.preventDefault();
@@ -1639,6 +1669,7 @@ export class MattermostComponent implements OnInit {
   mentionInputType: 'main' | 'thread' = 'main';
 
   onInput(type: 'main' | 'thread', $event: Event, channel_id: string, root_id?: string): void {
+    //TODO メンション機能。うまくいってない。途中でメンションするときの動きが出来てない。lastの@を固定でとってしまっているので。
     console.log(`onInput ${type === 'main' ? this.inputTextMain : this.inputTextThread}`);
     const inputText = type === 'main' ? this.inputTextMain : this.inputTextThread;
     const atIndex = inputText.lastIndexOf('@');
@@ -1649,7 +1680,7 @@ export class MattermostComponent implements OnInit {
     } else {
       const mention = inputText.slice(atIndex + 1);
       const team = this.mmTeamMas[this.mmChannelMas[channel_id].team_id];
-      const teamId = team.id === 'direct' ? this.mmTeamList[0].id : team.id;
+      const teamId = team.id === 'direct' ? this.mmTeamList[2].id : (team.id === 'timeline' ? this.mmChannelMas[channel_id].team_id : team.id);
 
       if (this.mentionKeyword && mention.startsWith(this.mentionKeyword) && this.mentionList.length === 0) {
         // 前方一致検索なのでヒットしなかったメンションキーワードなら追加入力を無視する。
@@ -1687,6 +1718,7 @@ export class MattermostComponent implements OnInit {
       }
     }
   }
+
   clearMention(): void {
     this.mentionSelectorIndex = -1;
     this.mentionList = [];
@@ -1709,5 +1741,12 @@ export class MattermostComponent implements OnInit {
   appFileDropList?: QueryList<FileDropDirective>;
 
   onFilesDropped($event: any): void {
+  }
+
+
+  /** イベント伝播しないように止める */
+  stopPropagation($event: Event): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
   }
 }

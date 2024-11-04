@@ -288,7 +288,7 @@ export class HomeComponent implements OnInit {
   changeModel(): void {
     if (this.model) {
       if (this.model.startsWith('claude-')) {
-        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.model} は海外リージョン（europe-west1:Belgium）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
+        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.model} は海外リージョン（us-east5）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
       } else if (this.model.startsWith('meta/')) {
         this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.model} は海外リージョン（us-central1）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
       } else if (this.model.endsWith('-experimental')) {

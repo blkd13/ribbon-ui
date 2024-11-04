@@ -916,7 +916,7 @@ export class ChatComponent implements OnInit {
   changeModel(): void {
     if (this.inDto.args.model) {
       if (this.inDto.args.model.startsWith('claude-')) {
-        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.inDto.args.model} は海外リージョン（europe-west1:Belgium）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
+        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.inDto.args.model} は海外リージョン（us-east5）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
       } else if (this.inDto.args.model.startsWith('meta/')) {
         this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.inDto.args.model} は海外リージョン（us-central1）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
       } else if (this.inDto.args.model.endsWith('-experimental')) {

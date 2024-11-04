@@ -103,17 +103,25 @@ export class ApiMattermostService {
       const ids = new Set<string>();
       const names = new Set<string>();
       mmChannelList.forEach(mmChannel => {
+        mmChannel.groupMemberIdList = [];
         if (mmChannel.display_name) {
           if (mmChannel.type === 'G') {
             // 空白を削ってカンマで区切ってnameに入れる
-            mmChannel.display_name.replaceAll(/ /g, '').split(',').forEach(username => names.add(username));
+            mmChannel.groupMemberIdList = mmChannel.display_name.replaceAll(/ /g, '').split(',');
+            mmChannel.groupMemberIdList.forEach(username => names.add(username));
+            mmChannel.groupMemberIdList = mmChannel.groupMemberIdList.filter(id => id !== this.mmUser?.username);
           } else {
             // グループ以外は無視
           }
         } else {
           if (mmChannel.type === 'D') {
             // 無名のダイレクトチャネルは名前を取ってくる。
-            mmChannel.name.split('__').forEach(id => ids.add(id));
+            mmChannel.groupMemberIdList = mmChannel.name.split('__');
+            mmChannel.groupMemberIdList.forEach(id => ids.add(id));
+            mmChannel.groupMemberIdList = mmChannel.groupMemberIdList.filter(id => id !== this.mmUser?.id);
+            if (mmChannel.groupMemberIdList.length === 0 && this.mmUser) {
+              mmChannel.groupMemberIdList = [this.mmUser.id];
+            } else { }
           } else {
             // ダイレクトチャネル以外は無視
           }
@@ -131,8 +139,8 @@ export class ApiMattermostService {
             if (mmChannel.display_name) {
               if (mmChannel.type === 'G') {
                 // 空白を削ってカンマで区切ってnameに入れる
-                // mmChannel.display_name = mmChannel.display_name.replaceAll(/ /g, '').split(',').filter(username => username !== this.mmUser?.username).map(username => nameMas[username]?.nickname || nameMas[username]?.username || '').filter(name => name.trim()).join(', ');
-                mmChannel.display_name = 'dummy';
+                // mmChannel.display_name = 'dummy';
+                mmChannel.display_name = mmChannel.display_name.replaceAll(/ /g, '').split(',').filter(username => username !== this.mmUser?.username).map(username => nameMas[username]?.nickname || nameMas[username]?.username || '').filter(name => name.trim()).join(', ');
                 // console.log(mmChannel.display_name);
               } else {
                 // グループ以外は無視
@@ -144,7 +152,7 @@ export class ApiMattermostService {
                   mmChannel.display_name = this.mmUser?.nickname || '';
                 } else {
                   mmChannel.display_name = 'dummy';
-                  // mmChannel.display_name = mmChannel.name.split('__').filter(id => id !== this.mmUser?.id).map(id => idMas[id].nickname || idMas[id].username || '').filter(name => name.trim()).join(', ');
+                  mmChannel.display_name = mmChannel.name.split('__').filter(id => id !== this.mmUser?.id).map(id => idMas[id].nickname || idMas[id].username || '').filter(name => name.trim()).join(', ');
                 }
                 // console.log(mmChannel.display_name);
               } else {
@@ -352,6 +360,8 @@ export interface MattermostChannel {
   total_msg_count_root: number;
   policy_id: string | null;
   last_root_post_at: number;
+
+  groupMemberIdList: string[];
 }
 export interface MattermostChannelForView extends MattermostChannel {
   isChecked: boolean;

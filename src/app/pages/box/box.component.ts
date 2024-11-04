@@ -1,4 +1,3 @@
-import { OnInit, ChangeDetectionStrategy, Component, Injectable, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -9,12 +8,7 @@ import { MatTreeModule } from '@angular/material/tree';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-
-
-import { CollectionViewer, SelectionChange, DataSource } from '@angular/cdk/collections';
-import { FlatTreeControl } from '@angular/cdk/tree';
-import { BehaviorSubject, merge, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { AuthService } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
@@ -22,161 +16,105 @@ import { ApiBoxService } from '../../services/api-box.service';
 
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 
-interface BoxNode {
-  etag: string;
+import { CollectionViewer, SelectionChange, DataSource } from '@angular/cdk/collections';
+import { FlatTreeControl } from '@angular/cdk/tree';
+import { OnInit, Component, Injectable, inject } from '@angular/core';
+import { BehaviorSubject, merge, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { FormsModule } from '@angular/forms';
+
+// フラットなノード構造の定義
+export class DynamicFlatNode {
+  constructor(
+    public name: string,
+    public type: string,
+    public id: string,
+    public level: number,
+    public expandable: boolean,
+    public isLoading = false
+  ) { }
+}
+// 型定義
+interface BoxEntry {
+  type: 'folder' | 'file' | 'web_link';
   id: string;
-  name: string;
   sequence_id: string;
-  type: string;
+  etag: string;
+  name: string;
   file_version?: {
-    id: string,
-    sha1: string,
-    type: string,
+    type: string;
+    id: string;
+    sha1: string;
   };
   sha1?: string;
 }
 
-@Component({
-  selector: 'app-box',
-  standalone: true,
-  imports: [
-    CommonModule,
-    MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule,
-    UserMarkComponent,
-  ],
-  templateUrl: './box.component.html',
-  styleUrl: './box.component.scss'
-})
-export class BoxComponent implements OnInit {
-
-
-  readonly authService: AuthService = inject(AuthService);
-  readonly dialog: MatDialog = inject(MatDialog);
-  readonly router: Router = inject(Router);
-  readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
-  readonly snackBar: MatSnackBar = inject(MatSnackBar);
-  readonly g: GService = inject(GService);
-  // readonly apiGitlabService: ApiGitlabService = inject(ApiGitlabService);
-  // readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
-  // readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
-  readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
-  readonly http: HttpClient = inject(HttpClient);
-  // readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
-
-  boxSearchResult: { entries: BoxNode[] } = { entries: [] };
-
-  ngOnInit(): void {
-    this.http.get<any>(`/user/oauth/api/proxy/box/2.0/users/me`).subscribe({
-      next: next => {
-        console.log(next);
-        this.http.get<{ entries: BoxNode[] }>(`/user/oauth/api/proxy/box/2.0/folders/0/items`).subscribe({
-          next: next => {
-            this.boxSearchResult = next;
-            console.log(next);
-            // this.http.get<any>(`/user/oauth/api/proxy/box/2.0/search?query=sales`).subscribe({
-            //   next: next => {
-            //     this.boxSearchResult = next;
-            //     console.log(next);
-            //   }
-            // });
-          }
-        });
-      }
-    });
-  }
-  constructor() {
-    const database = inject(DynamicDatabase);
-
-    this.treeControl = new FlatTreeControl<DynamicFlatNode>(this.getLevel, this.isExpandable);
-    this.dataSource = new DynamicDataSource(this.treeControl, database);
-
-    this.dataSource.data = database.initialData();
-  }
-  treeControl: FlatTreeControl<DynamicFlatNode>;
-  dataSource: DynamicDataSource;
-  getLevel = (node: DynamicFlatNode) => node.level;
-  isExpandable = (node: DynamicFlatNode) => node.expandable;
-  hasChild = (_: number, _nodeData: DynamicFlatNode) => _nodeData.expandable;
+interface BoxResponse {
+  total_count: number;
+  entries: BoxEntry[];
+  offset: number;
+  limit: number;
+  order: {
+    by: string;
+    direction: string;
+  }[];
 }
 
 
-interface FileNode {
-  name: string;
-  type: 'file' | 'directory';
-  children?: FileNode[];
-}
-
-const sampleFileSystem: FileNode = {
-  name: 'C:',
-  type: 'directory',
-  children: [
-    {
-      name: 'Users',
-      type: 'directory',
-      children: [
-        {
-          name: 'JohnDoe',
-          type: 'directory',
-          children: [
-            { name: 'document.txt', type: 'file' },
-            { name: 'image.jpg', type: 'file' },
-          ],
-        },
-      ],
-    },
-    {
-      name: 'Program Files',
-      type: 'directory',
-    },
-  ],
-};
-
-
+// データベースサービス
 @Injectable({ providedIn: 'root' })
 export class DynamicDatabase {
-  dataMap = new Map<string, FileNode>();
+  // box: BoxService = inject(BoxService);
 
-  constructor() {
-    this.buildDataMap(sampleFileSystem, '');
+  // 初期データの生成
+  getInitialData(jsonData: BoxResponse): DynamicFlatNode[] {
+    return jsonData.entries.map(item => new DynamicFlatNode(
+      item.name,
+      item.type,
+      item.id,
+      0,
+      item.type === 'folder'
+    ));
   }
 
-  rootLevelNodes: string[] = ['C'];
+  http: HttpClient = inject(HttpClient);
 
-  /** Initial data from database */
-  initialData(): DynamicFlatNode[] {
-    return this.rootLevelNodes.map(name => new DynamicFlatNode(name, 0, true));
+  // 子ノードの取得（ダミーAPI）
+  getChildren(nodeId: string): Observable<DynamicFlatNode[]> {
+    return this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/${nodeId}/items`)
+      .pipe(
+        map(response => response.entries.map(item =>
+          new DynamicFlatNode(
+            item.name,
+            item.type,
+            item.id,
+            0,  // レベルは呼び出し側で適切に設定
+            item.type === 'folder'
+          )
+        ))
+      );
   }
 
-  buildDataMap(node: FileNode, path: string) {
-    const fullPath = path ? `${path}/${node.name}` : node.name;
-    this.dataMap.set(fullPath, node);
-    if (node.children) {
-      node.children.forEach(child => this.buildDataMap(child, fullPath));
-    }
-  }
-
-  getChildren(node: string): FileNode[] | undefined {
-    console.log(node);
-    const fileNode = this.dataMap.get(node);
-    return fileNode?.children;
-  }
-
-  isExpandable(node: string): boolean {
-    const fileNode = this.dataMap.get(node);
-    return fileNode?.type === 'directory';
+  // ダウンロードメソッドを追加
+  downloadFile(fileId: string, fileName: string): Observable<void> {
+    return this.http.get(
+      `/user/oauth/api/proxy/box/2.0/files/${fileId}/content`,
+      { responseType: 'blob' }
+    ).pipe(
+      map(blob => {
+        // blobからファイルを作成してダウンロード
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      })
+    );
   }
 }
 
-export class DynamicFlatNode {
-  constructor(
-    public item: string, // full path of the file/directory
-    public level = 1,
-    public expandable = false,
-    public isLoading = signal(false),
-    public type: 'file' | 'directory' = 'file' // Add type property
-  ) { }
-}
-
+// データソース
 export class DynamicDataSource implements DataSource<DynamicFlatNode> {
   dataChange = new BehaviorSubject<DynamicFlatNode[]>([]);
 
@@ -195,10 +133,8 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
 
   connect(collectionViewer: CollectionViewer): Observable<DynamicFlatNode[]> {
     this._treeControl.expansionModel.changed.subscribe(change => {
-      if (
-        (change as SelectionChange<DynamicFlatNode>).added ||
-        (change as SelectionChange<DynamicFlatNode>).removed
-      ) {
+      if ((change as SelectionChange<DynamicFlatNode>).added ||
+        (change as SelectionChange<DynamicFlatNode>).removed) {
         this.handleTreeControl(change as SelectionChange<DynamicFlatNode>);
       }
     });
@@ -208,50 +144,135 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
 
   disconnect(collectionViewer: CollectionViewer): void { }
 
-  /** Handle expand/collapse behaviors */
   handleTreeControl(change: SelectionChange<DynamicFlatNode>) {
     if (change.added) {
       change.added.forEach(node => this.toggleNode(node, true));
     }
     if (change.removed) {
-      change.removed
-        .slice()
-        .reverse()
-        .forEach(node => this.toggleNode(node, false));
+      change.removed.slice().reverse().forEach(node => this.toggleNode(node, false));
     }
   }
 
-  /**
-   * Toggle the node, remove from display list
-   */
   toggleNode(node: DynamicFlatNode, expand: boolean) {
-    const children = this._database.getChildren(node.item);
-    const index = this.data.indexOf(node);
-    if (!children || index < 0) {
-      return;
-    }
+    node.isLoading = true;
+    this.dataChange.next(this.data);
 
-    node.isLoading.set(true);
+    if (expand) {
+      this._database.getChildren(node.id).subscribe(children => {
+        const index = this.data.indexOf(node);
+        if (index < 0) return;
 
-    setTimeout(() => {
-      if (expand) {
-        const nodes = children.map(
-          child => new DynamicFlatNode(
-            `${node.item}/${child.name}`, // construct full path
-            node.level + 1,
-            this._database.isExpandable(`${node.item}/${child.name}`),
-            signal(false),
-            child.type // set the type
-          ),
-        );
+        // 子ノードのレベルを設定
+        const nodes = children.map(child => {
+          child.level = node.level + 1;
+          return child;
+        });
+
+        // データの挿入
         this.data.splice(index + 1, 0, ...nodes);
-      } else {
-        // ... existing code ...
-      }
-
+        node.isLoading = false;
+        this.dataChange.next(this.data);
+      });
+    } else {
+      const index = this.data.indexOf(node);
+      let count = 0;
+      for (let i = index + 1; i < this.data.length && this.data[i].level > node.level; i++, count++) { }
+      this.data.splice(index + 1, count);
+      node.isLoading = false;
       this.dataChange.next(this.data);
-      node.isLoading.set(false);
-    }, 1000);
+    }
   }
 }
 
+@Component({
+  selector: 'app-box',
+  standalone: true,
+  imports: [
+    CommonModule, FormsModule,
+    MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
+    UserMarkComponent,
+  ],
+  templateUrl: './box.component.html',
+  styleUrl: './box.component.scss'
+})
+export class BoxComponent implements OnInit {
+
+  treeControl: FlatTreeControl<DynamicFlatNode>;
+  dataSource: DynamicDataSource;
+
+  database = inject(DynamicDatabase);
+
+  constructor() {
+    this.treeControl = new FlatTreeControl<DynamicFlatNode>(
+      node => node.level,
+      node => node.expandable
+    );
+    this.dataSource = new DynamicDataSource(this.treeControl, this.database);
+  }
+
+  hasChild = (_: number, node: DynamicFlatNode) => node.expandable;
+
+  readonly authService: AuthService = inject(AuthService);
+  readonly dialog: MatDialog = inject(MatDialog);
+  readonly router: Router = inject(Router);
+  readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
+  readonly snackBar: MatSnackBar = inject(MatSnackBar);
+  readonly g: GService = inject(GService);
+  // readonly apiGitlabService: ApiGitlabService = inject(ApiGitlabService);
+  // readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
+  // readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
+  readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
+  readonly http: HttpClient = inject(HttpClient);
+  // readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
+
+  boxSearchResult!: BoxResponse;
+
+  ngOnInit(): void {
+    this.http.get<any>(`/user/oauth/api/proxy/box/2.0/users/me`).subscribe({
+      next: next => {
+        console.log(next);
+        this.onTop();
+      }
+    });
+  }
+
+  onTop(): void {
+    this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/0/items`).subscribe({
+      next: next => {
+        this.boxSearchResult = next;
+        console.log(next);
+
+        // 初期データの設定
+        this.dataSource.data = this.database.getInitialData(next);
+      }
+    });
+  }
+
+  // ファイルクリックハンドラを追加
+  onNodeClick(node: DynamicFlatNode): void {
+    if (node.type === 'file') {
+      this.database.downloadFile(node.id, node.name).subscribe({
+        error: (error) => {
+          console.error('Download failed:', error);
+          // エラー時の処理（例：エラーメッセージの表示）
+        }
+      });
+    }
+  }
+
+  searchKeyword = '';
+  onSearch(): void {
+    this.http.get<any>(`/user/oauth/api/proxy/box/2.0/search?query=${this.searchKeyword}&type=file`).subscribe({
+      next: next => {
+        this.boxSearchResult = next;
+        console.log(next);
+
+        // 初期データの設定
+        this.dataSource.data = this.database.getInitialData(next);
+      },
+      error: error => {
+        console.error(error);
+      },
+    });
+  }
+}

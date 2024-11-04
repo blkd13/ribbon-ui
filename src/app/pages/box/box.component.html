@@ -1,29 +1,33 @@
-{{boxSearchResult|json}}
+<!-- 検索ボックス -->
+<div class="search-box">
+    <input type="text" matInput placeholder="検索キーワード" [(ngModel)]="searchKeyword">
+    <button (click)="onSearch()">検索</button>
+</div>
 
-@if(boxSearchResult && boxSearchResult.entries){
-@for(entry of boxSearchResult.entries;track $index){
-<div>{{entry|json}}</div>
-}
-}
-
+<button (click)="onTop()">トップへ移動</button>
 <mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
+    <!-- フォルダノード -->
+    <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding>
+        <div matTreeNodeToggle class="flex items-center cursor-pointer">
+            <button mat-icon-button>
+                @if(node.isLoading){
+                <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                <mat-icon>
+                    {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                </mat-icon>
+                }
+            </button>
+            <mat-icon>folder</mat-icon>
+            {{node.name}}
+        </div>
+    </mat-tree-node>
+
+    <!-- ファイルノード -->
     <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
         <button mat-icon-button disabled></button>
-        {{node.item}}
-    </mat-tree-node>
-    <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding matTreeNodeToggle>
-        <!-- [cdkTreeNodeTypeaheadLabel]="node.item" -->
-        <button mat-icon-button [attr.aria-label]="'Toggle ' + node.item" matTreeNodeToggle>
-            <mat-icon class="mat-icon-rtl-mirror">
-                {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-            </mat-icon>
-        </button>
-        {{node.item}}
-        @if (node.isLoading()) {
-        <mat-progress-bar mode="indeterminate" class="example-tree-progress-bar"></mat-progress-bar>
-        }
+        <mat-icon>insert_drive_file</mat-icon>
+        <!-- <span class="file-node" (click)="onNodeClick(node)">{{node.name}}</span> -->
+        <a [href]="'/api/user/oauth/api/proxy/box/2.0/files/' + node.id + '/content'" download>{{node.name}}</a>
     </mat-tree-node>
 </mat-tree>
-
-
-<app-user-mark></app-user-mark>

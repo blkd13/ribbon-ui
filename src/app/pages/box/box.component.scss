@@ -1,0 +1,26 @@
+.mat-tree {
+    margin: 20px;
+}
+
+.mat-tree-node {
+    min-height: 40px;
+}
+
+.mat-icon {
+    margin-right: 8px;
+}
+
+.file-node {
+    cursor: pointer;
+}
+
+.file-node:hover {
+    text-decoration: underline;
+    color: #1976d2;
+    /* または任意の色 */
+}
+
+.search-box {
+    background-color: black;
+    // color: white;
+}

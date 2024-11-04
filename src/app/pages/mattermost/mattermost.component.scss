@@ -94,20 +94,29 @@
 .channel {
     width: 100%;
     cursor: pointer;
-    padding: 5px 10px;
+    padding: 0;
     white-space: nowrap;
-    overflow-x: hidden;
+    overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    // transition: background-color 0.2s 0s ease;
+    // border-radius: 4px;
 }
 
-.channel:hover {
+.channel-container:hover {
     background-color: #26383d;
+}
+
+.timeline-radio-group.selected {
+    background-color: #17262b;
 }
 
 .selected {
     color: white;
     background-color: #39565e;
-    background-color: #17262b;
+    background-color: #173842;
 }
 
 .accordion div {
@@ -216,6 +225,11 @@ app-mm-team-logo {
     height: 32px;
     border-radius: 32px;
     overflow: hidden;
+
+    &--mini {
+        width: 20px;
+        height: 20px;
+    }
 }
 
 .scroll-to-bottom-button {
