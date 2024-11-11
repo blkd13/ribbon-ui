@@ -1,11 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable, of, Subject, switchMap, tap } from 'rxjs';
+import { catchError, delay, from, concatMap, map, Observable, of, retry, Subject, switchMap, tap, timer, toArray } from 'rxjs';
 import { Client4, WebSocketClient, WebSocketMessage } from '@mattermost/client';
 import emojiData from 'emoji-datasource';
 import { CustomEmoji } from '@mattermost/types/emojis';
 import { Thread } from '../models/project-models';
-
+import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './file-manager.service';
+import { Utils } from '../utils';
 
 @Injectable({ providedIn: 'root' })
 export class ApiMattermostService {
@@ -55,7 +56,20 @@ export class ApiMattermostService {
 
   mattermostUserAutocomplete(in_team: string, in_channel: string, name: string = '', limit = 25): Observable<{ users: MattermostUser[] }> {
     const url = `${this.baseUrl}/users/autocomplete?in_team=${in_team}&in_channel=${in_channel}&name=${name}&limit=${limit}`;
-    return this.http.get<{ users: MattermostUser[] }>(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    return this.http.get<{ users: MattermostUser[] }>(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .pipe(
+        retry({
+          count: 3,
+          delay: (error, retryCount) => {
+            // 403エラーの場合のみ1秒待ってリトライ
+            if (error.status === 403) {
+              return timer(1000);
+            }
+            // その他のエラーはリトライしない
+            throw error;
+          }
+        }),
+      );
   }
 
   mattermostTyping(channel_id: string, postId?: string): void {
@@ -213,6 +227,25 @@ export class ApiMattermostService {
   //   const url = `${this.baseUrl}/users/me/channels/${channelId}/posts/unread`;
   //   return this.http.get<{ posts: MattermostPost[] }>(url);
   // }
+
+  mattermostFilesUpload(channelId: string, files: FullPathFile[]): Observable<FilesOutDto[]> {
+    const clientIds = [Utils.generateUUID()]; // 重複しないような適当なID
+    const url = `${this.baseUrl}/files`;
+    return from(files).pipe( // ファイルの配列をObservableに変換
+      concatMap(file => {
+        const formData: FormData = new FormData();
+        formData.append('channel_id', channelId);
+        formData.append('client_ids', clientIds.join(','));
+        formData.append('files', file.file, file.fullPath.split('/').pop());
+        return this.http.post<FilesOutDto>(url, formData, {
+          reportProgress: true,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+      }),
+      toArray(), // 全ての処理が終わるまで待って、結果を配列にまとめる
+    );
+  }
+
 
   private subject: Subject<MessageEvent>;
   private wsClient!: WebSocketClient;
@@ -442,6 +475,31 @@ export interface MattermostUser {
 //   has_preview_image: boolean;     // プレビュー画像があるかどうか
 // };
 
+interface MattermostFileInfo {
+  id: string;
+  user_id: string;
+  channel_id: string;
+  create_at: number;
+  update_at: number;
+  delete_at: number;
+  name: string;
+  extension: string;
+  size: number;
+  mime_type: string;
+  width: number;
+  height: number;
+  has_preview_image: boolean;
+  mini_preview: string;
+  remote_id: string;
+  archived: boolean;
+}
+
+interface FilesOutDto {
+  file_infos: MattermostFileInfo[];
+  client_ids: string[];
+}
+
+
 // type MattermostImage = {
 //   url: string;                    // 画像のURL
 //   height: number;                 // 画像の高さ
@@ -583,6 +641,7 @@ export interface Post {
   reply_count: number;
   last_reply_at: number;
   participants: null;
+  mentions?: string[]; // 勝手に追加
   metadata: {
     emojis?: MattermostEmoji[];
     reactions?: {

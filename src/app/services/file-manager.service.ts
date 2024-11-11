@@ -40,7 +40,7 @@ export interface FileEntity {
     metaJson: any;
 }
 
-export type FullPathFile = { fullPath: string, file: File, base64String: string };
+export type FullPathFile = { fullPath: string, file: File, base64String: string, id?: string };
 
 @Injectable({ providedIn: 'root' })
 export class FileManagerService {

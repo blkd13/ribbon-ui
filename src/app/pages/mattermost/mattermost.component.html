@@ -17,9 +17,8 @@
             <div class="min-h-24"></div>
         </div>
 
-        @if(selectedTeam){
-
-        <div class="custom-scroll custom-scroll--thin h-full relative" [ngStyle]="{width: (250+p.x)+'px'}">
+        <div #channelListElem class="custom-scroll custom-scroll--thin h-full relative" style="width: 250px">
+            @if(selectedTeam){
             @if(mmCategoriesList){
 
             <!-- Unread -->
@@ -44,27 +43,27 @@
 
             @for(timeline of mmTimelineList;track $index){
 
-            <div class="flex items-center relative text-gray-400 timeline-radio-group" [title]="timeline.title"
+            <div class="relative text-gray-400 timeline-radio-group" [title]="timeline.title"
                 [ngClass]="{selected: selectedTimeline===timeline}">
 
                 <mat-radio-group name="sel" [value]="radioSelectedId" (change)="radioChange($event)"
                     class="flex flex-col">
                     <div class="channel-container">
                         <mat-radio-button [value]="timeline.id" class="timeline-name" color="primary">
-                        {{timeline.title}}
-                    </mat-radio-button>
+                            {{timeline.title}}
+                        </mat-radio-button>
                         <button class="channel-menu flex items-center" style="right: 0;position: absolute;"
-                        mat-icon-button [matMenuTriggerFor]="onEditTimeline">
-                        <mat-icon class="cursor-pointer mr-2">more_vert</mat-icon>
-                    </button>
-                    <mat-menu #onEditTimeline="matMenu">
-                        <button mat-menu-item (click)="editTimeline(timeline)">
-                            <mat-icon>edit</mat-icon>編集
+                            mat-icon-button [matMenuTriggerFor]="onEditTimeline">
+                            <mat-icon class="cursor-pointer mr-2">more_vert</mat-icon>
                         </button>
-                    </mat-menu>
+                        <mat-menu #onEditTimeline="matMenu">
+                            <button mat-menu-item (click)="editTimeline(timeline)">
+                                <mat-icon>edit</mat-icon>編集
+                            </button>
+                        </mat-menu>
                     </div>
                     @for(channel of timeline.channels; track $index){
-                    <div class="flex channel-container"
+                    <div class="relative flex channel-container"
                         title="[{{mmTeamMas[mmChannelMas[channel.channelId].team_id].display_name}}] {{mmChannelMas[channel.channelId].display_name||mmChannelMas[channel.channelId].name}}">
                         <button mat-icon-button matTooltip="ミュート" matTooltipPosition="left"
                             (click)="setMute(channel, !channel.isMute)"
@@ -75,19 +74,29 @@
                         </button>
                         <mat-radio-button [value]="channel.id" color="primary"
                             class="relative channel-name text-nowrap overflow-ellipsis" [ngClass]="{
-                                        selected: radioSelectedId===channel.id, 
-                                        unread: mmTimelineUnread[channel.id],
-                                        'opacity-30': channel.isMute,
-                                    }">
+                                selected: radioSelectedId===channel.id, 
+                                unread: mmTimelineUnread[channel.id],
+                                'opacity-30': channel.isMute,
+                            }">
 
-                            <div style="font-size: 10px;line-height:12px;color: #aaa;">
-                                [{{mmTeamMas[mmChannelMas[channel.channelId].team_id].display_name}}]
-                            </div>
                             <div>
-                                {{mmChannelMas[channel.channelId].display_name||mmChannelMas[channel.channelId].name}}
+                                <div style="font-size: 10px;line-height:12px;color: #aaa;">
+                                    [{{mmTeamMas[mmChannelMas[channel.channelId].team_id].display_name}}]
+                                </div>
+                                <div>
+                                    {{mmChannelMas[channel.channelId].display_name||mmChannelMas[channel.channelId].name}}
+                                </div>
                             </div>
                         </mat-radio-button>
+                        @if(messageCountMas[channel.channelId] && messageCountMas[channel.channelId].mention_count
+                        && messageCountMas[channel.channelId].mention_count>0){
+                        <div class="badge" style="font-weight: normal;top: 3px;padding-top: 5px;">
+                            {{messageCountMas[channel.channelId] ?
+                            messageCountMas[channel.channelId].mention_count:''}}
+                        </div>
+                        }
                     </div>
+
                     }
                 </mat-radio-group>
             </div>
@@ -121,10 +130,10 @@
 
             }
             <div class="min-h-24"></div>
+            }
         </div>
-        }
 
-        <div class="flex items-center cursor-ew-resize" appDragDelta (dragging)="p=$event">
+        <div class="flex items-center cursor-ew-resize" [appDragDelta]="channelListElem" position="right">
             <mat-icon class="rotate-90 ">drag_handle</mat-icon>
         </div>
 
@@ -134,7 +143,8 @@
                     <mat-icon>summarize</mat-icon>AI要約
                 </button>
             </div>
-            <div class="custom-scroll h-full w-full relative" #scroll (scroll)="onScroll($event)">
+            <div appFileDrop (filesDropped)="onFilesDropped('main', selectedChannelIds[0], $event)"
+                class="custom-scroll h-full w-full relative" #scroll (scroll)="onScroll($event)">
                 @if(viewPostCount>viewPostCountDelta){
                 <button type="button" class="scroll-to-bottom-button" (click)="scrollToBottom(true)">下端にスクロール</button>
                 }
@@ -169,17 +179,35 @@
                 <div style="height: 160px;"></div>
             </div>
             <div class="textarea-wrapper">
-                <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
-                    (keydown)="onKeyDown('main', $event, selectedChannelIds[0])"
-                    (input)="onInput('main', $event, selectedChannelIds[0])"
-                    [placeholder]="appFileDropList?.first?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
-                    #textAreaElemMain [(ngModel)]="inputTextMain" (blur)="clearMention()"
-                    (change)="onChange(selectedChannelIds[0])" [disabled]="selectedChannelIds.length!==1"></textarea>
-                @if(mentionInputType==='main' && mentionPosition){
-                <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
-                }
+                <div class="flex flex-col grow w-0">
+                    @for(file of inDto.main.fileList;track $index) {
+                    <div class="doc-tag" [matTooltip]="file.fullPath" matTooltipPosition="above">
+                        <div class="thumbnail">
+                            <!-- @if (content.image_url.url.startsWith('data:image/')) {
+                                <img [src]="content.image_url.url" />
+                                } @else {
+                                <div>doc</div>
+                                } -->
+                        </div>
+                        <div class="label">{{file.fullPath}}</div>
+                        <mat-icon class="close" (click)="inDto.main.fileList.splice($index,1)">close</mat-icon>
+                    </div>
+                    <!-- <app-doc-tag [contents]="inputArea.content" [index]="$index"
+                            (remove)="removeDoc(inputArea.content, $index)"></app-doc-tag> -->
+                    }
+                    <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
+                        (keydown)="onKeyDown('main', $event, selectedChannelIds[0])"
+                        (input)="onInput('main', $event, selectedChannelIds[0])"
+                        [placeholder]="appFileDropList?.first?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
+                        #textAreaElemMain [(ngModel)]="inDto.main.message" (blur)="clearMention()"
+                        (change)="onChange(selectedChannelIds[0])"
+                        [disabled]="selectedChannelIds.length!==1"></textarea>
+                    @if(mentionInputType==='main' && mentionPosition){
+                    <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
+                    }
+                </div>
                 <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
-                    [disabled]="!inputTextMain || inputTextMain.length===0 || isLoading"
+                    [disabled]="!inDto.main.message || inDto.main.message.length===0 || isLoading"
                     (click)="post('main', selectedChannelIds[0])">
                     <mat-icon>send</mat-icon>
                 </button>
@@ -187,7 +215,11 @@
         </div>
 
         @if(mmThread && mmThread.length>0){
-        <div class="flex-grow w-0 flex flex-col" appFileDrop (filesDropped)="onFilesDropped($event)">
+        <div class="flex items-center cursor-ew-resize" [appDragDelta]="threadElem" position="left">
+            <mat-icon class="rotate-90 ">drag_handle</mat-icon>
+        </div>
+        <div #threadElem class="flex flex-col" style="width: 35%;" appFileDrop
+            (filesDropped)="onFilesDropped('thread', mmThread[0][0].channel_id, $event)">
             <div class="flex gap-5 items-center">
                 <span style="font-size: 14px;">Thread</span>
                 <button type="button" mat-icon-button (click)="mmThread=[]" style="color:#add8e6;">
@@ -211,13 +243,13 @@
                     (keydown)="onKeyDown('thread', $event, mmThread[0][0].channel_id,mmThread[0][0].id)"
                     (input)="onInput('thread', $event, mmThread[0][0].channel_id,mmThread[0][0].id)"
                     [placeholder]="appFileDropList?.last?.isHovered?'ファイルドロップ':('メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
-                    #textAreaElemThread [(ngModel)]="inputTextThread" (blur)="clearMention()"
+                    #textAreaElemThread [(ngModel)]="inDto.thread.message" (blur)="clearMention()"
                     (change)="onChange(mmThread[0][0].channel_id)"></textarea>
                 @if(mentionInputType==='thread' && mentionPosition){
                 <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
                 }
                 <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
-                    [disabled]="inputTextThread.length===0 || isLoading"
+                    [disabled]="inDto.thread.message.length===0 || isLoading"
                     (click)="post('thread', mmThread[0][0].channel_id, mmThread[0][0].id)">
                     <mat-icon>send</mat-icon>
                 </button>
@@ -239,7 +271,7 @@
         }@else if(mention.roles!==mentionList[$index-1].roles&&mention.roles==='special'){
         <div>SPECIAL MENTIONS</div>
         }
-        <div style="padding: 5px;" [ngClass]="{selected:mentionSelectorIndex===$index}"
+        <div #mentionElem style="padding: 5px;" [ngClass]="{selected:mentionSelectorIndex===$index}"
             (mouseenter)="mentionSelectorIndex=$index;">
             <span>{{'@'+mention.username}}</span>
             <span style="color: #999;margin-left: 10px;">{{mention.nickname}}</span>
@@ -283,7 +315,7 @@
             (click)="stopPropagation($event)">
             @if(messageCountMas[channelId] && messageCountMas[channelId].mention_count &&
             messageCountMas[channelId].mention_count>0){
-            <div class="badge" style="font-weight: normal;top: 2px;">
+            <div class="badge" style="font-weight: normal;top: 3px;padding-top: 5px;">
                 {{messageCountMas[channelId] ? messageCountMas[channelId].mention_count:''}}
             </div>
             }

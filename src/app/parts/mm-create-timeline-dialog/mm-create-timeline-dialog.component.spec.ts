@@ -10,7 +10,7 @@ describe('MmCreateTimelineDialogComponent', () => {
     await TestBed.configureTestingModule({
       imports: [MmCreateTimelineDialogComponent]
     })
-      .compileComponents();
+    .compileComponents();
 
     fixture = TestBed.createComponent(MmCreateTimelineDialogComponent);
     component = fixture.componentInstance;

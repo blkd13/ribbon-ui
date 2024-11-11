@@ -17,7 +17,9 @@
             [matAutocomplete]="auto" [disabled]="isEdit">
         <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete">
             @for (user of userListAll; track user.id) {
+            @if(userFilter(user)){
             <mat-option [value]="user.name">[{{user.name}}] {{toAny(user).label}}</mat-option>
+            }
             }
         </mat-autocomplete>
     </mat-form-field>

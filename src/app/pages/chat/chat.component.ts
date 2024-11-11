@@ -48,7 +48,7 @@ import { Utils } from '../../utils';
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatSelectModule,
     MatSnackBarModule, MatDividerModule, MatCheckboxModule,
     DialogComponent,
-    UserMarkComponent
+    UserMarkComponent,
   ],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss'

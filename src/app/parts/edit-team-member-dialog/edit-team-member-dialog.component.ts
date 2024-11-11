@@ -116,4 +116,8 @@ export class EditTeamMemberDialogComponent implements OnInit {
       }
     }
   }
+
+  userFilter(user: User): boolean {
+    return user.name.indexOf(this.userName) !== -1 || ((user as any).label ? (user as any).label?.indexOf(this.userName) !== -1 : false);
+  }
 }
