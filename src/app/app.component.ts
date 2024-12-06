@@ -25,6 +25,15 @@ export class AppComponent implements OnInit {
   private readonly swUpdate: SwUpdate = inject(SwUpdate);
   private readonly snackBar: MatSnackBar = inject(MatSnackBar);
 
+  constructor() {
+    // v1.0からv2.0への移行
+    const v1 = localStorage.getItem('settings-v1.0');
+    if (v1 && JSON.parse(v1).model) {
+      // localStorage.removeItem('settings-v1.0');
+      localStorage.setItem('settings-v2.0', JSON.stringify([JSON.parse(v1)]));
+    }
+  }
+
   ngOnInit(): void {
     this.initializeApp();
     this.setupPwaUpdateCheck();

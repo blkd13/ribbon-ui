@@ -1,6 +1,6 @@
 // ./src/app/models.ts
 
-import { UUID } from "./project-models";
+import { MessageForView, UUID } from "./project-models";
 
 export enum UserStatus {
     // アクティブ系
@@ -46,7 +46,7 @@ export class TwoFactorAuthDetails {
     ) { }
 }
 
-export type GPTModels = 'gpt-4-vision-preview' | 'gemini-1.5-flash' | 'gemini-1.5-pro' | 'gemini-1.0-pro' | 'gemini-1.0-pro-vision';
+export type GPTModels = 'gpt-4-vision-preview' | 'gemini-1.5-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash-001' | 'gemini-1.5-pro-001' | 'gemini-1.5-flash-002' | 'gemini-1.5-pro-002' | 'gemini-1.0-pro' | 'gemini-1.0-pro-vision';
 
 export type ChatCompletionContentPart = ChatCompletionContentPartText | ChatCompletionContentPartImage;
 export interface ChatCompletionContentPartImage { image_url: ChatCompletionContentPartImage.ImageURL; type: 'image_url'; }
@@ -54,8 +54,8 @@ export namespace ChatCompletionContentPartImage { export interface ImageURL { ur
 export interface ChatCompletionContentPartText { text: string; type: 'text'; }
 
 // export type Message = ({ role: 'system', content: string } | { role: 'user' | 'assistant', content: string | ChatCompletionContentPart[] });
-type Message = { role: 'system' | 'user' | 'assistant', content: ChatCompletionContentPart[] };
-type MessageForView = Message & { editing: number, status: number, cacheId?: string, selected: boolean, previousMessageId: string, id: UUID };
+// type Message = { role: ChatCompletionRole, content: ChatCompletionContentPart[] };
+// type MessageForView = Message & { editing: number, status: number, cacheId?: string, selected: boolean, previousMessageId: string, id: UUID };
 
 export interface CachedContent {
     id: string;
@@ -352,10 +352,20 @@ export interface ChatCompletionCreateParamsBase {
 
     // Gemini用:安全性設定
     safetySettings?: SafetyRating[],
+
+    // Gemini用:Google検索フラグ
+    isGoogleSearch?: boolean,
 }
 
+export type ChatCompletionCreateParamsWithoutMessages = Omit<ChatCompletionCreateParamsBase, 'messages'>;
 export interface ChatCompletionStreamInDto {
     args: ChatCompletionCreateParamsBase;
+    options?: {
+        idempotencyKey: string
+    };
+}
+export interface ChatCompletionWithoutMessagesStreamInDto {
+    args: ChatCompletionCreateParamsWithoutMessages;
     options?: {
         idempotencyKey: string
     };
@@ -381,18 +391,18 @@ export interface SafetyRating {
 export type MessageGroupType = 'SINGLE' | 'PARALLEL' | 'REGENERATED';
 // export type MessageGroup = { seq: number, id: string, previousMessageId: string, type: MessageGroupType, messages: MessageForView[], selected: boolean, };
 
-export interface ChatInputDto {
-    messageList: MessageForView[];
-    model?: GPTModels;
-    max_tokens?: number | null;
-    temperature?: number | null;
-    top_p?: number | null;
+// export interface ChatInputDto {
+//     messageList: MessageForView[];
+//     model?: GPTModels;
+//     max_tokens?: number | null;
+//     temperature?: number | null;
+//     top_p?: number | null;
 
-    // Gemini用:コンテキストキャッシュ
-    cachedContent?: CachedContent;
-    // Gemini用:安全性設定
-    safetySettings?: SafetyRating[];
-}
+//     // Gemini用:コンテキストキャッシュ
+//     cachedContent?: CachedContent;
+//     // Gemini用:安全性設定
+//     safetySettings?: SafetyRating[];
+// }
 
 
 export interface GenerateContentRequestForCache {

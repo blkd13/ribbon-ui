@@ -1,4 +1,4 @@
-import { ChatCompletionCreateParamsBase, ChatCompletionStreamInDto, UserStatus } from "./models";
+import { ChatCompletionCreateParamsBase, ChatCompletionRole, ChatCompletionStreamInDto, UserStatus } from "./models";
 
 // 共通の型定義
 export type UUID = string;
@@ -24,11 +24,18 @@ export enum ProjectVisibility {
     Login = 'Login'
 }
 
-export enum ThreadVisibility {
+export enum ThreadGroupVisibility {
     Public = 'Public',
     Team = 'Team',
     Login = 'Login',
     Temporary = 'Temporary'
+}
+export enum ThreadGroupType {
+    Normal = 'Normal', // 通常スレッド
+    Default = 'Default', // デフォルトスレッド
+    Template = 'Template', // テンプレートスレッド
+    // Announcement = 'Announcement', // お知らせスレッド
+    // Temporary = 'Temporary', // 一時的なスレッド
 }
 
 export enum MessageClusterType {
@@ -122,34 +129,31 @@ export interface ProjectResponseDto {
 }
 
 // Thread DTOs
-export interface ThreadCreateDto {
-    // projectId: string;
+export interface ThreadGroupUpsertDto {
+    id?: UUID; // 更新の場合に使用
     title: string;
     description: string;
-    visibility: ThreadVisibility;
-    inDtoJson: string;
+    visibility: ThreadGroupVisibility;
+    threadList: ThreadUpsertDto[];
+}
+export interface ThreadUpsertDto {
+    id?: UUID; // 更新の場合に使用
+    inDto: ChatCompletionStreamInDto;
 }
 
-export interface ThreadUpdateDto {
-    title?: string;
-    description?: string;
-    visibility?: ThreadVisibility;
-    seq?: number;
-    inDtoJson?: string;
-}
-
-export interface ThreadResponseDto {
-    id: UUID;
-    projectId: UUID;
-    title: string;
-    description: string;
-    lastUpdate: Date;
-    seq: number;
-    inDtoJson: string;
-    visibility: ThreadVisibility;
-    createdAt: Date;
-    updatedAt: Date;
-}
+// export interface ThreadResponseDto {
+//     id: UUID;
+//     projectId: UUID;
+//     title: string;
+//     description: string;
+//     lastUpdate: Date;
+//     seq: number;
+//     // inDtoJson: string;
+//     inDto: ChatCompletionStreamInDto;
+//     visibility: ThreadVisibility;
+//     createdAt: Date;
+//     updatedAt: Date;
+// }
 
 // MessageGroup and Message DTOs
 // export interface ContentPartDto {
@@ -157,34 +161,31 @@ export interface ThreadResponseDto {
 //     content: string;
 // }
 
-export interface MessageUpsertDto {
-    messageClusterId?: UUID; // 更新の場合に使用
-    messageGroupId?: UUID; // 更新の場合に使用
-    messageId?: UUID; // 更新の場合に使用
-    messageClusterType: MessageClusterType;
-    messageGroupType: MessageGroupType;
-    role: string;
-    label: string;
-    previousMessageId?: UUID;
-    contents: ContentPart[];
-}
+// export interface MessageUpsertDto {
+//     messageGroupId?: UUID; // 更新の場合に使用
+//     messageId?: UUID; // 更新の場合に使用
+//     messageClusterType: MessageClusterType;
+//     messageGroupType: MessageGroupType;
+//     role: ChatCompletionRole;
+//     label: string;
+//     previousMessageId?: UUID;
+//     contents: ContentPart[];
+// }
 
-export interface MessageGroupResponseDto {
-    id: UUID;
-    threadId: UUID;
-    messageClusterId: UUID;
-    messageClusterType: MessageClusterType;
-    messageGroupType: MessageGroupType;
-    role: 'system' | 'user' | 'assistant';
-    label: string;
-    seq: number;
-    lastUpdate: Date;
-    previousMessageId?: UUID;
-    selectedIndex: number;
-    createdAt: Date;
-    updatedAt: Date;
-    messages: MessageForView[];
-}
+// export interface MessageGroupResponseDto {
+//     id: UUID;
+//     threadId: UUID;
+//     messageGroupType: MessageGroupType;
+//     role: ChatCompletionRole;
+//     label: string;
+//     seq: number;
+//     lastUpdate: Date;
+//     previousMessageGroupId?: UUID;
+//     // selectedIndex: number;
+//     createdAt: Date;
+//     updatedAt: Date;
+//     messages: MessageForView[];
+// }
 
 export interface MessageResponseDto {
     id: UUID;
@@ -194,29 +195,34 @@ export interface MessageResponseDto {
     updatedAt: Date;
 }
 
-export interface ContentPartResponseDto {
-    id: UUID;
-    messageId: UUID;
-    type: ContentPartType;
-    content: string;
-    seq: number;
-    createdAt: Date;
-    updatedAt: Date;
-}
+// export interface ContentPartResponseDto {
+//     id: UUID;
+//     messageId: UUID;
+//     type: ContentPartType;
+//     content: string;
+//     seq: number;
+//     createdAt: Date;
+//     updatedAt: Date;
+// }
 
-export interface MessageUpsertResponseDto {
-    messageGroup: MessageGroupResponseDto;
-    message: MessageForView;
-    contentParts: ContentPartResponseDto[];
-}
+// export interface MessageUpsertResponseDto {
+//     messageGroup: MessageGroup;
+//     message: Message;
+//     contentParts: ContentPart[];
+// }
+// export interface MessageUpsertResponseDtoForView {
+//     messageGroup: MessageGroupForView;
+//     message: MessageForView;
+//     contentParts: ContentPart[];
+// }
 
-export interface MessageGroupListResponseDto {
-    messageGroups: MessageGroupResponseDto[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-}
+// export interface MessageGroupListResponseDto {
+//     messageGroups: MessageGroupResponseDto[];
+//     total: number;
+//     page: number;
+//     limit: number;
+//     totalPages: number;
+// }
 
 
 
@@ -264,37 +270,61 @@ export interface Project extends BaseEntity {
     teamId: UUID;
 }
 
-export interface Thread extends BaseEntity {
+export interface ThreadGroup extends BaseEntity {
     projectId: UUID;
+    type: ThreadGroupType;
     title: string;
     description: string;
-    visibility: ThreadVisibility;
+    visibility: ThreadGroupVisibility;
     lastUpdate: Date;
-    seq: number;
+    threadList: Thread[];
+}
+export interface Thread extends BaseEntity {
+    threadGroupId: UUID;
+    status: 'Normal' | 'Deleted';
     inDto: ChatCompletionStreamInDto;
 }
 
 export interface MessageGroup extends BaseEntity {
     threadId: UUID;
-    type: MessageGroupType;
+    type: MessageGroupType; // Single, Parallel, Regenerated
     seq: number;
     lastUpdate: Date;
-    role: string;
-    label: string;
-    previousMessageId?: UUID;
+    role: ChatCompletionRole;
+    // label: string;
+    previousMessageGroupId?: UUID;
+    editedRootMessageGroupId?: UUID;
+}
+
+export interface MessageGroupForView extends MessageGroup {
+    // editing: number;
+    // status: number;
+    messages: MessageForView[];
+    selectedIndex: number; // messagesではなくnextMessageGroupIdのindex
 }
 
 export interface Message extends BaseEntity {
     messageGroupId: UUID;
     seq: number;
+    subSeq: number; // 並列メッセージの場合のサブシーケンス
     lastUpdate: Date;
     label: string;
     cacheId?: string;
+    editedRootMessageId?: UUID;
 }
 
+export enum MessageStatusType {
+    Initial = 'Initial',
+    // Normal = 'Normal',
+    Editing = 'Editing',
+    Loading = 'Loading',
+    Loaded = 'Loaded',
+    // Error = 'Error',
+    // Deleted = 'Deleted',
+}
 export interface MessageForView extends Message {
     editing: number;
-    status: number;
+    status: MessageStatusType;
     selected: boolean;
     contents: ContentPart[];
 }
@@ -302,7 +332,6 @@ export interface MessageForView extends Message {
 export interface ContentPart extends BaseEntity {
     messageId: UUID;
     type: ContentPartType;
-    // content: string;
     seq: number;
     text?: string;
     fileId?: string;

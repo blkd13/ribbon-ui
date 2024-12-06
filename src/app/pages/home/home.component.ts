@@ -3,7 +3,7 @@ import { FullPathFile, FileUploadContent, FileManagerService } from './../../ser
 import { MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 import { forkJoin, from, map, mergeMap, of, switchMap } from 'rxjs';
 import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
-import { ChatPanelComponent } from '../../parts/chat-panel/chat-panel.component';
+import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
@@ -31,7 +31,7 @@ import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.component';
 import { AuthService } from '../../services/auth.service';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
-import { Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadVisibility, UUID } from '../../models/project-models';
+import { Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupVisibility, UUID } from '../../models/project-models';
 import { NewlineToBrPipe } from '../../pipe/newline-to-br.pipe';
 import { RelativeTimePipe } from '../../pipe/relative-time.pipe';
 import { Utils } from '../../utils';
@@ -48,7 +48,7 @@ import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js'
   selector: 'app-home',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, RouterModule, ChatPanelComponent, FileDropDirective, DocTagComponent,
+    CommonModule, FormsModule, RouterModule, ChatPanelMessageComponent, FileDropDirective, DocTagComponent,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
     MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,
@@ -62,7 +62,7 @@ import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js'
 export class HomeComponent implements OnInit {
 
   readonly authService: AuthService = inject(AuthService);
-  readonly chatServce: ChatService = inject(ChatService);
+  readonly chatService: ChatService = inject(ChatService);
   readonly projectService: ProjectService = inject(ProjectService);
   readonly teamService: TeamService = inject(TeamService);
   readonly threadService: ThreadService = inject(ThreadService);
@@ -135,7 +135,7 @@ export class HomeComponent implements OnInit {
   }];
 
   // スレッドリスト
-  threadList: Thread[] = [];
+  threadGroupList: ThreadGroup[] = [];
 
   sortType: number = 1;
 
@@ -175,22 +175,22 @@ export class HomeComponent implements OnInit {
     })
   }
 
-  sortThread(threadList: Thread[]): void {
+  sortThread(threadGroupList: ThreadGroup[]): void {
     if (this.sortType === 1) {
       // 時刻順（新しい方が上に来る）
-      threadList.sort((a, b) => b.updatedAt < a.updatedAt ? -1 : 1);
+      threadGroupList.sort((a, b) => b.lastUpdate < a.lastUpdate ? -1 : 1);
     } else {
       // 名前順（Aが上に来る）
-      threadList.sort((a, b) => b.title < a.title ? 1 : -1);
+      threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
     }
   }
 
-  loadThreads(project: Project): Observable<Thread[]> {
-    return this.threadService.getThreadList(project.id).pipe(tap(threadList => {
-      this.sortThread(threadList);
+  loadThreads(project: Project): Observable<ThreadGroup[]> {
+    return this.threadService.getThreadGroupList(project.id).pipe(tap(threadGroupList => {
+      this.sortThread(threadGroupList);
       // 
-      this.threadList = threadList;
-      if (threadList.length) {
+      this.threadGroupList = threadGroupList;
+      if (threadGroupList.length) {
         // 本来はlastUpdateでソートしたかったが、何故か時刻が更新されていないので。
       } else {
       }
@@ -250,7 +250,7 @@ export class HomeComponent implements OnInit {
     );
   }
 
-  loadModels(): Observable<Thread[]> {
+  loadModels(): Observable<ThreadGroup[]> {
     // 必要モデルのロード
     return of(0).pipe( // 0のofはインデント揃えるためだけに入れてるだけで特に意味はない。
       switchMap(() => this.loadTeams()),

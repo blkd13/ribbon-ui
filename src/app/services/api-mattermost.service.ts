@@ -774,5 +774,5 @@ export class MattermostTimelineService {
     return this.http.post<any>(`${this.apiUrl}/to-ai`, { projectId, id, idType, filterType, params, systemPrompt });
   }
 }
-export type ToAiIdType = 'timeline' | 'channel' | 'thread';
+export type ToAiIdType = 'timeline' | 'timelineChannel' | 'channel' | 'thread';
 export type ToAiFilterType = 'timespan' | 'count' | 'batch';

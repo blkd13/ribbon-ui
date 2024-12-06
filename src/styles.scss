@@ -7,6 +7,8 @@
 // @include mat.typography-hierarchy($my-typography);
 
 /* You can add global styles to this file, and also import other style files */
+// Angular Materialのテーマ
+// @import "@angular/material/prebuilt-themes/cyan-orange.css";
 
 @tailwind base;
 @tailwind components;
@@ -102,6 +104,15 @@ body.dark-mode {
     --mdc-outlined-text-field-caret-color: rgb(105 184 205);
     --mdc-outlined-text-field-focus-outline-color: rgb(105 184 205);
     --mdc-outlined-text-field-focus-label-text-color: rgb(105 184 205);
+
+
+}
+
+.mdc-dialog--open .mat-mdc-dialog-surface,
+.mdc-dialog--closing .mat-mdc-dialog-surface {
+    border-radius: var(--mdc-dialog-container-shape, 4px);
+    background-color: var(--mdc-dialog-container-color, white);
+    background: linear-gradient(to bottom right, #192020 0%, #111515 50%, #080a0a 100%);
 }
 
 .mat-mdc-button .mat-mdc-button-persistent-ripple::before {

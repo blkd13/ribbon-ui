@@ -147,12 +147,29 @@
     font-weight: bold;
 }
 
+.command-dock {
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    border-radius: 20px;
+    background: linear-gradient(170deg, #232526 0%, #1c1c1c 50%, #141414 100%);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    box-shadow:
+        -10px -10px 30px rgba(255, 255, 255, 0.05),
+        10px 10px 30px rgba(0, 0, 0, 0.8);
+}
+
 /* CSS Grid Layout */
 .grid-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    gap: 10px;
+}
+
+.grid-label {
+    font-size: 11px;
 }
 
 .grid-item {
     text-align: right;
+    /* テキストを中央揃え */
 }

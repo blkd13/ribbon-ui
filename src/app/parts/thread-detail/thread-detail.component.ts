@@ -24,8 +24,8 @@ export class ThreadDetailComponent {
   ) {
     ;
     this.threadForm = this.fb.group({
-      title: [data.thread.title || '', Validators.required],
-      description: [data.thread.description || '',]
+      // title: [data.thread.title || '', Validators.required],
+      // description: [data.thread.description || '',]
     });
   }
 

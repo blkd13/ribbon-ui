@@ -1,0 +1,113 @@
+@if(messageGroup && messageGroup.messages && messageGroup.messages.length>0){
+<mat-expansion-panel class="message" [ngClass]="[messageGroup.messages[0].cacheId?'cached':'', messageGroup.role]"
+    [expanded]="messageGroup.messages[0].contents.length>0" #exPanel (opened)="loadContent().subscribe()">
+    <mat-expansion-panel-header class="message-header">
+        <mat-panel-title class="message-title" style="font-weight: normal;">
+            <!-- {{message.role}} -->
+            @if(messageGroup.role==='system'){
+            {{messageGroup.role}}
+            } @else if(messageGroup.messages[0].cacheId){
+            キャッシュ
+            } @else {
+            <select [(ngModel)]="messageGroup.role" (click)="stopPropagation($event)" [disabled]="index===1">
+                <option value="user">user</option>
+                <option value="assistant">assistant</option>
+            </select>
+            }
+        </mat-panel-title>
+        <mat-panel-description>
+            <div class="truncate">{{messageGroup.messages[0].label}}</div>
+        </mat-panel-description>
+        <div style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;">
+            @if(messageGroup.type) {
+            <!-- 並列実行（バッチを想定） -->
+            }@else if(messageGroup.type==='Regenerated' && messageGroup.messages.length>1) {
+            <!-- 再ラン -->
+            @for(message of messageGroup.messages; track $index){
+            {{$index}},
+            }
+            }@else {
+            <!-- @if(messageGroup.type==='Single') { } -->
+            }
+
+            <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）"
+                [ngStyle]="{visibility: messageGroup.role==='assistant'?'visible':'hidden'}">
+                <mat-icon>folder_zip</mat-icon>
+            </button>
+            <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
+                <mat-icon>content_copy</mat-icon>
+            </button>
+            <button mat-icon-button (click)="setEdit($event)" [title]="messageGroup.messages[0].editing?'保存':'編集'"
+                [ngStyle]="{visibility: messageGroup.messages[0].cacheId?'hidden':'visible'}">
+                @if(messageGroup.messages[0].editing){
+                <mat-icon>check_circle</mat-icon>
+                }@else{
+                <mat-icon>edit</mat-icon>
+                }
+            </button>
+            <button mat-icon-button (click)="remove($event)" style="margin-right: 10px;"
+                [title]="messageGroup.role==='assistant'?'リトライ':'削除'"
+                [ngStyle]="{visibility: (messageGroup.messages[0].cacheId || messageGroup.role==='system')?'hidden':'visible'}">
+                <mat-icon>@if(messageGroup.role==='assistant'){ refresh }@else{ close }</mat-icon>
+            </button>
+        </div>
+    </mat-expansion-panel-header>
+
+    <div class="flex w-full">
+        @for (message of messageGroup.messages; track $index) {
+        <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
+            <!-- ファイル -->
+            @if(message.contents.length>1){
+            <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
+                @for(content of message.contents; track $index){
+                @if(content.type==='text'){
+                }@else if(content.type==='error'){
+                }@else{
+                <app-doc-tag [contents]="message.contents" [index]="$index"
+                    (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
+                }
+                }
+            </div>
+            }
+
+            <!-- メッセージ -->
+            @for(content of message.contents; track $index){
+            @if(content.type==='text'){
+            <div class="chat-input" [hidden]="!message.editing">
+                <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
+                    (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'"
+                    [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
+            </div>
+            <div class="custom-scroll" style="display: block;overflow: auto;"
+                [ngStyle]="{'max-height': messageGroup.role==='assistant'?'auto':'70vh'}" #textBodyElem>
+                <markdown [hidden]="message.editing" katex mermaid clipboard
+                    [data]="brackets.pre+content.text+brackets.post">
+                </markdown>
+            </div>
+            }@else if(content.type==='error'){
+            <div style="color: red;overflow: auto;">
+                <div>ERROR</div>
+                {{content.text}}
+            </div>
+            }@else{
+            <!-- text 以外はファイル -->
+            }
+            }
+
+            <!-- Loading -->
+            @if (message.status === 'Loading') {
+            <!-- アニメーションつけるかどうか [@fadeAnimation] -->
+            <div class="absolute inset-0 flex items-center justify-center bg-black/25">
+                <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+            </div>
+            }
+        </div>
+        }
+    </div>
+</mat-expansion-panel>
+} @else {
+{{messageGroup.messages.length}}
+<!-- {{messageGroup.selectedIndex}} -->
+}
+
+<!-- <div class="chat-messages"></div> -->

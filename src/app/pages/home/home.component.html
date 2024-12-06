@@ -5,20 +5,9 @@
             <h1 style="margin-top:0;">AIチャットを始める</h1>
             <div class="flex flex-col justify-between gap-3 items-end">
                 <select [(ngModel)]="model" class="model-select" (change)="changeModel()">
-                    <option value="gemini-1.0-pro">古い：gemini-1.0-pro</option>
-                    <option value="gemini-1.0-pro-vision">古い：gemini-1.0-pro-vision</option>
-                    <option value="gemini-1.5-flash">速い：gemini-1.5-flash</option>
-                    <option value="gemini-1.5-pro">賢い：gemini-1.5-pro</option>
-                    <option value="gemini-1.5-flash-001">古い：gemini-1.5-flash-001</option>
-                    <option value="gemini-1.5-pro-001">古い：gemini-1.5-pro-001</option>
-                    <option value="gemini-1.5-flash-002">速い：gemini-1.5-flash-002</option>
-                    <option value="gemini-1.5-pro-002">賢い：gemini-1.5-pro-002</option>
-                    <option value="gemini-flash-experimental">実験：gemini-flash-experimental</option>
-                    <option value="gemini-pro-experimental">実験：gemini-pro-experimental</option>
-                    <option value="gpt-4o">賢い：GPT-4o</option>
-                    <option value="claude-3-5-sonnet@20240620">賢い：claude-3-5-sonnet&#64;20240620</option>
-                    <option value="claude-3-5-sonnet-v2@20241022">賢い：claude-3-5-sonnet-v2&#64;20241022</option>
-                    <option value="meta/llama3-405b-instruct-maas">独特：llama3-405b-instruct-maas</option>
+                    @for(option of chatService.modelList;track $index){
+                    <option [value]="option.id">{{option.tag}}：{{option.id}}</option>
+                    }
                 </select>
             </div>
         </div>
@@ -53,20 +42,20 @@
         }
 
         <!-- <h1>Recent Chats</h1> -->
-        @if(threadList.length>0){
+        @if(threadGroupList.length>0){
         <h1>チャット履歴</h1>
         <div class="recent-chats">
-            @for(thread of threadList;track $index){
+            @for(thread of threadGroupList;track $index){
             @if(maxDisplay > $index || showRecentChats){
             <a class="panel chat-item" [routerLink]="['/chat', thread.projectId,thread.id]">
                 <h3>{{thread.title}}</h3>
                 <p>{{thread.description}}</p>
-                <p>最終利用: {{ thread.updatedAt|relativeTime}}</p>
+                <p>最終利用: {{ thread.lastUpdate|relativeTime}}</p>
             </a>
             }
             }
         </div>
-        @if(threadList.length > 6){
+        @if(threadGroupList.length > 6){
         <button class="panel mt-5 w-full" (click)="toggleRecentChats()">
             {{ showRecentChats ? '隠す' : 'もっと見る' }}
         </button>

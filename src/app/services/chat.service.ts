@@ -1,19 +1,26 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, Subject, Subscriber, defer, finalize, first, forkJoin, from, map, switchMap, tap } from 'rxjs';
-import { CachedContent, ChatCompletionStreamInDto, GenerateContentRequestForCache } from '../models/models';
+import { CachedContent, ChatCompletionCreateParamsBase, ChatCompletionCreateParamsWithoutMessages, ChatCompletionRole, ChatCompletionStreamInDto, ChatCompletionWithoutMessagesStreamInDto, GenerateContentRequestForCache } from '../models/models';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 import { v4 as uuidv4 } from 'uuid';
-import { Message, MessageForView, MessageUpsertResponseDto } from '../models/project-models';
+import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
 
 export interface ChatInputArea {
-  role: 'system' | 'user' | 'assistant';
+  role: ChatCompletionRole;
   content: ChatContent[];
-  previousMessageId?: string;
+  // previousMessageGroupId?: string;
   messageGroupId?: string;
 }
 export type ChatContent = ({ type: 'text', text: string } | { type: 'file', text: string, fileId: string });
+// export interface ContentPart extends BaseEntity {
+//   messageId: UUID;
+//   type: ContentPartType;
+//   seq: number;
+//   text?: string;
+//   fileId?: string;
+// }
 
 
 /**
@@ -26,7 +33,30 @@ export type ChatContent = ({ type: 'text', text: string } | { type: 'file', text
 @Injectable({ providedIn: 'root' })
 export class ChatService {
 
-  protected connectionId!: string
+  /**
+   * gemini は 1,000 [文字] あたりの料金
+   * claude は 1,000 [トークン] あたりの料金
+   * 入力、出力、128kトークン以上時の入力、128kトークン以上時の出力
+   */
+  modelList = [
+    { tag: '古い', maxTokens: 8192, maxInputTokens: 32760, price: [0.00012500, 0.000375, 0.0001250, 0.000375], id: 'gemini-1.0-pro', },
+    { tag: '古い', maxTokens: 8192, maxInputTokens: 16384, price: [0.00012500, 0.000375, 0.0001250, 0.000375], id: 'gemini-1.0-pro-vision', },
+    { tag: '速い', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash', },
+    { tag: '賢い', maxTokens: 8192, maxInputTokens: 2000000, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro', },
+    { tag: '古い', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash-001', },
+    { tag: '古い', maxTokens: 8192, maxInputTokens: 2000000, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro-001', },
+    { tag: '速い', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash-002', },
+    { tag: '賢い', maxTokens: 8192, maxInputTokens: 2000000, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro-002', },
+    { tag: '実験', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-flash-experimental', },
+    { tag: '実験', maxTokens: 8192, maxInputTokens: 2000000, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-pro-experimental', },
+    { tag: '賢い', maxTokens: 4096, maxInputTokens: 128000, price: [0.00500000, 0.015000, 0.0050000, 0.015000], id: 'gpt-4o', },
+    { tag: '賢い', maxTokens: 8192, maxInputTokens: 200000, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet@20240620', },
+    { tag: '賢い', maxTokens: 8192, maxInputTokens: 200000, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-v2@20241022', },
+    { tag: '独特', maxTokens: 4096, maxInputTokens: 8000, price: [0.00100000, 0.015000, 0.0010000, 0.015000], id: 'meta/llama3-405b-instruct-maas', },
+  ];
+  priceMap: { [id: string]: { tag: string, maxTokens: number, maxInputTokens: number, id: string, price: number[] } } = Object.fromEntries(this.modelList.map(model => [model.id, model]));
+
+  protected connectionId!: string;
 
   protected messageIdStreamIdMap: { [messageId: string]: string[] } = {};
 
@@ -50,23 +80,24 @@ export class ChatService {
   public getObserver(messageId: string): { text: string, observer: Subject<string> | null } {
     const streamIdList = this.messageIdStreamIdMap[messageId];
     if (streamIdList) {
-      return {
-        text: this.textMap[streamIdList[streamIdList.length - 1]],
-        observer: this.subjectMap[streamIdList[streamIdList.length - 1]],
-      };
+      const streamId = `${streamIdList[streamIdList.length - 1]}|${messageId}`;
+      return { text: this.textMap[streamId], observer: this.subjectMap[streamId], };
     } else {
       return { text: '', observer: null, };
     }
   }
+
+  // 通信中かどうかのフラグ
+  flag = false;
 
   /**
    * ChatGPTのSSEを参考に作った。
    * SSEを受け取ってスレッドID毎に選り分けて投げる
    * @returns 
    */
-  private open(): Observable<string> {
+  private open(flag: boolean): Observable<string> {
     return new Observable<string>((observer) => {
-      if (Object.keys(this.subjectMap).length > 1) {
+      if (!flag) {
         console.log('Already exists stream');
         observer.next(this.connectionId);
         observer.complete();
@@ -106,8 +137,12 @@ export class ChatService {
                       console.error(e);
                     }
                   } else if (line.startsWith('[DONE] ')) {
+
+                    // 分割されたメッセージの結合
+                    const lineSplit = line.split(' ');
+
                     // 終了通知受信時
-                    const streamId = line.split(' ')[1];
+                    const streamId = lineSplit[1];
 
                     // // ログ出力
                     // console.log(this.textMap[streamId]);
@@ -117,11 +152,15 @@ export class ChatService {
 
                     // 監視オブジェクトを削除
                     delete this.subjectMap[streamId];
+                    if (streamId.split('|').length > 1) {
+                      delete this.subjectMap[streamId.split('|')[0]];
+                    } else { }
                     // ストリームが存在しなくなったら、XHRを中断する
                     if (Object.keys(this.subjectMap).length === 0) {
-                      xhr.abort();
+                      this.flag = false;
                       // チャットスレッド用にUUIDを生成
                       this.connectionId = uuidv4();
+                      xhr.abort();
                     } else {
                       // 何もしない
                     }
@@ -133,7 +172,13 @@ export class ChatService {
                   }
                 } else if (line.startsWith('error: ')) {
                   line = line.replace(/^error: /gm, '');
-                  const streamId = line.split(' ')[0];
+
+                  // 分割されたメッセージの結合
+                  const lineSplit = line.split(' ');
+
+                  // エラー通知受信時
+                  const streamId = lineSplit[0];
+
                   line = line.substring(streamId.length + 1);
                   console.error(line);
                   // エラー通知
@@ -184,43 +229,8 @@ export class ChatService {
   }
 
   /**
-   * リクエストを投げる。戻りはEventSourceから来る
-   * @param inDto 
-   * @param taskId 
-   * @returns 
-   */
-  // chatCompletionObservableStream(inDto: ChatCompletionStreamInDto): Observable<string> {
-  //   return new Observable<string>((observer) => {
-  //     // スレッド用にUUIDを生成
-  //     const streamId = Utils.generateUUID();
-
-  //     // 監視オブジェクトを登録
-  //     // this.subscriberMap[streamId] = observer;
-  //     this.textMap[streamId] = '';
-
-  //     // EventSourceを開く
-  //     this.open().subscribe((result) => {
-  //       this.http.post<string>(`/user/chat-completion?connectionId=${this.connectionId}&streamId=${streamId}`,
-  //         inDto,
-  //         { headers: this.authService.getHeaders() }).subscribe({
-  //           next: (result) => {
-  //             // console.log(result);
-  //             // Handle response
-  //             // eventSourceのイベントハンドラで処理するので何もしない
-  //           },
-  //           error: (error) => {
-  //             // Handle error
-  //             console.error(error);
-  //             observer.error(error);
-  //           },
-  //         });
-  //     });
-  //   });
-  // }
-
-
-  /**
-   * リクエストを投げる。戻りはEventSourceから来る
+   * リクエストを投げる。戻りはEventSourceから来る。
+   * タイトル設定用のメソッドなのでメッセージの実体を持つ。
    * @param inDto 
    * @param taskId 
    * @returns 
@@ -238,7 +248,14 @@ export class ChatService {
     this.textMap[streamId] = '';
     const streamObservable = subject.asObservable();
 
-    return this.open().pipe(
+    let flag = false;
+    if (this.flag) {
+      flag = false;
+    } else {
+      flag = true;
+      this.flag = true;
+    }
+    return this.open(flag).pipe(
       switchMap(connectionId => this.http.post<{ message?: MessageForView, status: string }>(
         `/user/chat-completion?connectionId=${connectionId}&streamId=${streamId}`,
         inDto,
@@ -248,34 +265,107 @@ export class ChatService {
     );
   }
 
-  chatCompletionObservableStreamByProjectModel(messageId: string): Observable<{
+  // /**
+  //  * リクエストを投げる。戻りはEventSourceから来る。
+  //  * プロジェクトモデル用のメソッドなのでメッセージの実体を持たない（メッセージIDのみ）
+  //  * @param inDto
+  //  * @param taskId
+  //  * @returns
+  //  * @see chatCompletionObservableStreamByProjectModel
+  //  */
+  // chatCompletionObservableStreamByProjectModel000(
+  //   args: ChatCompletionCreateParamsWithoutMessages,
+  //   idType: 'message' | 'messageGroup' | 'thread' | 'threadGroup',
+  //   id: string,
+  // ): Observable<{
+  //   connectionId: string,
+  //   streamId: string,
+  //   observer: Observable<string>,
+  //   meta: MessageUpsertResponseDto[],
+  // }> {
+  //   const streamId = uuidv4();
+  //   // ストリーム受け取り用のSubjectを生成
+  //   const subject = new Subject<string>();
+  //   this.subjectMap[streamId] = subject;
+  //   this.textMap[streamId] = '';
+  //   const streamObservable = subject.asObservable();
+  //   return this.open().pipe(
+  //     switchMap(connectionId => this.http.post<MessageUpsertResponseDto[]>(
+  //       `/user/v2/chat-completion?connectionId=${connectionId}&streamId=${streamId}&type=${idType}&id=${id}`,
+  //       { args },
+  //       // { headers: this.authService.getHeaders() }
+  //     )),
+  //     tap(resDtoList => {
+  //       resDtoList.forEach(resDto => {
+  //         // メッセージIdマップを作っておく
+  //         if (this.messageIdStreamIdMap[resDto.message.id]) {
+  //         } else {
+  //           this.messageIdStreamIdMap[resDto.message.id] = [];
+  //         }
+  //         this.messageIdStreamIdMap[resDto.message.id].push(streamId);
+  //       });
+  //     }),
+  //     map(resDtoList => ({ args, connectionId: this.connectionId, streamId, meta: resDtoList, observer: streamObservable }))
+  //   );
+  // }
+
+  /**
+   * リクエストを投げる。戻りはEventSourceから来る。
+   * プロジェクトモデル用のメソッドなのでメッセージの実体を持たない（メッセージIDのみ）
+   * @param inDto
+   * @param taskId
+   * @returns
+   * @see chatCompletionObservableStreamByProjectModel
+   */
+  chatCompletionObservableStreamByProjectModel(
+    args: ChatCompletionCreateParamsWithoutMessages,
+    idType: 'message' | 'messageGroup' | 'thread' | 'threadGroup',
+    id: string,
+  ): Observable<{
     connectionId: string,
     streamId: string,
-    observer: Observable<string>,
-    meta: MessageUpsertResponseDto,
+    metaList: { messageGroup: MessageGroupForView, observer: Observable<string> }[],
   }> {
     const streamId = uuidv4();
-    // ストリーム受け取り用のSubjectを生成
+
+    // ストリーム開いてるか開いてないかで新たにストリーム開くかをコントロールするフラグ
+    let flag = false;
+    if (this.flag) {
+      flag = false;
+    } else {
+      flag = true;
+      this.flag = true;
+    }
+
+    // メッセージ用ストリームが来る前にタイトル用のストリームが閉じるとバグるので、ダミーとしてストリームを開いておく
     const subject = new Subject<string>();
     this.subjectMap[streamId] = subject;
     this.textMap[streamId] = '';
-    const streamObservable = subject.asObservable();
-
-    return this.open().pipe(
-      switchMap(connectionId => this.http.post<MessageUpsertResponseDto>(
-        `/user/v2/chat-completion?connectionId=${connectionId}&streamId=${streamId}&messageId=${messageId}`,
-        {},
+    return this.open(flag).pipe(
+      switchMap(connectionId => this.http.post<MessageGroupForView[]>(
+        `/user/v2/chat-completion?connectionId=${connectionId}&streamId=${streamId}&type=${idType}&id=${id}`,
+        { args },
         // { headers: this.authService.getHeaders() }
       )),
-      tap(resDto => {
-        // メッセージIdマップを作っておくf
-        if (this.messageIdStreamIdMap[resDto.message.id]) {
+      map(messageGroupList => messageGroupList.map(messageGroup => {
+        // 原理的にmessagesは1つのはずなので、最初のメッセージを取り出す
+        const message = messageGroup.messages[0];
+        // ストリーム受け取り用のSubjectを生成
+        const subject = new Subject<string>();
+        this.subjectMap[`${streamId}|${message.id}`] = subject;
+        this.textMap[`${streamId}|${message.id}`] = '';
+        // メッセージIdマップを作っておく
+        if (this.messageIdStreamIdMap[message.id]) {
         } else {
-          this.messageIdStreamIdMap[resDto.message.id] = [];
+          this.messageIdStreamIdMap[message.id] = [];
         }
-        this.messageIdStreamIdMap[resDto.message.id].push(streamId);
-      }),
-      map(resDto => ({ connectionId: this.connectionId, streamId, meta: resDto, observer: streamObservable }))
+        this.messageIdStreamIdMap[message.id].push(streamId);
+        return {
+          observer: subject.asObservable(),
+          messageGroup,
+        };
+      })),
+      map(metaList => { return { connectionId: this.connectionId, streamId, metaList } })
     );
   }
 
@@ -307,8 +397,16 @@ export class ChatService {
     return this.http.post<CountTokensResponse>(`/count-tokens`, inDto);
   }
 
-  countTokensByProjectModel(inDto: ChatInputArea[], messageId: string = ''): Observable<CountTokensResponse> {
-    return this.http.post<CountTokensResponse>(`/user/v2/count-tokens?${messageId ? 'messageId=' + messageId : ''}`, inDto);
+  countTokensByProjectModel(inDto: ChatInputArea[], type: 'message' | 'messageGroup', id: string = ''): Observable<CountTokensResponse> {
+    let query = '';
+    if (id.startsWith('dummy-')) {
+      query = ``;
+    } else if (type === 'message') {
+      query = `&id=${id}`;
+    } else if (type === 'messageGroup') {
+      query = `&id=${id}`;
+    }
+    return this.http.post<CountTokensResponse>(`/user/v2/count-tokens?type=${type}${query}`, inDto);
   }
 
   /**
@@ -321,16 +419,24 @@ export class ChatService {
   /**
    * VertexAI Gemini用コンテキストキャッシュ作成API
    */
-  createCacheByProjectModel(model: string, messageId: string, inDto: GenerateContentRequestForCache): Observable<CachedContent> {
-    return this.http.post<CachedContent>(`/user/v2/cache?model=${model}&${messageId ? 'messageId=' + messageId : ''}`, inDto);
+  createCacheByProjectModel(model: string, id: string, type: 'messageGroup', inDto: GenerateContentRequestForCache): Observable<CachedContent> {
+    let query = '';
+    if (id.startsWith('dummy-')) {
+      query = ``;
+      // } else if (type === 'message') {
+      //   query = `&id=${id}`;
+    } else if (type === 'messageGroup') {
+      query = `&id=${id}`;
+    }
+    return this.http.post<CachedContent>(`/user/v2/cache?model=${model}&type=${type}${query}`, inDto);
   }
 
-  updateCacheByProjectModel(threadId: string, inDto: GenerateContentRequestForCache): Observable<CachedContent> {
-    return this.http.patch<CachedContent>(`/user/v2/cache?threadId=${threadId}`, inDto);
+  updateCacheByProjectModel(threadGroupId: string, inDto: GenerateContentRequestForCache): Observable<CachedContent> {
+    return this.http.patch<CachedContent>(`/user/v2/cache?threadGroupId=${threadGroupId}`, inDto);
   }
 
-  deleteCacheByProjectModel(threadId: string): Observable<CachedContent> {
-    return this.http.delete<CachedContent>(`/user/v2/cache?threadId=${threadId}`);
+  deleteCacheByProjectModel(threadGroupId: string): Observable<CachedContent> {
+    return this.http.delete<CachedContent>(`/user/v2/cache?threadGroupId=${threadGroupId}`);
   }
 
   // calcDuration(inDto: ChatCompletionStreamInDto): Observable<ChatCompletionStreamInDto> {

@@ -51,7 +51,7 @@ export const projectGuard: CanActivateFn = (route, state) => {
 
   const router = inject(Router);
   const activatedRoute = inject(ActivatedRoute);
-  const { projectId, threadId } = route.params;
+  const { projectId, threadGroupId } = route.params;
 
   let aloneTeam: Team;
   let defaultProject: Project;
@@ -102,16 +102,16 @@ export const projectGuard: CanActivateFn = (route, state) => {
   );
 };
 
-export const threadGuard: CanActivateFn = (route, state) => {
+export const threadGroupGuard: CanActivateFn = (route, state) => {
   const router = inject(Router);
   const activatedRoute = inject(ActivatedRoute);
-  const { projectId, threadId } = route.params;
+  const { projectId, threadGroupId } = route.params;
   const threadService: ThreadService = inject(ThreadService);
-  if (threadId === 'new-thread') {
+  if (threadGroupId === 'new-thread') {
     return true;
   } else {
-    return threadService.getThreadList(projectId).pipe(map(threadList => {
-      if (threadList.find(thread => thread.id === threadId)) {
+    return threadService.getThreadGroupList(projectId, true).pipe(map(threadGroupList => {
+      if (threadGroupList.find(threadGroup => threadGroup.id === threadGroupId)) {
         return true;
       } else {
         // デフォルトプロジェクトに飛ばす。

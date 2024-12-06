@@ -1300,7 +1300,7 @@ export class MattermostComponent implements OnInit {
         if (this.mmTimelineList.find(tl => tl.id === this.radioSelectedId)) {
           idParam.idType = 'timeline';
         } else {
-          idParam.idType = 'channel';
+          idParam.idType = 'timelineChannel';
         }
         idParam.id = this.radioSelectedId;
       } else {
@@ -1659,6 +1659,9 @@ export class MattermostComponent implements OnInit {
         });
 
         $event.preventDefault();
+      }
+      if ($event.key === 'Escape') {
+        this.clearMention();
       }
       if ($event.key === 'Enter') {
         const inputText = this.inDto[type].message;

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { departmentGuard, projectGuard, teamGuard, threadGuard } from './guard/chat.guard';
+import { departmentGuard, projectGuard, teamGuard, threadGroupGuard } from './guard/chat.guard';
 
 export const routes: Routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -21,7 +21,7 @@ export const routes: Routes = [
     {
         path: 'chat', children: [{
             path: ':projectId', canActivate: [projectGuard], children: [{
-                path: ':threadId', canActivate: [threadGuard], loadComponent: () => import('./pages/chat/chat.component').then(m => m.ChatComponent)
+                path: ':threadGroupId', canActivate: [threadGroupGuard], loadComponent: () => import('./pages/chat/chat.component').then(m => m.ChatComponent)
             }, { path: '**', redirectTo: 'new-thread' }]
         }, { path: '**', redirectTo: 'defaut-project' }]
     },

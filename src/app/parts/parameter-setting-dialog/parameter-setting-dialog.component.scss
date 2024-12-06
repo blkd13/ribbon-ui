@@ -1,0 +1,24 @@
+:host {
+    padding: 20px;
+}
+
+.container {
+    max-width: 750px;
+    width: 750px;
+    margin: auto;
+    padding: 20px;
+}
+
+.parameter-group {
+    margin: 15px 0 0 0;
+}
+
+input {
+    background-color: #666;
+    text-align: right;
+}
+
+input:disabled {
+    background-color: #333;
+    color: #999;
+}

@@ -1,0 +1,91 @@
+@if(threadGroup){
+<div class="container">
+  <h1>パラメータ設定</h1>
+
+  <div class="flex justify-between mb-5">
+    <div class="flex justify-between gap-3">
+      <button mat-raised-button color="primary" (click)="init()">初期設定に戻す</button>
+    </div>
+    <button mat-raised-button (click)="appendModel()">追加</button>
+  </div>
+
+  <div class="custom-scroll" style="
+  max-height: calc(100vh - 400px);
+  min-height: calc(100vh - 400px);
+  overflow-y: auto;
+  margin-right: -20px;
+  padding-right: 20px;
+  ">
+    @for(thread of threadGroup.threadList;track $index){
+    <ng-container *ngTemplateOutlet="argsTemplate; context: { args:thread.inDto.args, index:$index }"></ng-container>
+    }
+  </div>
+
+  <div class="flex justify-between">
+    <button mat-raised-button (click)="cancel()">キャンセル</button>
+    <div class="flex justify-between gap-3">
+      <button mat-raised-button color="primary" (click)="saveAndSubmit()">設定（永続）</button>
+      <button mat-raised-button color="primary" (click)="submit()">設定（今回のみ）</button>
+    </div>
+  </div>
+</div>
+}
+
+<ng-template #argsTemplate let-args="args" let-index="index">
+  <mat-divider></mat-divider>
+  <div class="flex gap-4 justify-between items-center my-4">
+    <button mat-raised-button color="primary" (click)="removeModel(index)" [disabled]="index==0">削除</button>
+    <div class="w-0 grow">
+      <div class="flex gap-4 justify-between items-baseline">
+        <mat-form-field appearance="fill" class="w-0 grow">
+          <mat-label>モデル選択</mat-label>
+          <mat-select [(ngModel)]="args.model">
+            @for(option of chatService.modelList;track $index){
+            <mat-option [value]="option.id">{{option.tag}}：{{option.id}}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <div class="flex items-center" style="width: 150px;"
+          [matTooltip]="args.model.startsWith('gemini-1.5')?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini-1.5以外では使用できません。'"
+          [ngStyle]="{opacity: args.model.startsWith('gemini-1.5')?1:0.5}">
+          <img src="./image/google-icon.svg" alt="Googleアイコン" class="w-8 h-8"
+            [ngStyle]="{opacity: args.isGoogleSearch ? 1 : 0.3}">
+          <mat-checkbox [(ngModel)]="args.isGoogleSearch" color="primary"
+            [disabled]="!args.model.startsWith('gemini-1.5')">Google<br />検索統合</mat-checkbox>
+        </div>
+      </div>
+
+      <div class="flex gap-4 justify-between">
+        <div class="parameter-group">
+          <label>温度（Temperature）: {{args.temperature|number:'0.1'}}</label>
+          <div class="">
+            <mat-slider min="0" max="2" step="0.1">
+              <input matSliderThumb [(ngModel)]="args.temperature">
+            </mat-slider>
+            <input class="ml-5" matInput type="number" [(ngModel)]="args.temperature" min="0" max="2" step="0.1">
+          </div>
+        </div>
+
+        <div class="parameter-group">
+          <label>トークン上限（Max Tokens）:
+            @if(!isMaxTokenFixedList[index]){ {{args.max_tokens|number}} }
+            @else { 最大値を使用 }
+          </label>
+          <div class="">
+            <mat-slider min="1" [max]="maxMaxToken" step="1" [disabled]="isMaxTokenFixedList[index]">
+              <input matSliderThumb [(ngModel)]="args.max_tokens">
+            </mat-slider>
+            <input class="ml-5" matInput type="number" [(ngModel)]="args.max_tokens" min="1" [max]="maxMaxToken"
+              [disabled]="isMaxTokenFixedList[index]">
+            <mat-checkbox [(ngModel)]="isMaxTokenFixedList[index]" (change)="toggleMaxTokenFixed(index)"
+              color="primary">
+              最大値を使用
+            </mat-checkbox>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</ng-template>

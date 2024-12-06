@@ -32,6 +32,8 @@ export class ApiInterceptor implements HttpInterceptor {
             // 本番環境の場合は環境変数で指定したAPIのエンドポイントに向ける
             url = `${environment.apiUrl}/${request.url}`.replaceAll(/\/\/*/g, '/');
             // console.log(`intercepted:${url}`);
+            // ヘッダーにバージョン情報を付与
+            request.headers.set('X-App-Version', this.g.version);
         } else {
             // request.headers.set('Authorization', 'wyfru3nthbf9zg6iagycfbt64a');
         }
