@@ -73,6 +73,9 @@ export class ChatPanelBaseComponent implements OnInit {
   exPanel!: MatExpansionPanel;
 
   @Input()
+  layout!: 'flex' | 'grid';
+
+  @Input()
   set bitCounter(bitCounter: number) {
     setTimeout(() => this.scroll(), 1);
   }
@@ -232,16 +235,17 @@ export class ChatPanelBaseComponent implements OnInit {
   remove($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
-    if (this.messageGroup.role === 'system') {
-      // systemは行消さずに中身消すだけにする。
-      this.messageGroup.messages[0].contents = [this.messageGroup.messages[0].contents[0]];
-      this.messageGroup.messages[0].contents[0].type = ContentPartType.Text;
-      this.messageGroup.messages[0].contents[0].text = '';
-      this.messageGroup.messages[0].contents[0].fileId = undefined;
-      this.exPanel.close();
-    } else {
-      this.removeEmitter.emit(this.messageGroup);
-    }
+    // if (this.messageGroup.role === 'system') {
+    //   // systemは行消さずに中身消すだけにする。
+    //   this.messageGroup.messages[0].contents = [this.messageGroup.messages[0].contents[0]];
+    //   this.messageGroup.messages[0].contents[0].type = ContentPartType.Text;
+    //   this.messageGroup.messages[0].contents[0].text = '';
+    //   this.messageGroup.messages[0].contents[0].fileId = undefined;
+    //   this.exPanel.close();
+    // } else {
+    //   this.removeEmitter.emit(this.messageGroup);
+    // }
+    this.removeEmitter.emit(this.messageGroup);
   }
 
   timeoutId: any;

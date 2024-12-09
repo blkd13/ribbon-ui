@@ -1167,8 +1167,8 @@ export class MattermostComponent implements OnInit {
 
   setPostCountFiilter(mmGroupedFilteredPostList: Post[][]): void {
     if (this.selectedTeam && this.selectedTeam.id === 'timeline' && this.selectedTimeline) {
-      // timelineの場合はmuteフラグでのチャネル絞り込みを行う。
-      const chIds = this.selectedTimeline.channels.filter(ch => !ch.isMute).map(ch => ch.channelId);
+      // timelineの場合はmuteフラグでのチャネル絞り込みを行う。（mute時でもシングル選択されてたら表示する）
+      const chIds = this.selectedTimeline.channels.filter(ch => !ch.isMute || this.radioSelectedId === ch.id).map(ch => ch.channelId);
       mmGroupedFilteredPostList = mmGroupedFilteredPostList.filter(postGroup => chIds.includes(postGroup[0].channel_id));
     } else { }
 
@@ -1357,7 +1357,7 @@ export class MattermostComponent implements OnInit {
     this.setTitle();
 
     // from で配列自体のObservableを作ることで mergeMap で並列実行数を絞る。
-    return from(mmChannelIdList.filter(chId => !this.initializedChannelList.includes(chId)).map(channelId =>
+    return from(mmChannelIdList.filter(chId => this.mmChannelMas[chId] && !this.initializedChannelList.includes(chId)).map(channelId =>
       this.apiMattermostService.mattermostChannelsPosts(channelId, page, perPage, span).pipe(map(channelPosts => ({ channelId, channelPosts })))
     )).pipe(
       mergeMap(request => request, 1), // worker=3みたいなもの

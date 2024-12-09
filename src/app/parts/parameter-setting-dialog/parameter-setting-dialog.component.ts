@@ -3,7 +3,7 @@ import { FormGroup, FormControl, Validators, FormsModule, ReactiveFormsModule } 
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { ChatService } from '../../services/chat.service';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProjectVisibility, Thread, ThreadGroup, ThreadGroupType } from '../../models/project-models';
 import { Utils } from '../../utils';
@@ -14,6 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { ProjectService, ThreadService } from '../../services/project.service';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { DialogComponent } from '../dialog/dialog.component';
 
 @Component({
   selector: 'app-parameter-setting-dialog',
@@ -21,7 +22,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   imports: [
     CommonModule, FormsModule,
     MatButtonModule, MatFormFieldModule, MatSelectModule, MatSliderModule, MatCheckboxModule,
-    MatDividerModule, MatTooltipModule,
+    MatDividerModule, MatTooltipModule, MatDialogModule,
   ],
   templateUrl: './parameter-setting-dialog.component.html',
   styleUrl: './parameter-setting-dialog.component.scss'
@@ -32,6 +33,7 @@ export class ParameterSettingDialogComponent {
   readonly projectService: ProjectService = inject(ProjectService);
   readonly threadService: ThreadService = inject(ThreadService);
 
+  readonly dialog: MatDialog = inject(MatDialog);
   readonly dialogRef: MatDialogRef<ParameterSettingDialogComponent> = inject(MatDialogRef);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly data = inject<{ threadGroup: ThreadGroup }>(MAT_DIALOG_DATA);
@@ -98,6 +100,7 @@ export class ParameterSettingDialogComponent {
     });
     this.submit();
   }
+
   submit() {
     this.threadGroup.threadList.forEach((_, index) => {
       if (this.isMaxTokenFixedList[index]) {
@@ -107,6 +110,7 @@ export class ParameterSettingDialogComponent {
     });
     this.dialogRef.close(this.threadGroup);
   }
+
   cancel() {
     this.dialogRef.close();
   }
@@ -123,7 +127,14 @@ export class ParameterSettingDialogComponent {
   }
 
   removeModel(index: number) {
-    this.threadGroup.threadList.splice(index, 1);
-    this.reload();
+    const threadGroup = this.threadGroup as ThreadGroup;
+    this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${this.threadGroup.threadList[index].inDto.args.model}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
+      next: next => {
+        if (next === 0) {
+          threadGroup.threadList.splice(index, 1);
+          this.reload();
+        } else { /** 削除キャンセル */ }
+      },
+    });
   }
 }

@@ -63,6 +63,7 @@
                         </mat-menu>
                     </div>
                     @for(channel of timeline.channels; track $index){
+                    @if(mmChannelMas[channel.channelId]){
                     <div class="relative flex channel-container"
                         title="[{{mmTeamMas[mmChannelMas[channel.channelId].team_id].display_name}}] {{mmChannelMas[channel.channelId].display_name||mmChannelMas[channel.channelId].name}}">
                         <button mat-icon-button matTooltip="ミュート" matTooltipPosition="left"
@@ -96,7 +97,7 @@
                         </div>
                         }
                     </div>
-
+                    }
                     }
                 </mat-radio-group>
             </div>

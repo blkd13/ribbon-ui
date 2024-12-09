@@ -7,6 +7,8 @@ import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { filter } from 'rxjs/operators';
+import { UserService } from './services/user.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -20,6 +22,7 @@ export class AppComponent implements OnInit {
   isChecked = false;
   showInfo = true;
   readonly authService: AuthService = inject(AuthService);
+  readonly userService: UserService = inject(UserService);
   readonly translateService: TranslateService = inject(TranslateService);
   readonly g: GService = inject(GService);
   private readonly swUpdate: SwUpdate = inject(SwUpdate);
@@ -31,7 +34,7 @@ export class AppComponent implements OnInit {
     if (v1 && JSON.parse(v1).model) {
       // localStorage.removeItem('settings-v1.0');
       localStorage.setItem('settings-v2.0', JSON.stringify([JSON.parse(v1)]));
-    }
+    } else { }
   }
 
   ngOnInit(): void {
@@ -45,7 +48,17 @@ export class AppComponent implements OnInit {
     this.authService.getUser().subscribe({
       next: next => {
         this.g.autoRedirectToLoginPageIfAuthError = true;
-        this.isChecked = true;
+        this.userService.getUserSetting().subscribe({
+          next: next => {
+            this.isChecked = true;
+          },
+          error: error => {
+            this.isChecked = true;
+          },
+          complete: () => {
+            // console.log('complete');
+          }
+        });
       },
       error: error => {
         this.g.autoRedirectToLoginPageIfAuthError = true;

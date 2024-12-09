@@ -69,7 +69,7 @@
                     [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
             </div>
             <div class="custom-scroll" style="display: block;overflow: auto;"
-                [ngStyle]="{'max-height': messageGroup.role==='assistant'?'auto':'70vh'}" #textBodyElem>
+                [ngClass]="[messageGroup.role==='assistant'&&layout==='grid'?'grid-panel':'flex-panel']" #textBodyElem>
                 <markdown [hidden]="message.editing" katex mermaid clipboard
                     [data]="brackets.pre+content.text+brackets.post">
                 </markdown>

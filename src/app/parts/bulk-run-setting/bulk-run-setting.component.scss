@@ -1,12 +1,22 @@
-::ng-deep table .mat-mdc-form-field-subscript-wrapper.mat-mdc-form-field-bottom-align {
-    display: none;
+::ng-deep {
+    table .mat-mdc-form-field-subscript-wrapper.mat-mdc-form-field-bottom-align {
+        display: none;
+    }
+
+    table .mat-mdc-header-row.mdc-data-table__header-row.cdk-header-row {
+        top: 0;
+        position: sticky;
+        z-index: 1;
+    }
 }
 
 .container {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    width: 520px;
-    height: 700px;
+    // width: 520px;
+    min-height: 700px;
+    height: auto;
+    max-height: calc(100vh - 150px);
     padding: 20px;
 }

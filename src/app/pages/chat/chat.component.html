@@ -1,6 +1,6 @@
 @if(showInfo){
 <div class="flex justify-center item-center" style="background-color: rgb(30, 109, 131);padding: 5px 10px;">
-    稀に謎のエラー（503系）が発生することがあります。このエラーは5分程度で自然回復するので、少し時間をおいてから試してみてください。もしくはモデルをGPT-4oに切り替えてください。
+    稀に謎のエラー（401 or 503系）が発生することがあります。このエラーは5分程度で自然回復するので、少し時間をおいてから試してみてください。もしくはモデルをGPT-4oに切り替えてください。
     <mat-icon class="cursor-pointer absolute right-3" (click)="showInfo=false">close</mat-icon>
 </div>
 }
@@ -25,14 +25,14 @@
             <a class="add-thread mb-5" [ngStyle]="{'background-color':!selectedThreadGroup?'#303030':'inherit'}"
                 matTooltip="Create new thread" (click)="clear()">
                 <mat-icon [ngStyle]="{'visibility': selectedThreadGroup?'visible':'hidden'}">add_circle</mat-icon>
-                <div>新規スレッド</div>
+                <div>新規チャット</div>
             </a>
             } @else {
             <a class="add-thread mb-5" [routerLink]="['/chat', selectedProject.id, 'new-thread']"
                 [ngStyle]="{'background-color':!selectedThreadGroup?'#303030':'inherit'}"
                 matTooltip="Create new thread">
                 <mat-icon [ngStyle]="{'visibility': selectedThreadGroup?'visible':'hidden'}">add_circle</mat-icon>
-                <div>新規スレッド</div>
+                <div>新規チャット</div>
             </a>
             }
             <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
@@ -174,10 +174,13 @@
                         @if(tokenObj.totalTokens ==-1){ wait.. } @else { $ {{cost|number:'1.2-2'}} }
                     </div> |
                 </div>
-                <button mat-icon-button (click)="toggleAllExpandCollapse()">
+                <button mat-icon-button (click)="userService.toggleChatLayout().subscribe()" title="チャットパネルのレイアウト">
+                    <mat-icon>@if(userService.chatLayout==='grid'){dashboard}@else{grid_view}</mat-icon>
+                </button>
+                <button mat-icon-button (click)="toggleAllExpandCollapse()" title="チャットパネルの開閉">
                     <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
                 </button>
-                <button mat-icon-button color="primary" (click)="openModelSetting()">
+                <button mat-icon-button color="primary" (click)="openModelSetting()" title="設定">
                     <mat-icon>settings</mat-icon>
                 </button>
                 <div class="mr-10"></div>
@@ -240,40 +243,42 @@
                 <div class="flex gap-1 w-full" [ngStyle]="index===0?{position:'sticky',top:0,zIndex:1}:{}">
                     @for(thread of selectedThreadGroup.threadList;track $index){
 
-                    @if(messageGroupIdListMas[thread.id] && messageGroupIdListMas[thread.id][index]; as messageGroupId){
+                    <div class="w-0 flex-grow">
+                        @if(messageGroupIdListMas[thread.id]){
+                        @if(messageGroupIdListMas[thread.id][index]; as messageGroupId){
+                        @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
 
-                    @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
+                        <!-- {{messageGroup.id}} -->
+                        @if(messageGroup.role==='system') {
+                        <app-chat-panel-system [messageGroup]="messageGroup" [bitCounter]="bitCounter" [thread]="thread"
+                            [layout]="userService.chatLayout" (edit)="editChat($event)"
+                            (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
+                            (remove)="removeMessageGroup($event)">
+                        </app-chat-panel-system>
+                        } @else if(['assistant', 'user'].includes(messageGroup.role)) {
+                        <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
+                            [layout]="userService.chatLayout" (edit)="editChat($event)"
+                            (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
+                            (remove)="removeMessageGroup($event)">
+                        </app-chat-panel-message>
+                        }
 
-                    <!-- {{messageGroup.id}} -->
-                    @if(messageGroup.role==='system') {
-                    <app-chat-panel-system class="w-0 flex-grow" [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-                        [thread]="thread" (edit)="editChat($event)" (removeContent)="removeContent($event)"
-                        (removeMessage)="removeMessage($event)" (remove)="removeMessageGroup($event)">
-                    </app-chat-panel-system>
-                    } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-                    <app-chat-panel-message class="w-0 flex-grow" [messageGroup]="messageGroup"
-                        [bitCounter]="bitCounter" (edit)="editChat($event)" (removeContent)="removeContent($event)"
-                        (removeMessage)="removeMessage($event)" (remove)="removeMessageGroup($event)">
-                    </app-chat-panel-message>
-                    }
+                        }
 
-                    }
+                        <!-- メッセージの後ろのグループの選択肢 -->
+                        @if(messageService.nextMessageGroupId[messageGroupId]
+                        &&(
+                        (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
+                        ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
+                        ) {
+                        <ng-container
+                            *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
+                        </ng-container>
+                        }
 
-                    <!-- メッセージの後ろのグループの選択肢 -->
-                    @if(messageService.nextMessageGroupId[messageGroupId]
-                    &&(
-                    (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
-                    ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
-                    ) {
-                    <ng-container
-                        *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
-                    </ng-container>
-                    }
-
-                    } @else {
-                    <div></div>
-                    }
-
+                        }
+                        }
+                    </div>
                     }
                 </div>
                 }
@@ -282,7 +287,7 @@
         </div>
         <!-- 履歴選択 -->
         <ng-template #messageSelectorTemplate let-messageGroup>
-            <div class="flex justify-end">
+            <div class="flex justify-end mt-3">
                 <mat-icon class="cursor-pointer" (click)="setSelect(messageGroup, -1)"
                     [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
                 <div class="text-center w-[60px]">

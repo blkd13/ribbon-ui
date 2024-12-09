@@ -293,7 +293,7 @@ export interface MessageGroup extends BaseEntity {
     role: ChatCompletionRole;
     // label: string;
     previousMessageGroupId?: UUID;
-    editedRootMessageGroupId?: UUID;
+    // editedRootMessageGroupId?: UUID;
 }
 
 export interface MessageGroupForView extends MessageGroup {
