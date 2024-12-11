@@ -32,12 +32,10 @@ export class ApiInterceptor implements HttpInterceptor {
             // 本番環境の場合は環境変数で指定したAPIのエンドポイントに向ける
             url = `${environment.apiUrl}/${request.url}`.replaceAll(/\/\/*/g, '/');
             // console.log(`intercepted:${url}`);
-            // ヘッダーにバージョン情報を付与
-            request.headers.set('X-App-Version', this.g.version);
         } else {
-            // request.headers.set('Authorization', 'wyfru3nthbf9zg6iagycfbt64a');
+            // request.headers.set('Authorization', 'xxx');
         }
-        request = request.clone({ url, method });
+        request = request.clone({ url, method,headers: request.headers.set('X-App-Version', this.g.version) });
 
         // // 同時リクエストが多くなるとブラウザエラーになることがあったので適当に遅延させる機能を付けた
         // // pipe(delay)だと結果読み出しが遅延するだけで発射が遅延しないのでsetTimeoutを使う

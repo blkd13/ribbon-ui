@@ -4,7 +4,7 @@ import { catchError, delay, from, concatMap, map, Observable, of, retry, Subject
 import { Client4, WebSocketClient, WebSocketMessage } from '@mattermost/client';
 import emojiData from 'emoji-datasource';
 import { CustomEmoji } from '@mattermost/types/emojis';
-import { Thread } from '../models/project-models';
+import { Thread, ThreadGroup } from '../models/project-models';
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './file-manager.service';
 import { Utils } from '../utils';
 
@@ -770,8 +770,8 @@ export class MattermostTimelineService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  mattermostToAi(projectId: string, id: string, idType: ToAiIdType, filterType: ToAiFilterType, params: any, systemPrompt: string): Observable<{ thread: Thread }> {
-    return this.http.post<any>(`${this.apiUrl}/to-ai`, { projectId, id, idType, filterType, params, systemPrompt });
+  mattermostToAi(projectId: string, id: string, idType: ToAiIdType, title: string, filterType: ToAiFilterType, params: any, systemPrompt: string): Observable<{ threadGroup: ThreadGroup }> {
+    return this.http.post<any>(`${this.apiUrl}/to-ai`, { projectId, id, idType, title, filterType, params, systemPrompt });
   }
 }
 export type ToAiIdType = 'timeline' | 'timelineChannel' | 'channel' | 'thread';

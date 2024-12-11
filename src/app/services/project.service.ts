@@ -125,6 +125,9 @@ export class ThreadService {
         const deafultThreadGroup = Object.keys(this.threadListMas).map(key => this.threadListMas[key].find(threadGroup => threadGroup.type === ThreadGroupType.Default)).filter(threadGroup => threadGroup)[0];
         if (deafultThreadGroup) {
             const threadGroup = Utils.clone(deafultThreadGroup);
+            threadGroup.lastUpdate = new Date(threadGroup.lastUpdate);
+            threadGroup.createdAt = new Date(threadGroup.createdAt);
+            threadGroup.updatedAt = new Date(threadGroup.updatedAt);
             // デフォルトスレッドグループがあればそれをひな型として返す
             // ひな型なので要らない項目は消しておかないといけない。
             Object.assign(threadGroup, genInitialBaseEntity('thread-group'));
@@ -216,19 +219,63 @@ export class ThreadService {
     }
 
     moveThreadGroup(threadGroupId: string, projectId: string): Observable<ThreadGroup> {
-        return this.http.put<ThreadGroup>(`/user/thread-group/${threadGroupId}`, { projectId }).pipe(tap(threadGroupResponseHandler));;
+        return this.http.put<ThreadGroup>(`/user/thread-group/${threadGroupId}`, { projectId });
     }
 
     cloneThreadGroup(threadGroupId: string): Observable<ThreadGroup> {
         return this.http.post<ThreadGroup>(`/user/thread-group/clone/${threadGroupId}`, {}).pipe(tap(threadGroupResponseHandler));
     }
 
-    cloneThread(threadId: string): Observable<Thread> {
-        return this.http.post<Thread>(`/user/thread/clone/${threadId}`, {}).pipe(tap(thread => threadFormat(thread)));
-    }
+    // cloneThread(threadId: string): Observable<Thread> {
+    //     return this.http.post<Thread>(`/user/thread/clone/${threadId}`, {}).pipe(tap(thread => threadFormat(thread)));
+    // }
 
     deleteThreadGroup(threadGroupId: string): Observable<void> {
         return this.http.delete<void>(`/user/thread-group/${threadGroupId}`);
+    }
+}
+
+
+@Injectable({ providedIn: 'root' })
+export class ThreadMessageService {
+    private readonly http: HttpClient = inject(HttpClient);
+    private readonly threadService: ThreadService = inject(ThreadService);
+    private readonly messageService: MessageService = inject(MessageService);
+
+    // saveThreadGroup(_orgThreadGroup: ThreadGroup): Observable<ThreadGroup> {
+    //     const orgThreadGroup = Utils.clone(_orgThreadGroup);
+    //     // 選択中スレッドを保存
+    //     return this.threadService.upsertThreadGroup(orgThreadGroup.id, orgThreadGroup).pipe(tap(threadGroup => {
+    //         this.messageService.getMessageGroupList
+    //         // TODO 本当はここの反映はserviceでやりたいけど、サービスが割れてるからやりにくい。。
+    //         threadGroup.threadList.forEach((thread, index) => {
+
+    //             this.messageGroupIdListMas[orgThreadGroup.threadList[index].id].forEach(messageGroupId => {
+    //                 this.messageService.messageGroupMas[messageGroupId].threadId = thread.id;
+    //             });
+    //         });
+    //         this.rebuildThreadGroup();
+    //     }));
+    // }
+
+    upsertThreadGroup(projectId: string, threadGroup: ThreadGroupUpsertDto): Observable<ThreadGroup> {
+        const inDto = Utils.clone(threadGroup);
+        if (inDto.id?.startsWith('dummy-')) {
+            inDto.id = undefined;
+        }
+        inDto.threadList.forEach(thread => {
+            if (thread.id?.startsWith('dummy-')) {
+                thread.id = undefined;
+            }
+            (thread as any).inDtoJson = JSON.stringify(thread.inDto);
+        });
+        return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(tap(obj => {
+            threadGroup.id = obj.id;
+            obj.threadList.forEach((thread, index) => {
+                threadGroup.threadList[index].id = thread.id;
+                threadFormat(thread);
+            });
+        }));
     }
 }
 
@@ -251,9 +298,15 @@ export class MessageService {
     oldMessageId: { [messageId: string]: string } = {};
     newMessageId: { [messageId: string]: string[] } = {};
 
+    idRemapTable: { [dummyId: string]: string } = {};
+
     /** メッセージのタイムスタンプを更新するだけ。 */
     updateTimestamp(type: 'message-group' | 'message', id: string): Observable<Message | MessageGroup> {
         return this.http.patch<MessageForView>(`/user/thread/${type}/${id}`, id);
+    }
+
+    editMessageWithContents(message: MessageForView): Observable<MessageForView> {
+        return this.http.patch<MessageForView>(`/user/message/${message.id}/content-parts`, message);
     }
 
     getMessageGroupList(threadGroupId: string, page: number = 1, limit: number = 1000): Observable<{ messageGroups: MessageGroupForView[] }> {
@@ -336,6 +389,7 @@ export class MessageService {
         this.nextMessageGroupId = {};
         this.oldMessageId = {};
         this.newMessageId = {};
+        this.idRemapTable = {};
     }
 
     initThreadGroup(threadGroupId: string, page: number = 1, limit: number = 1000): Observable<{ messageGroups: MessageGroupForView[] }> {
@@ -376,12 +430,18 @@ export class MessageService {
         }));
     }
 
+    /**
+     * 履歴のどれを選択するかを決める。
+     * previousMessageGroupId で束ねられたmessageGroupの中で、最も新しいものを選択するということ。
+     * @param previousMessageGroupId 
+     * @returns 
+     */
     resetSelectedIndex(previousMessageGroupId: string): number {
         const nextMessageGroupId = this.nextMessageGroupId[previousMessageGroupId];
         const tail = nextMessageGroupId.sort((a, b) => {
             // ソート条件：lastUpdate降順、seq降順
-            if (this.messageGroupMas[a].lastUpdate > this.messageGroupMas[b].lastUpdate) return -1;
-            if (this.messageGroupMas[a].lastUpdate < this.messageGroupMas[b].lastUpdate) return 1;
+            if (new Date(this.messageGroupMas[a].lastUpdate) > new Date(this.messageGroupMas[b].lastUpdate)) return -1;
+            if (new Date(this.messageGroupMas[a].lastUpdate) < new Date(this.messageGroupMas[b].lastUpdate)) return 1;
             return this.messageGroupMas[b].seq - this.messageGroupMas[a].seq; // seq降順
         })[0];
         // seqで昇順ソートしてselectedIndexを設定
@@ -402,8 +462,8 @@ export class MessageService {
         } else {
             targetMessageGroupId = Object.values(messageGroupMas).filter(messageGroup => messageGroup.threadId === threadId).sort((a, b) => {
                 // ソート条件：lastUpdate降順、seq降順
-                if (a.lastUpdate > b.lastUpdate) return -1;
-                if (a.lastUpdate < b.lastUpdate) return 1;
+                if (new Date(a.lastUpdate) > new Date(b.lastUpdate)) return -1;
+                if (new Date(a.lastUpdate) < new Date(b.lastUpdate)) return 1;
                 return b.seq - a.seq; // seq降順
             })[0].id;
         }
@@ -433,12 +493,12 @@ export class MessageService {
         while (this.nextMessageGroupId[targetMessageGroupId]) {
             targetMessageGroupId = this.nextMessageGroupId[targetMessageGroupId].slice().sort((a, b) => {
                 // ソート条件：lastUpdate降順、seq降順
-                if (this.messageGroupMas[a].lastUpdate > this.messageGroupMas[b].lastUpdate) return -1;
-                if (this.messageGroupMas[a].lastUpdate < this.messageGroupMas[b].lastUpdate) return 1;
+                if (new Date(this.messageGroupMas[a].lastUpdate) > new Date(this.messageGroupMas[b].lastUpdate)) return -1;
+                if (new Date(this.messageGroupMas[a].lastUpdate) < new Date(this.messageGroupMas[b].lastUpdate)) return 1;
                 return this.messageGroupMas[b].seq - this.messageGroupMas[a].seq; // seq降順
             })[0];
             // 新しいものじゃなければselectedIndexをoutboundsさせて抜ける
-            if (this.messageGroupMas[targetMessageGroupId].lastUpdate < messageGroup.lastUpdate) {
+            if (new Date(this.messageGroupMas[targetMessageGroupId].lastUpdate) < new Date(messageGroup.lastUpdate)) {
                 messageGroup.selectedIndex = this.nextMessageGroupId[messageGroup.id].length;
                 break;
             } else { }
@@ -467,6 +527,12 @@ export class MessageService {
         } else { }
         if (messageGroup.previousMessageGroupId === null) { // nullだとチェックに掛かるけどundefinedは掛からないのでnullをundefinedに変換
             messageGroup.previousMessageGroupId = undefined;
+        } else if (messageGroup.previousMessageGroupId) {
+            if (this.idRemapTable[messageGroup.previousMessageGroupId]) {
+                messageGroup.previousMessageGroupId = this.idRemapTable[messageGroup.previousMessageGroupId];
+            } else {
+                // 
+            }
         } else { }
         messageGroup.messages.map((message, index) => {
             if (message.id.startsWith('dummy-')) {
@@ -488,8 +554,9 @@ export class MessageService {
             tap(savedMessageGroup => {
                 // 要らないものを消す
                 if (orgMessageGroup.id.startsWith('dummy-')) {
-                    this.messageGroupList.splice(this.messageGroupList.indexOf(orgMessageGroup), 1);
-                    delete this.messageGroupMas[orgMessageGroup.id];
+                    this.idRemapTable[orgMessageGroup.id] = savedMessageGroup.id;
+                    // this.messageGroupList.splice(this.messageGroupList.indexOf(orgMessageGroup), 1);
+                    // delete this.messageGroupMas[orgMessageGroup.id];
                 } else { }
                 if (savedMessageGroup.previousMessageGroupId) {
                     this.prevMessageGroupId[orgMessageGroup.id] = savedMessageGroup.previousMessageGroupId;
@@ -501,8 +568,9 @@ export class MessageService {
                 }
                 orgMessageGroup.messages.map((message, index) => {
                     if (message.id.startsWith('dummy-')) {
-                        this.messageList.splice(this.messageList.indexOf(orgMessageGroup.messages[index]), 1);
-                        delete this.messageMas[orgMessageGroup.messages[index].id];
+                        this.idRemapTable[message.id] = savedMessageGroup.messages[index].id;
+                        // this.messageList.splice(this.messageList.indexOf(orgMessageGroup.messages[index]), 1);
+                        // delete this.messageMas[orgMessageGroup.messages[index].id];
                     } else { }
                 });
                 this.applyMessageGroup(savedMessageGroup);
@@ -525,26 +593,27 @@ export class MessageService {
      */
     cloneThreadDry(thread: Thread, newThreadId?: string): Observable<Thread> {
         const newThread = Utils.clone(thread);
-        newThread.id = newThreadId ? newThreadId : genDummyId('thread');
+        Object.assign(newThread, genInitialBaseEntity('thread'));
+        newThread.id = newThreadId ? newThreadId : newThread.id;
         newThread.status = 'Normal';
         type IdRemap = { [oldId: string]: string };
-        const idRemapTable: { messageGroup: IdRemap, message: IdRemap, contentPart: IdRemap, file: IdRemap } = { messageGroup: {}, message: {}, contentPart: {}, file: {} };
+        const idRemapTable: IdRemap = {};  // 後でIDをリマップするために保存。コピー元のIDをコピー先のダミーIDにリマップするのはこのメソッドローカルなのでここに保存しておく。
         // 対象スレッドのメッセージグループをコピー
         const messageGroupListObservable = safeForkJoin(
             this.messageGroupList
                 .filter(messageGroup => messageGroup.threadId === thread.id)
                 .map(messageGroup => {
                     const newMessageGroup = Utils.clone(messageGroup);
-                    newMessageGroup.id = genDummyId('message-group');
-                    idRemapTable.messageGroup[messageGroup.id] = newMessageGroup.id;
+                    Object.assign(newMessageGroup, genInitialBaseEntity('message-group'));
+                    idRemapTable[messageGroup.id] = newMessageGroup.id; // 後でIDをリマップするために保存
                     newMessageGroup.threadId = newThread.id;
                     newMessageGroup.previousMessageGroupId = messageGroup.previousMessageGroupId;
                     return safeForkJoin(
                         messageGroup.messages.map(message => {
                             // メッセージをコピー
                             const newMessage = Utils.clone(message);
-                            newMessage.id = genDummyId('message');
-                            idRemapTable.message[message.id] = newMessage.id;
+                            Object.assign(newMessage, genInitialBaseEntity('message'));
+                            idRemapTable[message.id] = newMessage.id;
                             newMessage.messageGroupId = newMessageGroup.id;
                             // コンテンツの有無を確認し、無ければ取得する
                             return (message.contents.length === 0 ? this.getMessageContentParts(message) : of(message.contents)).pipe(
@@ -553,8 +622,8 @@ export class MessageService {
                                     newMessage.contents = contents.map(content => {
                                         // コンテンツをコピー
                                         const newContent = Utils.clone(content);
-                                        newContent.id = genDummyId('content-part');
-                                        idRemapTable.contentPart[content.id] = newContent.id;
+                                        Object.assign(newContent, genInitialBaseEntity('content-part'));
+                                        idRemapTable[content.id] = newContent.id;
                                         newContent.messageId = newMessage.id;
                                         // TODO fileIdがある場合はファイルをコピーする処理を入れ他方がいいかもしれないけど、一旦除外。ツリーモードを作った時に考える。
                                         return newContent;
@@ -577,19 +646,17 @@ export class MessageService {
         return messageGroupListObservable.pipe(
             map(messageGroupList =>
                 messageGroupList.map(messageGroup => {
+                    // console.log(this.messageGroupList);
                     if (messageGroup.previousMessageGroupId) {
-                        messageGroup.previousMessageGroupId = idRemapTable.messageGroup[messageGroup.previousMessageGroupId] || messageGroup.previousMessageGroupId;
-                    } else { }
-                    if (messageGroup.editedRootMessageGroupId) {
-                        messageGroup.editedRootMessageGroupId = idRemapTable.messageGroup[messageGroup.editedRootMessageGroupId] || messageGroup.editedRootMessageGroupId;
+                        messageGroup.previousMessageGroupId = idRemapTable[messageGroup.previousMessageGroupId] || messageGroup.previousMessageGroupId;
                     } else { }
                     messageGroup.messages.forEach(message => {
-                        message.messageGroupId = idRemapTable.messageGroup[message.messageGroupId] || message.messageGroupId;
+                        message.messageGroupId = idRemapTable[message.messageGroupId] || message.messageGroupId;
                         if (message.editedRootMessageId) {
-                            message.editedRootMessageId = idRemapTable.message[message.editedRootMessageId] || message.editedRootMessageId;
+                            message.editedRootMessageId = idRemapTable[message.editedRootMessageId] || message.editedRootMessageId;
                         } else { }
                         message.contents.forEach(content => {
-                            content.messageId = idRemapTable.message[content.messageId] || content.messageId;
+                            content.messageId = idRemapTable[content.messageId] || content.messageId;
                         });
                     });
                     return messageGroup;
@@ -602,78 +669,11 @@ export class MessageService {
         );
     }
 
-    // getLastTouchedMessageGroupIds(messageGroupList: MessageGroup[], threadId?: string): { [threadId: string]: string } {
-    //     // TODO このメソッドは失敗しているかもしれない。そもそもこんなの要らなかったような気もする。previousMessageGroupIdでサマってソートすればいいだけな気がする。
-    //     const groupedThreads = messageGroupList.filter(mg => !threadId || mg.threadId === threadId).reduce((acc, messageGroup) => {
-    //         // threadIdごとにグループ化
-    //         acc[messageGroup.threadId] = acc[messageGroup.threadId] || [];
-    //         acc[messageGroup.threadId].push(messageGroup);
-    //         return acc;
-    //     }, {} as { [threadId: string]: MessageGroup[] });
-
-    //     // 各スレッドで最後に編集されたIDを取得
-    //     Object.values(groupedThreads).forEach(threadMessages => threadMessages.sort((a, b) => {
-    //         // ソート条件：lastUpdate降順、seq降順
-    //         if (a.lastUpdate > b.lastUpdate) return -1;
-    //         if (a.lastUpdate < b.lastUpdate) return 1;
-    //         return b.seq - a.seq; // seq降順
-    //     }));
-
-    //     return Object.keys(groupedThreads).reduce((acc, threadId) => {
-    //         const lastMessageGroup = groupedThreads[threadId][0]; // ソート後の最初のIDを取得 
-    //         const history = groupedThreads[threadId]
-    //             .filter(mg => mg.previousMessageGroupId && mg.previousMessageGroupId === lastMessageGroup.previousMessageGroupId)
-    //             .sort((a, b) => a.seq - b.seq); // seq昇順でソート
-    //         const index = history.findIndex(mg => mg.id === lastMessageGroup.id);
-    //         if (lastMessageGroup.previousMessageGroupId) {
-    //             (messageGroupList.find(mg => mg.id === lastMessageGroup.previousMessageGroupId) as MessageGroupForView).selectedIndex = index;
-    //         } else { }
-    //         acc[threadId] = lastMessageGroup.id;
-    //         return acc;
-    //     }, {} as { [threadId: string]: string });
-    // }
-
-
-    // // メッセージグループの追加
-    // addSingleMessageGroup(threadId: string, previousMessageGroupId: string | undefined, role: ChatCompletionRole, contents: ContentPart[], vars: any = {}): Observable<MessageGroupForView> {
-    //     return this.upsertMessageWithContents(
-    //         threadId, 'message-group',
-    //         '', MessageGroupType.Single, role, previousMessageGroupId,
-    //         '', 0, undefined, contents, vars
-    //     );
-    // }
-    // upsertMessageWithContents(
-    //     threadId: string,
-    //     targetType: 'message' | 'message-group',
-
-    //     messageGroupId: string,
-    //     messageGroupType: MessageGroupType,
-    //     role: ChatCompletionRole,
-    //     previousMessageGroupId: string | undefined,
-
-    //     messageId: string,
-    //     messageSubSeq: number,
-    //     cacheId: string | undefined,
-
-    //     contents: ContentPart[],
-    //     vars: any = {},
-    // ): Observable<MessageGroupForView> {
-    //     if (messageGroupId.startsWith('dummy-')) {
-    //         (messageGroupId as any) = undefined;
-    //     } else { }
-    //     if (messageId?.startsWith('dummy-')) {
-    //         (messageId as any) = undefined;
-    //     } else { }
-    //     const inDto = { messageGroupId, messageGroupType, role, previousMessageGroupId, messageId, messageSubSeq, cacheId, contents };
-    //     return this.http.post<MessageUpsertResponseDto>(`/user/thread/${threadId}/${targetType}`, inDto).pipe(
-    //         map(messageSet => this.applyMessageGroup(messageSet.messageGroup)),
-    //     );
-    // }
-
     applyMessageGroup(_messageGroup: MessageGroup): MessageGroupForView {
         const messageGroup = _messageGroup as MessageGroupForView;
         messageGroup.selectedIndex = 0;
         messageGroup.messages.sort((a, b) => a.seq - b.seq);
+        // console.log(this.messageGroupList);
 
         if (this.messageGroupMas[messageGroup.id]) {
             // Object.assign(this.messageGroupMas[messageGroup.id], messageGroup);
@@ -811,8 +811,8 @@ export class MessageService {
                 return acc;
             }, {} as { [messageGroupId: string]: MessageGroupForView });
             return safeForkJoin(Array.from(threadIdSet).map(threadId => {
-                const messageList = MessageService.rebuildMessageGroup(messageGroupMas, threadId);
-                return safeForkJoin(messageList.map(messageId => this.getMessageContentParts(messageMas[messageId])));
+                const messageGroupIdList = MessageService.rebuildMessageGroup(messageGroupMas, threadId);
+                return safeForkJoin(messageGroupIdList.map(messageGroupId => messageGroupMas[messageGroupId].messages.map(message => this.getMessageContentParts(message))).flat());
             }));
         }));
     }

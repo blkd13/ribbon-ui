@@ -16,8 +16,11 @@ import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from 
 import { FileDropDirective } from './../file-drop.directive';
 import { ContentPart } from './../../models/project-models';
 
-interface TableRow {
-  value: string;
+export interface BulkRunSettingData {
+  projectId: string;
+  mode: 'serial' | 'parallel';
+  contents: ({ type: 'text', text: string } | { type: 'file', text: string, fileId: string })[];
+  promptTemplate: string;
 }
 
 @Component({
@@ -63,7 +66,13 @@ export class BulkRunSettingComponent {
 
   executeBatch(): void {
     this.data.contents = this.dataSource.filter(value => value.text.trim() !== '');
-    this.dialogRef.close({ ...this.data });
+    const outDto: BulkRunSettingData = {
+      mode: this.data.mode,
+      contents: this.data.contents.filter(content => content.text),  // 空コンテンツは除外
+      promptTemplate: this.promptTemplate,
+      projectId: this.data.projectId,
+    };
+    this.dialogRef.close(outDto);
   }
 
   addRow() {
@@ -171,7 +180,7 @@ export class BulkRunSettingComponent {
       }
       text = clipboardData?.getData('text');
 
-      const rows = text.trim().split('\n');
+      const rows = text.trim().split(/[\r\n]+/g);
       for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
         if (this.dataSource[index + rowIndex] === undefined) {
           this.dataSource.push({ type: 'text', text: rows[rowIndex] });

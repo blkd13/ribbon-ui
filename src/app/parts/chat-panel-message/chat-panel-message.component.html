@@ -53,7 +53,7 @@
         </div>
     </mat-expansion-panel-header>
 
-    <div class="flex w-full">
+    <div class="flex w-full gap-2">
         @for (message of messageGroup.messages; track $index) {
         <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
             <!-- ファイル -->
@@ -78,8 +78,8 @@
                     (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'"
                     [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
             </div>
-            <div class="custom-scroll" style="display: block;overflow: auto;"
-                [ngStyle]="{'max-height': messageGroup.role==='assistant'?'auto':'70vh'}" #textBodyElem>
+            <div class="custom-scroll block overflow-auto"
+                [ngClass]="[messageGroup.role==='assistant'&&layout==='grid'?'grid-panel':'flex-panel']" #textBodyElem>
                 <markdown [hidden]="message.editing" katex mermaid clipboard
                     [data]="brackets.pre+content.text+brackets.post">
                 </markdown>

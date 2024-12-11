@@ -324,7 +324,7 @@ export class ChatService {
   ): Observable<{
     connectionId: string,
     streamId: string,
-    metaList: { messageGroup: MessageGroupForView, observer: Observable<string> }[],
+    messageGroupList: MessageGroupForView[],
   }> {
     const streamId = uuidv4();
 
@@ -338,6 +338,7 @@ export class ChatService {
     }
 
     // メッセージ用ストリームが来る前にタイトル用のストリームが閉じるとバグるので、ダミーとしてストリームを開いておく
+    // つまり、ストリーム開いてるかの判定をするブロックの中でthis.subjectMapに登録しないと、つるっと抜ける可能性がある。
     const subject = new Subject<string>();
     this.subjectMap[streamId] = subject;
     this.textMap[streamId] = '';
@@ -348,24 +349,22 @@ export class ChatService {
         // { headers: this.authService.getHeaders() }
       )),
       map(messageGroupList => messageGroupList.map(messageGroup => {
-        // 原理的にmessagesは1つのはずなので、最初のメッセージを取り出す
-        const message = messageGroup.messages[0];
-        // ストリーム受け取り用のSubjectを生成
-        const subject = new Subject<string>();
-        this.subjectMap[`${streamId}|${message.id}`] = subject;
-        this.textMap[`${streamId}|${message.id}`] = '';
-        // メッセージIdマップを作っておく
-        if (this.messageIdStreamIdMap[message.id]) {
-        } else {
-          this.messageIdStreamIdMap[message.id] = [];
-        }
-        this.messageIdStreamIdMap[message.id].push(streamId);
-        return {
-          observer: subject.asObservable(),
-          messageGroup,
-        };
+        messageGroup.messages.forEach(message => {
+          // ストリーム受け取り用のSubjectを生成
+          const subject = new Subject<string>();
+          this.subjectMap[`${streamId}|${message.id}`] = subject;
+          this.textMap[`${streamId}|${message.id}`] = '';
+          // メッセージIdマップを作っておく
+          if (this.messageIdStreamIdMap[message.id]) {
+          } else {
+            this.messageIdStreamIdMap[message.id] = [];
+          }
+          this.messageIdStreamIdMap[message.id].push(streamId);
+          message.observer = subject.asObservable();
+        });
+        return messageGroup;
       })),
-      map(metaList => { return { connectionId: this.connectionId, streamId, metaList } })
+      map(messageGroupList => { return { connectionId: this.connectionId, streamId, messageGroupList } })
     );
   }
 

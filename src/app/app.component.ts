@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from './services/auth.service';
 import { GService } from './services/g.service';
@@ -7,6 +7,9 @@ import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { filter } from 'rxjs/operators';
+import { UserService } from './services/user.service';
+
+declare var _paq: any;
 
 @Component({
   selector: 'app-root',
@@ -20,8 +23,11 @@ export class AppComponent implements OnInit {
   isChecked = false;
   showInfo = true;
   readonly authService: AuthService = inject(AuthService);
+  readonly userService: UserService = inject(UserService);
   readonly translateService: TranslateService = inject(TranslateService);
   readonly g: GService = inject(GService);
+  readonly router: Router = inject(Router);
+
   private readonly swUpdate: SwUpdate = inject(SwUpdate);
   private readonly snackBar: MatSnackBar = inject(MatSnackBar);
 
@@ -31,12 +37,19 @@ export class AppComponent implements OnInit {
     if (v1 && JSON.parse(v1).model) {
       // localStorage.removeItem('settings-v1.0');
       localStorage.setItem('settings-v2.0', JSON.stringify([JSON.parse(v1)]));
-    }
+    } else { }
   }
 
   ngOnInit(): void {
     this.initializeApp();
     this.setupPwaUpdateCheck();
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        _paq.push(['setCustomUrl', event.urlAfterRedirects]);
+        _paq.push(['trackPageView']);
+      }
+    });
+
   }
 
   private initializeApp(): void {
@@ -45,7 +58,17 @@ export class AppComponent implements OnInit {
     this.authService.getUser().subscribe({
       next: next => {
         this.g.autoRedirectToLoginPageIfAuthError = true;
-        this.isChecked = true;
+        this.userService.getUserSetting().subscribe({
+          next: next => {
+            this.isChecked = true;
+          },
+          error: error => {
+            this.isChecked = true;
+          },
+          complete: () => {
+            // console.log('complete');
+          }
+        });
       },
       error: error => {
         this.g.autoRedirectToLoginPageIfAuthError = true;

@@ -135,8 +135,8 @@ export class MmMessageSelectorDialogComponent {
       case 0:
         const startHm = this.timeForm.value.startTime.split(':');
         const endHm = this.timeForm.value.endTime.split(':');
-        this.timeForm.value.startDate.setHours(startHm[0] - 9, startHm[1], 0, 0); // JSTなので-9しないとダメ
-        this.timeForm.value.endDate.setHours(endHm[0] - 9, endHm[1], 0, 0); // JSTなので-9しないとダメ
+        this.timeForm.value.startDate.setHours(startHm[0], startHm[1], 0, 0); // JSTなので-9しないとダメ
+        this.timeForm.value.endDate.setHours(endHm[0], endHm[1], 0, 0); // JSTなので-9しないとダメ
         params.timespan = {
           start: this.timeForm.value.startDate.getTime(),
           end: this.timeForm.value.endDate.getTime(),
@@ -152,9 +152,9 @@ export class MmMessageSelectorDialogComponent {
         break;
     }
     this.isLoading = true;
-    this.mattermostTimelineService.mattermostToAi(this.projectId, this.data.id, this.data.idType, filterType, params, this.systemPrompt).subscribe({
+    this.mattermostTimelineService.mattermostToAi(this.projectId, this.data.id, this.data.idType, this.data.title, filterType, params, this.systemPrompt).subscribe({
       next: next => {
-        this.dialogRef.close({ filterType, thread: next.thread });
+        this.dialogRef.close({ filterType, threadGroup: next.threadGroup });
         this.isLoading = false;
       },
       error: error => {

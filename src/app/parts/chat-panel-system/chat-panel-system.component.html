@@ -24,12 +24,14 @@
             <div class="truncate">{{messageGroup.messages[0].label}}</div>
         </mat-panel-description>
         <div style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;">
+            <!-- 
             <button mat-icon-button class="invisible">
                 <mat-icon>folder_zip</mat-icon>
             </button>
             <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
                 <mat-icon>content_copy</mat-icon>
             </button>
+             -->
             <button mat-icon-button (click)="setEdit($event)" [title]="editing?'保存':'編集'">
                 @if(editing){
                 <mat-icon>check_circle</mat-icon>
@@ -37,7 +39,8 @@
                 <mat-icon>edit</mat-icon>
                 }
             </button>
-            <button mat-icon-button (click)="remove($event)" style="margin-right: 10px;">
+            <button mat-icon-button (click)="removeThread($event)" style="margin-right: 10px;"
+                [ngClass]="{invisible: !removable}">
                 <mat-icon>close</mat-icon>
             </button>
         </div>
@@ -69,7 +72,7 @@
                     [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
             </div>
             <div class="custom-scroll" style="display: block;overflow: auto;"
-                [ngStyle]="{'max-height': messageGroup.role==='assistant'?'auto':'70vh'}" #textBodyElem>
+                [ngClass]="[messageGroup.role==='assistant'&&layout==='grid'?'grid-panel':'flex-panel']" #textBodyElem>
                 <markdown [hidden]="message.editing" katex mermaid clipboard
                     [data]="brackets.pre+content.text+brackets.post">
                 </markdown>

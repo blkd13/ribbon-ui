@@ -34,7 +34,8 @@
 <ng-template #argsTemplate let-args="args" let-index="index">
   <mat-divider></mat-divider>
   <div class="flex gap-4 justify-between items-center my-4">
-    <button mat-raised-button color="primary" (click)="removeModel(index)" [disabled]="index==0">削除</button>
+    <button mat-raised-button color="primary" (click)="removeModel(index)"
+      [disabled]="threadGroup.threadList.length===1">削除</button>
     <div class="w-0 grow">
       <div class="flex gap-4 justify-between items-baseline">
         <mat-form-field appearance="fill" class="w-0 grow">

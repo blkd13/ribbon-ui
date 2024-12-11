@@ -1,7 +1,7 @@
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
 import { genDummyId, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
-import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter } from 'rxjs';
+import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty } from 'rxjs';
 import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, TemplateRef, ViewChild, ViewChildren, inject } from '@angular/core';
 import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
 import { FormsModule } from '@angular/forms';
@@ -24,12 +24,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { saveAs } from 'file-saver';
 
-import { CachedContent, SafetyRating, safetyRatingLabelMap } from '../../models/models';
+import { CachedContent, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
 import { ChatContent, ChatInputArea, ChatService, CountTokensResponse } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Observable, tap, toArray } from 'rxjs';
-import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
+import { DomUtils, safeConcatMap, safeForkJoin } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.component';
 import { AuthService } from '../../services/auth.service';
@@ -37,11 +37,12 @@ import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { BaseEntity, ContentPart, ContentPartType, Message, MessageClusterType, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectVisibility, Team, TeamType, Thread, ThreadGroup, ThreadGroupType, ThreadGroupVisibility, UUID } from '../../models/project-models';
 import { GService } from '../../services/g.service';
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
-import { BulkRunSettingComponent } from '../../parts/bulk-run-setting/bulk-run-setting.component';
+import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-run-setting/bulk-run-setting.component';
 import { Utils } from '../../utils';
 import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-dialog/parameter-setting-dialog.component';
 import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
 import { ChatPanelBaseComponent } from '../../parts/chat-panel-base/chat-panel-base.component';
+import { UserService } from '../../services/user.service';
 
 
 @Component({
@@ -112,15 +113,12 @@ export class ChatComponent implements OnInit {
   cacheMap: { [key: string]: CachedContent } = {};
   editNameThreadId: string = '';
   private timeoutId: any;
-  bulkRunSetting: {
-    mode: 'serial' | 'parallel',
-    promptTemplate: string,
-    contents: ({ type: 'text', text: string } | { type: 'file', text: string, fileId: string })[]
-  } = {
-      mode: 'serial',
-      promptTemplate: `ありがとうございます。\nでは次は"\${value}"をお願いします。`,
-      contents: [],
-    };
+  bulkRunSetting: BulkRunSettingData = {
+    mode: 'parallel',
+    promptTemplate: `ありがとうございます。\nでは次は"\${value}"をお願いします。`,
+    contents: [],
+    projectId: '',
+  };
 
   // 画面インタラクション系
   allExpandCollapseFlag = true; // メッセージの枠を全部一気に開くか閉じるかのフラグ
@@ -142,6 +140,7 @@ export class ChatComponent implements OnInit {
   readonly threadService: ThreadService = inject(ThreadService);
   readonly messageService: MessageService = inject(MessageService);
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
+  readonly userService: UserService = inject(UserService);
   readonly dbService: NgxIndexedDBService = inject(NgxIndexedDBService);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly router: Router = inject(Router);
@@ -191,22 +190,28 @@ export class ChatComponent implements OnInit {
       },
     }).afterClosed().subscribe((result: ThreadGroup) => {
       if (result) {
-        this.selectedThreadGroup = result;
-        // Object.assign(this.selectedThreadGroup, result);
+        // switchMap(() => safeForkJoin(
+        //   this.selectedThreadGroup.threadList
+        //     // 既存スレッドの場合は何もしないので除外する
+        //     .filter(thread => !this.messageService.messageGroupList.find(messageGroup => messageGroup.threadId === thread.id))
+        //     // 新規スレッドの場合は元スレッドをコピー
+        //     .map(thread => this.messageService.cloneThreadDry(this.selectedThreadGroup.threadList[0], thread.id))
+        // )),
         safeForkJoin(
-          this.selectedThreadGroup.threadList
+          result.threadList
             // 既存スレッドの場合は何もしないので除外する
-            .filter(thread => !this.messageService.messageGroupList.find(messageGroup => messageGroup.threadId === thread.id))
+            .filter(thread => !this.messageGroupIdListMas[thread.id])
             // 新規スレッドの場合は元スレッドをコピー
             .map(thread => this.messageService.cloneThreadDry(this.selectedThreadGroup.threadList[0], thread.id))
         ).subscribe({
           next: resDto => {
+            this.selectedThreadGroup = result;
             this.rebuildThreadGroup();
             this.onChange();
           },
           error: error => {
             console.error(error);
-          }
+          },
         });
       } else {
         // キャンセルされた場合
@@ -249,6 +254,31 @@ export class ChatComponent implements OnInit {
     });
   }
 
+  presetInputList = [
+    { label: "なし", text: "" },
+    { label: "エラー<br/>解説", text: "以下のエラーについて、日本語で内容を解説してください。\n\n" },
+    { label: "要約", text: "要約してください。\n\n" },
+    { label: "和訳", text: "和訳してください。\n\n" },
+    { label: "英訳", text: "英訳してください。\n\n" },
+  ]
+
+  selectPreset(preset: { label: string, text: string }): void {
+    // // システムプロンプトに設定したいか？
+    // this.selectedThreadGroup.threadList.forEach(thread => this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][0]].messages[0].contents[0].text = preset.text);
+    this.inputArea.content[0].text = preset.text;
+    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+  }
+
+  presetThreadList: Thread[] = [];
+  loadPreset(index: number): void {
+    this.selectedThreadGroup.threadList = this.selectedThreadGroup.threadList.slice(0, index);
+    while (this.selectedThreadGroup.threadList.length < index) {
+      this.selectedThreadGroup.threadList.push(this.presetThreadList[this.selectedThreadGroup.threadList.length - 1])
+    }
+    this.rebuildThreadGroup();
+    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+  }
+
   threadGroupChangeHandler(project: Project, threadGroupList: ThreadGroup[], threadGroupId: string): void {
     let noSend = true;
     if (threadGroupId === 'new-thread') {
@@ -258,6 +288,20 @@ export class ChatComponent implements OnInit {
       this.selectedThreadGroup.threadList.forEach(thread => {
         const contentPart = this.messageService.initContentPart(genDummyId(), 'アシスタントAI');
         this.messageService.addSingleMessageGroupDry(thread.id, undefined, 'system', [contentPart]);
+      });
+
+      // presetスレッドようにスレッドコピーしておく。
+      const baseThread = this.selectedThreadGroup.threadList[0];
+      safeForkJoin([
+        this.messageService.cloneThreadDry(baseThread),
+        this.messageService.cloneThreadDry(baseThread),
+      ]).subscribe({
+        next: next => {
+          (['gpt-4o', 'claude-3-5-sonnet-v2@20241022'] as GPTModels[]).forEach((model, index) => {
+            next[index].inDto.args.model = model;
+          });
+          this.presetThreadList = next;
+        }
       });
 
       this.rebuildThreadGroup();
@@ -311,6 +355,8 @@ export class ChatComponent implements OnInit {
           this.selectedThreadGroup = threadGroup;
           this.cdr.detectChanges();
           this.isThreadGroupLoading = true;
+
+          // ちょっとご茶ついてるから直さないとダメかも。。cloneThreadDryの後に ).flat().flat().filter(message => message.contents.length === 0).map(message => this.messageService.getMessageContentParts(message)) はなんか違和感がある。
           this.messageService.initThreadGroup(threadGroup.id).pipe(
             switchMap(() => safeForkJoin(
               this.selectedThreadGroup.threadList
@@ -333,7 +379,7 @@ export class ChatComponent implements OnInit {
               this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]
                 .slice().reverse().filter((messageGroupId, index) => index < 5)
                 .map((messageGroupId, index) => this.messageService.messageGroupMas[messageGroupId].messages)
-              ).flat().flat().map(message => this.messageService.getMessageContentParts(message))
+              ).flat().flat().filter(message => message.contents.length === 0).map(message => this.messageService.getMessageContentParts(message))
             )),
             tap(tapRes => {
 
@@ -387,7 +433,7 @@ export class ChatComponent implements OnInit {
     // 本来はlastUpdateでソートしたかったが、何故か時刻が更新されていないので。
     if (this.sortType === 1) {
       // 時刻順（新しい方が上に来る）
-      threadGroupList.sort((a, b) => b.lastUpdate < a.lastUpdate ? -1 : 1);
+      threadGroupList.sort((a, b) => new Date(b.lastUpdate) < new Date(a.lastUpdate) ? -1 : 1);
     } else {
       // 名前順（Aが上に来る）
       threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
@@ -465,140 +511,6 @@ export class ChatComponent implements OnInit {
     }));
   }
 
-  // selectThreadGroup(projectId: string, threadGroup: ThreadGroup): Observable<any> {
-  //   if (this.selectedThreadGroup === threadGroup) {
-  //     return of(0);
-  //   } else {
-  //     this.router.navigate(['chat', projectId, threadGroup.id]);
-  //   }
-  //   return of(0);
-  //   // // 既存スレッド選択中に別スレッドを選択した場合、前回まで選択していたスレッドを保存する。（フォーカス外れたタイミングで保存する感じ）
-  //   // // if (location.pathname.endsWith(thread.id)) {
-  //   // // } else {
-  //   // //   return of(null);
-  //   // // }
-  //   // this.router.navigate(['chat', projectId, threadGroup.id]);
-  //   // const beforeSelectedThread = this.selectedThreadGroup;
-  //   // // 選択中スレッドを変更
-  //   // this.selectedThreadGroup = threadGroup;
-  //   // // this.inDto = threadGoroup.inDto;
-
-  //   // // TODO DANGER 何か良からぬことが起きている。selectedThreadが書き換わるはずないのに書き換わってしまうので仕方なくthreadListと切り離す。しかもこれが起きるのは本番モードだけという、、、
-  //   // // this.selectedThreadGroup = JSON.parse(JSON.stringify(thread));
-
-  //   // this.cdr.detectChanges();
-  //   // return safeForkJoin([
-  //   //   (beforeSelectedThread && threadGroup !== beforeSelectedThread && this.selectedDanmen !== JSON.stringify(beforeSelectedThread))
-  //   //     ? this.save(this.selectedThreadGroup)
-  //   //     : of(this.selectedThreadGroup),
-  //   //   this.messageService.getMessageGroupList(threadGroup.id).pipe(
-  //   //     tap(resDto => {
-  //   //       this.selectedDanmen = JSON.stringify(this.selectedThreadGroup);
-  //   //       // スレッド初期化
-  //   //       this.initializeThread(resDto.messageGroups);
-  //   //       const lastMessage = this.getLatestMessage(resDto.messageGroups);
-  //   //       this.inputArea.previousMessageGroupId = lastMessage.id;
-  //   //       if (this.previousMessageIdMap[lastMessage.id]) {
-  //   //         this.previousMessageIdMap[lastMessage.id].selectedIndex = this.previousMessageIdMap[lastMessage.id].messages.length;
-  //   //         this.inputArea.messageGroupId = this.previousMessageIdMap[lastMessage.id].id;
-  //   //       }
-  //   //       this.rebuildMessageList();
-  //   //       this.onChange();
-
-  //   //       // 5件以上だったら末尾2件を開く。5件未満だったら全部開く。
-  //   //       // this.allExpandCollapseFlag = this.messageList.length < 5;
-  //   //       this.allExpandCollapseFlag = this.messageClusterList.length < 5;
-  //   //     }),
-  //   //     switchMap(resDto => safeForkJoin(
-  //   //       // this.messageList.slice().reverse()
-  //   //       //   .filter(message => !message.id.startsWith('dummy-'))
-  //   //       //   .filter((message, index) => index < (this.allExpandCollapseFlag ? 10 : 2))
-  //   //       //   .map(message => this.messageService.getMessageContentParts(message))
-  //   //       this.messageClusterList.slice().reverse()
-  //   //         .filter(cluster => !cluster[0].id.startsWith('dummy-'))
-  //   //         .filter((_, index) => index < (this.allExpandCollapseFlag ? 10 : 2))
-  //   //         .map(cluster => this.messageService.getMessageContentParts(cluster[0]))
-  //   //     )),
-  //   //     tap(tapRes => {
-
-  //   //       // 実行中のメッセージがあったら復旧する
-  //   //       Object.keys(this.messageMap).forEach(messageId => {
-  //   //         const resDto = this.chatService.getObserver(messageId);
-  //   //         if (resDto && resDto.observer) {
-  //   //           // 別ページから復帰した場合に再開する。
-  //   //           // const responseMessage = this.messageList[this.messageList.length - 1];
-  //   //           const responseMessage = this.messageClusterList[this.messageClusterList.length - 1][0];
-  //   //           responseMessage.contents[0].text = resDto.text;
-  //   //           this.chatStreamSubscription = resDto.observer.subscribe(this.chatStreamHander(responseMessage));
-  //   //         } else { }
-  //   //       });
-
-  //   //       // 一番下まで下げる
-  //   //       setTimeout(() => { DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); }, 500);
-
-  //   //       // this.router.navigate(['chat', this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
-  //   //       setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
-
-  //   //       document.title = `AI : ${this.selectedThreadGroup?.title || 'Ribbon UI'}`;
-  //   //     }),
-  //   //     map(ret => null)
-  //   //   )
-  //   // ]);
-  // }
-
-  // loadModels(): Observable<ThreadGroup[]> {
-  //   // 必要モデルのロード
-  //   return of(0).pipe( // 0のofはインデント揃えるためだけに入れてるだけで特に意味はない。
-  //     switchMap(() => this.loadTeams()),
-  //     switchMap(() => this.loadProjects()),
-  //     switchMap(() => this.loadThreadGroups(this.defaultProject))
-  //   );
-  // }
-
-  // export(threadIndex: number): void {
-  //   if (threadIndex < 0) {
-  //     this.dbService.getAll('threadList').subscribe(obj => {
-  //       const text = JSON.stringify(obj);
-  //       const blob = new Blob([text], { type: 'application/json' });
-  //       const url = window.URL.createObjectURL(blob);
-  //       const a = document.createElement('a');
-  //       a.href = url;
-  //       a.download = 'threadList.json';
-  //       a.click();
-  //       window.URL.revokeObjectURL(url);
-  //     });
-  //   } else {
-  //     const text = JSON.stringify(this.threadGroupList[threadIndex]);
-  //     const blob = new Blob([text], { type: 'application/json' });
-  //     const url = window.URL.createObjectURL(blob);
-  //     const a = document.createElement('a');
-  //     a.href = url;
-  //     a.download = `thread-${threadIndex}.json`;
-  //     a.click();
-  //     window.URL.revokeObjectURL(url);
-  //   }
-  // }
-
-  // generateInitialMessageGroup(): MessageGroupResponseDto {
-  //   const defaultSystemPrompt = 'アシスタントAI';
-  //   const defaultRole = 'system';
-
-  //   const messageGroup = this.chatMessageService.initMessageUpsertDto(this.selectedThreadGroup?.id || '');
-
-  //   const message = this.chatMessageService.initMessage(messageGroup.id, 0);
-  //   message.label = defaultSystemPrompt.substring(0, 250);
-
-  //   const contentPart = this.messageService.initContentPart(message.id);
-  //   contentPart.text = defaultSystemPrompt;
-
-  //   messageGroup.role = defaultRole;
-  //   messageGroup.label = message.label;
-
-  //   message.contents.push(contentPart);
-  //   messageGroup.messages.push(message);
-  //   return messageGroup;
-  // }
-
   onFilesDropped(files: FullPathFile[]): Subscription {
     // 複数ファイルを纏めて追加したときは全部読み込み終わってからカウントする。
     this.tokenObj.totalTokens = -1;
@@ -640,197 +552,6 @@ export class ChatComponent implements OnInit {
     return cost;
   }
 
-  // getLatestMessage(messageGroups: MessageGroupResponseDto[]): MessageForView {
-  //   let latestMessage: MessageForView | undefined = undefined;
-  //   let latestDate: Date | undefined = undefined;
-  //   let latestSeq: number | undefined = undefined;
-  //   for (const group of messageGroups) {
-  //     for (const message of group.messages) {
-  //       const messageDate = new Date(message.lastUpdate);
-  //       if (!latestDate || messageDate > latestDate) {
-  //         latestDate = messageDate;
-  //         latestMessage = message;
-  //       }
-  //       // const messageSeq = message.seq;
-  //       // if (!latestSeq || messageSeq > latestSeq) {
-  //       //   latestSeq = messageSeq;
-  //       //   latestMessage = message;
-  //       // }
-  //     }
-  //   }
-  //   // エラー
-  //   if (latestMessage) { } else { throw Error('Message not found'); }
-  //   return latestMessage;
-  // }
-
-  // selectLatest(messageGroup: MessageGroupResponseDto): number {
-  //   const ary = messageGroup.messages;
-  //   if (ary.length === 0) {
-  //     // throw new Error("Array is empty");
-  //     messageGroup.selectedIndex = 0;
-  //     return 0;
-  //   }
-  //   let latestIndex = 0;
-  //   // updateだと途中でキャッシュ作ると逆転するのでcreateを使う。
-  //   let latestDate = ary[0].createdAt;
-  //   for (let i = 1; i < ary.length; i++) {
-  //     if (ary[i].createdAt > latestDate) {
-  //       latestDate = ary[i].createdAt;
-  //       latestIndex = i;
-  //     }
-  //   }
-  //   messageGroup.selectedIndex = latestIndex;
-  //   return latestIndex;
-  // }
-
-  // initializeThread(messageGroups: MessageGroupResponseDto[]): void {
-  //   this.messageGroupListAll = messageGroups;
-
-  //   // MessageGroupResponseDto の selectedIndex を設定する
-  //   messageGroups.forEach(this.selectLatest);
-
-  //   // previoudMessageId（一個前のメッセージID）が無いもをRootとして取り出しておく。
-  //   const rootMessageGroup = messageGroups.find(messageGroup => !messageGroup.previousMessageId);
-  //   if (rootMessageGroup) {
-  //     this.rootMessageGroup = rootMessageGroup;
-  //   } else {
-  //     throw new Error('Root not found');
-  //   }
-
-  //   // ID, MessageForView のモデル化
-  //   this.messageMap = messageGroups.reduce((prev, curr) => {
-  //     curr.messages.forEach(message => prev[message.id] = message);
-  //     return prev;
-  //   }, {} as Record<UUID, MessageForView>);
-
-  //   // ID, MessageGroupResponseDto のモデル化
-  //   this.messageGroupMap = messageGroups.reduce((prev, curr) => {
-  //     prev[curr.id] = curr;
-  //     return prev;
-  //   }, {} as Record<UUID, MessageGroupResponseDto>);
-
-  //   // ツリーを作る
-  //   this.previousMessageIdMap = messageGroups.reduce((prev, curr) => {
-  //     if (curr.previousMessageId) {
-  //       if (prev[curr.previousMessageId]) {
-  //         // ツリー構造としてmessagePreviousIDが被るのはおかしい。分岐はmessageGroupで行われるべきであって。
-  //         // throw Error('Model error');
-  //         // おかしいけどなってしまったものは仕方ないのでそのまま動かす。
-  //         // TODO 後でモデル側も更新するようにする。
-  //         curr.messages.unshift(...prev[curr.previousMessageId].messages);
-  //         curr.selectedIndex = curr.messages.length - 1;
-  //         console.log(`curr.selectedIndex=${curr.selectedIndex}`);
-  //         prev[curr.previousMessageId] = curr;
-  //       } else {
-  //         prev[curr.previousMessageId] = curr;
-  //       }
-  //     } else { /** rootは無視 */ }
-  //     return prev;
-  //   }, {} as Record<UUID, MessageGroupResponseDto>);
-  // }
-
-  // rebuildMessageList(): void {
-  //   // 表示するメッセージ一覧
-  //   // this.messageList = [];
-  //   this.messageClusterList = [];
-  //   if (this.rootMessageGroup.messages[this.rootMessageGroup.selectedIndex]) {
-  //     // 先頭にルートを設定
-  //     // this.messageList.push(this.rootMessageGroup.messages[this.rootMessageGroup.selectedIndex]);
-  //     this.messageClusterList.push([this.rootMessageGroup.messages[this.rootMessageGroup.selectedIndex]]);
-  //   } else {
-  //     return;
-  //   }
-  //   while (true) {
-  //     // const message = this.messageList[this.messageList.length - 1];
-  //     const message = this.messageClusterList[this.messageClusterList.length - 1][0];
-  //     // 先行後続マップ
-  //     const messageGroup = this.previousMessageIdMap[message.id];
-  //     if (messageGroup) {
-  //       // inputAreaに相当する場合はselectedIndexがOutOfBoundしてるのでselectedMessageがnullになるはず。
-  //       const selectedMessage = messageGroup.messages[messageGroup.selectedIndex];
-  //       if (selectedMessage) {
-  //         // 選択メッセージリスト
-  //         // this.messageList.push(selectedMessage);
-  //         this.messageClusterList.push([selectedMessage]);
-  //       } else {
-  //         // 選択メッセージが無い = inputAreaなので打ち止め
-  //         break;
-  //       }
-  //     } else {
-  //       break;
-  //     }
-  //   }
-
-  //   // TODO inputAreaの更新。こここんな無理矢理だった微妙。。。他で包括的にやらなくていいんだっけ？
-  //   // this.inputArea.previousMessageId = this.messageList[this.messageList.length - 1].id;
-  //   this.inputArea.previousMessageGroupId = this.messageClusterList[this.messageClusterList.length - 1][0].id;
-
-  //   // キャッシュ有無判定
-  //   if (!this.inDto
-  //     || !this.inDto.argsList[0].cachedContent
-  //     || (this.inDto.argsList[0].cachedContent && new Date(this.inDto.argsList[0].cachedContent.expireTime) < new Date())) {
-  //     // キャッシュ有効期限が切れているのでキャッシュを消しておく。
-  //     // this.messageList.forEach(message => message.cacheId = undefined);
-  //     this.messageClusterList.forEach(cluster => cluster.forEach(message => message.cacheId = undefined));
-  //   }
-  // }
-
-  // saveMessage(threadId: string, message: MessageForView): Observable<MessageUpsertResponseDto> {
-  //   let messageGroup = this.messageGroupMap[message.messageGroupId];
-  //   // if (messageGroup) {
-  //   // } else {
-  //   //   messageGroup = { id: '', previousMessageId: '', } as any;
-  //   // }
-  //   return this.messageService.upsertMessageWithContents(threadId, {
-  //     messageClusterId: messageGroup.messageClusterId,
-  //     messageClusterType: messageGroup.messageClusterType || MessageClusterType.Single, // TODO 今nullになってしまうとエラーになるので。。。
-  //     messageGroupId: messageGroup.id,
-  //     messageId: message.id,
-  //     previousMessageId: messageGroup.previousMessageId,
-  //     role: messageGroup.role,
-  //     label: message.label,
-  //     messageGroupType: messageGroup.messageGroupType || MessageGroupType.Single,
-  //     contents: message.contents,
-  //   }).pipe(tap({
-  //     next: next => {
-  //       if (message.id && message.id.startsWith('dummy-')) {
-  //         // IDが附番されたのでモデル更新しておく
-  //         this.messageMap[next.message.id] = this.messageMap[message.id];
-  //         delete this.messageMap[message.id]
-
-  //         // contentのIDも附番する。でも中身はもとからあるのやらない。
-  //         message.contents.forEach((content, index) => content.id = next.contentParts[index].id);
-
-  //         // dummyを参照していた人々の更新
-  //         if (this.previousMessageIdMap[message.id]) {
-  //           this.previousMessageIdMap[next.message.id] = this.previousMessageIdMap[message.id];
-  //           this.previousMessageIdMap[next.message.id].previousMessageId = next.message.id;
-  //           delete this.previousMessageIdMap[message.id]
-  //         }
-
-  //         // dummyを参照していた人々の更新
-  //         if (this.inputArea.previousMessageGroupId === message.id) {
-  //           this.inputArea.previousMessageGroupId = next.message.id;
-  //         }
-
-  //       } else {/** dummy以外のものは画面側オブジェクトが最新なので反映する必要はない。 */ }
-  //       if (message.messageGroupId && message.messageGroupId.startsWith('dummy-')) {
-  //         // IDが附番されたのでモデル更新しておく
-  //         this.messageGroupMap[next.messageGroup.id] = this.messageGroupMap[messageGroup.id];
-  //         delete this.messageGroupMap[messageGroup.id]
-
-  //         // 子供の更新
-  //         messageGroup.messages.forEach(message => message.messageGroupId = next.messageGroup.id);
-
-  //       } else {/** dummy以外のものは画面側オブジェクトが最新なので反映する必要はない。 */ }
-
-  //       // id 発番されてないやつもいるので上書き
-  //       message.id = next.message.id;
-  //       messageGroup.id = next.messageGroup.id;
-  //     }
-  //   }));
-  // }
-
   renameThreadGroup($event: Event, threadGroup: ThreadGroup, flag: boolean, $index: number): void {
     if (flag) {
       this.editNameThreadId = threadGroup.id;
@@ -843,156 +564,6 @@ export class ChatComponent implements OnInit {
     }
   }
 
-  // duplicate($event: MouseEvent, thread: Thread): void {
-  //   this.dialog.open(DialogComponent, { data: { title: 'スレッド複製', message: `未実装です`, options: ['Close'] } });
-  //   // これはサーバー側で実装した方が良いやつ。
-  //   // // this.stopPropagation($event);
-  //   // const dupli = JSON.parse(JSON.stringify(thread)) as Thread;
-  //   // dupli.title = thread.title + '_copy';
-  //   // this.threadGroupList.push(dupli);
-  // }
-
-  // /**
-  //  * スレッドを保存、メッセージの組み立て。
-  //  * トリガとなるメッセージIDを配信。
-  //  */
-  // saveAndBuildThread(): Observable<string> {
-  //   // 初回送信なので、スレッドを作るところから動かす
-  //   const thread = this.selectedThreadGroup
-  //     ? this.save(this.selectedThreadGroup) // 二回目以降はメタパラメータを保存するだけ。
-  //     : this.save(this.selectedThreadGroup).pipe( // 初回送信の場合は色々動かす。
-  //       // selectedThreadに反映
-  //       tap(thread => {
-  //         this.selectedThreadGroup = thread;
-  //         // URL切替
-  //         this.router.navigate(['chat', this.selectedProject.id, thread.id]);
-  //       }),
-  //       // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
-  //       switchMap(thread => {
-  //         // 最初のリクエストをnullで初期化
-  //         let previousResult: MessageUpsertResponseDto[] | undefined = undefined;
-  //         // safeForkJoin(this.messageGroupListAll.map(group =>
-  //         //   safeForkJoin(group.messages.map(message => this.saveMessage(thread.id, message)))
-  //         // ))
-  //         // 処理開始
-  //         return from(this.messageGroupListAll.map((obj, idx) => ({ obj, idx }))).pipe(
-  //           concatMap(({ obj, idx }) => {
-  //             return of(null).pipe(
-  //               concatMap(() => {
-  //                 // 前のリクエストの結果を現在のリクエストに含める
-  //                 if (idx > 0 && previousResult) {
-  //                   obj.previousMessageId = previousResult[previousResult.length - 1].message.id;
-  //                   this.previousMessageIdMap[obj.previousMessageId] = obj;
-  //                 } else { }
-  //                 return safeForkJoin(
-  //                   obj.messages.map(message => this.saveMessage(thread.id, message))
-  //                 ).pipe(
-  //                   tap(res => {
-  //                     // 現在の結果を保存して、次のリクエストで使用
-  //                     previousResult = res;
-  //                   })
-  //                 );
-  //               })
-  //             );
-  //           }),
-  //           // 全てのリクエストの結果を配列として返す
-  //           toArray(),
-  //           tap(upsertResponseList => {
-  //             // inputAreaのpreviousMessageIdを更新しておく。
-  //             if (previousResult) {
-  //               this.inputArea.previousMessageGroupId = previousResult[previousResult.length - 1].message.id;
-  //             } else { }
-  //           }),
-  //         );
-  //       }),
-  //       // 後続で使うようにthreadに戻しておく
-  //       map(upsertResponseList => this.selectedThreadGroup as ThreadGroup),
-  //     );
-  //   return thread.pipe(
-  //     tap(thread => {
-  //       // 二回目以降だろうとタイトルが何も書かれていなかったら埋める。
-  //       // タイトル自動設定ブロック
-  //       if (thread.title && thread.title.trim() && thread.title !== '　') {
-  //         // タイトルが設定済みだったら何もしない
-  //       } else {
-  //         // タイトルが無かったら入力分からタイトルを作る。この処理は待つ必要が無いので投げっ放し。
-  //         // const presetText = this.messageList.map(message => message.contents.filter(content => content.type === 'text').map(content => content.text)).join('\n');
-  //         const presetText = this.messageClusterList.map(cluster => cluster[0].contents.filter(content => content.type === 'text').map(content => content.text)).join('\n');
-  //         const inputText = this.inputArea.contents.filter(content => content.type === 'text').map(content => content.text).join('\n');
-  //         const mergeText = `${presetText}\n${inputText}`.substring(0, 1024);
-  //         this.chatService.chatCompletionObservableStreamNew({
-  //           args: {
-  //             max_tokens: 40,
-  //             model: 'gemini-1.5-flash',
-  //             messages: [
-  //               {
-  //                 role: 'user',
-  //                 content: `この書き出しで始まるチャットにタイトルをつけてください。短く適当でいいです。タイトルだけを返してください。タイトル以外の説明などはつけてはいけません。\n\n\`\`\`markdown\n\n${mergeText}\n\`\`\``
-  //               } as any
-  //             ],
-  //           },
-  //         }).subscribe({
-  //           next: next => {
-  //             next.observer.pipe(tap(text => thread.title += text), toArray()).subscribe({
-  //               next: next => this.save(thread).subscribe()
-  //             });
-  //           },
-  //         });
-  //       }
-  //     }),
-  //     switchMap(thread => {
-  //       // 入力エリアに何も書かれていない場合はスルーして直前のmessageIdを返す。
-  //       if (this.inputArea.contents[0].type === 'text' && this.inputArea.contents[0].text) {
-  //         const message = this.messageService.initMessage(this.inputArea.messageGroupId || '');
-  //         message.label = this.inputArea.contents.filter(content => content.type === 'text').map(content => content.text).join('\n').substring(0, 250);
-  //         this.inputArea.contents.forEach(content => {
-  //           const contentPart = this.messageService.initContentPart(message.id);
-  //           contentPart.type = content.type as ContentPartType;
-  //           contentPart.text = content.text;
-  //           contentPart.fileId = contentPart.type === 'file' ? (content as { fileId: string }).fileId : undefined;
-  //           message.contents.push(contentPart);
-  //         });
-
-  //         if (this.inputArea.messageGroupId && this.messageGroupMap[this.inputArea.messageGroupId]) {
-  //           // 既存グループへの追加
-  //         } else {
-  //           // 新規メッセージグループを作る
-  //           const messageGroup = this.messageService.initMessageUpsertDto(thread.id, { role: this.inputArea.role, previousMessageId: this.inputArea.previousMessageGroupId });
-  //           this.messageGroupListAll.push(messageGroup);
-  //           this.messageGroupMap[messageGroup.id] = messageGroup;
-  //           if (messageGroup.previousMessageId) {
-  //             this.previousMessageIdMap[messageGroup.previousMessageId] = messageGroup;
-  //           } else { }
-  //           // メッセージと紐づけ
-  //           message.messageGroupId = messageGroup.id;
-  //         }
-  //         // this.inputArea.editing = 0;
-  //         // inputAreaをDB保存。
-  //         return this.saveMessage(thread.id, message).pipe(
-  //           tap(upsertResponse => {
-  //             // 
-  //             this.messageGroupMap[upsertResponse.messageGroup.id].messages.push(upsertResponse.message);
-  //             // 入力エリアをクリア
-  //             this.inputArea = this.generateInitalInputArea();
-  //             //再構成
-  //             this.rebuildMessageList();
-  //             setTimeout(() => {
-  //               DomUtils.textAreaHeighAdjust(this.textAreaElem.nativeElement); // 高さ調整
-  //               DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
-  //             }, 0);
-  //           }),
-  //           map(upsertResponse => upsertResponse.message.id),
-  //         )
-  //       } else {
-  //         // return of(this.messageList[this.messageList.length - 1].id); // 末尾にあるメッセージが発火トリガー
-  //         return of(this.messageClusterList[this.messageClusterList.length - 1][0].id); // 末尾にあるメッセージが発火トリガー
-  //       }
-  //     }),
-  //     // 発射準備完了。発射トリガーとなるメッセージIDを返す。とりあえずログ出力もしておく。
-  //     tap(messageId => console.log('Message ID before chat completion:', messageId)),
-  //   );
-  // }
-
   /**
    * スレッドを保存、メッセージの組み立て。
    * トリガとなるメッセージIDを配信。
@@ -1001,7 +572,26 @@ export class ChatComponent implements OnInit {
   saveAndBuildThread(): Observable<string[]> {
     // 初回送信なので、スレッドを作るところから動かす
     const threadGroup = (!this.selectedThreadGroup.id.startsWith('dummy-'))
-      ? this.saveThreadGroup(this.selectedThreadGroup) // 二回目以降はメタパラメータを保存するだけ。
+      ? this.saveThreadGroup(this.selectedThreadGroup).pipe(
+        // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
+        switchMap(threadGroup =>
+          safeForkJoin(threadGroup.threadList.map(thread =>
+            // 複雑になってしまったけど、直列実行したい＋配列が空の時も動かしたいを実現するためにこんな感じになっている。
+            this.messageGroupIdListMas[thread.id].filter(messageGroupId => messageGroupId.startsWith('dummy-')).length === 0
+              ? of([])
+              : from(this.messageGroupIdListMas[thread.id].filter(messageGroupId => messageGroupId.startsWith('dummy-')))
+                .pipe(
+                  concatMap(messageGroupId => this.messageService.upsertSingleMessageGroup(this.messageService.messageGroupMas[messageGroupId])),
+                  toArray(),
+                ),
+          ).flat())
+        ),
+        // メッセージ状況を反映
+        tap(upsertResponseList => this.rebuildThreadGroup()),
+        // 後続で使うようにthreadに戻しておく
+        map(upsertResponseList => this.selectedThreadGroup),
+      )
+      // 二回目以降はメタパラメータを保存するだけ。
       : this.saveThreadGroup(this.selectedThreadGroup).pipe( // 初回送信の場合は色々動かす。
         // selectedThreadに反映
         tap(threadGroup => {
@@ -1012,11 +602,10 @@ export class ChatComponent implements OnInit {
         // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
         switchMap(threadGroup =>
           safeForkJoin(threadGroup.threadList.map(thread =>
-            this.messageGroupIdListMas[thread.id].map(messageGroupId =>
-              this.messageService.upsertSingleMessageGroup(
-                this.messageService.messageGroupMas[messageGroupId]
-              )
-            ),
+            from(this.messageGroupIdListMas[thread.id])
+              .pipe(concatMap(messageGroupId =>
+                this.messageService.upsertSingleMessageGroup(this.messageService.messageGroupMas[messageGroupId])
+              )),
           ).flat()),
         ),
         // メッセージ状況を反映
@@ -1097,14 +686,21 @@ export class ChatComponent implements OnInit {
   }
 
   touchMessageGroupAndRebuild(messageGroup: MessageGroupForView): Observable<MessageGroup> {
-    return this.messageService.updateTimestamp('message-group', messageGroup.id)
-      .pipe(map((res) => {
+    return (
+      // ダミーの場合は一旦保存してからじゃないとタイムスタンプの意味ない。
+      (messageGroup.threadId.startsWith('dummy-') || messageGroup.id.startsWith('dummy-'))
+        ? from(this.messageGroupIdListMas[messageGroup.threadId]).pipe(concatMap(messageGroupId => this.messageService.upsertSingleMessageGroup(this.messageService.messageGroupMas[messageGroupId])))
+        : of({})
+    ).pipe(
+      switchMap(_ => this.messageService.updateTimestamp('message-group', messageGroup.id)),
+      map((res) => {
         // lastUpdateを更新
         messageGroup.lastUpdate = res.lastUpdate;
         this.rebuildThreadGroup();
         // this.onChange();
         return messageGroup;
-      }));
+      }),
+    )
   }
 
   /**
@@ -1126,144 +722,7 @@ export class ChatComponent implements OnInit {
       })
     });
     this.touchMessageGroupAndRebuild(this.messageService.messageGroupMas[ids[ids.length - 1]]).subscribe();
-    // this.touchMessageGroupAndRebuild(this.messageService.messageGroupMas[selectedMessageGroupId]).subscribe();
   }
-
-  // changeModel(index: number): void {
-  //   const model = this.selectedThreadGroup.threadList[index].inDto.args.model;
-  //   if (model) {
-  //     if (model.startsWith('claude-')) {
-  //       this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${model} は海外リージョン（us-east5）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
-  //     } else if (model.startsWith('meta/')) {
-  //       this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${model} は海外リージョン（us-central1）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
-  //     } else if (model.endsWith('-experimental')) {
-  //       this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${model} は海外リージョン（us-central1）を利用します。\n実験的なモデルのため結果が正確でない可能性があります。`, options: ['Close'] } });
-  //     }
-  //   } else { }
-  // }
-
-  // /**
-  //  * 推論開始トリガーを引く
-  //  */
-  // send(): void {
-  //   // // バリデーションエラー
-  //   // if (!this.inDto.args.model) {
-  //   //   return;
-  //   //   // } else if (this.inDto.args.model.startsWith('gemini-1.0') && this.tokenObj.totalTokens > 32766) {
-  //   //   //   this.snackBar.open(`トークンサイズオーバーです。 32,766以下にしてください。`, 'close', { duration: 3000 });
-  //   //   //   return;
-  //   // } else if (this.inDto.args.model.startsWith('gpt-') && (this.inDto.args.max_tokens || 0) > 4096) {
-  //   //   this.snackBar.open(`${this.inDto.args.model} の maxTokens は上限4,096です。`, 'close', { duration: 3000 });
-  //   //   this.inDto.args.max_tokens = Math.min(this.inDto.args.max_tokens || 0, 4096);
-  //   //   return;
-  //   // } else if (this.inDto.args.model.startsWith('meta/llama3') && (this.inDto.args.max_tokens || 0) > 4096) {
-  //   //   this.snackBar.open(`${this.inDto.args.model} の maxTokens は上限4,096です。`, 'close', { duration: 3000 });
-  //   //   this.inDto.args.max_tokens = Math.min(this.inDto.args.max_tokens || 0, 4096);
-  //   //   return;
-  //   // } else if (this.messageGroupMap[this.messageList[this.messageList.length - 1].messageGroupId].role === 'assistant' && this.inputArea.contents[0].text.length === 0) {
-  //   //   if (this.inputArea.contents.length > 1) {
-  //   //     this.snackBar.open(`ファイルだけでは送信できません。何かメッセージを入力してください。`, 'close', { duration: 3000 });
-  //   //   } else {
-  //   //     this.snackBar.open(`メッセージを入力してください。`, 'close', { duration: 3000 });
-  //   //   }
-  //   //   return;
-  //   // } else if (this.inDto.args.isGoogleSearch && !this.inDto.args.model.startsWith('gemini-1.5')) {
-  //   //   this.snackBar.open(`Google検索統合は Gemini-1.5 系統以外では使えません。`, 'close', { duration: 3000 });
-  //   //   this.inDto.args.isGoogleSearch = false;
-  //   //   return;
-  //   // } else {
-  //   // }
-
-  //   // // 継続系
-  //   // if (this.inDto.args.model.startsWith('claude-') && (this.inDto.args.temperature || 0) > 1) {
-  //   //   this.snackBar.open(`claude はtempertureを0～1.0の範囲で使ってください。`, 'close', { duration: 3000 });
-  //   //   this.inDto.args.temperature = 1;
-  //   // } else { }
-  //   // if ((this.messageList.length % 2) % 7 === 0 && this.tokenObj.totalTokens > 16384) {
-  //   //   // 7問い合わせごとにアラート出す
-  //   //   this.snackBar.open(`スレッド内のやり取りが長引いてきました。話題が変わった際は左上の「新規スレッド」から新規スレッドを始めることをお勧めします。\n（スレッドが長くなるとAIの回答精度が落ちていきます）`, 'close', { duration: 6000 });
-  //   // } else { }
-
-  //   this.isLock = true;
-
-  //   // 初回送信後はプレースホルダをデフォルトのものに戻す。
-  //   this.placeholder = this.defaultPlaceholder;
-
-  //   // キャッシュ使う場合はキャッシュ期限をcacheTtlInSecondsまで伸ばす
-  //   const inDto = this.selectedThreadGroup.threadList[0].inDto;
-  //   if (this.selectedThreadGroup && inDto.args.cachedContent) {
-  //     const expireTime = new Date(inDto.args.cachedContent.expireTime);
-  //     const currentTime = new Date();
-  //     const differenceInMilliseconds = expireTime.getTime() - currentTime.getTime();
-
-  //     if (differenceInMilliseconds > this.cacheTtlInSeconds * 1000) {
-  //       // If expire time is more than 10 minutes ahead, return it as is
-  //     } else {
-  //       // If expire time is within 10 minutes, update it to 10 minutes from now
-  //       this.chatService.updateCacheByProjectModel(this.selectedThreadGroup.id, { ttl: { seconds: this.cacheTtlInSeconds, nanos: 0 } }).subscribe({
-  //         next: next => {
-  //           // console.log(next);
-  //           // キャッシュ更新はDB側で登録済みなのでこっちはinDtoに入れるだけにする。
-  //           // this.inDto.argsList[0].cachedContent = next;
-  //           inDto.args.cachedContent = next;
-  //         },
-  //       });
-  //     }
-  //   } else { }
-
-  //   // if (this.selectedThreadGroup) {
-  //   //   this.selectedThreadGroup.inDto.args.cachedContent = this.cacheMap[this.selectedThreadGroup.id];
-  //   // }
-  //   // メッセージを組み立ててから末尾のmessageIdに火をつける。
-
-  //   this.saveAndBuildThread().pipe(
-  //     switchMap(messageId =>
-  //       safeForkJoin(this.selectedThreadGroup.threadList.map(thread => this.chatService.chatCompletionObservableStreamByProjectModel(thread.inDto.args, messageId).pipe(
-  //         tap(resDto => {
-  //           // キャッシュを更新する
-  //           // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
-  //           let messageGroup = this.previousMessageIdMap[resDto.meta.messageGroup.previousMessageId || ''];
-  //           if (messageGroup) {
-  //           } else {
-  //             // サーバー側で生成されたメッセージグループをこっちがわに構成する。
-  //             messageGroup = resDto.meta.messageGroup;
-  //             messageGroup.messages = messageGroup.messages || [];
-  //             messageGroup.selectedIndex = 0;
-  //             if (messageGroup.previousMessageId) {
-  //               this.previousMessageIdMap[messageGroup.previousMessageId] = messageGroup;
-  //             }
-  //             this.messageGroupListAll.push(messageGroup);
-  //             this.messageGroupMap[messageGroup.id] = messageGroup;
-  //           }
-
-  //           // レスポンス受け用オブジェクト
-  //           const responseMessage = resDto.meta.message;
-  //           messageGroup.messages.push(responseMessage);
-  //           this.messageMap[responseMessage.id] = responseMessage;
-  //           responseMessage.contents = resDto.meta.contentParts as any;
-
-  //           // メッセージID紐づけ。
-  //           this.inputArea.previousMessageGroupId = resDto.meta.message.id;
-  //           this.rebuildMessageList();
-
-  //           // 入力ボックスのサイズを戻す。
-  //           setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
-  //           setTimeout(() => {
-  //             DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
-  //           }, 100);
-
-  //           this.chatStreamSubscription = resDto.observer.subscribe(this.chatStreamHander(responseMessage));
-  //         }),
-  //       )))
-  //     ),
-  //   ).subscribe({
-  //     next: resDto => {
-  //     },
-  //     error: error => {
-  //       this.chatErrorHandler(error);
-  //     }
-  //   });
-  // }
 
   /**
    * 推論開始トリガーを引く
@@ -1271,7 +730,7 @@ export class ChatComponent implements OnInit {
   send(type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' = 'threadGroup', idList: string[] = []): Observable<{
     connectionId: string,
     streamId: string,
-    metaList: { messageGroup: MessageGroupForView, observer: Observable<string> }[],
+    messageGroupList: MessageGroup[],
   }[]> {
     let threadList: Thread[] = [];
     if (type === 'threadGroup') {
@@ -1286,7 +745,7 @@ export class ChatComponent implements OnInit {
     }
 
     for (const thread of threadList) {
-      const messageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1]];
+      const tailMessageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1]];
       const modelName = thread.inDto.args.model || '';
       const model = this.chatService.priceMap[modelName];
       const args = thread.inDto.args;
@@ -1301,12 +760,13 @@ export class ChatComponent implements OnInit {
         this.snackBar.open(`Google検索統合は Gemini-1.5 系統以外では使えません。`, 'close', { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
-      } else if (messageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0) {
+      } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0) {
         if (this.inputArea.content.length > 1) {
           this.snackBar.open(`ファイルだけでは送信できません。何かメッセージを入力してください。`, 'close', { duration: 3000 });
           throw new Error('ファイルだけでは送信できません。何かメッセージを入力してください。');
         } else {
           this.snackBar.open(`メッセージを入力してください。`, 'close', { duration: 3000 });
+          // throw new Error('メッセージを入力してください。');
         }
       }
 
@@ -1317,7 +777,7 @@ export class ChatComponent implements OnInit {
       } else { }
       if ((this.messageGroupIdListMas[thread.id].length % 2) % 7 === 0 && this.tokenObj.totalTokens > 16384) {
         // 7問い合わせごとにアラート出す
-        this.snackBar.open(`スレッド内のやり取りが長引いてきました。話題が変わった際は左上の「新規スレッド」から新規スレッドを始めることをお勧めします。\n（スレッドが長くなるとAIの回答精度が落ちていきます）`, 'close', { duration: 6000 });
+        this.snackBar.open(`チャット内のやり取りが長引いてきました。話題が変わった際は左上の「新規チャット」から新規チャットを始めることをお勧めします。\n（チャットが長くなるとAIの回答精度が落ちていきます）`, 'close', { duration: 6000 });
       } else { }
     }
 
@@ -1366,12 +826,15 @@ export class ChatComponent implements OnInit {
             .pipe(tap(resDto => {
               // キャッシュを更新する
               // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
-              resDto.metaList.forEach(meta => {
-                this.messageService.applyMessageGroup(meta.messageGroup);
+              resDto.messageGroupList.forEach(messageGroup => {
+                this.messageService.applyMessageGroup(messageGroup);
                 this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
-                this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(meta.observer.subscribe(this.chatStreamHander(meta.messageGroup.messages[0])));
-                const message = meta.messageGroup.messages[0];
-                console.log(`Message ID before chat completion: ${message.id}`);
+                messageGroup.messages.map(message => {
+                  if (message.observer) {
+                    this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
+                    console.log(`Message ID before chat completion: ${message.id}`);
+                  } else { }
+                });
               });
             }))
         )).pipe(tap(text => {
@@ -1387,54 +850,6 @@ export class ChatComponent implements OnInit {
         }))
       )
     );
-
-    // this.saveAndBuildThread().pipe(
-    //   switchMap(messageId =>
-    //     safeForkJoin(this.selectedThreadGroup.threadList.map(thread => this.chatService.chatCompletionObservableStreamByProjectModel(thread.inDto.args, messageId).pipe(
-    //       tap(resDto => {
-    //         // キャッシュを更新する
-    //         // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
-    //         let messageGroup = this.previousMessageIdMap[resDto.meta.messageGroup.previousMessageId || ''];
-    //         if (messageGroup) {
-    //         } else {
-    //           // サーバー側で生成されたメッセージグループをこっちがわに構成する。
-    //           messageGroup = resDto.meta.messageGroup;
-    //           messageGroup.messages = messageGroup.messages || [];
-    //           messageGroup.selectedIndex = 0;
-    //           if (messageGroup.previousMessageId) {
-    //             this.previousMessageIdMap[messageGroup.previousMessageId] = messageGroup;
-    //           }
-    //           this.messageGroupListAll.push(messageGroup);
-    //           this.messageGroupMap[messageGroup.id] = messageGroup;
-    //         }
-
-    //         // レスポンス受け用オブジェクト
-    //         const responseMessage = resDto.meta.message;
-    //         messageGroup.messages.push(responseMessage);
-    //         this.messageMap[responseMessage.id] = responseMessage;
-    //         responseMessage.contents = resDto.meta.contentParts as any;
-
-    //         // メッセージID紐づけ。
-    //         this.inputArea.previousMessageGroupId = resDto.meta.message.id;
-    //         this.rebuildMessageList();
-
-    //         // 入力ボックスのサイズを戻す。
-    //         setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
-    //         setTimeout(() => {
-    //           DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
-    //         }, 100);
-
-    //         this.chatStreamSubscription = resDto.observer.subscribe(this.chatStreamHander(responseMessage));
-    //       }),
-    //     )))
-    //   ),
-    // ).subscribe({
-    //   next: resDto => {
-    //   },
-    //   error: error => {
-    //     this.chatErrorHandler(error);
-    //   }
-    // });
   }
 
   /**
@@ -1760,14 +1175,41 @@ export class ChatComponent implements OnInit {
     // }
   }
 
+  removeThread(targetThread: Thread): void {
+    const threadGroup = this.selectedThreadGroup;
+    const thread = threadGroup.threadList.find(_thread => _thread.id === targetThread.id);
+    if (thread) {
+      this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${thread.inDto.args.model}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
+        next: next => {
+          if (next === 0) {
+            threadGroup.threadList.splice(threadGroup.threadList.indexOf(thread), 1);
+            if (thread.id.startsWith('dummy-')) {
+              // ダミーの場合はAPIには送る必要が無い。
+            } else {
+              this.threadService.upsertThreadGroup(threadGroup.projectId, threadGroup).subscribe({
+                next: next => {
+                },
+                error: error => {
+                  this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+                },
+              });
+            }
+          } else { /** 削除キャンセル */ }
+        }
+      });
+    } else {
+      // TODO 選択中のスレッドグループじゃないやつを消そうとしてる。現在はこれはエラー。
+    }
+  }
+
   removeMessageGroup(messageGroup: MessageGroupForView): void {
+    if (messageGroup.role === 'system' || !messageGroup.previousMessageGroupId) {
+      return;
+    } else { }
+    if (!this.messageService.messageGroupMas[messageGroup.previousMessageGroupId]) return;
+
     // あえてOutOfBoundsさせる
     messageGroup.selectedIndex = messageGroup.messages.length;
-    // systemは削除させない
-    if (messageGroup.role === 'system'
-      || !messageGroup.previousMessageGroupId
-      || !this.messageService.messageGroupMas[messageGroup.previousMessageGroupId])
-      return;
 
     const previousMessageGroup: MessageGroupForView = this.messageService.messageGroupMas[messageGroup.previousMessageGroupId];
 
@@ -1826,13 +1268,13 @@ export class ChatComponent implements OnInit {
 
   removeThreadGroup($event: MouseEvent, $index: number, threadGroup: ThreadGroup): void {
     // this.stopPropagation($event);
-    this.dialog.open(DialogComponent, { data: { title: 'スレッド削除', message: `このスレッドを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
+    this.dialog.open(DialogComponent, { data: { title: 'チャット削除', message: `このチャットを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
       next: next => {
         if (next === 0) {
           this.threadService.deleteThreadGroup(threadGroup.id).subscribe({
             next: next => {
               this.threadGroupList.splice($index, 1)
-              if (threadGroup === this.selectedThreadGroup) {
+              if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
               } else {
                 this.sortThreadGroup(this.threadGroupList);
@@ -1852,12 +1294,15 @@ export class ChatComponent implements OnInit {
           // スレッド移動後はスレッドグループを再読み込みする
           this.loadThreadGroups(this.selectedProject).subscribe({
             next: next => {
-              if (threadGroup === this.selectedThreadGroup) { this.clear(); } // 選択中のスレッドを移動した場合は選択解除
-              this.snackBar.open(`スレッドを移動しました。`, 'close', { duration: 3000 });
+              if (threadGroup.id === this.selectedThreadGroup.id) {
+                this.clear();
+              } // 選択中のスレッドを移動した場合は選択解除
+              this.snackBar.open(`チャットを移動しました。`, 'close', { duration: 3000 });
             },
           });
         },
         error: error => {
+          console.error(error);
           this.snackBar.open(`更新エラーです。\n${JSON.stringify(error)}`, 'close', { duration: 30000 });
         }
       });
@@ -1904,18 +1349,48 @@ export class ChatComponent implements OnInit {
       // メッセージエリアに何も書かれていなかったら一括実行モーダル開く
       this.dialog.open(BulkRunSettingComponent, {
         data: {
+          ...this.bulkRunSetting,
           projectId: this.selectedProject.id,
-          ...this.bulkRunSetting
         }
       }).afterClosed().subscribe({
-        next: next => {
-          if (next) {
-            // モーダル閉じたら実行かける
-            this.bulkRunSetting.promptTemplate = next.promptTemplate;
-            this.bulkRunSetting.contents = next.contents;
-            this.bulkRunSetting.contents = this.bulkRunSetting.contents.filter(content => content.text); // 空コンテンツは除外
-            this.bulkRunSetting.mode = next.mode;
-            this.bulkNext();
+        next: (next: BulkRunSettingData) => {
+          // モーダル閉じたら実行かける
+          if (next && next.contents.length > 0) {
+            this.bulkRunSetting = next;
+            if (next.mode === 'serial') {
+              // 直列実行
+              this.bulkNext();
+            } else {
+              // 並列実行
+              Object.keys(this.messageGroupIdListMas).map(threadId => {
+                const tailMessageGroupId = this.messageGroupIdListMas[threadId][this.messageGroupIdListMas[threadId].length - 1];
+                const messageGroup = this.messageService.initMessageGroup(threadId, tailMessageGroupId, 'user', []);
+                messageGroup.previousMessageGroupId = tailMessageGroupId;
+                messageGroup.messages = []; // ゴミmessageが作られているので消す
+                next.contents.map((content, index) => {
+                  const contents: ContentPart[] = [];
+                  const message = this.messageService.initMessage(messageGroup.id, contents);
+                  message.subSeq = index;
+                  const text = next.promptTemplate.replace('${value}', content.text);
+                  const contentPartText = this.messageService.initContentPart(message.id, text);
+                  contentPartText.text = text;
+                  contents.push(contentPartText);
+                  if (content.type === 'text') {
+                  } else if (content.type === 'file') {
+                    const contentPartFile = this.messageService.initContentPart(message.id, content.text);
+                    contentPartFile.type = content.type as ContentPartType;
+                    contentPartFile.fileId = content.fileId;
+                    contents.push(contentPartFile);
+                  }
+                  message.contents = contents;
+                  messageGroup.messages.push(message);
+                });
+                return this.messageService.applyMessageGroup(messageGroup);
+              })
+              this.rebuildThreadGroup();
+              this.send().subscribe();
+              this.bulkRunSetting.contents = [];
+            }
           } else {
             // キャンセル
           }
@@ -1923,6 +1398,7 @@ export class ChatComponent implements OnInit {
       });
     }
   }
+
   bulkNext(): void {
     if (this.bulkRunSetting.contents.length > 0) {
       // 一括実行設定あり

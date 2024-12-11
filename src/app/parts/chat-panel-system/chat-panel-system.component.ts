@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -25,4 +25,15 @@ import { MessageGroupForView, Thread } from '../../models/project-models';
 export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
   editing = 0;
   @Input() thread!: Thread;
+  @Input() removable!: boolean;
+
+  @Output('removeThread')
+  removeThreadEmitter: EventEmitter<Thread> = new EventEmitter();
+
+  removeThread($event: MouseEvent): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+    this.removeThreadEmitter.emit(this.thread);
+  }
+
 }
