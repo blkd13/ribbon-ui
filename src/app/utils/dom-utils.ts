@@ -108,22 +108,3 @@ export type TextAreaHeighAdjustInDto = { padding: number, lineHeight: number, mi
 export function safeForkJoin<T>(observables: Observable<T>[]): Observable<T[]> {
     return observables.length === 0 ? of([]) : forkJoin(observables);
 }
-
-
-/**
- * concatMapの引数が空の配列の場合でも、空の配列を返すようにするユーティリティ関数。
- * @param observables 処理対象のObservable配列
- * @returns 空配列の場合はof([])を返し、それ以外はconcatMapで順次処理した結果を返す
- */
-export function safeConcatMap<T>(observables: Observable<T>[]): Observable<T[]> {
-    if (observables.length === 0) {
-        return of([] as T[]);
-    } else {
-        return from(observables).pipe(
-            concatMap(observable => observable),
-        ).pipe(
-            toArray(),
-        );
-
-    }
-}

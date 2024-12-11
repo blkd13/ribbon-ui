@@ -29,7 +29,7 @@ import { ChatContent, ChatInputArea, ChatService, CountTokensResponse } from '..
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Observable, tap, toArray } from 'rxjs';
-import { DomUtils, safeConcatMap, safeForkJoin } from '../../utils/dom-utils';
+import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.component';
 import { AuthService } from '../../services/auth.service';
@@ -701,6 +701,7 @@ export class ChatComponent implements OnInit {
         : this.selectedThreadGroup.threadList.map(thread => thread.id);
       threadList = this.selectedThreadGroup.threadList.filter(thread => threadIdList.includes(thread.id));
     } else if (type === 'messageGroup') {
+      threadList = idList.map(id => this.selectedThreadGroup.threadList.find(thread => thread.id === this.messageService.messageGroupMas[id].threadId)).filter(thread => thread) as Thread[];
     } else {
       throw new Error('Not implemented');
     }

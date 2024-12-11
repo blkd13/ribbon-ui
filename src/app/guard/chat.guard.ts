@@ -1,10 +1,52 @@
-import { AuthService } from './../services/auth.service';
+import { AuthService, OAuth2Provider } from './../services/auth.service';
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, ActivatedRoute } from '@angular/router';
 import { ProjectService, TeamService, ThreadService } from '../services/project.service';
 import { map, of, switchMap, tap } from 'rxjs';
 import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
 import { UserRole } from '../models/models';
+
+export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateFn => {
+  const guardFunc: CanActivateFn = (route, state) => {
+    const authService: AuthService = inject(AuthService);
+    // const router = inject(Router);
+    return authService.getOAuthAccountList().pipe(map(next => {
+      if (next.oauthAccounts.find(oAuthAccount => oAuthAccount.provider === oAuthProvider)) {
+        authService.getOAuthUserInfo(oAuthProvider, 'user-info').subscribe({
+          next: (res) => {
+            console.log(res);
+          },
+          error: (err) => {
+            // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
+            location.href = `/api/oauth/${oAuthProvider}/login/home`;
+            console.error(err);
+          },
+        });
+        return true;
+      } else {
+        console.log('OAuth2ログインが必要です');
+        // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
+        location.href = `/api/oauth/${oAuthProvider}/login/home`;
+        // router.navigate(['/home']);
+        return false;
+      }
+    }));
+  };
+  return guardFunc;
+}
+
+export const loginGuard: CanActivateFn = (route, state) => {
+  const authService: AuthService = inject(AuthService);
+  const router = inject(Router);
+  return authService.getUser().pipe(map(user => {
+    if (user) {
+      return true;
+    } else {
+      router.navigate(['/login']);
+      return false;
+    }
+  }));
+};
 
 export const departmentGuard: CanActivateFn = (route, state) => {
   const authService: AuthService = inject(AuthService);
