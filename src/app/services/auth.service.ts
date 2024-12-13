@@ -5,6 +5,8 @@ import { map, tap } from 'rxjs/operators';
 import { User, TwoFactorAuthDetails } from '../models/models';
 import { PredictTransaction } from './department.service';
 
+export type OAuth2Provider = 'box' | 'mattermost' | 'gitlab' | 'gitea';
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private apiUrl = '';
@@ -53,12 +55,11 @@ export class AuthService {
    * ログアウト
    */
   logout(): void {
-    const url = `/logout`;
-
-    this.http.get<void>(`/user/oauth/api/proxy/mattermost/api/v4/users/logout`).subscribe({});
-    this.http.get<void>(`/user/oauth/api/proxy/box/oauth2/revoke`).subscribe({});
-
     // ログアウトはsubscribeまでやってしまう。
+    this.http.post<void>(`/user/oauth/api/proxy/mattermost/api/v4/users/logout`, undefined, { headers: new HttpHeaders({ 'X-Requested-With': 'XMLHttpRequest' }) }).subscribe();
+    this.http.post<void>(`/user/oauth/api/proxy/box/oauth2/revoke`, '', { headers: new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' }) }).subscribe();
+    // ログアウトはsubscribeまでやってしまう。
+    const url = `/logout`;
     this.http.get<void>(url).subscribe({
       next: next => {
         location.href = './';
@@ -193,6 +194,11 @@ export class AuthService {
   getOAuthAccountList(): Observable<{ oauthAccounts: any[] }> {
     const url = `/user/oauth/account`;
     return this.http.get<{ oauthAccounts: any[] }>(url);
+  }
+
+  getOAuthUserInfo(provider: OAuth2Provider, api: 'user-info'): Observable<any> {
+    const url = `/user/oauth/api/basic-api/${provider}/${api}`;
+    return this.http.get<any>(url);
   }
 
   postPincode(pincode?: string): Observable<User> {

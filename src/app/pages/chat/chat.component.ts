@@ -29,7 +29,7 @@ import { ChatContent, ChatInputArea, ChatService, CountTokensResponse } from '..
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Observable, tap, toArray } from 'rxjs';
-import { DomUtils, safeConcatMap, safeForkJoin } from '../../utils/dom-utils';
+import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.component';
 import { AuthService } from '../../services/auth.service';
@@ -119,6 +119,7 @@ export class ChatComponent implements OnInit {
     contents: [],
     projectId: '',
   };
+  tailMessageGroupList: (MessageGroupForView | null)[] = [];
 
   // 画面インタラクション系
   allExpandCollapseFlag = true; // メッセージの枠を全部一気に開くか閉じるかのフラグ
@@ -477,8 +478,9 @@ export class ChatComponent implements OnInit {
   rebuildThreadGroup(): { [threadId: string]: string[] } {
     this.messageGroupIdListMas = this.messageService.rebuildThreadGroup(this.messageService.messageGroupMas);
     // 末尾のroleを取得
-    const line = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id];
-    this.tailRole = line[line.length - 1] ? this.messageService.messageGroupMas[line[line.length - 1]].role : 'system';
+    const lineIdList = this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]);
+    this.tailMessageGroupList = lineIdList.map(line => line[line.length - 1] ? this.messageService.messageGroupMas[line[line.length - 1]] : null);
+    this.tailRole = this.tailMessageGroupList[0] ? this.tailMessageGroupList[0].role : 'system';
     // メッセージグループの数が最大のスレッドを探す
     const maxMessageGroupCount = Object.values(this.messageGroupIdListMas).map(messageGroupIdList => messageGroupIdList.length).reduce((a, b) => Math.max(a, b), 0);
     this.indexList = Array.from({ length: maxMessageGroupCount }, (_, i) => i);
@@ -732,6 +734,12 @@ export class ChatComponent implements OnInit {
     streamId: string,
     messageGroupList: MessageGroup[],
   }[]> {
+
+    if (this.isLock) {
+      this.snackBar.open(`メッセージ受信中は送信できません。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`, 'close', { duration: 3000 });
+      throw new Error(`メッセージ受信中は送信できません。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`);
+    } else { }
+
     let threadList: Thread[] = [];
     if (type === 'threadGroup') {
       // idListが空の場合は選択中のスレッドグループを使う
@@ -740,6 +748,7 @@ export class ChatComponent implements OnInit {
         : this.selectedThreadGroup.threadList.map(thread => thread.id);
       threadList = this.selectedThreadGroup.threadList.filter(thread => threadIdList.includes(thread.id));
     } else if (type === 'messageGroup') {
+      threadList = idList.map(id => this.selectedThreadGroup.threadList.find(thread => thread.id === this.messageService.messageGroupMas[id].threadId)).filter(thread => thread) as Thread[];
     } else {
       throw new Error('Not implemented');
     }
@@ -1178,7 +1187,7 @@ export class ChatComponent implements OnInit {
   removeThread(targetThread: Thread): void {
     const threadGroup = this.selectedThreadGroup;
     const thread = threadGroup.threadList.find(_thread => _thread.id === targetThread.id);
-    if (thread) {
+    if (thread && threadGroup.threadList.length > 1) {
       this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${thread.inDto.args.model}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
         next: next => {
           if (next === 0) {
@@ -1199,6 +1208,7 @@ export class ChatComponent implements OnInit {
       });
     } else {
       // TODO 選択中のスレッドグループじゃないやつを消そうとしてる。現在はこれはエラー。
+      this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
     }
   }
 
@@ -1273,7 +1283,7 @@ export class ChatComponent implements OnInit {
         if (next === 0) {
           this.threadService.deleteThreadGroup(threadGroup.id).subscribe({
             next: next => {
-              this.threadGroupList.splice($index, 1)
+              this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
               if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
               } else {
@@ -1294,6 +1304,7 @@ export class ChatComponent implements OnInit {
           // スレッド移動後はスレッドグループを再読み込みする
           this.loadThreadGroups(this.selectedProject).subscribe({
             next: next => {
+              this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
               if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
               } // 選択中のスレッドを移動した場合は選択解除

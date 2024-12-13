@@ -148,7 +148,7 @@ export class MattermostComponent implements OnInit {
               next: next => {
                 let nextId = '';
                 if (targetTeamId === 'timeline') {
-                  if (next.length > 0) {
+                  if (next.length > 0 && next[0].channel_ids.length > 0) {
                     nextId = next[0].channel_ids[0];
                   } else {
                     nextId = 'new-timeline';
@@ -1198,7 +1198,7 @@ export class MattermostComponent implements OnInit {
       // 新しいメッセージが来てたら既読タイムスタンプを更新する
       const chList = Array.from(chIdSet).map(chId => timeline.channels.find(ch => ch.channelId === chId))
         .filter(v => !!v)
-        .filter(ch => new Date(ch.lastViewedAt).getTime() < maxDateMas[ch.channelId]);
+        .filter(ch => new Date(ch.lastViewedAt || 0).getTime() < maxDateMas[ch.channelId]);
 
       // mattermost向けは逐次で投げる 
       this.clearUnreadAndMentionCount(chIdSet).subscribe();
@@ -1350,16 +1350,26 @@ export class MattermostComponent implements OnInit {
 
     // New Messageの線を引くためのもの
     if (this.selectedTeam?.id === 'timeline' && this.selectedTimeline) {
-      this.newMessageDate = this.selectedTimeline.channels[0].lastViewedAt.getTime() - 9 * 60 * 60 * 1000;
-      this.newMessageDate = this.selectedTimeline.channels[0].lastViewedAt.getTime();
+      // this.newMessageDate = this.selectedTimeline.channels[0].lastViewedAt?.getTime() - 9 * 60 * 60 * 1000;
+      // channelsのlastViewedAtの再過去を取得する
+      this.newMessageDate = this.selectedTimeline.channels
+        .map(ch => ch.lastViewedAt?.getTime() || 0) // `undefined`をエポック（0）に変換
+        .reduce((min, time) => Math.min(min, time), Infinity); // 最小値を取得
     } else {
       this.newMessageDate = this.messageCountMas[mmChannelIdList[0]].last_viewed_at;
+
+      this.newMessageDate = mmChannelIdList
+        .map(channelId => this.messageCountMas[channelId]?.last_viewed_at || 0) // `undefined`をエポック（0）に変換
+        .reduce((min, time) => Math.min(min, time), Infinity); // 最小値を取得
+
+      if (this.newMessageDate === Infinity) {
+        this.newMessageDate = 0; // 全て`undefined`ならエポックタイムを設定
+      } else { }
     }
 
     this.setTitle();
 
     // from で配列自体のObservableを作ることで mergeMap で並列実行数を絞る。
-
     return from(mmChannelIdList.filter(chId => this.mmChannelMas[chId] && !this.initializedChannelList.includes(chId)).map(channelId =>
       this.apiMattermostService.mattermostChannelsPosts(channelId, page, perPage, span).pipe(map(channelPosts => ({ channelId, channelPosts })))
     )).pipe(
@@ -1686,7 +1696,8 @@ export class MattermostComponent implements OnInit {
         } else if ($event.ctrlKey) {
           this.post(type, channel_id, root_id);
         } else {
-          this.post(type, channel_id, root_id);
+          // なんかしらんがEnterだと文字が消えないことが多いのできっぱりCtrl+Enterだけにする。
+          // this.post(type, channel_id, root_id);
         }
       } else {
         // 最後のキー入力から1000秒後にonChangeが動くようにする。1000秒経たずにここに来たら前回のタイマーをキャンセルする

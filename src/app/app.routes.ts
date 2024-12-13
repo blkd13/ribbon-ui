@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { departmentGuard, projectGuard, teamGuard, threadGroupGuard } from './guard/chat.guard';
+import { departmentGuard, loginGuard, oAuthGuardGenerator, projectGuard, teamGuard, threadGroupGuard } from './guard/chat.guard';
 
 export const routes: Routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -7,16 +7,16 @@ export const routes: Routes = [
     { path: 'login', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
     { path: 'team/:teamId', canActivate: [teamGuard], loadComponent: () => import('./pages/team/team.component').then(m => m.TeamComponent) },
     { path: 'invite/:onetimeToken', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
-    { path: 'home', loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
+    { path: 'home', canActivate: [loginGuard], loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
     {
-        path: 'mattermost', children: [{
+        path: 'mattermost', canActivate: [oAuthGuardGenerator('mattermost')], children: [{
             path: ':targetTeamId', children: [
                 { path: ':targetChannelId', loadComponent: () => import('./pages/mattermost/mattermost.component').then(m => m.MattermostComponent) },
                 { path: '**', redirectTo: 'default' },
             ],
         }, { path: '**', redirectTo: 'timeline' }],
     },
-    { path: 'box', canActivate: [departmentGuard], loadComponent: () => import('./pages/box/box.component').then(m => m.BoxComponent) },
+    { path: 'box', canActivate: [oAuthGuardGenerator('box')], loadComponent: () => import('./pages/box/box.component').then(m => m.BoxComponent) },
     { path: 'department', canActivate: [departmentGuard], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
     {
         path: 'chat', children: [{

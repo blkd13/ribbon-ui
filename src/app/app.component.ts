@@ -43,6 +43,8 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.initializeApp();
     this.setupPwaUpdateCheck();
+
+    // matomo
     this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
         _paq.push(['setCustomUrl', event.urlAfterRedirects]);
