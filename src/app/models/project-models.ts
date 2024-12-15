@@ -336,5 +336,5 @@ export interface ContentPart extends BaseEntity {
     type: ContentPartType;
     seq: number;
     text?: string;
-    fileId?: string;
+    fileGroupId?: string;
 }

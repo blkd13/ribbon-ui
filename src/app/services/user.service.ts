@@ -4,7 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
-export type UserSettingKey = 'chatLayout';
+export type UserSettingKey = 'chatLayout' | 'chatTabLayout';
 export type Config = { value: Record<UserSettingKey, any> };
 @Injectable({
   providedIn: 'root'
@@ -16,11 +16,17 @@ export class UserService {
   readonly auth: AuthService = inject(AuthService);
 
   chatLayout: 'flex' | 'grid' = 'flex'; // チャット画面のレイアウト
-  setting: Config = { value: { chatLayout: 'flex' } };
+  chatTabLayout: 'tabs' | 'column' = 'column'; // チャットタブのレイアウト
+  setting: Config = { value: { chatLayout: 'flex', chatTabLayout: 'column' } };
+
+  toggleChatTabLayout(): Observable<Config> {
+    this.chatTabLayout = this.chatTabLayout === 'column' ? 'tabs' : 'column';
+    return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout } });
+  }
 
   toggleChatLayout(): Observable<Config> {
     this.chatLayout = this.chatLayout === 'flex' ? 'grid' : 'flex';
-    return this.upsertUserSetting({ value: { chatLayout: this.chatLayout } });
+    return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout } });
   }
 
   getUserSetting(): Observable<Config> {
@@ -28,8 +34,9 @@ export class UserService {
     const userId = this.auth.getCurrentUser().id;
     return this.http.get<Config>(`${this.apiUrl}/${userId}/${key}`).pipe(
       tap(setting => {
-        if (key === 'config') {
-          this.chatLayout = setting.value.chatLayout;
+        if (key === 'config' && setting.value) {
+          this.chatLayout = setting.value.chatLayout || 'flex';
+          this.chatTabLayout = setting.value.chatTabLayout || 'column';
         } else { }
         console.log(setting);
       }),

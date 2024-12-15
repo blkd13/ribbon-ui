@@ -1,4 +1,4 @@
-<div class="doc-tag" (click)="open()" [matTooltip]="contents[index].text||''" matTooltipPosition="above">
+<div class="doc-tag" (click)="open()" [matTooltip]="content.text||''" matTooltipPosition="above">
     <div class="thumbnail">
         <!-- @if (content.image_url.url.startsWith('data:image/')) {
         <img [src]="content.image_url.url" />
@@ -6,6 +6,6 @@
         <div>doc</div>
         } -->
     </div>
-    <div class="label">{{contents[index].text}}</div>
+    <div class="label">{{content.text || 'オブジェクト'}}</div>
     <mat-icon class="close" (click)="onRemove($event)">close</mat-icon>
 </div>

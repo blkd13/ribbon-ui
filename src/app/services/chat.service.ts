@@ -13,7 +13,7 @@ export interface ChatInputArea {
   // previousMessageGroupId?: string;
   messageGroupId?: string;
 }
-export type ChatContent = ({ type: 'text', text: string } | { type: 'file', text: string, fileId: string });
+export type ChatContent = ({ type: 'text', text: string } | { type: 'file', text: string, fileGroupId: string });
 // export interface ContentPart extends BaseEntity {
 //   messageId: UUID;
 //   type: ContentPartType;

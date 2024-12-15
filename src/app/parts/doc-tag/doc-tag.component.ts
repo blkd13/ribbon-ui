@@ -17,10 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 export class DocTagComponent {
 
   @Input()
-  contents!: (ContentPart | ChatContent)[];
-
-  @Input()
-  index!: number;
+  content!: (ContentPart | ChatContent);
 
   @Output()
   remove: EventEmitter<ContentPart | ChatContent> = new EventEmitter();
@@ -28,12 +25,12 @@ export class DocTagComponent {
   readonly dialog: MatDialog = inject(MatDialog);
 
   open(): void {
-    this.dialog.open<DocViewComponent>(DocViewComponent, { width: '80vw', data: { contents: this.contents, index: this.index } });
+    this.dialog.open<DocViewComponent>(DocViewComponent, { width: '80vw', data: { content: this.content } });
   }
 
   onRemove($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
-    this.remove.emit(this.contents[this.index]);
+    this.remove.emit(this.content);
   }
 }

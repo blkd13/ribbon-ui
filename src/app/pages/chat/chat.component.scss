@@ -118,7 +118,7 @@
     border-bottom-right-radius: 6px;
     cursor: pointer;
     transition: background-color 0.3s 0s linear, left 0.3s 0s ease;
-    z-index: 1;
+    z-index: 2;
 
     &:hover {
         background-color: #555;
@@ -172,4 +172,10 @@
 .grid-item {
     text-align: right;
     /* テキストを中央揃え */
+}
+
+::ng-deep {
+    .isSingleThread .mat-mdc-tab-header {
+        display: none !important;
+    }
 }
