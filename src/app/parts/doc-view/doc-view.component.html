@@ -6,18 +6,52 @@
     }
 
     .content {
+        height: calc(100vh - 300px);
         max-height: calc(100vh - 200px);
         margin: auto;
     }
 </style>
 
-<div class="flex justify-center">
+<div class="flex justify-center w-full">
+    @if(fileGroup){
+    <div class="w-1/4">
+        <div class="w-full custom-scroll" style="height: calc(100vh - 210px)">
+            <div class="w-full sticky top-0 ">
+                <div class="w-full p-[10px]">ファイル種別</div>
+                @for(fileType of fileTypeList;track $index){
+                <div [title]="fileTypeMap[fileType].disabled?'この形式は対応していません':''"
+                    [ngClass]="{'cursor-not-allowed': fileTypeMap[fileType].disabled}">
+                    <mat-checkbox color="primary" [(ngModel)]="fileTypeMap[fileType].isActive"
+                        [disabled]="fileTypeMap[fileType].disabled"
+                        [indeterminate]="fileTypeMap[fileType].indeterminate" (change)="checkFileType(fileType)"
+                        class="text-left text-nowrap w-full">
+                        {{fileType}}
+                    </mat-checkbox>
+                </div>
+                }
+                <mat-divider></mat-divider>
+                <div class="w-full p-[10px]">ファイル一覧</div>
+            </div>
 
-    @if(data.contents.length&&data.index>0){
-    <button mat-icon-button (click)="setIndex(data.index-1)"><mat-icon>arrow_back_ios</mat-icon></button>
+            @for(file of fileGroup.files;track $index){
+            <div class="text-left text-nowrap cursor-pointer" [ngClass]="{'bg-gray-700':index==$index}"
+                (click)="setIndex($index)">
+                <mat-checkbox color="primary" [(ngModel)]="file.isActive" (change)="checkFile(file)"
+                    [disabled]="fileTypeMap[file.fileType].disabled"
+                    [ngClass]="{'cursor-not-allowed': fileTypeMap[file.fileType].disabled}"></mat-checkbox>
+                <span [title]="fileTypeMap[file.fileType].disabled?'この形式は対応していません':''">
+                    {{file.fileName}}
+                </span>
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- @if(fileGroup.files.length&&index>0){
+    <button mat-icon-button (click)="setIndex(index-1)"><mat-icon>arrow_back_ios</mat-icon></button>
     }
-
-    <div>
+    -->
+    <div class="custom-scroll w-full">
         <h3>{{label}}</h3>
         @if(type==='image'){
         <img class="content" [src]="dataUrl" />
@@ -27,7 +61,7 @@
             <option value="Windows-31J">Shift-JIS(Windows-31J)</option>
             <option value="EUC-JP">EUC-JP</option>
         </select>
-        <div class="content" style="overflow: auto;">
+        <div class="content">
             <markdown katex mermaid clipboard [data]="brackets.pre+text+brackets.post"></markdown>
         </div>
         }@else if(type==='audio'){
@@ -43,9 +77,10 @@
         <div>{{dataUrl.substring(0,dataUrl.indexOf(','))}}</div>
         }
     </div>
-
-    @if(data.contents.length&&data.contents.length-1>data.index){
-    <button mat-icon-button (click)="setIndex(data.index+1)"><mat-icon>arrow_forward_ios</mat-icon></button>
+    <!-- 
+    @if(fileGroup.files.length&&fileGroup.files.length-1>index){
+    <button mat-icon-button (click)="setIndex(index+1)"><mat-icon>arrow_forward_ios</mat-icon></button>
     }
-
+    -->
+    }
 </div>

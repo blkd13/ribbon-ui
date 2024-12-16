@@ -19,7 +19,7 @@ import { ContentPart } from './../../models/project-models';
 export interface BulkRunSettingData {
   projectId: string;
   mode: 'serial' | 'parallel';
-  contents: ({ type: 'text', text: string } | { type: 'file', text: string, fileId: string })[];
+  contents: ({ type: 'text', text: string } | { type: 'file', text: string, fileGroupId: string })[];
   promptTemplate: string;
 }
 
@@ -35,7 +35,7 @@ export interface BulkRunSettingData {
 })
 export class BulkRunSettingComponent {
   displayedColumns: string[] = ['no', 'question', 'actions'];
-  dataSource: ({ type: 'text', text: string } | { type: 'file', text: string, fileId: string })[] = [];
+  dataSource: ({ type: 'text', text: string } | { type: 'file', text: string, fileGroupId: string })[] = [];
 
   promptTemplate = ``;
   @ViewChild('promptTemplateElement')
@@ -48,7 +48,7 @@ export class BulkRunSettingComponent {
   contents: ContentPart[] = [];
 
   readonly dialogRef: MatDialogRef<BulkRunSettingComponent> = inject(MatDialogRef<BulkRunSettingComponent>);
-  readonly data: { mode: 'serial' | 'parallel', contents: ({ type: 'text', text: string } | { type: 'file', text: string, fileId: string })[], promptTemplate: string, projectId: string } = inject(MAT_DIALOG_DATA);
+  readonly data: { mode: 'serial' | 'parallel', contents: ({ type: 'text', text: string } | { type: 'file', text: string, fileGroupId: string })[], promptTemplate: string, projectId: string } = inject(MAT_DIALOG_DATA);
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
 
@@ -113,10 +113,10 @@ export class BulkRunSettingComponent {
       .uploadFiles({ projectId: this.data.projectId, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
       .subscribe({
         next: next => {
-          next.results.forEach(fileEntity => {
+          next.results.forEach(fileGroupEntity => {
             this.dataSource = [...this.dataSource.filter(data => data.text)];
-            // this.inputArea.content.push({ type: 'file', fileId: fileEntity.id, text: fileEntity.fileName });
-            this.dataSource.push({ type: 'file', text: fileEntity.fileName, fileId: fileEntity.id });
+            // this.inputArea.content.push({ type: 'file', fileId: fileGroupEntity.id, text: fileGroupEntity.fileName });
+            this.dataSource.push({ type: 'file', text: fileGroupEntity.label, fileGroupId: fileGroupEntity.id });
             this.dataSource = [...this.dataSource];
           });
           // this.onChange();

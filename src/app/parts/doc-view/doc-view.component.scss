@@ -1,0 +1,13 @@
+::ng-deep {
+
+    markdown {
+        &>div {
+            height: 100%;
+        }
+
+        code[class*=language-],
+        pre[class*=language-] {
+            height: 100%;
+        }
+    }
+}

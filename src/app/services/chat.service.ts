@@ -13,7 +13,7 @@ export interface ChatInputArea {
   // previousMessageGroupId?: string;
   messageGroupId?: string;
 }
-export type ChatContent = ({ type: 'text', text: string } | { type: 'file', text: string, fileId: string });
+export type ChatContent = ({ type: 'text', text: string } | { type: 'file', text: string, fileGroupId: string });
 // export interface ContentPart extends BaseEntity {
 //   messageId: UUID;
 //   type: ContentPartType;
@@ -47,11 +47,14 @@ export class ChatService {
     { tag: '古い', maxTokens: 8192, maxInputTokens: 2000000, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro-001', },
     { tag: '速い', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash-002', },
     { tag: '賢い', maxTokens: 8192, maxInputTokens: 2000000, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro-002', },
-    { tag: '実験', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-flash-experimental', },
-    { tag: '実験', maxTokens: 8192, maxInputTokens: 2000000, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-pro-experimental', },
+    // { tag: '実験', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-exp', },
+    // { tag: '実験', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00012500, 0.000375, 0.0001250, 0.000375], id: 'gemini-exp-1206', },
+    { tag: '古い', maxTokens: 8192, maxInputTokens: 1000000, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-flash-experimental', },
+    { tag: '古い', maxTokens: 8192, maxInputTokens: 2000000, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-pro-experimental', },
     { tag: '賢い', maxTokens: 4096, maxInputTokens: 128000, price: [0.00500000, 0.015000, 0.0050000, 0.015000], id: 'gpt-4o', },
     { tag: '賢い', maxTokens: 8192, maxInputTokens: 200000, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet@20240620', },
     { tag: '賢い', maxTokens: 8192, maxInputTokens: 200000, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-v2@20241022', },
+    // { tag: '独特', maxTokens: 4096, maxInputTokens: 8000, price: [0.00100000, 0.015000, 0.0010000, 0.015000], id: 'meta/llama3-405b-instruct-maas', },
     { tag: '独特', maxTokens: 4096, maxInputTokens: 8000, price: [0.00100000, 0.015000, 0.0010000, 0.015000], id: 'meta/llama3-405b-instruct-maas', },
   ];
   priceMap: { [id: string]: { tag: string, maxTokens: number, maxInputTokens: number, id: string, price: number[] } } = Object.fromEntries(this.modelList.map(model => [model.id, model]));
@@ -324,7 +327,7 @@ export class ChatService {
   ): Observable<{
     connectionId: string,
     streamId: string,
-    metaList: { messageGroup: MessageGroupForView, observer: Observable<string> }[],
+    messageGroupList: MessageGroupForView[],
   }> {
     const streamId = uuidv4();
 
@@ -338,6 +341,7 @@ export class ChatService {
     }
 
     // メッセージ用ストリームが来る前にタイトル用のストリームが閉じるとバグるので、ダミーとしてストリームを開いておく
+    // つまり、ストリーム開いてるかの判定をするブロックの中でthis.subjectMapに登録しないと、つるっと抜ける可能性がある。
     const subject = new Subject<string>();
     this.subjectMap[streamId] = subject;
     this.textMap[streamId] = '';
@@ -348,24 +352,22 @@ export class ChatService {
         // { headers: this.authService.getHeaders() }
       )),
       map(messageGroupList => messageGroupList.map(messageGroup => {
-        // 原理的にmessagesは1つのはずなので、最初のメッセージを取り出す
-        const message = messageGroup.messages[0];
-        // ストリーム受け取り用のSubjectを生成
-        const subject = new Subject<string>();
-        this.subjectMap[`${streamId}|${message.id}`] = subject;
-        this.textMap[`${streamId}|${message.id}`] = '';
-        // メッセージIdマップを作っておく
-        if (this.messageIdStreamIdMap[message.id]) {
-        } else {
-          this.messageIdStreamIdMap[message.id] = [];
-        }
-        this.messageIdStreamIdMap[message.id].push(streamId);
-        return {
-          observer: subject.asObservable(),
-          messageGroup,
-        };
+        messageGroup.messages.forEach(message => {
+          // ストリーム受け取り用のSubjectを生成
+          const subject = new Subject<string>();
+          this.subjectMap[`${streamId}|${message.id}`] = subject;
+          this.textMap[`${streamId}|${message.id}`] = '';
+          // メッセージIdマップを作っておく
+          if (this.messageIdStreamIdMap[message.id]) {
+          } else {
+            this.messageIdStreamIdMap[message.id] = [];
+          }
+          this.messageIdStreamIdMap[message.id].push(streamId);
+          message.observer = subject.asObservable();
+        });
+        return messageGroup;
       })),
-      map(metaList => { return { connectionId: this.connectionId, streamId, metaList } })
+      map(messageGroupList => { return { connectionId: this.connectionId, streamId, messageGroupList } })
     );
   }
 

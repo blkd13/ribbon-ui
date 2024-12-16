@@ -315,7 +315,7 @@ export class MattermostComponent implements OnInit {
         this.mmTimelineList = next;
         this.tlchMas = next.reduce((mas, curr) => {
           mas[curr.id] = { type: 'timeline', obj: curr };
-          curr.channels.forEach(ch => {
+          curr.channels.filter(ch => this.mmChannelMas[ch.channelId]).forEach(ch => {
             // 画面上でしか使わない未読フラグを更新する。
             this.mmTimelineUnread[ch.id] = !ch.lastViewedAt || ch.lastViewedAt.getTime() < this.mmChannelMas[ch.channelId].last_post_at;
             // console.log(ch.id, new Date(this.mmChannelMas[ch.channelId].last_post_at), ch.lastViewedAt, this.mmTimelineUnread[ch.id]);
@@ -1167,7 +1167,7 @@ export class MattermostComponent implements OnInit {
 
   setPostCountFiilter(mmGroupedFilteredPostList: Post[][]): void {
     if (this.selectedTeam && this.selectedTeam.id === 'timeline' && this.selectedTimeline) {
-      // timelineの場合はmuteフラグでのチャネル絞り込みを行う。（mute時でもシングル選択されてたら表示する）
+      // timelineの場合はmuteフラグでのチャネル絞り込みを行う。(mute時でもシングル選択されてたら表示する)
       const chIds = this.selectedTimeline.channels.filter(ch => !ch.isMute || this.radioSelectedId === ch.id).map(ch => ch.channelId);
       mmGroupedFilteredPostList = mmGroupedFilteredPostList.filter(postGroup => chIds.includes(postGroup[0].channel_id));
     } else { }
@@ -1299,6 +1299,8 @@ export class MattermostComponent implements OnInit {
       if (this.selectedTeam?.id === 'timeline') {
         if (this.mmTimelineList.find(tl => tl.id === this.radioSelectedId)) {
           idParam.idType = 'timeline';
+        } else if (this.mmChannelList.find(ch => ch.id === this.radioSelectedId)) {
+          idParam.idType = 'channel';
         } else {
           idParam.idType = 'timelineChannel';
         }
@@ -1325,7 +1327,7 @@ export class MattermostComponent implements OnInit {
             case 'timespan':
             case 'count':
               // this.router.navigate(['/chat', next.thread.projectId, next.thread.id]);
-              window.open(`./#/chat/${next.thread.projectId}/${next.thread.id}`, 'chat');
+              window.open(`./#/chat/${next.threadGroup.projectId}/${next.threadGroup.id}`, 'chat');
               break;
             case 'batch':
               break;
@@ -1694,7 +1696,8 @@ export class MattermostComponent implements OnInit {
         } else if ($event.ctrlKey) {
           this.post(type, channel_id, root_id);
         } else {
-          this.post(type, channel_id, root_id);
+          // なんかしらんがEnterだと文字が消えないことが多いのできっぱりCtrl+Enterだけにする。
+          // this.post(type, channel_id, root_id);
         }
       } else {
         // 最後のキー入力から1000秒後にonChangeが動くようにする。1000秒経たずにここに来たら前回のタイマーをキャンセルする

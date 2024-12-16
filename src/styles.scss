@@ -166,7 +166,7 @@ html>body {
     /* カスタムスクロールバー */
     .custom-scroll {
         overflow-y: auto;
-        overflow-x: hidden;
+        overflow-x: auto;
         transition: all 0.3s 0s ease;
 
         scrollbar-color: rgb(26, 54, 61) rgb(11, 18, 20);

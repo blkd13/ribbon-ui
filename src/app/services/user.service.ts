@@ -4,8 +4,8 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
-export type UserSettingKey = 'chatLayout';
-
+export type UserSettingKey = 'chatLayout' | 'chatTabLayout';
+export type Config = { value: Record<UserSettingKey, any> };
 @Injectable({
   providedIn: 'root'
 })
@@ -16,18 +16,28 @@ export class UserService {
   readonly auth: AuthService = inject(AuthService);
 
   chatLayout: 'flex' | 'grid' = 'flex'; // チャット画面のレイアウト
-  setting: { value: Record<UserSettingKey, any> } = { value: { chatLayout: 'flex' } };
+  chatTabLayout: 'tabs' | 'column' = 'column'; // チャットタブのレイアウト
+  setting: Config = { value: { chatLayout: 'flex', chatTabLayout: 'column' } };
 
-  toggleChatLayout(): Observable<Record<UserSettingKey, any>> {
-    this.chatLayout = this.chatLayout === 'flex' ? 'grid' : 'flex';
-    return this.upsertUserSetting({ value: { chatLayout: this.chatLayout } });
+  toggleChatTabLayout(): Observable<Config> {
+    this.chatTabLayout = this.chatTabLayout === 'column' ? 'tabs' : 'column';
+    return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout } });
   }
 
-  getUserSetting(): Observable<Record<UserSettingKey, any>> {
+  toggleChatLayout(): Observable<Config> {
+    this.chatLayout = this.chatLayout === 'flex' ? 'grid' : 'flex';
+    return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout } });
+  }
+
+  getUserSetting(): Observable<Config> {
     const key: string = 'config';
     const userId = this.auth.getCurrentUser().id;
-    return this.http.get<Record<UserSettingKey, any>>(`${this.apiUrl}/${userId}/${key}`).pipe(
+    return this.http.get<Config>(`${this.apiUrl}/${userId}/${key}`).pipe(
       tap(setting => {
+        if (key === 'config' && setting.value) {
+          this.chatLayout = setting.value.chatLayout || 'flex';
+          this.chatTabLayout = setting.value.chatTabLayout || 'column';
+        } else { }
         console.log(setting);
       }),
       catchError(this.handleError)
@@ -39,11 +49,11 @@ export class UserService {
    * @param setting ユーザー設定データ
    * @returns Observable<UserSetting>
    */
-  upsertUserSetting(value: { value: Record<UserSettingKey, any> }): Observable<Record<UserSettingKey, any>> {
+  upsertUserSetting(value: Config): Observable<Config> {
     const key: string = 'config';
     const userId = this.auth.getCurrentUser().id;
     Object.assign(this.setting, value);
-    return this.http.post<Record<UserSettingKey, any>>(`${this.apiUrl}/${userId}/${key}`, value).pipe(
+    return this.http.post<Config>(`${this.apiUrl}/${userId}/${key}`, value).pipe(
       catchError(this.handleError)
     );
   }

@@ -1,3 +1,4 @@
+import { Observable } from "rxjs";
 import { ChatCompletionCreateParamsBase, ChatCompletionRole, ChatCompletionStreamInDto, UserStatus } from "./models";
 
 // 共通の型定義
@@ -327,6 +328,7 @@ export interface MessageForView extends Message {
     status: MessageStatusType;
     selected: boolean;
     contents: ContentPart[];
+    observer?: Observable<string>;
 }
 
 export interface ContentPart extends BaseEntity {
@@ -334,5 +336,5 @@ export interface ContentPart extends BaseEntity {
     type: ContentPartType;
     seq: number;
     text?: string;
-    fileId?: string;
+    fileGroupId?: string;
 }

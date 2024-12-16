@@ -53,7 +53,7 @@
         </div>
     </mat-expansion-panel-header>
 
-    <div class="flex w-full">
+    <div class="flex w-full gap-2">
         @for (message of messageGroup.messages; track $index) {
         <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
             <!-- ファイル -->
@@ -63,8 +63,7 @@
                 @if(content.type==='text'){
                 }@else if(content.type==='error'){
                 }@else{
-                <app-doc-tag [contents]="message.contents" [index]="$index"
-                    (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
+                <app-doc-tag [content]="content" (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
                 }
                 }
             </div>

@@ -5,22 +5,39 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { detect } from 'jschardet';
 import { ContentPart } from '../../models/project-models';
-import { FileManagerService } from './../../services/file-manager.service';
+import { FileEntityForView, FileGroupEntityForView, FileManagerService } from './../../services/file-manager.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { Utils } from '../../utils';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { CommonModule } from '@angular/common';
+import { MatDividerModule } from '@angular/material/divider';
+
+
+
+// FileNodeというTree構造を表すインターフェイスを定義します。
+interface FileNode {
+  name: string;
+  type: 'directory' | 'file';
+  children?: FileNode[];
+  file?: FileEntityForView;
+  isActive: boolean;
+  indeterminate: boolean;
+  disabled: boolean;
+}
+
 
 @Component({
   selector: 'app-doc-view',
   standalone: true,
-  imports: [FormsModule, MarkdownModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, FormsModule, MarkdownModule, MatIconModule, MatButtonModule, MatCheckboxModule, MatDividerModule],
   templateUrl: './doc-view.component.html',
   styleUrl: './doc-view.component.scss'
 })
 export class DocViewComponent {
 
-  contents: ContentPart[];
-  content: ContentPart;
+  index: number = 0;
+  fileGroup!: FileGroupEntityForView;
+
   brackets: { pre: string, post: string } = { pre: '', post: '' };
 
   type!: 'image' | 'text' | 'audio' | 'video' | 'pdf' | 'other';
@@ -34,38 +51,246 @@ export class DocViewComponent {
 
   encode: 'UTF-8' | 'SHIFT_JIS' | 'EUC-JP' | 'Windows-31J' = 'UTF-8';
 
+  treeData: FileNode[] = []; // ツリー構造化したデータを保持する配列
+
+  fileTypeList: string[] = [];
+  fileTypeMap: { [fileType: string]: { isActive: boolean, indeterminate: boolean, disabled: boolean } } = {};
+
   readonly dialogRef: MatDialogRef<DocViewComponent> = inject(MatDialogRef<DocViewComponent>);
   readonly sanitizer: DomSanitizer = inject(DomSanitizer);
-  readonly data: { index: number, contents: ContentPart[] } = inject(MAT_DIALOG_DATA);
+  readonly data: { content: ContentPart } = inject(MAT_DIALOG_DATA);
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
 
   constructor() {
-    this.contents = this.data.contents.filter(content => content.type === 'file');
-    this.content = this.data.contents[this.data.index];
-    this.setIndex(this.data.index);
+    // // this.contents = this.data.contents.filter(content => content.type === 'file');
+    // const fileGroupId = this.data.content.fileGroupId;
+    // if (fileGroupId) {
+    //   this.fileManagerService.getFileGroup(fileGroupId).subscribe({
+    //     next: next => {
+    //       this.fileGroup = next;
+    //       this.setIndeterminate();
+    //       this.fileTypeList = [...new Set(this.fileGroup.files.map(file => file.fileType))];
+    //       this.fileTypeList.forEach(fileType => {
+    //         this.checkFileType(fileType);
+    //       });
+    //       this.setIndex(this.index);
+    //     },
+    //   });
+    // } else { /** ファイルが選択されていないエラー */ }
+
+    const fileGroupId = this.data.content.fileGroupId;
+    if (fileGroupId) {
+      this.fileManagerService.getFileGroup(fileGroupId).subscribe({
+        next: next => {
+          this.fileGroup = next;
+          this.setIndeterminate();
+          this.fileTypeList = [...new Set(this.fileGroup.files.map(file => file.fileType))];
+          this.fileTypeList.forEach(fileType => {
+            this.checkFileType(fileType);
+          });
+
+          // ツリー構造に変換
+          this.treeData = this.buildFileTree(this.fileGroup.files);
+
+          // 初期選択
+          this.setIndex(this.index);
+        },
+      });
+    } else {
+      // ファイルグループがない場合の処理
+    }
+
   }
 
-  changeIndex(type: 'increment' | 'decrement'): void {
-    let index = this.data.index;
-    const increment = type === 'increment' ? +1 : -1;
-    for (let i = this.data.index; i < this.data.contents.length; i += increment) {
-      if (this.data.contents[i].type === 'file') {
-        index = i;
-        break;
-      } else {
-        //
+
+  // ファイルのリストからツリー構造を構築する
+  buildFileTree(files: FileEntityForView[]): FileNode[] {
+    const root: FileNode[] = [];
+
+    const invalidMimeTypes = [
+      'application/octet-stream',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/java-vm',
+      'application/x-elf',
+      'application/xml',
+      'application/x-msdownload',
+      'application/zip',
+      'image/x-icon',
+    ];
+
+    files.forEach(file => {
+      const pathParts = file.fileName.split('/'); // ファイル名に含まれるディレクトリ区切り文字を想定
+      this.insertFileNode(root, pathParts, file, invalidMimeTypes);
+    });
+
+    return root;
+  }
+
+  // 再帰的にノードを挿入する関数
+  insertFileNode(currentLevel: FileNode[], pathParts: string[], file: FileEntityForView, invalidMimeTypes: string[]): void {
+    const part = pathParts[0];
+    const isLast = pathParts.length === 1;
+
+    let node = currentLevel.find(n => n.name === part);
+
+    if (!node) {
+      node = {
+        name: part,
+        type: isLast ? 'file' : 'directory',
+        children: isLast ? [] : [],
+        file: isLast ? file : undefined,
+        isActive: file.isActive,
+        indeterminate: false,
+        disabled: isLast && invalidMimeTypes.includes(file.fileType),
+      };
+
+      if (!isLast) {
+        node.children = [];
       }
+
+      currentLevel.push(node);
     }
-    this.setIndex(index);
+
+    if (!isLast && node.type === 'directory' && node.children) {
+      this.insertFileNode(node.children, pathParts.slice(1), file, invalidMimeTypes);
+    } else if (isLast) {
+      // 最終ノードはファイル
+      node.file = file;
+      node.type = 'file';
+      // 無効ファイルはdisabledフラグ
+      node.disabled = invalidMimeTypes.includes(file.fileType);
+      node.isActive = file.isActive;
+    }
+  }
+
+  // ディレクトリ/ファイルのチェック状態更新
+  checkFile(file: FileEntityForView): void {
+    this.setIndeterminate();
+    this.fileManagerService.activateFile(file.isActive, [file.id]).subscribe({
+      next: next => {
+        console.log(next);
+      },
+    });
+  }
+
+  // ディレクトリチェック切り替え
+  checkDirectory(node: FileNode): void {
+    // ディレクトリ内の全ファイルをチェック状態に合わせる
+    this.setDirectoryActive(node, node.isActive);
+
+    // ファイル群を更新
+    const ids: string[] = this.collectFileIds(node);
+    this.fileManagerService.activateFile(node.isActive, ids).subscribe({
+      next: next => {
+        console.log(next);
+      },
+    });
+
+    // 親ディレクトリを遡ってindeterminateやisActiveを更新する処理が必要な場合は、
+    // 表示前にbuildFileTree時などに参照を持たせておくか、全体を再評価するメソッドを利用します。
+  }
+
+  setDirectoryActive(node: FileNode, isActive: boolean): void {
+    if (node.type === 'file' && node.file && !node.disabled) {
+      node.isActive = isActive;
+      node.file.isActive = isActive;
+    }
+    if (node.children) {
+      node.children.forEach(child => {
+        if (!child.disabled) {
+          child.isActive = isActive;
+          if (child.type === 'file' && child.file) {
+            child.file.isActive = isActive;
+          }
+          this.setDirectoryActive(child, isActive);
+        }
+      });
+    }
+    this.updateDirectoryCheckStates(node);
+  }
+
+  // 子ノードの状態から現在のディレクトリノードのindeterminateなどを再計算
+  updateDirectoryCheckStates(node: FileNode): void {
+    if (node.type === 'file') {
+      // ファイルならそのまま
+      return;
+    }
+    if (!node.children || node.children.length === 0) {
+      return;
+    }
+
+    let allActive = true;
+    let anyActive = false;
+
+    node.children.forEach(child => {
+      this.updateDirectoryCheckStates(child);
+      if (child.isActive) {
+        anyActive = true;
+      } else {
+        allActive = false;
+      }
+      if (child.indeterminate) {
+        allActive = false;
+        anyActive = true;
+      }
+    });
+
+    node.isActive = allActive && !node.disabled;
+    node.indeterminate = !allActive && anyActive;
+  }
+
+  collectFileIds(node: FileNode): string[] {
+    const ids: string[] = [];
+    if (node.type === 'file' && node.file) {
+      ids.push(node.file.id);
+    }
+    if (node.children) {
+      node.children.forEach(child => {
+        ids.push(...this.collectFileIds(child));
+      });
+    }
+    return ids;
+  }
+
+
+
+  /// ------------------------------
+
+
+  setIndeterminate(): void {
+    // ファイル種別ごとにチェックボックスの状態を設定する。面倒なのは indeterminate の判定。
+    // TODO 毎回全量洗い替えしてるので後で直した方がよい。
+    const invalidMimeTypes = [
+      'application/octet-stream',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/java-vm',
+      'application/x-elf',
+      'application/xml',
+      'application/x-msdownload',
+      'application/zip',
+      'image/x-icon',
+    ];
+    this.fileTypeMap = this.fileGroup.files.reduce((mas, file) => {
+      if (invalidMimeTypes.includes(file.fileType)) {
+        mas[file.fileType] = { isActive: false, indeterminate: false, disabled: true };
+      } else {
+        if (mas[file.fileType]) {
+          mas[file.fileType] = { isActive: file.isActive || mas[file.fileType].isActive, indeterminate: mas[file.fileType].indeterminate || (mas[file.fileType].isActive !== file.isActive), disabled: false };
+          console.log(mas[file.fileType].indeterminate);
+        } else {
+          mas[file.fileType] = { isActive: file.isActive, indeterminate: false, disabled: false };
+        }
+      }
+      return mas;
+    }, {} as { [fileType: string]: { isActive: boolean, indeterminate: boolean, disabled: boolean } });
   }
 
   setIndex(index: number): void {
-    this.data.index = index;
-    this.content = this.data.contents[index];
-    this.label = (this.content.text || '');
+    this.index = index;
+    this.label = this.fileGroup.files[index].fileName;
 
-    if (this.content.fileId) { } else { return; }
-    this.fileManagerService.downloadFile(this.content.fileId).subscribe({
+    if (this.fileGroup) { } else { return; }
+    this.fileManagerService.downloadFile(this.fileGroup.files[index].id).subscribe({
       next: next => {
         this.dataUrl = next;
         if (this.dataUrl.startsWith('data:image/')) {
@@ -125,8 +350,8 @@ export class DocViewComponent {
             this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.dataUrl);
           } else {
             this.type = 'other';
-            if (this.content.fileId) {
-              this.fileManagerService.downloadFile(this.content.fileId, 'pdf').subscribe({
+            if (this.fileGroup.files[index].id) {
+              this.fileManagerService.downloadFile(this.fileGroup.files[index].id, 'pdf').subscribe({
                 next: next => {
                   this.type = 'pdf';
                   this.dataUrl = next;
@@ -141,6 +366,38 @@ export class DocViewComponent {
         }
 
       }
+    });
+  }
+
+  // checkFile(file: FileEntityForView): void {
+  //   this.setIndeterminate();
+  //   this.fileManagerService.activateFile(file.isActive, [file.id]).subscribe({
+  //     next: next => {
+  //       console.log(next);
+  //     },
+  //   });
+  // }
+
+  checkFileType(fileType: string): void {
+    const ids: string[] = [];
+    this.fileGroup.files.forEach(file => {
+      if (file.fileType === fileType) {
+        if (file.isActive === this.fileTypeMap[fileType].isActive) {
+          /** 元から適用されてるので無視でよい */
+        } else {
+          file.isActive = this.fileTypeMap[fileType].isActive;
+          ids.push(file.id);
+        }
+      } else { /** 関係ない */ }
+    });
+
+    // fileTypeMapの状態を更新
+    this.fileTypeMap[fileType].indeterminate = false;
+
+    this.fileManagerService.activateFile(this.fileTypeMap[fileType].isActive, ids).subscribe({
+      next: next => {
+        console.log(next);
+      },
     });
   }
 

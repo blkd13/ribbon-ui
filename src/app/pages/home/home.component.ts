@@ -178,7 +178,7 @@ export class HomeComponent implements OnInit {
   sortThread(threadGroupList: ThreadGroup[]): void {
     if (this.sortType === 1) {
       // 時刻順（新しい方が上に来る）
-      threadGroupList.sort((a, b) => b.lastUpdate < a.lastUpdate ? -1 : 1);
+      threadGroupList.sort((a, b) => new Date(b.lastUpdate) < new Date(a.lastUpdate) ? -1 : 1);
     } else {
       // 名前順（Aが上に来る）
       threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);

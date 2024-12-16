@@ -13,7 +13,7 @@ import { saveAs } from 'file-saver'; // Blobファイルのダウンロードの
 
 import { ChatCompletionContentPart, ChatCompletionContentPartText } from '../../models/models';
 import { ChatService } from '../../services/chat.service';
-import { DomUtils } from '../../utils/dom-utils';
+import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { MarkdownComponent } from 'ngx-markdown';
 import { DocTagComponent } from '../doc-tag/doc-tag.component';
 import { ContentPart, ContentPartType, MessageForView, MessageGroupForView } from '../../models/project-models';
@@ -266,15 +266,30 @@ export class ChatPanelBaseComponent implements OnInit {
   onSubmit(): void {
     // TODO 本当は次の送信までメッセージ保存したくないけどどうしようもないので一旦保存しておく。
     // 内容を変更した場合は別メッセージとして扱う。
-    this.messageService.upsertSingleMessageGroup(this.messageGroup).subscribe({
-      next: next => {
-        this.editEmitter.emit(next);
-      },
-      error: error => {
-        this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
-        // TODO メッセージ戻す処理が必要。
-      }
-    });
+    if (this.messageGroup.role === 'system') {
+      // system：システムプロンプトはツリーを変えたくないので単純にedit
+      safeForkJoin(this.messageGroup.messages.map(message => this.messageService.editMessageWithContents(message))).subscribe({
+        next: next => {
+          // 戻ってきたもので元オブジェクトに更新を掛ける。
+          next.forEach((message, index) => this.messageGroup.messages[index] = message);
+          this.editEmitter.emit(this.messageGroup);
+        },
+        error: error => {
+          this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
+          // TODO メッセージ戻す処理が必要。
+        }
+      });
+    } else {
+      this.messageService.upsertSingleMessageGroup(this.messageGroup).subscribe({
+        next: next => {
+          this.editEmitter.emit(next);
+        },
+        error: error => {
+          this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
+          // TODO メッセージ戻す処理が必要。
+        }
+      });
+    }
   }
 
   onChange(): void {

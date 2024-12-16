@@ -219,16 +219,16 @@ export class ThreadService {
     }
 
     moveThreadGroup(threadGroupId: string, projectId: string): Observable<ThreadGroup> {
-        return this.http.put<ThreadGroup>(`/user/thread-group/${threadGroupId}`, { projectId }).pipe(tap(threadGroupResponseHandler));;
+        return this.http.put<ThreadGroup>(`/user/thread-group/${threadGroupId}`, { projectId });
     }
 
     cloneThreadGroup(threadGroupId: string): Observable<ThreadGroup> {
         return this.http.post<ThreadGroup>(`/user/thread-group/clone/${threadGroupId}`, {}).pipe(tap(threadGroupResponseHandler));
     }
 
-    cloneThread(threadId: string): Observable<Thread> {
-        return this.http.post<Thread>(`/user/thread/clone/${threadId}`, {}).pipe(tap(thread => threadFormat(thread)));
-    }
+    // cloneThread(threadId: string): Observable<Thread> {
+    //     return this.http.post<Thread>(`/user/thread/clone/${threadId}`, {}).pipe(tap(thread => threadFormat(thread)));
+    // }
 
     deleteThreadGroup(threadGroupId: string): Observable<void> {
         return this.http.delete<void>(`/user/thread-group/${threadGroupId}`);
@@ -303,6 +303,10 @@ export class MessageService {
     /** メッセージのタイムスタンプを更新するだけ。 */
     updateTimestamp(type: 'message-group' | 'message', id: string): Observable<Message | MessageGroup> {
         return this.http.patch<MessageForView>(`/user/thread/${type}/${id}`, id);
+    }
+
+    editMessageWithContents(message: MessageForView): Observable<MessageForView> {
+        return this.http.patch<MessageForView>(`/user/message/${message.id}/content-parts`, message);
     }
 
     getMessageGroupList(threadGroupId: string, page: number = 1, limit: number = 1000): Observable<{ messageGroups: MessageGroupForView[] }> {
@@ -436,8 +440,8 @@ export class MessageService {
         const nextMessageGroupId = this.nextMessageGroupId[previousMessageGroupId];
         const tail = nextMessageGroupId.sort((a, b) => {
             // ソート条件：lastUpdate降順、seq降順
-            if (this.messageGroupMas[a].lastUpdate > this.messageGroupMas[b].lastUpdate) return -1;
-            if (this.messageGroupMas[a].lastUpdate < this.messageGroupMas[b].lastUpdate) return 1;
+            if (new Date(this.messageGroupMas[a].lastUpdate) > new Date(this.messageGroupMas[b].lastUpdate)) return -1;
+            if (new Date(this.messageGroupMas[a].lastUpdate) < new Date(this.messageGroupMas[b].lastUpdate)) return 1;
             return this.messageGroupMas[b].seq - this.messageGroupMas[a].seq; // seq降順
         })[0];
         // seqで昇順ソートしてselectedIndexを設定
@@ -458,8 +462,8 @@ export class MessageService {
         } else {
             targetMessageGroupId = Object.values(messageGroupMas).filter(messageGroup => messageGroup.threadId === threadId).sort((a, b) => {
                 // ソート条件：lastUpdate降順、seq降順
-                if (a.lastUpdate > b.lastUpdate) return -1;
-                if (a.lastUpdate < b.lastUpdate) return 1;
+                if (new Date(a.lastUpdate) > new Date(b.lastUpdate)) return -1;
+                if (new Date(a.lastUpdate) < new Date(b.lastUpdate)) return 1;
                 return b.seq - a.seq; // seq降順
             })[0].id;
         }
@@ -489,12 +493,12 @@ export class MessageService {
         while (this.nextMessageGroupId[targetMessageGroupId]) {
             targetMessageGroupId = this.nextMessageGroupId[targetMessageGroupId].slice().sort((a, b) => {
                 // ソート条件：lastUpdate降順、seq降順
-                if (this.messageGroupMas[a].lastUpdate > this.messageGroupMas[b].lastUpdate) return -1;
-                if (this.messageGroupMas[a].lastUpdate < this.messageGroupMas[b].lastUpdate) return 1;
+                if (new Date(this.messageGroupMas[a].lastUpdate) > new Date(this.messageGroupMas[b].lastUpdate)) return -1;
+                if (new Date(this.messageGroupMas[a].lastUpdate) < new Date(this.messageGroupMas[b].lastUpdate)) return 1;
                 return this.messageGroupMas[b].seq - this.messageGroupMas[a].seq; // seq降順
             })[0];
             // 新しいものじゃなければselectedIndexをoutboundsさせて抜ける
-            if (this.messageGroupMas[targetMessageGroupId].lastUpdate < messageGroup.lastUpdate) {
+            if (new Date(this.messageGroupMas[targetMessageGroupId].lastUpdate) < new Date(messageGroup.lastUpdate)) {
                 messageGroup.selectedIndex = this.nextMessageGroupId[messageGroup.id].length;
                 break;
             } else { }

@@ -21,10 +21,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTabsModule } from '@angular/material/tabs';
 
 import { saveAs } from 'file-saver';
 
-import { CachedContent, SafetyRating, safetyRatingLabelMap } from '../../models/models';
+import { CachedContent, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
 import { ChatContent, ChatInputArea, ChatService, CountTokensResponse } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
@@ -53,6 +54,7 @@ import { UserService } from '../../services/user.service';
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatSelectModule,
     MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatProgressSpinnerModule,
+    MatTabsModule,
     UserMarkComponent,
     ChatPanelMessageComponent, ChatPanelSystemComponent,
   ],
@@ -73,9 +75,12 @@ export class ChatComponent implements OnInit {
   @ViewChild('textAreaElem', { static: false })
   textAreaElem!: ElementRef<HTMLTextAreaElement>;
 
-  // チャット表示欄
-  @ViewChild('textBodyElem', { static: false })
-  textBodyElem!: ElementRef<HTMLDivElement>;
+  // // チャット表示欄
+  // @ViewChild('textBodyElem', { static: false })
+  // textBodyElem!: ElementRef<HTMLDivElement>;
+
+  @ViewChildren('textBodyElem')
+  textBodyElem!: QueryList<ElementRef<HTMLDivElement>>;
 
   @ViewChild(FileDropDirective, { static: false })
   appFileDrop?: FileDropDirective;
@@ -114,11 +119,12 @@ export class ChatComponent implements OnInit {
   editNameThreadId: string = '';
   private timeoutId: any;
   bulkRunSetting: BulkRunSettingData = {
-    mode: 'serial',
+    mode: 'parallel',
     promptTemplate: `ありがとうございます。\nでは次は"\${value}"をお願いします。`,
     contents: [],
     projectId: '',
   };
+  tailMessageGroupList: (MessageGroupForView | null)[] = [];
 
   // 画面インタラクション系
   allExpandCollapseFlag = true; // メッセージの枠を全部一気に開くか閉じるかのフラグ
@@ -254,6 +260,31 @@ export class ChatComponent implements OnInit {
     });
   }
 
+  presetInputList = [
+    { label: "なし", text: "" },
+    { label: "エラー<br/>解説", text: "以下のエラーについて、日本語で内容を解説してください。\n\n" },
+    { label: "要約", text: "要約してください。\n\n" },
+    { label: "和訳", text: "和訳してください。\n\n" },
+    { label: "英訳", text: "英訳してください。\n\n" },
+  ]
+
+  selectPreset(preset: { label: string, text: string }): void {
+    // // システムプロンプトに設定したいか？
+    // this.selectedThreadGroup.threadList.forEach(thread => this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][0]].messages[0].contents[0].text = preset.text);
+    this.inputArea.content[0].text = preset.text;
+    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+  }
+
+  presetThreadList: Thread[] = [];
+  loadPreset(index: number): void {
+    this.selectedThreadGroup.threadList = this.selectedThreadGroup.threadList.slice(0, index);
+    while (this.selectedThreadGroup.threadList.length < index) {
+      this.selectedThreadGroup.threadList.push(this.presetThreadList[this.selectedThreadGroup.threadList.length - 1])
+    }
+    this.rebuildThreadGroup();
+    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+  }
+
   threadGroupChangeHandler(project: Project, threadGroupList: ThreadGroup[], threadGroupId: string): void {
     let noSend = true;
     if (threadGroupId === 'new-thread') {
@@ -263,6 +294,20 @@ export class ChatComponent implements OnInit {
       this.selectedThreadGroup.threadList.forEach(thread => {
         const contentPart = this.messageService.initContentPart(genDummyId(), 'アシスタントAI');
         this.messageService.addSingleMessageGroupDry(thread.id, undefined, 'system', [contentPart]);
+      });
+
+      // presetスレッドようにスレッドコピーしておく。
+      const baseThread = this.selectedThreadGroup.threadList[0];
+      safeForkJoin([
+        this.messageService.cloneThreadDry(baseThread),
+        this.messageService.cloneThreadDry(baseThread),
+      ]).subscribe({
+        next: next => {
+          (['gpt-4o', 'claude-3-5-sonnet-v2@20241022'] as GPTModels[]).forEach((model, index) => {
+            next[index].inDto.args.model = model;
+          });
+          this.presetThreadList = next;
+        }
       });
 
       this.rebuildThreadGroup();
@@ -369,7 +414,8 @@ export class ChatComponent implements OnInit {
               this.isThreadGroupLoading = false;
 
               // 一番下まで下げる
-              setTimeout(() => { DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); }, 500);
+              this.textBodyElem.forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+              // setTimeout(() => { DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); }, 500);
 
               // this.router.navigate(['chat', this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
               setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
@@ -394,7 +440,7 @@ export class ChatComponent implements OnInit {
     // 本来はlastUpdateでソートしたかったが、何故か時刻が更新されていないので。
     if (this.sortType === 1) {
       // 時刻順（新しい方が上に来る）
-      threadGroupList.sort((a, b) => b.lastUpdate < a.lastUpdate ? -1 : 1);
+      threadGroupList.sort((a, b) => new Date(b.lastUpdate) < new Date(a.lastUpdate) ? -1 : 1);
     } else {
       // 名前順（Aが上に来る）
       threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
@@ -438,8 +484,9 @@ export class ChatComponent implements OnInit {
   rebuildThreadGroup(): { [threadId: string]: string[] } {
     this.messageGroupIdListMas = this.messageService.rebuildThreadGroup(this.messageService.messageGroupMas);
     // 末尾のroleを取得
-    const line = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id];
-    this.tailRole = line[line.length - 1] ? this.messageService.messageGroupMas[line[line.length - 1]].role : 'system';
+    const lineIdList = this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]);
+    this.tailMessageGroupList = lineIdList.map(line => line[line.length - 1] ? this.messageService.messageGroupMas[line[line.length - 1]] : null);
+    this.tailRole = this.tailMessageGroupList[0] ? this.tailMessageGroupList[0].role : 'system';
     // メッセージグループの数が最大のスレッドを探す
     const maxMessageGroupCount = Object.values(this.messageGroupIdListMas).map(messageGroupIdList => messageGroupIdList.length).reduce((a, b) => Math.max(a, b), 0);
     this.indexList = Array.from({ length: maxMessageGroupCount }, (_, i) => i);
@@ -453,6 +500,21 @@ export class ChatComponent implements OnInit {
       this.threadGroupList.unshift(threadGroup);
       this.sortThreadGroup(this.threadGroupList);
     }));
+  }
+
+  cloneThreadGroup(threadGroupId: string) {
+    this.isThreadGroupLoading = true
+    this.threadService.cloneThreadGroup(threadGroupId).subscribe({
+      next: threadGroup => {
+        this.threadGroupList.unshift(threadGroup);
+        this.sortThreadGroup(this.threadGroupList);
+        this.isThreadGroupLoading = false;
+      },
+      error: error => {
+        console.error(error);
+        this.isThreadGroupLoading = false;
+      },
+    });
   }
 
   saveThreadGroup(_orgThreadGroup: ThreadGroup): Observable<ThreadGroup> {
@@ -480,8 +542,8 @@ export class ChatComponent implements OnInit {
       .uploadFiles({ projectId: this.selectedProject.id, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
       .subscribe({
         next: next => {
-          next.results.forEach(fileEntity => {
-            this.inputArea.content.push({ type: 'file', fileId: fileEntity.id, text: fileEntity.fileName });
+          next.results.forEach(fileGroupEntity => {
+            this.inputArea.content.push({ type: 'file', fileGroupId: fileGroupEntity.id, text: fileGroupEntity.label });
           });
 
           this.onChange();
@@ -530,50 +592,27 @@ export class ChatComponent implements OnInit {
    * トリガとなるメッセージIDを配信。
    * @returns トリガとなるmessageGroupIdの配列
    */
-  saveAndBuildThread(): Observable<string[]> {
+  saveAndBuildThreadGroup(): Observable<string[]> {
     // 初回送信なので、スレッドを作るところから動かす
-    const threadGroup = (!this.selectedThreadGroup.id.startsWith('dummy-'))
-      ? this.saveThreadGroup(this.selectedThreadGroup).pipe(
-        // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
-        switchMap(threadGroup =>
-          safeForkJoin(threadGroup.threadList.map(thread =>
-            // 複雑になってしまったけど、直列実行したい＋配列が空の時も動かしたいを実現するためにこんな感じになっている。
-            this.messageGroupIdListMas[thread.id].filter(messageGroupId => messageGroupId.startsWith('dummy-')).length === 0
-              ? of([])
-              : from(this.messageGroupIdListMas[thread.id].filter(messageGroupId => messageGroupId.startsWith('dummy-')))
-                .pipe(
-                  concatMap(messageGroupId => this.messageService.upsertSingleMessageGroup(this.messageService.messageGroupMas[messageGroupId])),
-                  toArray(),
-                ),
-          ).flat())
-        ),
-        // メッセージ状況を反映
-        tap(upsertResponseList => this.rebuildThreadGroup()),
-        // 後続で使うようにthreadに戻しておく
-        map(upsertResponseList => this.selectedThreadGroup),
-      )
-      // 二回目以降はメタパラメータを保存するだけ。
-      : this.saveThreadGroup(this.selectedThreadGroup).pipe( // 初回送信の場合は色々動かす。
-        // selectedThreadに反映
-        tap(threadGroup => {
-          this.selectedThreadGroup = threadGroup;
-          // // URL切替
-          // this.router.navigate(['chat', this.selectedProject.id, threadGroup.id]);
-        }),
-        // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
-        switchMap(threadGroup =>
-          safeForkJoin(threadGroup.threadList.map(thread =>
-            from(this.messageGroupIdListMas[thread.id])
-              .pipe(concatMap(messageGroupId =>
-                this.messageService.upsertSingleMessageGroup(this.messageService.messageGroupMas[messageGroupId])
-              )),
-          ).flat()),
-        ),
-        // メッセージ状況を反映
-        tap(upsertResponseList => this.rebuildThreadGroup()),
-        // 後続で使うようにthreadに戻しておく
-        map(upsertResponseList => this.selectedThreadGroup),
-      );
+    const threadGroup = this.saveThreadGroup(this.selectedThreadGroup).pipe(
+      // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
+      switchMap(threadGroup =>
+        safeForkJoin(threadGroup.threadList.map(thread =>
+          // 複雑になってしまったけど、直列実行したい＋配列が空の時も動かしたいを実現するためにこんな感じになっている。
+          this.messageGroupIdListMas[thread.id].filter(messageGroupId => messageGroupId.startsWith('dummy-')).length === 0
+            ? of([])
+            : from(this.messageGroupIdListMas[thread.id].filter(messageGroupId => messageGroupId.startsWith('dummy-')))
+              .pipe(
+                concatMap(messageGroupId => this.messageService.upsertSingleMessageGroup(this.messageService.messageGroupMas[messageGroupId])),
+                toArray(),
+              ),
+        ).flat())
+      ),
+      // メッセージ状況を反映
+      tap(upsertResponseList => this.rebuildThreadGroup()),
+      // 後続で使うようにthreadに戻しておく
+      map(upsertResponseList => this.selectedThreadGroup),
+    );
     return threadGroup.pipe(
       tap(threadGroup => {
         // 二回目以降だろうとタイトルが何も書かれていなかったら埋める。
@@ -613,7 +652,7 @@ export class ChatComponent implements OnInit {
               const contentPart = this.messageService.initContentPart(genDummyId(), content.text);
               contentPart.type = content.type as ContentPartType;
               contentPart.text = content.text;
-              contentPart.fileId = contentPart.type === 'file' ? (content as { fileId: string }).fileId : undefined;
+              contentPart.fileGroupId = contentPart.type === 'file' ? (content as { fileGroupId: string }).fileGroupId : undefined;
               return contentPart;
             });
             return this.messageService.upsertSingleMessageGroup(
@@ -631,7 +670,8 @@ export class ChatComponent implements OnInit {
               this.rebuildThreadGroup();
               setTimeout(() => {
                 DomUtils.textAreaHeighAdjust(this.textAreaElem.nativeElement); // 高さ調整
-                DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
+                this.textBodyElem.forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+                // DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
               }, 0);
               return upsertResponseList.map(messageGroup => messageGroup.id);
             }),
@@ -691,8 +731,14 @@ export class ChatComponent implements OnInit {
   send(type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' = 'threadGroup', idList: string[] = []): Observable<{
     connectionId: string,
     streamId: string,
-    metaList: { messageGroup: MessageGroupForView, observer: Observable<string> }[],
+    messageGroupList: MessageGroup[],
   }[]> {
+
+    if (this.isLock) {
+      this.snackBar.open(`メッセージ受信中は送信できません。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`, 'close', { duration: 3000 });
+      throw new Error(`メッセージ受信中は送信できません。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`);
+    } else { }
+
     let threadList: Thread[] = [];
     if (type === 'threadGroup') {
       // idListが空の場合は選択中のスレッドグループを使う
@@ -707,7 +753,7 @@ export class ChatComponent implements OnInit {
     }
 
     for (const thread of threadList) {
-      const messageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1]];
+      const tailMessageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1]];
       const modelName = thread.inDto.args.model || '';
       const model = this.chatService.priceMap[modelName];
       const args = thread.inDto.args;
@@ -722,12 +768,13 @@ export class ChatComponent implements OnInit {
         this.snackBar.open(`Google検索統合は Gemini-1.5 系統以外では使えません。`, 'close', { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
-      } else if (messageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0) {
+      } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0) {
         if (this.inputArea.content.length > 1) {
           this.snackBar.open(`ファイルだけでは送信できません。何かメッセージを入力してください。`, 'close', { duration: 3000 });
           throw new Error('ファイルだけでは送信できません。何かメッセージを入力してください。');
         } else {
           this.snackBar.open(`メッセージを入力してください。`, 'close', { duration: 3000 });
+          // throw new Error('メッセージを入力してください。');
         }
       }
 
@@ -769,7 +816,7 @@ export class ChatComponent implements OnInit {
       }
     } else { }
 
-    return this.saveAndBuildThread().pipe(
+    return this.saveAndBuildThreadGroup().pipe(
       tap(() => {
         this.router.navigate(['chat', this.selectedProject.id, this.selectedThreadGroup.id]);
       }),
@@ -787,12 +834,15 @@ export class ChatComponent implements OnInit {
             .pipe(tap(resDto => {
               // キャッシュを更新する
               // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
-              resDto.metaList.forEach(meta => {
-                this.messageService.applyMessageGroup(meta.messageGroup);
+              resDto.messageGroupList.forEach(messageGroup => {
+                this.messageService.applyMessageGroup(messageGroup);
                 this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
-                this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(meta.observer.subscribe(this.chatStreamHander(meta.messageGroup.messages[0])));
-                const message = meta.messageGroup.messages[0];
-                console.log(`Message ID before chat completion: ${message.id}`);
+                messageGroup.messages.map(message => {
+                  if (message.observer) {
+                    this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
+                    console.log(`Message ID before chat completion: ${message.id}`);
+                  } else { }
+                });
               });
             }))
         )).pipe(tap(text => {
@@ -803,7 +853,8 @@ export class ChatComponent implements OnInit {
           // 入力ボックスのサイズを戻す。
           setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
           setTimeout(() => {
-            DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
+            this.textBodyElem.forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+            // DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
           }, 100);
         }))
       )
@@ -821,7 +872,8 @@ export class ChatComponent implements OnInit {
         message.contents[0].text += text;
         message.status = MessageStatusType.Editing;
         this.bitCounter++;
-        DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
+        this.textBodyElem.forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+        // DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
       },
       error: error => {
         this.chatErrorHandler(error);
@@ -934,7 +986,7 @@ export class ChatComponent implements OnInit {
               return {
                 type: content.type,
                 text: content.text,
-                fileId: content.fileId,
+                fileId: content.fileGroupId,
               } as ChatContent;
             }),
           });
@@ -1010,7 +1062,7 @@ export class ChatComponent implements OnInit {
         this.dialog.open(DialogComponent, { data: { title: 'alert', message, options: ['Close'] } });
         throw new Error(message);
       }
-      return this.saveAndBuildThread().pipe(switchMap(
+      return this.saveAndBuildThreadGroup().pipe(switchMap(
         // トリガーを引く
         messageGroupId => this.chatService.createCacheByProjectModel(
           thread.inDto.args.model || '', messageGroupId[0], 'messageGroup',
@@ -1133,58 +1185,69 @@ export class ChatComponent implements OnInit {
     // }
   }
 
-  removeMessageGroup(messageGroup: MessageGroupForView): void {
-    // systemの削除はスレッドの削除として扱う。
-    if (messageGroup.role === 'system' || !messageGroup.previousMessageGroupId) {
-      const threadGroup = this.selectedThreadGroup;
-      const thread = threadGroup.threadList.find(thread => thread.id === messageGroup.threadId);
-      if (thread) {
-        this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${thread.inDto.args.model}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
-          next: next => {
-            if (next === 0) {
-              threadGroup.threadList.splice(threadGroup.threadList.indexOf(thread), 1);
-              if (thread.id.startsWith('dummy-')) {
-                // ダミーの場合はAPIには送る必要が無い。
-              } else {
-                this.threadService.upsertThreadGroup(threadGroup.projectId, threadGroup).subscribe({
-                  next: next => {
-                  },
-                  error: error => {
-                    this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
-                  },
-                });
-              }
-            } else { /** 削除キャンセル */ }
-          }
-        });
-      } else { }
-      return;
-    } else { }
-
-    if (!this.messageService.messageGroupMas[messageGroup.previousMessageGroupId]) return;
-
-    // あえてOutOfBoundsさせる
-    messageGroup.selectedIndex = messageGroup.messages.length;
-
-    const previousMessageGroup: MessageGroupForView = this.messageService.messageGroupMas[messageGroup.previousMessageGroupId];
-
-    this.touchMessageGroupAndRebuild(previousMessageGroup).subscribe({
-      next: next => {
-        if (messageGroup.role === 'user') {
-          this.inputArea.messageGroupId = previousMessageGroup.id;
-        } else if (messageGroup.role === 'assistant') {
-          // assistantを削除するとはつまりリトライのこと
-          this.inputArea.content[0].text = '';
-          if (messageGroup.previousMessageGroupId) {
-            // リトライさせるのは一個前のメッセージグループ
-            this.send('messageGroup', [messageGroup.previousMessageGroupId]).subscribe({});
-          } else { }
-        } else if (messageGroup.role === 'system') {
+  removeThread(targetThread: Thread): void {
+    const threadGroup = this.selectedThreadGroup;
+    const thread = threadGroup.threadList.find(_thread => _thread.id === targetThread.id);
+    if (thread && threadGroup.threadList.length > 1) {
+      this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${thread.inDto.args.model}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
+        next: next => {
+          if (next === 0) {
+            threadGroup.threadList.splice(threadGroup.threadList.indexOf(thread), 1);
+            if (thread.id.startsWith('dummy-')) {
+              // ダミーの場合はAPIには送る必要が無い。
+            } else {
+              this.threadService.upsertThreadGroup(threadGroup.projectId, threadGroup).subscribe({
+                next: next => {
+                },
+                error: error => {
+                  this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+                },
+              });
+            }
+          } else { /** 削除キャンセル */ }
         }
+      });
+    } else {
+      // TODO 選択中のスレッドグループじゃないやつを消そうとしてる。現在はこれはエラー。
+      this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+    }
+  }
+
+  removeMessageGroup(messageGroup: MessageGroupForView): void {
+    (messageGroup.id.startsWith('dummy-') ? this.saveAndBuildThreadGroup() : of([])).subscribe({
+      next: next => {
+        if (messageGroup.role === 'system' || !messageGroup.previousMessageGroupId) {
+          return;
+        } else { }
+        if (!this.messageService.messageGroupMas[messageGroup.previousMessageGroupId]) return;
+
+        // あえてOutOfBoundsさせる
+        messageGroup.selectedIndex = messageGroup.messages.length;
+
+        const previousMessageGroup: MessageGroupForView = this.messageService.messageGroupMas[messageGroup.previousMessageGroupId];
+
+        this.touchMessageGroupAndRebuild(previousMessageGroup).subscribe({
+          next: next => {
+            if (messageGroup.role === 'user') {
+              this.inputArea.messageGroupId = previousMessageGroup.id;
+            } else if (messageGroup.role === 'assistant') {
+              // assistantを削除するとはつまりリトライのこと
+              this.inputArea.content[0].text = '';
+              if (messageGroup.previousMessageGroupId) {
+                // リトライさせるのは一個前のメッセージグループ
+                this.send('messageGroup', [messageGroup.previousMessageGroupId]).subscribe({});
+              } else { }
+            } else if (messageGroup.role === 'system') {
+            }
+          },
+          error: error => {
+            this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+          },
+        });
       },
       error: error => {
         this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
-      }
+      },
     });
   }
 
@@ -1228,8 +1291,8 @@ export class ChatComponent implements OnInit {
         if (next === 0) {
           this.threadService.deleteThreadGroup(threadGroup.id).subscribe({
             next: next => {
-              this.threadGroupList.splice($index, 1)
-              if (threadGroup === this.selectedThreadGroup) {
+              this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
+              if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
               } else {
                 this.sortThreadGroup(this.threadGroupList);
@@ -1249,12 +1312,16 @@ export class ChatComponent implements OnInit {
           // スレッド移動後はスレッドグループを再読み込みする
           this.loadThreadGroups(this.selectedProject).subscribe({
             next: next => {
-              if (threadGroup === this.selectedThreadGroup) { this.clear(); } // 選択中のスレッドを移動した場合は選択解除
+              this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
+              if (threadGroup.id === this.selectedThreadGroup.id) {
+                this.clear();
+              } // 選択中のスレッドを移動した場合は選択解除
               this.snackBar.open(`チャットを移動しました。`, 'close', { duration: 3000 });
             },
           });
         },
         error: error => {
+          console.error(error);
           this.snackBar.open(`更新エラーです。\n${JSON.stringify(error)}`, 'close', { duration: 30000 });
         }
       });
@@ -1331,7 +1398,7 @@ export class ChatComponent implements OnInit {
                   } else if (content.type === 'file') {
                     const contentPartFile = this.messageService.initContentPart(message.id, content.text);
                     contentPartFile.type = content.type as ContentPartType;
-                    contentPartFile.fileId = content.fileId;
+                    contentPartFile.fileGroupId = content.fileGroupId;
                     contents.push(contentPartFile);
                   }
                   message.contents = contents;
@@ -1351,6 +1418,22 @@ export class ChatComponent implements OnInit {
     }
   }
 
+  scrollPositions: number[] = [];
+  saveScrollPosition(tabIndex: number): void {
+    const bodyElem = this.textBodyElem.get(tabIndex);
+    if (bodyElem && bodyElem.nativeElement) {
+      this.scrollPositions[tabIndex] = bodyElem.nativeElement.scrollTop || 0;
+    } else { }
+  }
+  restoreScrollPosition(tabIndex: number): void {
+    setTimeout(() => {
+      const bodyElem = this.textBodyElem.get(tabIndex);
+      if (bodyElem) {
+        bodyElem.nativeElement.scrollTop = this.scrollPositions[tabIndex] || 0;
+      } else { }
+    }, 0);
+  }
+
   bulkNext(): void {
     if (this.bulkRunSetting.contents.length > 0) {
       // 一括実行設定あり
@@ -1360,7 +1443,7 @@ export class ChatComponent implements OnInit {
         this.inputArea.content[0].text = this.bulkRunSetting.promptTemplate.replace('${value}', content.text);
         if (content.type === 'text') {
         } else if (content.type === 'file') {
-          this.inputArea.content.push({ type: 'file', fileId: content.fileId, text: content.text });
+          this.inputArea.content.push({ type: 'file', fileGroupId: content.fileGroupId, text: content.text });
         }
         this.send().subscribe();
       }

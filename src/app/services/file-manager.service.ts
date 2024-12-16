@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { from, Observable } from 'rxjs';
+import { from, Observable, of } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
@@ -26,6 +26,20 @@ export interface FileAccessUpdate {
     canDelete: boolean;
 }
 
+export interface FileGroupEntity {
+    id: string;
+    projectId: string;
+    type: 'upload' | 'merged';
+    label: string;
+    description: string;
+    uploadedBy: string;
+    isActive: boolean;
+}
+
+export interface FileGroupEntityForView extends FileGroupEntity {
+    files: FileEntityForView[];
+}
+
 export interface FileEntity {
     id: string;
     fileName: string;
@@ -33,12 +47,17 @@ export interface FileEntity {
     projectId: string;
     uploadedBy: string;
     fileBodyId: string;
-    // Add other properties as needed
+    isActive: boolean;
+}
 
+export interface FileEntityForView extends FileEntity {
+    // Add other properties as needed
     fileSize: number,
     fileType: string;
     metaJson: any;
 }
+
+
 
 export type FullPathFile = { fullPath: string, file: File, base64String: string, id?: string };
 
@@ -127,8 +146,8 @@ export class FileManagerService {
      * @param request 
      * @returns 
      */
-    uploadFiles(request: FileUploadRequest): Observable<{ message: string, results: FileEntity[] }> {
-        return this.http.post<{ message: string, results: FileEntity[] }>(`/user/upload`, request);
+    uploadFiles(request: FileUploadRequest): Observable<{ message: string, results: FileGroupEntity[] }> {
+        return this.http.post<{ message: string, results: FileGroupEntity[] }>(`/user/upload`, request);
     }
 
     downloadFile(fileId: string, format: string = 'binary'): Observable<string> {
@@ -137,6 +156,10 @@ export class FileManagerService {
             switchMap(blob => from(this.blobToBase64(blob))),
             catchError(this.handleError)
         );
+    }
+
+    activateFile(isActive: boolean, ids: string[]): Observable<{ message: string, updateResult: number }> {
+        return ids.length > 0 ? this.http.patch<{ message: string, updateResult: number }>(`/user/file-activate`, { isActive, ids }) : of({ message: 'No files to update', updateResult: 0 });
     }
 
     private blobToBase64(blob: Blob): Promise<string> {
@@ -156,14 +179,20 @@ export class FileManagerService {
     //     );
     // }
 
-    updateFileMetadata(fileId: string, metadata: FileMetadata): Observable<FileEntity> {
-        return this.http.patch<FileEntity>(`/user/${fileId}/metadata`, metadata).pipe(
-            catchError(this.handleError)
-        );
-    }
+    // updateFileMetadata(fileId: string, metadata: FileMetadata): Observable<FileEntity> {
+    //     return this.http.patch<FileEntity>(`/user/${fileId}/metadata`, metadata).pipe(
+    //         catchError(this.handleError)
+    //     );
+    // }
 
-    deleteFile(fileId: string): Observable<any> {
-        return this.http.delete(`/user/${fileId}`).pipe(
+    // deleteFile(fileId: string): Observable<any> {
+    //     return this.http.delete(`/user/${fileId}`).pipe(
+    //         catchError(this.handleError)
+    //     );
+    // }
+
+    getFileGroup(fileGroupId: string): Observable<FileGroupEntityForView> {
+        return this.http.get<FileGroupEntityForView>(`/user/file-group/${fileGroupId}`).pipe(
             catchError(this.handleError)
         );
     }
