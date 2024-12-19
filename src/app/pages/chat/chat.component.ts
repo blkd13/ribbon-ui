@@ -4,7 +4,7 @@ import { genDummyId, MessageService, ProjectService, TeamService, ThreadService 
 import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty } from 'rxjs';
 import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, TemplateRef, ViewChild, ViewChildren, inject } from '@angular/core';
 import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgModel } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 
@@ -45,6 +45,7 @@ import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-pan
 import { ChatPanelBaseComponent } from '../../parts/chat-panel-base/chat-panel-base.component';
 import { UserService } from '../../services/user.service';
 
+declare var _paq: any;
 
 @Component({
   selector: 'app-chat',
@@ -104,10 +105,10 @@ export class ChatComponent implements OnInit {
 
   inputArea: ChatInputArea = this.generateInitalInputArea();
 
-  selectedDanmen: string = '';
-
   aloneTeam!: Team;
   defaultProject!: Project;
+
+  selectedTeam!: Team;
   selectedProject!: Project;
   projectList: Project[] = [];
   teamMap: { [key: string]: Team } = {};
@@ -172,7 +173,7 @@ export class ChatComponent implements OnInit {
     }, 1000);
   }
 
-  changeModel(index: number): void { }
+  // changeModel(index: number): void { }
   // editChat(resDto: MessageGroup): void { }
 
   generateInitalInputArea(): ChatInputArea {
@@ -203,6 +204,7 @@ export class ChatComponent implements OnInit {
         //     // 新規スレッドの場合は元スレッドをコピー
         //     .map(thread => this.messageService.cloneThreadDry(this.selectedThreadGroup.threadList[0], thread.id))
         // )),
+        this.modelCheck();
         safeForkJoin(
           result.threadList
             // 既存スレッドの場合は何もしないので除外する
@@ -240,6 +242,7 @@ export class ChatComponent implements OnInit {
       } else {
         // プロジェクト変更あり
         if (project) {
+          this.selectedTeam = this.teamMap[project.teamId];
           this.selectedProject = project;
           // puroject指定がある場合、指定されたプロジェクトでスレッドリストを取得
           this.isThreadGroupLoading = true;
@@ -275,12 +278,25 @@ export class ChatComponent implements OnInit {
     setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
   }
 
+  modelCheck(modelList: string[] = []): void {
+    console.log(modelList);
+    // 空配列だったらスレッドグループ全体をチェック
+    modelList = modelList.length === 0 ? this.selectedThreadGroup.threadList.map(thread => thread.inDto.args.model as string).filter(model => model) : modelList;
+    const mess = this.chatService.validateModelAttributes(modelList);
+    if (mess.message.length > 0) {
+      this.dialog.open(DialogComponent, { data: { title: 'Alert', message: mess.message, options: ['Close'] } });
+    } else {
+      // アラート不用
+    }
+  }
+
   presetThreadList: Thread[] = [];
   loadPreset(index: number): void {
     this.selectedThreadGroup.threadList = this.selectedThreadGroup.threadList.slice(0, index);
     while (this.selectedThreadGroup.threadList.length < index) {
       this.selectedThreadGroup.threadList.push(this.presetThreadList[this.selectedThreadGroup.threadList.length - 1])
     }
+    this.modelCheck();
     this.rebuildThreadGroup();
     setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
   }
@@ -301,9 +317,10 @@ export class ChatComponent implements OnInit {
       safeForkJoin([
         this.messageService.cloneThreadDry(baseThread),
         this.messageService.cloneThreadDry(baseThread),
+        this.messageService.cloneThreadDry(baseThread),
       ]).subscribe({
         next: next => {
-          (['gpt-4o', 'claude-3-5-sonnet-v2@20241022'] as GPTModels[]).forEach((model, index) => {
+          (['gpt-4o', 'claude-3-5-sonnet-v2@20241022', 'gemini-2.0-flash-exp'] as GPTModels[]).forEach((model, index) => {
             next[index].inDto.args.model = model;
           });
           this.presetThreadList = next;
@@ -321,7 +338,6 @@ export class ChatComponent implements OnInit {
       if (this.g.share['home->chat'] && this.g.share['home->chat'].static) {
         // ホーム画面から：home->chat経由で初期値指定されているときは初期値入れる。
         const args = this.g.share['home->chat'];
-        // this.messageClusterList.forEach(cluster => cluster[0].contents[0].text = args.static.systemPrompt);
         // this.messageList[0].contents[0].text = args.static.systemPrompt;
         this.placeholder = args.static.placeholder;
         this.selectedThreadGroup.threadList[0].inDto.args.model = args.model || this.selectedThreadGroup.threadList[0].inDto.args.model;
@@ -458,7 +474,15 @@ export class ChatComponent implements OnInit {
         });
       });
       // ノーマルスレッドグループだけ持ってくる
-      this.threadGroupList = this.sortThreadGroup(threadGroupList).filter(threadGroup => threadGroup.type === ThreadGroupType.Normal);
+      const _threadGroupList = this.sortThreadGroup(threadGroupList).filter(threadGroup => threadGroup.type === ThreadGroupType.Normal);
+      const mergedUsers = _threadGroupList.map(newObj => {
+        const oldObj = this.threadGroupList.find(oldObj => oldObj.id === newObj.id); // idでマッチする詳細を検索
+        if (oldObj) {
+          Object.assign(oldObj, newObj);
+        } else {
+          this.threadGroupList.push(newObj);
+        }
+      });
     }));
   }
 
@@ -539,7 +563,7 @@ export class ChatComponent implements OnInit {
     this.tokenObj.totalTokens = -1;
     this.isLock = true;
     return this.fileManagerService
-      .uploadFiles({ projectId: this.selectedProject.id, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
+      .uploadFiles({ uploadType: 'Group', projectId: this.selectedProject.id, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
       .subscribe({
         next: next => {
           next.results.forEach(fileGroupEntity => {
@@ -595,6 +619,7 @@ export class ChatComponent implements OnInit {
   saveAndBuildThreadGroup(): Observable<string[]> {
     // 初回送信なので、スレッドを作るところから動かす
     const threadGroup = this.saveThreadGroup(this.selectedThreadGroup).pipe(
+      tap(threadGroup => this.selectedThreadGroup = threadGroup), // 選択中のものを更新（これをしておかないとthreadGroupの参照が切れる）
       // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
       switchMap(threadGroup =>
         safeForkJoin(threadGroup.threadList.map(thread =>
@@ -728,7 +753,7 @@ export class ChatComponent implements OnInit {
   /**
    * 推論開始トリガーを引く
    */
-  send(type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' = 'threadGroup', idList: string[] = []): Observable<{
+  send(type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | undefined = undefined, idList: string[] = []): Observable<{
     connectionId: string,
     streamId: string,
     messageGroupList: MessageGroup[],
@@ -739,6 +764,17 @@ export class ChatComponent implements OnInit {
       throw new Error(`メッセージ受信中は送信できません。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`);
     } else { }
 
+    if (type === undefined) {
+      // デフォルト値はthreadGroup。
+      if (this.selectedThreadGroup.threadList.length > 1 && this.userService.chatTabLayout === 'tabs') {
+        type = 'thread'; // タブ表示中であれば選択中のスレッドのみとする。
+      } else {
+        type = 'threadGroup'; // デフォルト値はthreadGroup
+      }
+    } else {
+      // そのまま
+    }
+
     let threadList: Thread[] = [];
     if (type === 'threadGroup') {
       // idListが空の場合は選択中のスレッドグループを使う
@@ -746,6 +782,10 @@ export class ChatComponent implements OnInit {
         ? idList.filter(id => this.threadGroupList.find(threadGroup => threadGroup.id === id))
         : this.selectedThreadGroup.threadList.map(thread => thread.id);
       threadList = this.selectedThreadGroup.threadList.filter(thread => threadIdList.includes(thread.id));
+    } else if (type === 'thread') {
+      // 対称のスレッド
+      idList = idList.length > 0 ? idList : [this.selectedThreadGroup.threadList[this.tabIndex].id];
+      threadList = this.selectedThreadGroup.threadList.filter(thread => idList.includes(thread.id));
     } else if (type === 'messageGroup') {
       threadList = idList.map(id => this.selectedThreadGroup.threadList.find(thread => thread.id === this.messageService.messageGroupMas[id].threadId)).filter(thread => thread) as Thread[];
     } else {
@@ -816,14 +856,16 @@ export class ChatComponent implements OnInit {
       }
     } else { }
 
+    _paq.push(['trackEvent', 'AIチャット', 'メッセージ送信', this.selectedThreadGroup.threadList.length]);
+
     return this.saveAndBuildThreadGroup().pipe(
-      tap(() => {
-        this.router.navigate(['chat', this.selectedProject.id, this.selectedThreadGroup.id]);
-      }),
       switchMap(messageGroupIds =>
         safeForkJoin(messageGroupIds.filter(messageGroupId => {
           if (type === 'threadGroup') {
             return true;
+          } else if (type === 'thread') {
+            return true;
+            return idList.includes(this.messageService.messageGroupMas[messageGroupId].threadId);
           } else if (type === 'messageGroup') {
             return idList.includes(messageGroupId);
           } else {
@@ -832,6 +874,8 @@ export class ChatComponent implements OnInit {
         }).map((messageGroupId, index) =>
           this.chatService.chatCompletionObservableStreamByProjectModel(this.selectedThreadGroup.threadList[index].inDto.args, 'messageGroup', messageGroupId)
             .pipe(tap(resDto => {
+              console.log('response-------------------------');
+              console.log(resDto);
               // キャッシュを更新する
               // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
               resDto.messageGroupList.forEach(messageGroup => {
@@ -844,6 +888,8 @@ export class ChatComponent implements OnInit {
                   } else { }
                 });
               });
+              this.rebuildThreadGroup();
+              console.log(this.messageGroupIdListMas);
             }))
         )).pipe(tap(text => {
 
@@ -891,9 +937,16 @@ export class ChatComponent implements OnInit {
    * @returns 
    */
   chatAfterHandler(message: MessageForView): void {
-    // this.を使っているのでスレッドグループ行き来したときに混ざってないか心配。。。
-    delete this.chatStreamSubscriptionList[this.selectedThreadGroup.id];
-
+    const threadId = this.messageService.messageGroupMas[message.messageGroupId].threadId;
+    const threadGroup = this.threadGroupList.find(threadGroup => threadGroup.threadList.find(thread => thread.id === threadId));
+    if (threadGroup) {
+      // this.を使っているのでスレッドグループ行き来したときに混ざってないか心配。。。
+      delete this.chatStreamSubscriptionList[threadGroup.id];
+      if (this.selectedThreadGroup.id === threadGroup.id) {
+        // new-threadだった時はチャットが完了したらURL動かしておく。
+        this.router.navigate(['chat', threadGroup.projectId, threadGroup.id]);
+      } else { }
+    } else { }
     this.isLock = false;
     message.status = MessageStatusType.Loaded;
     message.label = message.contents.filter(content => content.type === 'text').map(content => content.text).join('\n').substring(0, 250);
@@ -944,6 +997,7 @@ export class ChatComponent implements OnInit {
 
   /** チャット中断 */
   chatCancel(): void {
+    _paq.push(['trackEvent', 'AIチャット', 'メッセージキャンセル', this.selectedThreadGroup.threadList.length]);
     if (this.chatStreamSubscriptionList[this.selectedThreadGroup.id]) {
       this.isLock = false;
       setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
@@ -976,27 +1030,31 @@ export class ChatComponent implements OnInit {
     safeForkJoin(this.selectedThreadGroup.threadList.map(thread => {
       // console.log(this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1]);
       const inDto: ChatInputArea[] = [];
+      let tailMessageGroupId = '';
       this.messageGroupIdListMas[thread.id].map(messageGroupId => {
         const messageGroup = this.messageService.messageGroupMas[messageGroupId];
-        this.messageService.messageGroupMas[messageGroupId].messages.map(message => {
-          inDto.push({
-            role: messageGroup.role,
-            messageGroupId: messageGroup.id,
-            content: message.contents.filter(content => content.text).map(content => {
-              return {
-                type: content.type,
-                text: content.text,
-                fileId: content.fileGroupId,
-              } as ChatContent;
-            }),
+        if (messageGroupId.startsWith('dummy-')) {
+          messageGroup.messages.map(message => {
+            inDto.push({
+              role: messageGroup.role,
+              messageGroupId: messageGroup.id,
+              content: message.contents.filter(content => content.text).map(content => {
+                return {
+                  type: content.type,
+                  text: content.text,
+                  fileId: content.fileGroupId,
+                } as ChatContent;
+              }),
+            });
           });
-        });
-        if (this.inputArea.content[0].text) {
-          inDto.push(this.inputArea);
-        } else { }
+        } else {
+          tailMessageGroupId = messageGroupId;
+        }
       });
-      // countTokensByProjectModel(inDto: ChatInputArea[], id: string = '', type: 'message' | 'messageGroup'): Observable<CountTokensResponse> {
-      return this.chatService.countTokensByProjectModel(inDto, 'messageGroup', this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1]);
+      if (this.inputArea.content[0].text) {
+        inDto.push(this.inputArea);
+      } else { }
+      return this.chatService.countTokensByProjectModel(inDto, 'messageGroup', tailMessageGroupId);
     })).subscribe({
       next: next => {
         const tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
@@ -1132,6 +1190,7 @@ export class ChatComponent implements OnInit {
 
   toggleAllExpandCollapse(): void {
     this.allExpandCollapseFlag = !this.allExpandCollapseFlag;
+    _paq.push(['trackEvent', 'AIチャット画面操作', 'パネルの一括開閉', this.allExpandCollapseFlag]);
     // this.chatSystemPanelList
     ([this.chatPanelList] as QueryList<ChatPanelBaseComponent>[])
       .forEach(chatList => {
@@ -1412,12 +1471,14 @@ export class ChatComponent implements OnInit {
             }
           } else {
             // キャンセル
+            this.bulkRunSetting.contents = [];
           }
         }
       });
     }
   }
 
+  tabIndex = 0;
   scrollPositions: number[] = [];
   saveScrollPosition(tabIndex: number): void {
     const bodyElem = this.textBodyElem.get(tabIndex);
@@ -1426,6 +1487,7 @@ export class ChatComponent implements OnInit {
     } else { }
   }
   restoreScrollPosition(tabIndex: number): void {
+    this.tabIndex = tabIndex;
     setTimeout(() => {
       const bodyElem = this.textBodyElem.get(tabIndex);
       if (bodyElem) {
@@ -1453,6 +1515,7 @@ export class ChatComponent implements OnInit {
   clear() {
     this.messageService.clear(); // ストック情報を全消ししておく。
     this.threadGroupChangeHandler(this.selectedProject, this.threadGroupList, 'new-thread');
+    // this.rebuildThreadGroup();
     this.router.navigate(['/chat', this.selectedProject.id, 'new-thread']);
   }
 

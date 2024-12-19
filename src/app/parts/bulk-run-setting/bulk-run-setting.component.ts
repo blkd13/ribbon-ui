@@ -110,7 +110,7 @@ export class BulkRunSettingComponent {
     // 複数ファイルを纏めて追加したときは全部読み込み終わってからカウントする。
     this.isLock = true;
     return this.fileManagerService
-      .uploadFiles({ projectId: this.data.projectId, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
+      .uploadFiles({ uploadType: 'Single', projectId: this.data.projectId, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
       .subscribe({
         next: next => {
           next.results.forEach(fileGroupEntity => {

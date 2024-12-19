@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from './services/auth.service';
 import { GService } from './services/g.service';
@@ -8,7 +8,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { filter } from 'rxjs/operators';
 import { UserService } from './services/user.service';
-import { forkJoin } from 'rxjs';
+
+declare var _paq: any;
 
 @Component({
   selector: 'app-root',
@@ -25,6 +26,8 @@ export class AppComponent implements OnInit {
   readonly userService: UserService = inject(UserService);
   readonly translateService: TranslateService = inject(TranslateService);
   readonly g: GService = inject(GService);
+  readonly router: Router = inject(Router);
+
   private readonly swUpdate: SwUpdate = inject(SwUpdate);
   private readonly snackBar: MatSnackBar = inject(MatSnackBar);
 
@@ -40,6 +43,15 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     this.initializeApp();
     this.setupPwaUpdateCheck();
+
+    // matomo
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        _paq.push(['setCustomUrl', event.urlAfterRedirects]);
+        _paq.push(['trackPageView']);
+      }
+    });
+
   }
 
   private initializeApp(): void {
@@ -47,6 +59,9 @@ export class AppComponent implements OnInit {
     this.g.autoRedirectToLoginPageIfAuthError = false;
     this.authService.getUser().subscribe({
       next: next => {
+        /* matomoにUserIDを送る */
+        _paq.push(['setUserId', next.id]);
+
         this.g.autoRedirectToLoginPageIfAuthError = true;
         this.userService.getUserSetting().subscribe({
           next: next => {
@@ -70,6 +85,11 @@ export class AppComponent implements OnInit {
     });
   }
 
+  isUpdated = false;
+  reload(): void {
+    window.location.reload();
+  }
+
   private setupPwaUpdateCheck(): void {
     if (this.swUpdate.isEnabled) {
       this.swUpdate.versionUpdates
@@ -78,9 +98,9 @@ export class AppComponent implements OnInit {
           const snack = this.snackBar.open('更新が利用可能です', '更新', {
             duration: 6000,
           });
-
+          this.isUpdated = true;
           snack.onAction().subscribe(() => {
-            window.location.reload();
+            this.reload();
           });
         });
 

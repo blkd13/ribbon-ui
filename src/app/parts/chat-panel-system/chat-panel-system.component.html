@@ -5,7 +5,7 @@
         <mat-panel-title class="message-title" style="font-weight: normal;">
             <!-- モデル選択 -->
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
-                [(ngModel)]="thread.inDto.args.model">
+                [(ngModel)]="thread.inDto.args.model" (change)="modelChange()">
                 @for(option of chatService.modelList;track $index) {
                 <option [value]="option.id">{{option.tag}}：{{option.id}}</option>
                 }
@@ -32,8 +32,8 @@
                 <mat-icon>content_copy</mat-icon>
             </button>
              -->
-            <button mat-icon-button (click)="setEdit($event)" [title]="editing?'保存':'編集'">
-                @if(editing){
+            <button mat-icon-button (click)="setEdit($event)" [title]="messageGroup.messages[0].editing?'保存':'編集'">
+                @if(messageGroup.messages[0].editing){
                 <mat-icon>check_circle</mat-icon>
                 }@else{
                 <mat-icon>edit</mat-icon>

@@ -45,18 +45,20 @@ export class FileDropDirective {
   @HostListener('paste', ['$event']) async onPaste($event: ClipboardEvent) {
     if ($event.clipboardData) {
       const items = $event.clipboardData.items;
+      const itemsOnlyFile = [];
       const fileList = [];
       for (let i = 0; i < items.length; i++) {
         if (items[i].kind === 'file') {
+          itemsOnlyFile.push(items[i]);
           fileList.push(items[i].getAsFile());
         } else { }
       }
-      if (items.length === fileList.length && fileList.length > 0) {
+      if (itemsOnlyFile.length === fileList.length && fileList.length > 0) {
         // ファイルがペーストされた場合はDrag＆Dropとして扱う。
         // this.onFilesDropped(fileList);
-        this.fileManagerService.onFileOrFolderMultipleForDragAndDrop(items).then(files => {
-          this.filesDropped.emit(files);
-        });
+        this.fileManagerService
+          .onFileOrFolderMultipleForDragAndDrop(itemsOnlyFile)
+          .then(files => this.filesDropped.emit(files));
         this.stopPropagation($event);
       } else { }
     } else { }

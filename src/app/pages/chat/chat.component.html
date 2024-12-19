@@ -1,6 +1,6 @@
 @if(showInfo&&false){
 <div class="flex justify-center item-center" style="background-color: rgb(30, 109, 131);padding: 5px 10px;">
-    稀に謎のエラー（401 or 503系）が発生することがあります。このエラーは5分程度で自然回復するので、少し時間をおいてから試してみてください。もしくはモデルをGPT-4oに切り替えてください。
+    現在、メッセージがリアルタイムで反映されない障害が発生しています。メッセージ自体は処理されているので、回答の済んだ頃合いを見てリロードしてみてください。
     <mat-icon class="cursor-pointer absolute right-3" (click)="showInfo=false">close</mat-icon>
 </div>
 }
@@ -13,14 +13,18 @@
     </div>
     <!-- スレッドリスト -->
     <div class="h-full w-52 pt-0 overflow-hidden left-pane relative" [ngStyle]="{width: showThreadList?'208px':'8px'}">
-        <div class="h-full w-52 overflow-hidden">
+        <div class="h-full w-52 overflow-hidden relative">
             <a class="add-thread" [routerLink]="['/home']" style="padding-left: 7px;">
                 <button mat-icon-button matTooltip="Back to home" style="width: 32px;">
                     <mat-icon>arrow_back_ios</mat-icon>
                 </button>
                 <div>ホームへ</div>
             </a>
-            <div class="project-title gradient-texxt" [title]="selectedProject.label">{{selectedProject.label}}</div>
+            <div class="project-title gradient-texxt" [title]="selectedProject.label"
+                [ngClass]="{'team-project':selectedTeam.teamType!=='Alone'}">{{selectedProject.label}}</div>
+            @if(selectedTeam.teamType!=='Alone'){
+            <div class="share-tag">Share:{{selectedTeam.label}}</div>
+            }
             @if(selectedThreadGroup.id.startsWith('dummy-')) {
             <a class="add-thread mb-5" [ngStyle]="{'background-color':!selectedThreadGroup?'#303030':'inherit'}"
                 matTooltip="Create new thread" (click)="clear()">
@@ -28,7 +32,7 @@
                 <div>新規チャット</div>
             </a>
             } @else {
-            <a class="add-thread mb-5" [routerLink]="['/chat', selectedProject.id, 'new-thread']"
+            <a class="add-thread mb-5" [routerLink]="['/chat', selectedProject.id, 'new-thread']" (click)="clear()"
                 [ngStyle]="{'background-color':!selectedThreadGroup?'#303030':'inherit'}"
                 matTooltip="Create new thread">
                 <mat-icon [ngStyle]="{'visibility': selectedThreadGroup?'visible':'hidden'}">add_circle</mat-icon>
@@ -205,11 +209,11 @@
             }
         </style>
         @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length===1){
-        <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col"
+        <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col z-10"
             style="transform: scale(0.5);">
             <h1>スレッド数</h1>
             <div class="w-full flex justify-center items-center gap-10">
-                @for(index of [1,2,3];track $index){
+                @for(index of [1, 2, 3, 4];track $index){
                 <div class="course-panel" (click)="loadPreset(index)"
                     [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
                 }
@@ -243,7 +247,8 @@
                     <app-chat-panel-system class="sticky top-0 z-10" [messageGroup]="messageGroup"
                         [bitCounter]="bitCounter" [thread]="thread"
                         [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
-                        (edit)="editChat($event)" (removeThread)="removeThread($event)">
+                        (edit)="editChat($event)" (removeThread)="removeThread($event)"
+                        (modelChange)="modelCheck([$event])">
                     </app-chat-panel-system>
                     } @else if(['assistant', 'user'].includes(messageGroup.role)) {
                     <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"

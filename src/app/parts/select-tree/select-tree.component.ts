@@ -21,9 +21,14 @@ interface OrgNode extends OrgStruct {
 
 interface FileInfo extends OrgStruct {
   type: 'file';
-  size: number;
-  mimeType: string;
-  lastModified: Date;
+  id: string;
+  projectId: string;
+  fileBodyId: string;
+
+  fileSize: number;
+  fileType: string;
+  metaJson: any;
+  // lastModified: Date;
   children?: never;
   ext?: string;
 }
@@ -131,7 +136,7 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
   // const extList = Array.from(new Set(_files.map(file => file.path.split('.').pop() || ''))).sort();
   const extList: MimeTreeNode[] = [];
   const extMap = {} as { [ext: string]: MimeTreeNode };
-  const extMimeMap = {} as { [ext: string]: { [mimeType: string]: MimeTreeNode } };
+  const extMimeMap = {} as { [ext: string]: { [fileType: string]: MimeTreeNode } };
   _files.forEach(file => {
     const ext = file.path.includes('.') ? (file.path.split('.').pop() || '') : '';
     file.ext = ext;
@@ -153,22 +158,22 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
     if (!extMimeMap[ext]) {
       extMimeMap[ext] = {};
     } else { }
-    if (!extMimeMap[ext][file.mimeType]) {
-      extMimeMap[ext][file.mimeType] = {
+    if (!extMimeMap[ext][file.fileType]) {
+      extMimeMap[ext][file.fileType] = {
         depth: 1,
         pare: extMap[ext],
         isActive: true,
         disabled: false,
         indeterminate: false,
-        path: `${ext}/${file.mimeType}`,
-        name: file.mimeType,
+        path: `${ext}/${file.fileType}`,
+        name: file.fileType,
         type: 'mime',
         expanded: true,
         children: [],
       };
-      extMap[ext].children.push(extMimeMap[ext][file.mimeType]);
+      extMap[ext].children.push(extMimeMap[ext][file.fileType]);
     } else { }
-    extMimeMap[ext][file.mimeType].children.push(file as any); // 無理矢理file入れておく
+    extMimeMap[ext][file.fileType].children.push(file as any); // 無理矢理file入れておく
   });
   extList.sort((a, b) => a.name.localeCompare(b.name));
   extList.forEach(extNode => {
@@ -197,20 +202,20 @@ export class SelectTreeComponent implements OnInit {
   extTree: MimeTreeNode[] = [];
   selectedMimes: Set<string> = new Set();
 
-  initFile(): { isActive: boolean, disabled: boolean, depth: number, pare: OrgNode | undefined, type: 'file', lastModified: Date } {
-    return { isActive: true, disabled: false, depth: -1, pare: undefined as any, type: 'file', lastModified: new Date(), };
+  initFile(): { fileBodyId: string, projectId: string, id: string, isActive: boolean, disabled: boolean, depth: number, pare: OrgNode | undefined, type: 'file', lastModified: Date, metaJson: any } {
+    return { fileBodyId: '', projectId: '', id: '', isActive: true, disabled: false, depth: -1, pare: undefined as any, type: 'file', lastModified: new Date(), metaJson: {} };
   }
 
   folderList: TreeNode[] = [];
   fileInfos: FileInfo[] = [
-    { ...this.initFile(), size: 2048, path: '/home/user/documents/reports/document1.pdf', name: 'document1.pdf', mimeType: 'application/pdf' },
-    { ...this.initFile(), size: 1024, path: '/home/user/images/image1.png', name: 'image1.png', mimeType: 'image/png' },
-    { ...this.initFile(), size: 1024, path: '/home/etc/memo', name: 'memo', mimeType: 'text/plain' },
-    { ...this.initFile(), size: 1024, path: '/home/etc/dat', name: 'dat', mimeType: 'application/json' },
-    { ...this.initFile(), size: 1024, path: '/home/user/image1.png', name: 'image1.png', mimeType: 'image/png' },
-    { ...this.initFile(), size: 1024, path: '/home/user/image1.png', name: 'image1.png', mimeType: 'image/png' },
-    { ...this.initFile(), size: 5120, path: '/var/www/assets/images/image2.jpg', name: 'image2.jpg', mimeType: 'image/jpeg' },
-    { ...this.initFile(), size: 1024, path: '/home/user/backups/system/backup1.tar.gz', name: 'backup1.tar.gz', mimeType: 'application/gzip' },
+    { ...this.initFile(), fileSize: 2048, path: '/home/user/documents/reports/document1.pdf', name: 'document1.pdf', fileType: 'application/pdf' },
+    { ...this.initFile(), fileSize: 1024, path: '/home/user/images/image1.png', name: 'image1.png', fileType: 'image/png' },
+    { ...this.initFile(), fileSize: 1024, path: '/home/etc/memo', name: 'memo', fileType: 'text/plain' },
+    { ...this.initFile(), fileSize: 1024, path: '/home/etc/dat', name: 'dat', fileType: 'application/json' },
+    { ...this.initFile(), fileSize: 1024, path: '/home/user/image1.png', name: 'image1.png', fileType: 'image/png' },
+    { ...this.initFile(), fileSize: 1024, path: '/home/user/image1.png', name: 'image1.png', fileType: 'image/png' },
+    { ...this.initFile(), fileSize: 5120, path: '/var/www/assets/images/image2.jpg', name: 'image2.jpg', fileType: 'image/jpeg' },
+    { ...this.initFile(), fileSize: 1024, path: '/home/user/backups/system/backup1.tar.gz', name: 'backup1.tar.gz', fileType: 'application/gzip' },
   ];
   ngOnInit(): void {
     const { root, folderList } = buildFileTreeFromFileInfo(this.fileInfos);

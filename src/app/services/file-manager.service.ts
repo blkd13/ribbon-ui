@@ -10,6 +10,7 @@ export interface FileUploadContent {
 }
 
 export interface FileUploadRequest {
+    uploadType: 'Single' | 'Group';
     projectId: string;
     contents: FileUploadContent[];
 }
@@ -84,7 +85,7 @@ export class FileManagerService {
     }
 
     // ファイルかフォルダかを複数雑に投げ込んだときにファイルフルパスリストにして返却する
-    async onFileOrFolderMultipleForDragAndDrop(items: DataTransferItemList): Promise<FullPathFile[]> {
+    async onFileOrFolderMultipleForDragAndDrop(items: DataTransferItemList | DataTransferItem[]): Promise<FullPathFile[]> {
         // ディレクトリだったら再帰検索する。
         const files: FullPathFile[] = [];
         const promises = [];

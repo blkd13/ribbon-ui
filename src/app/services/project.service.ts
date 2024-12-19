@@ -469,6 +469,7 @@ export class MessageService {
         }
 
         const showMessageGroupIdList = [targetMessageGroupId];
+        // console.log(`target=${targetMessageGroupId}`);
         while (messageGroupMas[targetMessageGroupId]) {
             const targetMessageGroup = messageGroupMas[targetMessageGroupId];
             if (targetMessageGroup.previousMessageGroupId) {
@@ -476,6 +477,7 @@ export class MessageService {
             } else {
             }
             targetMessageGroupId = targetMessageGroup.previousMessageGroupId as string;
+            // console.log(`target=${targetMessageGroupId}`);
         }
         // console.log(`showMessageGroupIdList: ${showMessageGroupIdList}`);
         return showMessageGroupIdList;
@@ -511,7 +513,9 @@ export class MessageService {
         return Object.fromEntries(
             [...new Set(Object.values(messageGroupMas).map(group => group.threadId))]
                 .map(threadId => {
+                    // console.log(messageGroupMas);
                     const showMessageGroupIdList = MessageService.rebuildMessageGroup(messageGroupMas, threadId);
+                    // console.log(showMessageGroupIdList);
                     // selectedIndexをセットするために呼ぶ
                     this.getTailMessageGroupIds(messageGroupMas[showMessageGroupIdList[showMessageGroupIdList.length - 1]] as MessageGroupForView);
                     return [threadId, showMessageGroupIdList];
@@ -555,8 +559,9 @@ export class MessageService {
                 // 要らないものを消す
                 if (orgMessageGroup.id.startsWith('dummy-')) {
                     this.idRemapTable[orgMessageGroup.id] = savedMessageGroup.id;
-                    // this.messageGroupList.splice(this.messageGroupList.indexOf(orgMessageGroup), 1);
-                    // delete this.messageGroupMas[orgMessageGroup.id];
+                    this.messageGroupList.splice(this.messageGroupList.indexOf(orgMessageGroup), 1);
+                    delete this.messageGroupMas[orgMessageGroup.id];
+                    orgMessageGroup.id = savedMessageGroup.id;
                 } else { }
                 if (savedMessageGroup.previousMessageGroupId) {
                     this.prevMessageGroupId[orgMessageGroup.id] = savedMessageGroup.previousMessageGroupId;
@@ -569,8 +574,9 @@ export class MessageService {
                 orgMessageGroup.messages.map((message, index) => {
                     if (message.id.startsWith('dummy-')) {
                         this.idRemapTable[message.id] = savedMessageGroup.messages[index].id;
-                        // this.messageList.splice(this.messageList.indexOf(orgMessageGroup.messages[index]), 1);
-                        // delete this.messageMas[orgMessageGroup.messages[index].id];
+                        this.messageList.splice(this.messageList.indexOf(orgMessageGroup.messages[index]), 1);
+                        delete this.messageMas[orgMessageGroup.messages[index].id];
+                        orgMessageGroup.messages[index].id = savedMessageGroup.messages[index].id;
                     } else { }
                 });
                 this.applyMessageGroup(savedMessageGroup);

@@ -4,6 +4,8 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
+declare var _paq: any;
+
 export type UserSettingKey = 'chatLayout' | 'chatTabLayout';
 export type Config = { value: Record<UserSettingKey, any> };
 @Injectable({
@@ -21,11 +23,13 @@ export class UserService {
 
   toggleChatTabLayout(): Observable<Config> {
     this.chatTabLayout = this.chatTabLayout === 'column' ? 'tabs' : 'column';
+    _paq.push(['trackEvent', 'AIチャット画面操作', 'タブ/列切替', this.chatTabLayout]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout } });
   }
 
   toggleChatLayout(): Observable<Config> {
     this.chatLayout = this.chatLayout === 'flex' ? 'grid' : 'flex';
+    _paq.push(['trackEvent', 'AIチャット画面操作', '高さ揃え切替', this.chatLayout]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout } });
   }
 
@@ -38,7 +42,7 @@ export class UserService {
           this.chatLayout = setting.value.chatLayout || 'flex';
           this.chatTabLayout = setting.value.chatTabLayout || 'column';
         } else { }
-        console.log(setting);
+        // console.log(setting);
       }),
       catchError(this.handleError)
     );

@@ -17,6 +17,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 export class DocTagComponent {
 
   @Input()
+  removable = true;
+
+  @Input()
   content!: (ContentPart | ChatContent);
 
   @Output()
