@@ -71,6 +71,11 @@ body.dark-mode {
 }
 
 .mat-primary {
+
+    &.mat-icon {
+        --mat-icon-color: rgb(105 184 205);
+    }
+
     // slider
     --mdc-slider-hover-handle-color: rgb(105 184 205);
     --mdc-slider-focus-handle-color: rgb(105 184 205);
