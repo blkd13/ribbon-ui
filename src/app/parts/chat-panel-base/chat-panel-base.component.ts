@@ -24,26 +24,25 @@ import { animate, style, transition, trigger } from '@angular/animations';
 
 
 @Component({
-  selector: 'app-chat-panel-base',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, DocTagComponent,
-    MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
-  ],
-  templateUrl: './chat-panel-base.component.html',
-  styleUrl: './chat-panel-base.component.scss',
-  // encapsulation: ViewEncapsulation.None,
-  animations: [
-    trigger('fadeAnimation', [
-      transition(':enter', [
-        style({ opacity: 0 }),
-        animate('200ms', style({ opacity: 1 }))
-      ]),
-      transition(':leave', [
-        animate('200ms', style({ opacity: 0 }))
-      ])
-    ])
-  ],
+    selector: 'app-chat-panel-base',
+    imports: [
+        CommonModule, FormsModule, DocTagComponent,
+        MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
+    ],
+    templateUrl: './chat-panel-base.component.html',
+    styleUrl: './chat-panel-base.component.scss',
+    // encapsulation: ViewEncapsulation.None,
+    animations: [
+        trigger('fadeAnimation', [
+            transition(':enter', [
+                style({ opacity: 0 }),
+                animate('200ms', style({ opacity: 1 }))
+            ]),
+            transition(':leave', [
+                animate('200ms', style({ opacity: 0 }))
+            ])
+        ])
+    ]
 })
 export class ChatPanelBaseComponent implements OnInit {
 

@@ -191,11 +191,10 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
 }
 
 @Component({
-  selector: 'app-file-tree',
-  standalone: true,
-  imports: [CommonModule, MatCheckboxModule, MatIconModule],
-  templateUrl: './select-tree.component.html',
-  styleUrls: ['./select-tree.component.scss']
+    selector: 'app-file-tree',
+    imports: [CommonModule, MatCheckboxModule, MatIconModule],
+    templateUrl: './select-tree.component.html',
+    styleUrls: ['./select-tree.component.scss']
 })
 export class SelectTreeComponent implements OnInit {
   fileTree: TreeNode[] = [];

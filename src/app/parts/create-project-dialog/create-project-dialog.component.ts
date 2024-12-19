@@ -14,11 +14,10 @@ import { Utils } from '../../utils';
 // import { DevelopmentStageType, DocumentSubType, DocumentType, Project, ProjectStatus } from 'src/app/models/project-model';
 
 @Component({
-  selector: 'app-create-project-dialog',
-  standalone: true,
-  imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule],
-  templateUrl: './create-project-dialog.component.html',
-  styleUrl: './create-project-dialog.component.scss'
+    selector: 'app-create-project-dialog',
+    imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule],
+    templateUrl: './create-project-dialog.component.html',
+    styleUrl: './create-project-dialog.component.scss'
 })
 export class CreateProjectDialogComponent implements OnInit {
 

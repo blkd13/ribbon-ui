@@ -19,15 +19,14 @@ import { DialogComponent } from '../dialog/dialog.component';
 declare const _paq: any;
 
 @Component({
-  selector: 'app-parameter-setting-dialog',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule,
-    MatButtonModule, MatFormFieldModule, MatSelectModule, MatSliderModule, MatCheckboxModule,
-    MatDividerModule, MatTooltipModule, MatDialogModule,
-  ],
-  templateUrl: './parameter-setting-dialog.component.html',
-  styleUrl: './parameter-setting-dialog.component.scss'
+    selector: 'app-parameter-setting-dialog',
+    imports: [
+        CommonModule, FormsModule,
+        MatButtonModule, MatFormFieldModule, MatSelectModule, MatSliderModule, MatCheckboxModule,
+        MatDividerModule, MatTooltipModule, MatDialogModule,
+    ],
+    templateUrl: './parameter-setting-dialog.component.html',
+    styleUrl: './parameter-setting-dialog.component.scss'
 })
 export class ParameterSettingDialogComponent {
 

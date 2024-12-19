@@ -3,11 +3,10 @@ import { ApiMattermostService, MattermostTeamForView } from './../../services/ap
 import { Component, inject, Input } from '@angular/core';
 
 @Component({
-  selector: 'app-mm-team-logo',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './mm-team-logo.component.html',
-  styleUrl: './mm-team-logo.component.scss'
+    selector: 'app-mm-team-logo',
+    imports: [CommonModule],
+    templateUrl: './mm-team-logo.component.html',
+    styleUrl: './mm-team-logo.component.scss'
 })
 export class MmTeamLogoComponent {
   readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);

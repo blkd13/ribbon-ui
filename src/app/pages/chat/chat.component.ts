@@ -48,19 +48,18 @@ import { UserService } from '../../services/user.service';
 declare var _paq: any;
 
 @Component({
-  selector: 'app-chat',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, RouterModule, FileDropDirective, DocTagComponent,
-    MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
-    MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatSelectModule,
-    MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatProgressSpinnerModule,
-    MatTabsModule,
-    UserMarkComponent,
-    ChatPanelMessageComponent, ChatPanelSystemComponent,
-  ],
-  templateUrl: './chat.component.html',
-  styleUrl: './chat.component.scss'
+    selector: 'app-chat',
+    imports: [
+        CommonModule, FormsModule, RouterModule, FileDropDirective, DocTagComponent,
+        MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
+        MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatSelectModule,
+        MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatProgressSpinnerModule,
+        MatTabsModule,
+        UserMarkComponent,
+        ChatPanelMessageComponent, ChatPanelSystemComponent,
+    ],
+    templateUrl: './chat.component.html',
+    styleUrl: './chat.component.scss'
 })
 export class ChatComponent implements OnInit {
 

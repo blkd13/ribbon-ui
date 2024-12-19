@@ -21,25 +21,24 @@ import { safeForkJoin } from '../../utils/dom-utils';
 type ShortcutType = 'today' | 'fromYesterday' | 'yesterday' | 'thisWeek' | 'lastWeek';
 
 @Component({
-  selector: 'app-mm-message-selector-dialog',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    FormsModule,
-    MatTabsModule,
-    MatDatepickerModule,  // 日付ピッカー用のモジュール
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatSliderModule,
-    MatSelectModule,
-    MatProgressSpinnerModule,
-    MatDividerModule,
-  ],
-  providers: [],
-  templateUrl: './mm-message-selector-dialog.component.html',
-  styleUrls: ['./mm-message-selector-dialog.component.scss']
+    selector: 'app-mm-message-selector-dialog',
+    imports: [
+        ReactiveFormsModule,
+        FormsModule,
+        MatTabsModule,
+        MatDatepickerModule, // 日付ピッカー用のモジュール
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatButtonToggleModule,
+        MatSliderModule,
+        MatSelectModule,
+        MatProgressSpinnerModule,
+        MatDividerModule,
+    ],
+    providers: [],
+    templateUrl: './mm-message-selector-dialog.component.html',
+    styleUrls: ['./mm-message-selector-dialog.component.scss']
 })
 export class MmMessageSelectorDialogComponent {
 

@@ -48,16 +48,15 @@ type InDtoSub = { message: string, fileList: FullPathFile[] };
 type InDto = Record<InType, InDtoSub>;
 
 @Component({
-  selector: 'app-mattermost',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, RouterModule, MarkdownModule, MatAutocompleteModule, MatSelectModule,
-    MatButtonModule, MatProgressSpinnerModule,
-    MatExpansionModule, MatIconModule, MatCheckboxModule, MatBadgeModule, MatMenuModule, MatDividerModule, MatTooltipModule, MatRadioModule,
-    MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
-  ],
-  templateUrl: './mattermost.component.html',
-  styleUrl: './mattermost.component.scss'
+    selector: 'app-mattermost',
+    imports: [
+        CommonModule, FormsModule, RouterModule, MarkdownModule, MatAutocompleteModule, MatSelectModule,
+        MatButtonModule, MatProgressSpinnerModule,
+        MatExpansionModule, MatIconModule, MatCheckboxModule, MatBadgeModule, MatMenuModule, MatDividerModule, MatTooltipModule, MatRadioModule,
+        MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
+    ],
+    templateUrl: './mattermost.component.html',
+    styleUrl: './mattermost.component.scss'
 })
 export class MattermostComponent implements OnInit {
   readonly authService: AuthService = inject(AuthService);

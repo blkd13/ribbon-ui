@@ -15,11 +15,10 @@ import { User } from '../../models/models';
 import { Observer, Subscription } from 'rxjs';
 import { DialogComponent } from '../dialog/dialog.component';
 @Component({
-  selector: 'app-edit-team-member-dialog',
-  standalone: true,
-  imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule],
-  templateUrl: './edit-team-member-dialog.component.html',
-  styleUrl: './edit-team-member-dialog.component.scss'
+    selector: 'app-edit-team-member-dialog',
+    imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule],
+    templateUrl: './edit-team-member-dialog.component.html',
+    styleUrl: './edit-team-member-dialog.component.scss'
 })
 export class EditTeamMemberDialogComponent implements OnInit {
   readonly projectService: ProjectService = inject(ProjectService);

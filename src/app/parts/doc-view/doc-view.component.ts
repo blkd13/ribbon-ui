@@ -27,11 +27,10 @@ interface FileNode {
 
 
 @Component({
-  selector: 'app-doc-view',
-  standalone: true,
-  imports: [CommonModule, FormsModule, MarkdownModule, MatIconModule, MatButtonModule, MatCheckboxModule, MatDividerModule],
-  templateUrl: './doc-view.component.html',
-  styleUrl: './doc-view.component.scss'
+    selector: 'app-doc-view',
+    imports: [CommonModule, FormsModule, MarkdownModule, MatIconModule, MatButtonModule, MatCheckboxModule, MatDividerModule],
+    templateUrl: './doc-view.component.html',
+    styleUrl: './doc-view.component.scss'
 })
 export class DocViewComponent {
 

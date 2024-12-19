@@ -7,11 +7,10 @@ import { MatDialog } from '@angular/material/dialog';
 import { GService } from '../../../services/g.service';
 
 @Component({
-  selector: 'app-oauth-mail-auth',
-  standalone: true,
-  imports: [FormsModule],
-  templateUrl: './oauth-mail-auth.component.html',
-  styleUrl: './oauth-mail-auth.component.scss'
+    selector: 'app-oauth-mail-auth',
+    imports: [FormsModule],
+    templateUrl: './oauth-mail-auth.component.html',
+    styleUrl: './oauth-mail-auth.component.scss'
 })
 export class OAuthMailAuthComponent {
   readonly authService: AuthService = inject(AuthService);

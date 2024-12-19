@@ -24,14 +24,13 @@ export interface BulkRunSettingData {
 }
 
 @Component({
-  selector: 'app-bulk-run-setting',
-  standalone: true,
-  imports: [FormsModule,
-    MatButtonModule, MatTableModule, MatProgressBarModule, MatInputModule, MatIconModule,
-    MatFormFieldModule, MatSnackBarModule, MatRadioModule,
-    FileDropDirective],
-  templateUrl: './bulk-run-setting.component.html',
-  styleUrl: './bulk-run-setting.component.scss'
+    selector: 'app-bulk-run-setting',
+    imports: [FormsModule,
+        MatButtonModule, MatTableModule, MatProgressBarModule, MatInputModule, MatIconModule,
+        MatFormFieldModule, MatSnackBarModule, MatRadioModule,
+        FileDropDirective],
+    templateUrl: './bulk-run-setting.component.html',
+    styleUrl: './bulk-run-setting.component.scss'
 })
 export class BulkRunSettingComponent {
   displayedColumns: string[] = ['no', 'question', 'actions'];

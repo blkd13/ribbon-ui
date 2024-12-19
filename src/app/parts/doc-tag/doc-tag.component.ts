@@ -8,11 +8,10 @@ import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
-  selector: 'app-doc-tag',
-  standalone: true,
-  imports: [MatIconModule, MatDialogModule, MatTooltipModule, CommonModule],
-  templateUrl: './doc-tag.component.html',
-  styleUrl: './doc-tag.component.scss'
+    selector: 'app-doc-tag',
+    imports: [MatIconModule, MatDialogModule, MatTooltipModule, CommonModule],
+    templateUrl: './doc-tag.component.html',
+    styleUrl: './doc-tag.component.scss'
 })
 export class DocTagComponent {
 

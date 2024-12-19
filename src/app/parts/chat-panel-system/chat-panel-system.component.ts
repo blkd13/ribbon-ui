@@ -15,15 +15,14 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DialogComponent } from '../dialog/dialog.component';
 
 @Component({
-  selector: 'app-chat-panel-system',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, DocTagComponent,
-    MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
-    MatDialogModule,
-  ],
-  templateUrl: './chat-panel-system.component.html',
-  styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss'],
+    selector: 'app-chat-panel-system',
+    imports: [
+        CommonModule, FormsModule, DocTagComponent,
+        MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
+        MatDialogModule,
+    ],
+    templateUrl: './chat-panel-system.component.html',
+    styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss']
 })
 export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 

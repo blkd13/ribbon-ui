@@ -45,19 +45,18 @@ import { MarkdownModule } from 'ngx-markdown';
 import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
 
 @Component({
-  selector: 'app-home',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, RouterModule, ChatPanelMessageComponent, FileDropDirective, DocTagComponent,
-    MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
-    MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
-    MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,
-    MarkdownModule,
-    DialogComponent, NewlineToBrPipe, RelativeTimePipe,
-    UserMarkComponent,
-  ],
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.scss'
+    selector: 'app-home',
+    imports: [
+        CommonModule, FormsModule, RouterModule, ChatPanelMessageComponent, FileDropDirective, DocTagComponent,
+        MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
+        MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
+        MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,
+        MarkdownModule,
+        DialogComponent, NewlineToBrPipe, RelativeTimePipe,
+        UserMarkComponent,
+    ],
+    templateUrl: './home.component.html',
+    styleUrl: './home.component.scss'
 })
 export class HomeComponent implements OnInit {
 

@@ -8,11 +8,10 @@ import { MatMenuModule } from '@angular/material/menu';
 import { PredictHistoryComponent } from '../predict-history/predict-history.component';
 import { MatDividerModule } from '@angular/material/divider';
 @Component({
-  selector: 'app-user-mark',
-  standalone: true,
-  imports: [CommonModule, MatMenuModule, MatDividerModule, MatIconModule, MatButtonModule],
-  templateUrl: './user-mark.component.html',
-  styleUrl: './user-mark.component.scss'
+    selector: 'app-user-mark',
+    imports: [CommonModule, MatMenuModule, MatDividerModule, MatIconModule, MatButtonModule],
+    templateUrl: './user-mark.component.html',
+    styleUrl: './user-mark.component.scss'
 })
 export class UserMarkComponent {
 

@@ -24,26 +24,25 @@ import { animate, style, transition, trigger } from '@angular/animations';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 
 @Component({
-  selector: 'app-chat-panel-message',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, DocTagComponent,
-    MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
-  ],
-  templateUrl: './chat-panel-message.component.html',
-  styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-message.component.scss',],
-  // encapsulation: ViewEncapsulation.None,
-  animations: [
-    trigger('fadeAnimation', [
-      transition(':enter', [
-        style({ opacity: 0 }),
-        animate('200ms', style({ opacity: 1 }))
-      ]),
-      transition(':leave', [
-        animate('200ms', style({ opacity: 0 }))
-      ])
-    ])
-  ],
+    selector: 'app-chat-panel-message',
+    imports: [
+        CommonModule, FormsModule, DocTagComponent,
+        MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
+    ],
+    templateUrl: './chat-panel-message.component.html',
+    styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-message.component.scss',],
+    // encapsulation: ViewEncapsulation.None,
+    animations: [
+        trigger('fadeAnimation', [
+            transition(':enter', [
+                style({ opacity: 0 }),
+                animate('200ms', style({ opacity: 1 }))
+            ]),
+            transition(':leave', [
+                animate('200ms', style({ opacity: 0 }))
+            ])
+        ])
+    ]
 })
 export class ChatPanelMessageComponent extends ChatPanelBaseComponent {
   //   // @Input() // status 0:未開始 1:実行中 2:完了

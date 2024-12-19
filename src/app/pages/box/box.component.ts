@@ -185,15 +185,14 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
 }
 
 @Component({
-  selector: 'app-box',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule,
-    MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
-    UserMarkComponent,
-  ],
-  templateUrl: './box.component.html',
-  styleUrl: './box.component.scss'
+    selector: 'app-box',
+    imports: [
+        CommonModule, FormsModule,
+        MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
+        UserMarkComponent,
+    ],
+    templateUrl: './box.component.html',
+    styleUrl: './box.component.scss'
 })
 export class BoxComponent implements OnInit {
 
