@@ -287,12 +287,11 @@ export class HomeComponent implements OnInit {
 
   changeModel(): void {
     if (this.model) {
-      if (this.model.startsWith('claude-')) {
-        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.model} は海外リージョン（us-east5）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
-      } else if (this.model.startsWith('meta/')) {
-        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.model} は海外リージョン（us-central1）を利用します。\n個人情報は絶対に入力しないでください。`, options: ['Close'] } });
-      } else if (this.model.endsWith('-experimental')) {
-        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `${this.model} は海外リージョン（us-central1）を利用します。\n実験的なモデルのため結果が正確でない可能性があります。`, options: ['Close'] } });
+      const mess = this.chatService.validateModelAttributes([this.model]);
+      if (mess.message.length > 0) {
+        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: mess.message, options: ['Close'] } });
+      } else {
+        // アラート不用
       }
     } else { }
   }

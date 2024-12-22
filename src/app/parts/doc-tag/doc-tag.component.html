@@ -7,5 +7,7 @@
         } -->
     </div>
     <div class="label">{{content.text || 'オブジェクト'}}</div>
+    @if(removable){
     <mat-icon class="close" (click)="onRemove($event)">close</mat-icon>
+    }
 </div>

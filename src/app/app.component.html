@@ -1,3 +1,11 @@
+@if(isUpdated){
+<div class="flex justify-center item-center" style="background-color: rgb(30, 109, 131);padding: 5px 10px;">
+    新しいバージョンがリリースされています。<a class="cursor-pointer" (click)="reload()">画面を更新</a>してください。
+    リリースノートは画面左下のバージョン番号をクリックしてください。
+    <!-- <mat-icon class="cursor-pointer absolute right-3" (click)="isUpdated=false">close</mat-icon> -->
+</div>
+}
+
 @if( isChecked ){
 <router-outlet class="h-0 flex-grow-0" />
 <a class="fixed cursor-pointer bottom-3 left-4 bg-[#303030] px-8 py-2" href="./static/release-note.html"

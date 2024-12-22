@@ -56,16 +56,39 @@ export class AuthService {
    */
   logout(): void {
     // ログアウトはsubscribeまでやってしまう。
-    this.http.post<void>(`/user/oauth/api/proxy/mattermost/api/v4/users/logout`, undefined, { headers: new HttpHeaders({ 'X-Requested-With': 'XMLHttpRequest' }) }).subscribe();
-    this.http.post<void>(`/user/oauth/api/proxy/box/oauth2/revoke`, '', { headers: new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' }) }).subscribe();
-    // ログアウトはsubscribeまでやってしまう。
-    const url = `/logout`;
-    this.http.get<void>(url).subscribe({
+    // TODO ちょっと変な気もするので後で見直し。
+    this.getOAuthAccountList().subscribe({
       next: next => {
-        location.href = './';
+        if (next.oauthAccounts.find(value => value.provider === 'mattermost')) {
+          this.http.post<void>(`/user/oauth/api/proxy/mattermost/api/v4/users/logout`, undefined, { headers: new HttpHeaders({ 'X-Requested-With': 'XMLHttpRequest' }) }).subscribe();
+        } else { }
+        if (next.oauthAccounts.find(value => value.provider === 'box')) {
+          this.http.post<void>(`/user/oauth/api/proxy/box/oauth2/revoke`, '', { headers: new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' }) }).subscribe();
+        } else { }
       },
       error: error => {
-        location.href = './';
+        // ログアウトはsubscribeまでやってしまう。
+        const url = `/logout`;
+        this.http.get<void>(url).subscribe({
+          next: next => {
+            location.href = './';
+          },
+          error: error => {
+            location.href = './';
+          }
+        });
+      },
+      complete: () => {
+        // ログアウトはsubscribeまでやってしまう。
+        const url = `/logout`;
+        this.http.get<void>(url).subscribe({
+          next: next => {
+            location.href = './';
+          },
+          error: error => {
+            location.href = './';
+          }
+        });
       }
     });
   }

@@ -59,6 +59,9 @@ export class AppComponent implements OnInit {
     this.g.autoRedirectToLoginPageIfAuthError = false;
     this.authService.getUser().subscribe({
       next: next => {
+        /* matomoにUserIDを送る */
+        _paq.push(['setUserId', next.id]);
+
         this.g.autoRedirectToLoginPageIfAuthError = true;
         this.userService.getUserSetting().subscribe({
           next: next => {
@@ -82,6 +85,11 @@ export class AppComponent implements OnInit {
     });
   }
 
+  isUpdated = false;
+  reload(): void {
+    window.location.reload();
+  }
+
   private setupPwaUpdateCheck(): void {
     if (this.swUpdate.isEnabled) {
       this.swUpdate.versionUpdates
@@ -90,9 +98,9 @@ export class AppComponent implements OnInit {
           const snack = this.snackBar.open('更新が利用可能です', '更新', {
             duration: 6000,
           });
-
+          this.isUpdated = true;
           snack.onAction().subscribe(() => {
-            window.location.reload();
+            this.reload();
           });
         });
 

@@ -16,6 +16,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogComponent } from '../dialog/dialog.component';
 
+declare const _paq: any;
+
 @Component({
   selector: 'app-parameter-setting-dialog',
   standalone: true,
@@ -46,6 +48,7 @@ export class ParameterSettingDialogComponent {
   maxMaxToken = 8192; // スライダーの最大値
 
   constructor() {
+    _paq.push(['trackEvent', 'チャットの設定', '設定画面を開く', 0]);
     this.reload();
   }
 
@@ -101,7 +104,8 @@ export class ParameterSettingDialogComponent {
     this.submit();
   }
 
-  submit() {
+  submit(savedFlag = false) {
+    _paq.push(['trackEvent', 'チャットの設定', '確定', savedFlag]);
     this.threadGroup.threadList.forEach((_, index) => {
       if (this.isMaxTokenFixedList[index]) {
         this.befMaxTokenList[index] = this.threadGroup.threadList[index].inDto.args.max_tokens || 0;

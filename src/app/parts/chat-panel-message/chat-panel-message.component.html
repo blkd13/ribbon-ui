@@ -63,7 +63,8 @@
                 @if(content.type==='text'){
                 }@else if(content.type==='error'){
                 }@else{
-                <app-doc-tag [content]="content" (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
+                <app-doc-tag [removable]="false" [content]="content"
+                    (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
                 }
                 }
             </div>

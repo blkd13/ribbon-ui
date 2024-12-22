@@ -35,7 +35,7 @@ interface FileNode {
 })
 export class DocViewComponent {
 
-  index: number = 0;
+  index: number = -1;
   fileGroup!: FileGroupEntityForView;
 
   brackets: { pre: string, post: string } = { pre: '', post: '' };
@@ -51,6 +51,17 @@ export class DocViewComponent {
 
   encode: 'UTF-8' | 'SHIFT_JIS' | 'EUC-JP' | 'Windows-31J' = 'UTF-8';
 
+  invalidMimeTypes = [
+    'application/octet-stream',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/java-vm',
+    'application/x-elf',
+    'application/xml',
+    'application/x-msdownload',
+    'application/zip',
+    'image/x-icon',
+  ];
+
   treeData: FileNode[] = []; // ツリー構造化したデータを保持する配列
 
   fileTypeList: string[] = [];
@@ -62,22 +73,6 @@ export class DocViewComponent {
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
 
   constructor() {
-    // // this.contents = this.data.contents.filter(content => content.type === 'file');
-    // const fileGroupId = this.data.content.fileGroupId;
-    // if (fileGroupId) {
-    //   this.fileManagerService.getFileGroup(fileGroupId).subscribe({
-    //     next: next => {
-    //       this.fileGroup = next;
-    //       this.setIndeterminate();
-    //       this.fileTypeList = [...new Set(this.fileGroup.files.map(file => file.fileType))];
-    //       this.fileTypeList.forEach(fileType => {
-    //         this.checkFileType(fileType);
-    //       });
-    //       this.setIndex(this.index);
-    //     },
-    //   });
-    // } else { /** ファイルが選択されていないエラー */ }
-
     const fileGroupId = this.data.content.fileGroupId;
     if (fileGroupId) {
       this.fileManagerService.getFileGroup(fileGroupId).subscribe({
@@ -85,15 +80,17 @@ export class DocViewComponent {
           this.fileGroup = next;
           this.setIndeterminate();
           this.fileTypeList = [...new Set(this.fileGroup.files.map(file => file.fileType))];
-          this.fileTypeList.forEach(fileType => {
-            this.checkFileType(fileType);
-          });
 
-          // ツリー構造に変換
-          this.treeData = this.buildFileTree(this.fileGroup.files);
+          next.files.forEach(file => {
+            file.isActive = this.invalidMimeTypes.includes(file.fileType) ? false : file.isActive;
+          });
+          // this.fileGroup.files.sort((a, b) => a.fileName.localeCompare(b.fileName));
+
+          // // ツリー構造に変換
+          // this.treeData = this.buildFileTree(this.fileGroup.files);
 
           // 初期選択
-          this.setIndex(this.index);
+          this.setIndex(0);
         },
       });
     } else {
@@ -106,21 +103,9 @@ export class DocViewComponent {
   // ファイルのリストからツリー構造を構築する
   buildFileTree(files: FileEntityForView[]): FileNode[] {
     const root: FileNode[] = [];
-
-    const invalidMimeTypes = [
-      'application/octet-stream',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/java-vm',
-      'application/x-elf',
-      'application/xml',
-      'application/x-msdownload',
-      'application/zip',
-      'image/x-icon',
-    ];
-
     files.forEach(file => {
       const pathParts = file.fileName.split('/'); // ファイル名に含まれるディレクトリ区切り文字を想定
-      this.insertFileNode(root, pathParts, file, invalidMimeTypes);
+      this.insertFileNode(root, pathParts, file, this.invalidMimeTypes);
     });
 
     return root;
@@ -260,18 +245,8 @@ export class DocViewComponent {
   setIndeterminate(): void {
     // ファイル種別ごとにチェックボックスの状態を設定する。面倒なのは indeterminate の判定。
     // TODO 毎回全量洗い替えしてるので後で直した方がよい。
-    const invalidMimeTypes = [
-      'application/octet-stream',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/java-vm',
-      'application/x-elf',
-      'application/xml',
-      'application/x-msdownload',
-      'application/zip',
-      'image/x-icon',
-    ];
     this.fileTypeMap = this.fileGroup.files.reduce((mas, file) => {
-      if (invalidMimeTypes.includes(file.fileType)) {
+      if (this.invalidMimeTypes.includes(file.fileType)) {
         mas[file.fileType] = { isActive: false, indeterminate: false, disabled: true };
       } else {
         if (mas[file.fileType]) {
@@ -286,6 +261,7 @@ export class DocViewComponent {
   }
 
   setIndex(index: number): void {
+    if (index === this.index) return;
     this.index = index;
     this.label = this.fileGroup.files[index].fileName;
 

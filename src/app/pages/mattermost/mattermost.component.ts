@@ -265,11 +265,11 @@ export class MattermostComponent implements OnInit {
     channelIds.push(mmChannel.id);
     this.mattermostTimelineService.updateTimeline(mmTimeline.id, { ...mmTimeline, channelIds: channelIds }).subscribe({
       next: next => {
-        this.snackBar.open(`更新に失敗しました。`, 'close', { duration: 3000 });
+        this.snackBar.open(`追加しました`, 'close', { duration: 3000 });
         this.reloadTimeline().subscribe(); // タイムラインのモデルを更新
       },
       error: error => {
-        this.snackBar.open(`更新に失敗しました。`, 'close', { duration: 3000 });
+        this.snackBar.open(`追加に失敗しました。`, 'close', { duration: 3000 });
       },
     });
   }

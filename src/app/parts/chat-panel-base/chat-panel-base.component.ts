@@ -267,18 +267,21 @@ export class ChatPanelBaseComponent implements OnInit {
     // TODO 本当は次の送信までメッセージ保存したくないけどどうしようもないので一旦保存しておく。
     // 内容を変更した場合は別メッセージとして扱う。
     if (this.messageGroup.role === 'system') {
-      // system：システムプロンプトはツリーを変えたくないので単純にedit
-      safeForkJoin(this.messageGroup.messages.map(message => this.messageService.editMessageWithContents(message))).subscribe({
-        next: next => {
-          // 戻ってきたもので元オブジェクトに更新を掛ける。
-          next.forEach((message, index) => this.messageGroup.messages[index] = message);
-          this.editEmitter.emit(this.messageGroup);
-        },
-        error: error => {
-          this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
-          // TODO メッセージ戻す処理が必要。
-        }
-      });
+      if (this.messageGroup.messages[0].id.startsWith('dummy-')) {
+      } else {
+        // system：システムプロンプトはツリーを変えたくないので単純にedit
+        safeForkJoin(this.messageGroup.messages.map(message => this.messageService.editMessageWithContents(message))).subscribe({
+          next: next => {
+            // 戻ってきたもので元オブジェクトに更新を掛ける。
+            next.forEach((message, index) => this.messageGroup.messages[index] = message);
+            this.editEmitter.emit(this.messageGroup);
+          },
+          error: error => {
+            this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
+            // TODO メッセージ戻す処理が必要。
+          }
+        });
+      }
     } else {
       this.messageService.upsertSingleMessageGroup(this.messageGroup).subscribe({
         next: next => {
@@ -304,7 +307,7 @@ export class ChatPanelBaseComponent implements OnInit {
   onBlur($event: FocusEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
-    this.messageGroup.messages[0].editing = 0;
+    this.messageGroup.messages.forEach(message => message.editing = 0);
   }
 
   setEdit($event: MouseEvent): void {
@@ -319,7 +322,7 @@ export class ChatPanelBaseComponent implements OnInit {
         this.height = `${this.textBodyElem.nativeElement.clientHeight}px`;
       } else { }
     }
-    this.messageGroup.messages[0].editing = this.messageGroup.messages[0].editing ? 0 : 1;
+    this.messageGroup.messages.forEach(message => message.editing = message.editing ? 0 : 1);
   }
 
   loadContent(): Observable<ContentPart[]> {
