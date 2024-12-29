@@ -517,7 +517,7 @@ export class MessageService {
                     const showMessageGroupIdList = MessageService.rebuildMessageGroup(messageGroupMas, threadId);
                     // console.log(showMessageGroupIdList);
                     // selectedIndexをセットするために呼ぶ
-                    this.getTailMessageGroupIds(messageGroupMas[showMessageGroupIdList[showMessageGroupIdList.length - 1]] as MessageGroupForView);
+                    this.getTailMessageGroupIds(messageGroupMas[showMessageGroupIdList.at(-1)!] as MessageGroupForView);
                     return [threadId, showMessageGroupIdList];
                 })
         );

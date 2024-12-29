@@ -199,7 +199,7 @@
                     <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
                         (keydown)="onKeyDown('main', $event, selectedChannelIds[0])"
                         (input)="onInput('main', $event, selectedChannelIds[0])"
-                        [placeholder]="appFileDropList?.first?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
+                        [placeholder]="appFileDropList().at(0)?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
                         #textAreaElemMain [(ngModel)]="inDto.main.message" (blur)="clearMention()"
                         (change)="onChange(selectedChannelIds[0])"
                         [disabled]="selectedChannelIds.length!==1"></textarea>
@@ -243,7 +243,7 @@
                 <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
                     (keydown)="onKeyDown('thread', $event, mmThread[0][0].channel_id,mmThread[0][0].id)"
                     (input)="onInput('thread', $event, mmThread[0][0].channel_id,mmThread[0][0].id)"
-                    [placeholder]="appFileDropList?.last?.isHovered?'ファイルドロップ':('メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
+                    [placeholder]="appFileDropList().at(-1)?.isHovered?'ファイルドロップ':('メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
                     #textAreaElemThread [(ngModel)]="inDto.thread.message" (blur)="clearMention()"
                     (change)="onChange(mmThread[0][0].channel_id)"></textarea>
                 @if(mentionInputType==='thread' && mentionPosition){

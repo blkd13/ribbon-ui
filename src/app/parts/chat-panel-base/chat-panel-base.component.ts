@@ -1,6 +1,6 @@
 import { MessageService } from './../../services/project.service';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, ViewEncapsulation, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewEncapsulation, inject, input, output, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,7 +25,6 @@ import { animate, style, transition, trigger } from '@angular/animations';
 
 @Component({
   selector: 'app-chat-panel-base',
-  standalone: true,
   imports: [
     CommonModule, FormsModule, DocTagComponent,
     MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
@@ -43,54 +42,50 @@ import { animate, style, transition, trigger } from '@angular/animations';
         animate('200ms', style({ opacity: 0 }))
       ])
     ])
-  ],
+  ]
 })
 export class ChatPanelBaseComponent implements OnInit {
 
   // @Input() // status 0:未開始 1:実行中 2:完了
   // message!: MessageForView;
 
-  @Input() // status 0:未開始 1:実行中 2:完了
-  messageGroup!: MessageGroupForView;
+  readonly messageGroup = input.required<MessageGroupForView>();
 
-  @Input() // メッセージの順番
-  index!: number;
+  readonly index = input<number>();
 
   // チャット入力欄
-  @ViewChild('textAreaElem')
-  textAreaElem!: ElementRef<HTMLTextAreaElement>;
+  readonly textAreaElem = viewChild<ElementRef<HTMLTextAreaElement>>('textAreaElem');
 
-  @ViewChild('textBodyElem')
-  textBodyElem!: ElementRef<HTMLDivElement>;
+  readonly textBodyElem = viewChild<ElementRef<HTMLDivElement>>('textBodyElem');
 
-  @Input()
-  title!: string;
+  readonly placeholder = input<string>();
 
-  @Input()
-  placeholder?: string;
+  readonly exPanel = viewChild.required<MatExpansionPanel>('exPanel');
 
-  @ViewChild('exPanel')
-  exPanel!: MatExpansionPanel;
+  readonly layout = input.required<'flex' | 'grid'>();
 
-  @Input()
-  layout!: 'flex' | 'grid';
-
+  beforeScrollTop = -1;
+  autoscroll = false;
+  beforeText = '';
   @Input()
   set bitCounter(bitCounter: number) {
-    setTimeout(() => this.scroll(), 1);
+    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as ChatCompletionContentPartText);
+    if (this.beforeText === content?.text) {
+      // 変更なければ何もしない
+    } else {
+      // 変更あればスクロール
+      setTimeout(() => this.scroll(), 1);
+      this.beforeText = content?.text;
+    }
   }
 
-  @Output('edit')
-  editEmitter: EventEmitter<MessageGroupForView> = new EventEmitter();
+  readonly editEmitter = output<MessageGroupForView>({ alias: 'edit' });
 
-  @Output('remove')
-  removeEmitter: EventEmitter<MessageGroupForView> = new EventEmitter();
+  readonly removeEmitter = output<MessageGroupForView>({ alias: 'remove' });
 
-  @Output('removeMessage')
-  removeMessageEmitter: EventEmitter<MessageForView> = new EventEmitter();
+  readonly removeMessageEmitter = output<MessageForView>({ alias: 'removeMessage' });
 
-  @Output('removeContent')
-  removeContentEmitter: EventEmitter<ContentPart> = new EventEmitter();
+  readonly removeContentEmitter = output<ContentPart>({ alias: 'removeContent' });
 
   // Jsonの場合は```jsonで囲むための文字列
   brackets = { pre: '', post: '' };
@@ -117,15 +112,30 @@ export class ChatPanelBaseComponent implements OnInit {
   }
 
   scroll(): void {
-    const content = (this.messageGroup.messages[0].contents.find(content => content.type === 'text') as ChatCompletionContentPartText);
+    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as ChatCompletionContentPartText);
     if (content && (content.text.startsWith('{') || content.text.startsWith('['))) {
       this.brackets.pre = '```json\n';
       this.brackets.post = '\n```';
     }
-    // 一番下にスクロール
-    if (this.textBodyElem) {
-      DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
-    } else { }
+    // 冷静になるとこのパネル自体はスクロールしなくていいんじゃないかという気がする。
+    // // 一番下にスクロール
+    // const textBodyElem = this.textBodyElem();
+    // if (textBodyElem) {
+    //   if (this.autoscroll) {
+    //     console.log(this.beforeScrollTop, textBodyElem.nativeElement.scrollTop);
+    //     if (this.beforeScrollTop <= textBodyElem.nativeElement.scrollTop) {
+    //       this.beforeScrollTop = textBodyElem.nativeElement.scrollTop;
+    //       DomUtils.scrollToBottomIfNeededSmooth(textBodyElem.nativeElement);
+    //     } else {
+    //       this.autoscroll = false;
+    //     }
+    //   } else {
+    //     // オートスクロール復活の適切なタイミングが無いからとりあえず下スクロールをトリガにする。
+    //     if (this.beforeScrollTop > textBodyElem.nativeElement.scrollTop) {
+    //       this.autoscroll = true;
+    //     }
+    //   }
+    // } else { }
   }
 
   languageExtensions = {
@@ -245,7 +255,7 @@ export class ChatPanelBaseComponent implements OnInit {
     // } else {
     //   this.removeEmitter.emit(this.messageGroup);
     // }
-    this.removeEmitter.emit(this.messageGroup);
+    this.removeEmitter.emit(this.messageGroup());
   }
 
   timeoutId: any;
@@ -254,7 +264,7 @@ export class ChatPanelBaseComponent implements OnInit {
       if ($event.ctrlKey) {
         // this.onSubmit();
         // ここでsubmitすると二重送信になるのでblurするだけで良い。
-        this.textAreaElem.nativeElement.blur();
+        this.textAreaElem()?.nativeElement.blur();
       } else {
       }
     } else {
@@ -266,15 +276,16 @@ export class ChatPanelBaseComponent implements OnInit {
   onSubmit(): void {
     // TODO 本当は次の送信までメッセージ保存したくないけどどうしようもないので一旦保存しておく。
     // 内容を変更した場合は別メッセージとして扱う。
-    if (this.messageGroup.role === 'system') {
-      if (this.messageGroup.messages[0].id.startsWith('dummy-')) {
+    const messageGroup = this.messageGroup();
+    if (messageGroup.role === 'system') {
+      if (messageGroup.messages[0].id.startsWith('dummy-')) {
       } else {
         // system：システムプロンプトはツリーを変えたくないので単純にedit
-        safeForkJoin(this.messageGroup.messages.map(message => this.messageService.editMessageWithContents(message))).subscribe({
+        safeForkJoin(messageGroup.messages.map(message => this.messageService.editMessageWithContents(message))).subscribe({
           next: next => {
             // 戻ってきたもので元オブジェクトに更新を掛ける。
-            next.forEach((message, index) => this.messageGroup.messages[index] = message);
-            this.editEmitter.emit(this.messageGroup);
+            next.forEach((message, index) => this.messageGroup().messages[index] = message);
+            this.editEmitter.emit(this.messageGroup());
           },
           error: error => {
             this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
@@ -283,7 +294,7 @@ export class ChatPanelBaseComponent implements OnInit {
         });
       }
     } else {
-      this.messageService.upsertSingleMessageGroup(this.messageGroup).subscribe({
+      this.messageService.upsertSingleMessageGroup(messageGroup).subscribe({
         next: next => {
           this.editEmitter.emit(next);
         },
@@ -297,7 +308,7 @@ export class ChatPanelBaseComponent implements OnInit {
 
   onChange(): void {
     // textareaの縦幅更新。遅延打ちにしないとvalueが更新されていない。
-    setTimeout(() => { DomUtils.textAreaHeighAdjust(this.textAreaElem.nativeElement); }, 0);
+    setTimeout(() => { DomUtils.textAreaHeighAdjust(this.textAreaElem()!.nativeElement); }, 0);
   }
 
   height: string = 'auto';
@@ -307,41 +318,44 @@ export class ChatPanelBaseComponent implements OnInit {
   onBlur($event: FocusEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
-    this.messageGroup.messages.forEach(message => message.editing = 0);
+    this.messageGroup().messages.forEach(message => message.editing = 0);
   }
 
   setEdit($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
 
-    if (this.messageGroup.messages[0].editing) {
-      this.onSubmit();
+    const messageGroup = this.messageGroup();
+    if (messageGroup.messages[0].editing) {
+      // this.onSubmit();
     } else {
-      this.exPanel.open();
-      if (this.textBodyElem) {
-        this.height = `${this.textBodyElem.nativeElement.clientHeight}px`;
+      this.exPanel().open();
+      const textBodyElem = this.textBodyElem();
+      if (textBodyElem) {
+        this.height = `${textBodyElem.nativeElement.clientHeight}px`;
       } else { }
     }
-    this.messageGroup.messages.forEach(message => message.editing = message.editing ? 0 : 1);
+    messageGroup.messages.forEach(message => message.editing = message.editing ? 0 : 1);
   }
 
   loadContent(): Observable<ContentPart[]> {
-    if (this.messageGroup.messages[0].id.startsWith('dummy-')) {
+    const messageGroup = this.messageGroup();
+    if (messageGroup.messages[0].id.startsWith('dummy-')) {
       // TODO いちいちこんな分岐入れるのはあり得ないので他の方法を考えるべき。
       return of([]);
-    } else if (this.messageGroup.messages[0].contents.length === 0) {
-      const contentPart = this.messageService.initContentPart(this.messageGroup.messages[0].id, this.messageGroup.messages[0].label);
-      this.messageGroup.messages[0].contents = [contentPart];
+    } else if (messageGroup.messages[0].contents.length === 0) {
+      const contentPart = this.messageService.initContentPart(messageGroup.messages[0].id, messageGroup.messages[0].label);
+      messageGroup.messages[0].contents = [contentPart];
       this.isLoading = true;
-      return this.messageService.getMessageContentParts(this.messageGroup.messages[0]).pipe(
+      return this.messageService.getMessageContentParts(messageGroup.messages[0]).pipe(
         tap(contents => {
-          this.messageGroup.messages[0].contents = contents;
+          this.messageGroup().messages[0].contents = contents;
           this.isLoading = false;
         }),
       );
     } else {
       // load済みのものを返す
-      return of(this.messageGroup.messages[0].contents);
+      return of(messageGroup.messages[0].contents);
     }
   }
 

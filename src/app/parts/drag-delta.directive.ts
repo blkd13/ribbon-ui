@@ -1,4 +1,4 @@
-import { Directive, HostListener, Input, Output, EventEmitter } from '@angular/core';
+import { Directive, HostListener, input, output } from '@angular/core';
 
 @Directive({
   selector: '[appDragDelta]',
@@ -6,13 +6,14 @@ import { Directive, HostListener, Input, Output, EventEmitter } from '@angular/c
 })
 export class DragDeltaDirective {
 
-  @Input()
-  appDragDelta!: HTMLElement;
+  readonly appDragDelta = input.required<HTMLElement>();
 
-  @Input()
-  position: 'left' | 'right' | 'top' | 'bottom' = 'right';
+  readonly position = input<'left' | 'right' | 'top' | 'bottom'>('right');
 
-  @Output() dragging = new EventEmitter<{ x: number; y: number }>();
+  readonly dragging = output<{
+    x: number;
+    y: number;
+}>();
   startX = 0;
   startY = 0;
   startW = 0;
@@ -21,7 +22,8 @@ export class DragDeltaDirective {
 
   @HostListener('mousedown', ['$event'])
   onMouseDown(event: MouseEvent): void {
-    if (this.appDragDelta) {
+    const appDragDelta = this.appDragDelta();
+    if (appDragDelta) {
       this.draggingActive = true;
 
       // 開始位置を記録
@@ -29,8 +31,8 @@ export class DragDeltaDirective {
       this.startY = event.clientY;
 
       // 開始時のサイズを記録
-      this.startW = this.appDragDelta.clientWidth;
-      this.startH = this.appDragDelta.clientHeight;
+      this.startW = appDragDelta.clientWidth;
+      this.startH = appDragDelta.clientHeight;
 
       event.stopImmediatePropagation();
       event.preventDefault(); // 不要な選択動作を防止
@@ -42,15 +44,18 @@ export class DragDeltaDirective {
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent): void {
     if (this.draggingActive) {
-      const sign = this.position === 'right' || this.position === 'bottom' ? 1 : -1;
+      const position = this.position();
+      const sign = position === 'right' || position === 'bottom' ? 1 : -1;
       const deltaX = (event.clientX - this.startX) * sign;
       const deltaY = (event.clientY - this.startY) * sign;
-      if (this.position === 'left' || this.position === 'right') {
-        this.appDragDelta.style.width = `${(this.startW + deltaX).toFixed(1)}px`;
-      } else if (this.position === 'top' || this.position === 'bottom') {
-        this.appDragDelta.style.height = `${(this.startH + deltaY).toFixed(1)}px`;
+      const appDragDelta = this.appDragDelta();
+      const positionValue = this.position();
+      if (positionValue === 'left' || positionValue === 'right') {
+        appDragDelta.style.width = `${(this.startW + deltaX).toFixed(1)}px`;
+      } else if (positionValue === 'top' || positionValue === 'bottom') {
+        appDragDelta.style.height = `${(this.startH + deltaY).toFixed(1)}px`;
       }
-      console.log(`${this.appDragDelta.style.width}`);
+      console.log(`${appDragDelta.style.width}`);
       // 差分をEmitterで配信
       this.dragging.emit({ x: deltaX, y: deltaY });
       // console.log({ x: deltaX, y: deltaY });

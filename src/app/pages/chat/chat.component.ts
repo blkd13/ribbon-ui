@@ -2,7 +2,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
 import { genDummyId, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty } from 'rxjs';
-import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, TemplateRef, ViewChild, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, TemplateRef, inject, viewChildren, viewChild } from '@angular/core';
 import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
 import { FormsModule, NgModel } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -49,7 +49,6 @@ declare var _paq: any;
 
 @Component({
   selector: 'app-chat',
-  standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, FileDropDirective, DocTagComponent,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
@@ -65,26 +64,23 @@ declare var _paq: any;
 export class ChatComponent implements OnInit {
 
   // メッセージ表示ボックスのリスト
-  @ViewChildren(ChatPanelMessageComponent)
-  chatPanelList!: QueryList<ChatPanelMessageComponent>;
+  readonly chatPanelList = viewChildren<ChatPanelMessageComponent>(ChatPanelMessageComponent);
 
   // メッセージ表示ボックスのリスト
-  @ViewChildren(ChatPanelSystemComponent)
-  chatSystemPanelList!: QueryList<ChatPanelSystemComponent>;
+  readonly chatSystemPanelList = viewChildren<ChatPanelSystemComponent>(ChatPanelSystemComponent);
 
   // チャット入力欄
-  @ViewChild('textAreaElem', { static: false })
-  textAreaElem!: ElementRef<HTMLTextAreaElement>;
+  readonly textAreaElem = viewChild.required<ElementRef<HTMLTextAreaElement>>('textAreaElem');
 
-  // // チャット表示欄
-  // @ViewChild('textBodyElem', { static: false })
-  // textBodyElem!: ElementRef<HTMLDivElement>;
+  // チャット表示欄
+  readonly textBodyElem = viewChildren<ElementRef<HTMLDivElement>>('textBodyElem');
 
-  @ViewChildren('textBodyElem')
-  textBodyElem!: QueryList<ElementRef<HTMLDivElement>>;
+  // スクロール制御用のアンカー
+  readonly chatPanelGroupElem = viewChildren<ElementRef<HTMLDivElement>>('chatPanelGroupElem');
+  readonly anchor = viewChildren<ElementRef<HTMLDivElement>>('anchor');
 
-  @ViewChild(FileDropDirective, { static: false })
-  appFileDrop?: FileDropDirective;
+
+  readonly appFileDrop = viewChild(FileDropDirective);
 
   // スレッドリスト
   threadGroupList: ThreadGroup[] = [];
@@ -166,9 +162,10 @@ export class ChatComponent implements OnInit {
     });
 
     setInterval(() => {
-      if (this.textAreaElem && this.textAreaElem.nativeElement) {
+      const textAreaElem = this.textAreaElem();
+      if (textAreaElem && textAreaElem.nativeElement) {
         // とりあえず毎秒高さ調整をしとく。
-        DomUtils.textAreaHeighAdjust(this.textAreaElem.nativeElement);
+        DomUtils.textAreaHeighAdjust(textAreaElem.nativeElement);
       } else { }
     }, 1000);
   }
@@ -275,7 +272,7 @@ export class ChatComponent implements OnInit {
     // // システムプロンプトに設定したいか？
     // this.selectedThreadGroup.threadList.forEach(thread => this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][0]].messages[0].contents[0].text = preset.text);
     this.inputArea.content[0].text = preset.text;
-    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+    setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
 
   modelCheck(modelList: string[] = []): void {
@@ -298,7 +295,7 @@ export class ChatComponent implements OnInit {
     }
     this.modelCheck();
     this.rebuildThreadGroup();
-    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+    setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
 
   threadGroupChangeHandler(project: Project, threadGroupList: ThreadGroup[], threadGroupId: string): void {
@@ -332,7 +329,7 @@ export class ChatComponent implements OnInit {
       this.inputArea = this.generateInitalInputArea();
       // this.inputArea.previousMessageGroupId = lastMessage.id;
       this.cdr.detectChanges();
-      setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
       // ホーム画面からの遷移の場合は初期値を入れる
       if (this.g.share['home->chat'] && this.g.share['home->chat'].static) {
@@ -410,7 +407,7 @@ export class ChatComponent implements OnInit {
               Object.keys(this.messageGroupIdListMas).forEach(threadId => {
                 this.messageGroupIdListMas[threadId].forEach(messageGroupId => {
                   if (this.messageService.messageGroupMas[messageGroupId]) {
-                    const message = this.messageService.messageGroupMas[messageGroupId].messages[this.messageService.messageGroupMas[messageGroupId].messages.length - 1];
+                    const message = this.messageService.messageGroupMas[messageGroupId].messages.at(-1)!;
                     const resDto = this.chatService.getObserver(message.id);
                     if (resDto && resDto.observer) {
                       // 別ページから復帰した場合に再開する。
@@ -430,11 +427,10 @@ export class ChatComponent implements OnInit {
               this.isThreadGroupLoading = false;
 
               // 一番下まで下げる
-              this.textBodyElem.forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
-              // setTimeout(() => { DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); }, 500);
+              this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
 
               // this.router.navigate(['chat', this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
-              setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+              setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
               document.title = `AI : ${this.selectedThreadGroup?.title || 'Ribbon UI'}`;
             }),
@@ -508,8 +504,8 @@ export class ChatComponent implements OnInit {
   rebuildThreadGroup(): { [threadId: string]: string[] } {
     this.messageGroupIdListMas = this.messageService.rebuildThreadGroup(this.messageService.messageGroupMas);
     // 末尾のroleを取得
-    const lineIdList = this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]);
-    this.tailMessageGroupList = lineIdList.map(line => line[line.length - 1] ? this.messageService.messageGroupMas[line[line.length - 1]] : null);
+    const lineMessageList = this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]);
+    this.tailMessageGroupList = lineMessageList.map(message => this.messageService.messageGroupMas[message.at(-1)!] ?? null);
     this.tailRole = this.tailMessageGroupList[0] ? this.tailMessageGroupList[0].role : 'system';
     // メッセージグループの数が最大のスレッドを探す
     const maxMessageGroupCount = Object.values(this.messageGroupIdListMas).map(messageGroupIdList => messageGroupIdList.length).reduce((a, b) => Math.max(a, b), 0);
@@ -683,7 +679,7 @@ export class ChatComponent implements OnInit {
             return this.messageService.upsertSingleMessageGroup(
               this.messageService.initMessageGroup(
                 thread.id,
-                this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1],
+                this.messageGroupIdListMas[thread.id].at(-1),
                 this.inputArea.role,
                 contents,
               )
@@ -694,16 +690,14 @@ export class ChatComponent implements OnInit {
               this.inputArea = this.generateInitalInputArea();
               this.rebuildThreadGroup();
               setTimeout(() => {
-                DomUtils.textAreaHeighAdjust(this.textAreaElem.nativeElement); // 高さ調整
-                this.textBodyElem.forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
-                // DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
+                DomUtils.textAreaHeighAdjust(this.textAreaElem().nativeElement); // 高さ調整
+                this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
               }, 0);
               return upsertResponseList.map(messageGroup => messageGroup.id);
             }),
           );
         } else {
-          // return of(this.messageList[this.messageList.length - 1].id); // 末尾にあるメッセージが発火トリガー
-          return of(threadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1])); // 末尾にあるメッセージが発火トリガー
+          return of(threadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id].at(-1)!)); // 末尾にあるメッセージが発火トリガー
         }
       }),
       // 発射準備完了。発射トリガーとなるメッセージIDを返す。とりあえずログ出力もしておく。
@@ -739,7 +733,7 @@ export class ChatComponent implements OnInit {
     const selectedMessageGroupId = this.messageService.nextMessageGroupId[group.id][group.selectedIndex];
     const messageGroup = this.messageService.messageGroupMas[selectedMessageGroupId];
     const ids = this.messageService.getTailMessageGroupIds(messageGroup);
-    const newMessageGroup = this.messageService.messageGroupMas[ids[ids.length - 1]];
+    const newMessageGroup = this.messageService.messageGroupMas[ids.at(-1)!];
     // contentのキャッシュを取得
     newMessageGroup.messages.forEach(message => {
       message.status = MessageStatusType.Loading;
@@ -747,7 +741,7 @@ export class ChatComponent implements OnInit {
         next: contentParts => message.status = MessageStatusType.Loaded,
       })
     });
-    this.touchMessageGroupAndRebuild(this.messageService.messageGroupMas[ids[ids.length - 1]]).subscribe();
+    this.touchMessageGroupAndRebuild(this.messageService.messageGroupMas[ids.at(-1)!]).subscribe();
   }
 
   /**
@@ -793,8 +787,8 @@ export class ChatComponent implements OnInit {
     }
 
     for (const thread of threadList) {
-      const tailMessageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1]];
-      const modelName = thread.inDto.args.model || '';
+      const tailMessageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id].at(-1)!];
+      const modelName = thread.inDto.args.model ?? '';
       const model = this.chatService.priceMap[modelName];
       const args = thread.inDto.args;
 
@@ -874,8 +868,8 @@ export class ChatComponent implements OnInit {
         }).map((messageGroupId, index) =>
           this.chatService.chatCompletionObservableStreamByProjectModel(this.selectedThreadGroup.threadList[index].inDto.args, 'messageGroup', messageGroupId)
             .pipe(tap(resDto => {
-              console.log('response-------------------------');
-              console.log(resDto);
+              // console.log('response-------------------------');
+              // console.log(resDto);
               // キャッシュを更新する
               // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
               resDto.messageGroupList.forEach(messageGroup => {
@@ -889,24 +883,29 @@ export class ChatComponent implements OnInit {
                 });
               });
               this.rebuildThreadGroup();
+              this.autoscroll = true;
+              this.beforeScrollTop = -1;
               console.log(this.messageGroupIdListMas);
             }))
         )).pipe(tap(text => {
 
+          // console.log(`pipe---------------------${text}`);
           // メッセージID紐づけ。
           this.rebuildThreadGroup();
 
           // 入力ボックスのサイズを戻す。
-          setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
-          setTimeout(() => {
-            this.textBodyElem.forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
-            // DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem.nativeElement); // 下端にスクロール
-          }, 100);
+          setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+          // setTimeout(() => {
+          //   this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+          // }, 100);
         }))
       )
     );
   }
 
+  scrollRange = -1;
+  autoscroll = false;
+  beforeScrollTop = -1;
   /**
    * チャットのレスポンスストリームを捌くハンドラ
    * @param message 
@@ -918,8 +917,32 @@ export class ChatComponent implements OnInit {
         message.contents[0].text += text;
         message.status = MessageStatusType.Editing;
         this.bitCounter++;
-        this.textBodyElem.forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
-        // DomUtils.scrollToBottomIfNeeded(this.textBodyElem.nativeElement);
+        if (this.autoscroll) {
+          // 一回でも上スクロールしてたらオートスクロールをオフ。
+          const threadIndex = this.selectedThreadGroup.threadList.map(thread => thread.id).indexOf(this.messageService.messageGroupMas[message.messageGroupId].threadId);
+          this.textBodyElem().forEach((elem, index) => {
+            // tab表示中は非表示タブの中身は消えているので0版をターゲットとする
+            if (index === threadIndex || this.userService.chatTabLayout && index === 0) {
+              requestAnimationFrame(() => {
+                const scrollTop = elem.nativeElement.scrollTop;
+                if (scrollTop > 0) {
+                  // console.log(this.beforeScrollTop, scrollTop);
+                  if (this.beforeScrollTop <= scrollTop) {
+                    this.beforeScrollTop = scrollTop;
+                    if (this.userService.chatTabLayout === 'tabs') {
+                      this.anchor().at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } else {
+                      this.chatPanelGroupElem()?.at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    // DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement);
+                  } else {
+                    this.autoscroll = false;
+                  }
+                }
+              });
+            } else { }
+          });
+        } else { }
       },
       error: error => {
         this.chatErrorHandler(error);
@@ -937,10 +960,12 @@ export class ChatComponent implements OnInit {
    * @returns 
    */
   chatAfterHandler(message: MessageForView): void {
+    // console.log(`after----------------`);
+    this.autoscroll = false;
     const threadId = this.messageService.messageGroupMas[message.messageGroupId].threadId;
     const threadGroup = this.threadGroupList.find(threadGroup => threadGroup.threadList.find(thread => thread.id === threadId));
     if (threadGroup) {
-      // this.を使っているのでスレッドグループ行き来したときに混ざってないか心配。。。
+      // TODO DANGER this.を使っているのでスレッドグループ行き来したときに混ざってないか心配。。。
       delete this.chatStreamSubscriptionList[threadGroup.id];
       if (this.selectedThreadGroup.id === threadGroup.id) {
         // new-threadだった時はチャットが完了したらURL動かしておく。
@@ -951,7 +976,7 @@ export class ChatComponent implements OnInit {
     message.status = MessageStatusType.Loaded;
     message.label = message.contents.filter(content => content.type === 'text').map(content => content.text).join('\n').substring(0, 250);
     this.bulkNext();
-    setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+    setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
 
   // エラーハンドラー
@@ -1000,7 +1025,7 @@ export class ChatComponent implements OnInit {
     _paq.push(['trackEvent', 'AIチャット', 'メッセージキャンセル', this.selectedThreadGroup.threadList.length]);
     if (this.chatStreamSubscriptionList[this.selectedThreadGroup.id]) {
       this.isLock = false;
-      setTimeout(() => { this.textAreaElem.nativeElement.focus(); }, 100);
+      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
       this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.unsubscribe());
     } else {
     }
@@ -1028,7 +1053,7 @@ export class ChatComponent implements OnInit {
     this.charCount = 0;
     this.tokenObj.totalTokens = -1;
     safeForkJoin(this.selectedThreadGroup.threadList.map(thread => {
-      // console.log(this.messageGroupIdListMas[thread.id][this.messageGroupIdListMas[thread.id].length - 1]);
+      // console.log(this.messageGroupIdListMas[thread.id].at(-1));
       const inDto: ChatInputArea[] = [];
       let tailMessageGroupId = '';
       this.messageGroupIdListMas[thread.id].map(messageGroupId => {
@@ -1072,7 +1097,7 @@ export class ChatComponent implements OnInit {
       },
     });
     // textareaの縦幅更新。遅延打ちにしないとvalueが更新されていない。
-    this.textAreaElem && setTimeout(() => { DomUtils.textAreaHeighAdjust(this.textAreaElem.nativeElement); }, 0);
+    this.textAreaElem() && setTimeout(() => { DomUtils.textAreaHeighAdjust(this.textAreaElem().nativeElement); }, 0);
   }
 
   contextCacheControl(threadGroup: ThreadGroup): void {
@@ -1123,7 +1148,7 @@ export class ChatComponent implements OnInit {
       return this.saveAndBuildThreadGroup().pipe(switchMap(
         // トリガーを引く
         messageGroupId => this.chatService.createCacheByProjectModel(
-          thread.inDto.args.model || '', messageGroupId[0], 'messageGroup',
+          thread.inDto.args.model ?? '', messageGroupId[0], 'messageGroup',
           { ttl: { seconds: this.cacheTtlInSeconds, nanos: 0 } },
         )
       )).pipe(tap(next => {
@@ -1192,16 +1217,13 @@ export class ChatComponent implements OnInit {
     this.allExpandCollapseFlag = !this.allExpandCollapseFlag;
     _paq.push(['trackEvent', 'AIチャット画面操作', 'パネルの一括開閉', this.allExpandCollapseFlag]);
     // this.chatSystemPanelList
-    ([this.chatPanelList] as QueryList<ChatPanelBaseComponent>[])
-      .forEach(chatList => {
-        chatList.forEach(chat => {
-          if (this.allExpandCollapseFlag) {
-            chat.exPanel.open();
-          } else {
-            chat.exPanel.close();
-          }
-        });
-      });
+    this.chatPanelList().forEach(chat => {
+      if (this.allExpandCollapseFlag) {
+        chat.exPanel().open();
+      } else {
+        chat.exPanel().close();
+      }
+    });
   }
 
   removeContent(content: ContentPart): void {
@@ -1317,7 +1339,7 @@ export class ChatComponent implements OnInit {
       } else if (this.messageService.messageGroupMas[messageGroup.id]) {
         // 既存グループへの新メッセージ追加
         // this.inputArea.messageGroupId = '';
-        this.textAreaElem.nativeElement.focus();
+        this.textAreaElem().nativeElement.focus();
       } else {
         // 新規グループで新規メッセージ
         // ここはない？
@@ -1441,7 +1463,7 @@ export class ChatComponent implements OnInit {
             } else {
               // 並列実行
               Object.keys(this.messageGroupIdListMas).map(threadId => {
-                const tailMessageGroupId = this.messageGroupIdListMas[threadId][this.messageGroupIdListMas[threadId].length - 1];
+                const tailMessageGroupId = this.messageGroupIdListMas[threadId].at(-1);
                 const messageGroup = this.messageService.initMessageGroup(threadId, tailMessageGroupId, 'user', []);
                 messageGroup.previousMessageGroupId = tailMessageGroupId;
                 messageGroup.messages = []; // ゴミmessageが作られているので消す
@@ -1481,7 +1503,7 @@ export class ChatComponent implements OnInit {
   tabIndex = 0;
   scrollPositions: number[] = [];
   saveScrollPosition(tabIndex: number): void {
-    const bodyElem = this.textBodyElem.get(tabIndex);
+    const bodyElem = this.textBodyElem().at(tabIndex);
     if (bodyElem && bodyElem.nativeElement) {
       this.scrollPositions[tabIndex] = bodyElem.nativeElement.scrollTop || 0;
     } else { }
@@ -1489,7 +1511,7 @@ export class ChatComponent implements OnInit {
   restoreScrollPosition(tabIndex: number): void {
     this.tabIndex = tabIndex;
     setTimeout(() => {
-      const bodyElem = this.textBodyElem.get(tabIndex);
+      const bodyElem = this.textBodyElem().at(tabIndex);
       if (bodyElem) {
         bodyElem.nativeElement.scrollTop = this.scrollPositions[tabIndex] || 0;
       } else { }

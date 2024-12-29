@@ -7,11 +7,10 @@ import { CommonModule } from '@angular/common';
 import { Utils } from '../../utils';
 
 @Component({
-  selector: 'app-predict-history',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './predict-history.component.html',
-  styleUrl: './predict-history.component.scss'
+    selector: 'app-predict-history',
+    imports: [CommonModule],
+    templateUrl: './predict-history.component.html',
+    styleUrl: './predict-history.component.scss'
 })
 export class PredictHistoryComponent implements OnInit {
 

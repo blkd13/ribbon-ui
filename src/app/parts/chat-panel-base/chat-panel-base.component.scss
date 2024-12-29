@@ -18,9 +18,35 @@
     }
 }
 
+.message-header-message {
+    position: sticky;
+    top: 0;
+    transition: top 0.3s 0s linear;
+    z-index: 1;
+}
+
+// stickyが少し複雑になってしまった、、
+// systemは常に1番上に固定、普通のメッセージはその下にstickyするからtop52開ける。expantionを閉じてるときは52開けるけど、開いてるときは開けない（stickyされるエレメントが変わるから）。
+.message {
+    &.closed {
+        position: sticky;
+        top: 52px;
+        overflow: hidden;
+    }
+
+    &.expanded {
+        overflow: unset;
+    }
+}
+
+.expanded .message-header-message {
+    top: 52px;
+}
+
+
 .message-notediting {
     border: 1px solid #444;
-    padding: 8px 12px 0;
+    padding: 2px 6px 2px;
 }
 
 .chat-input {
@@ -46,8 +72,14 @@
     font-weight: bold;
 }
 
-.message.user {
+.message.user,
+.user .message-header,
+.message.user .controller-bottom {
     background-color: rgb(42, 50, 53);
+
+    .message-notediting {
+        border: 1px solid lighten(rgb(42, 50, 53), 7%);
+    }
 }
 
 .user {
@@ -60,8 +92,14 @@
     }
 }
 
-.message.assistant {
+.message.assistant,
+.assistant .message-header,
+.message.assistant .controller-bottom {
     background-color: rgb(56, 53, 49);
+
+    .message-notediting {
+        border: 1px solid lighten(rgb(56, 53, 49), 7%);
+    }
 }
 
 .assistant {
@@ -74,7 +112,8 @@
     }
 }
 
-.message.cached {
+.message.cached,
+.message.cached .controller-bottom {
     background-color: #313131;
 }
 
@@ -117,4 +156,30 @@
             padding: 0 12px 8px;
         }
     }
+}
+
+.controller-bottom {
+    padding: 0 8px;
+    justify-content: end;
+    position: absolute;
+    bottom: 10px;
+    display: flex;
+    top: auto;
+    right: 0;
+    border-radius: 40px;
+    border: 1px solid rgb(68, 68, 68);
+}
+
+.controller-bottom {
+    opacity: 0.1;
+    transition: opacity 0.3s;
+}
+
+.controller-bottom--hide {
+    bottom: 4px;
+    opacity: 0;
+}
+
+.controller-bottom:hover {
+    opacity: 1;
 }

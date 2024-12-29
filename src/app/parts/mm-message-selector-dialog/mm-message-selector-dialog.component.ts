@@ -13,40 +13,42 @@ import { MatDividerModule } from '@angular/material/divider';
 
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MattermostTimelineService, ToAiFilterType, ToAiIdType } from '../../services/api-mattermost.service';
-import { ProjectService } from '../../services/project.service';
-import { Project } from '../../models/project-models';
+import { ProjectService, TeamService } from '../../services/project.service';
+import { Project, Team } from '../../models/project-models';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { safeForkJoin } from '../../utils/dom-utils';
 
 type ShortcutType = 'today' | 'fromYesterday' | 'yesterday' | 'thisWeek' | 'lastWeek';
 
 @Component({
-  selector: 'app-mm-message-selector-dialog',
-  standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    FormsModule,
-    MatTabsModule,
-    MatDatepickerModule,  // 日付ピッカー用のモジュール
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatButtonToggleModule,
-    MatSliderModule,
-    MatSelectModule,
-    MatProgressSpinnerModule,
-    MatDividerModule,
-  ],
-  providers: [],
-  templateUrl: './mm-message-selector-dialog.component.html',
-  styleUrls: ['./mm-message-selector-dialog.component.scss']
+    selector: 'app-mm-message-selector-dialog',
+    imports: [
+        ReactiveFormsModule,
+        FormsModule,
+        MatTabsModule,
+        MatDatepickerModule, // 日付ピッカー用のモジュール
+        MatFormFieldModule,
+        MatInputModule,
+        MatButtonModule,
+        MatButtonToggleModule,
+        MatSliderModule,
+        MatSelectModule,
+        MatProgressSpinnerModule,
+        MatDividerModule,
+    ],
+    providers: [],
+    templateUrl: './mm-message-selector-dialog.component.html',
+    styleUrls: ['./mm-message-selector-dialog.component.scss']
 })
 export class MmMessageSelectorDialogComponent {
 
   readonly projectService: ProjectService = inject(ProjectService);
+  readonly teamService: TeamService = inject(TeamService);
   readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
   readonly dialogRef: MatDialogRef<MmMessageSelectorDialogComponent> = inject(MatDialogRef);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly data = inject<{ title: string, channelCount: number, id: string, idType: ToAiIdType }>(MAT_DIALOG_DATA);
+  readonly fb: FormBuilder = inject(FormBuilder);
 
   isLoading = false;
   systemPrompt: string = `チャットを要約してください。`;
@@ -70,7 +72,7 @@ export class MmMessageSelectorDialogComponent {
     { label: '先週', value: 'lastWeek' },
   ];
 
-  constructor(private fb: FormBuilder) {
+  constructor() {
     this.countForm = this.fb.group({
       // 1チャネル当たり60が上限
       // this.data.channelCount
@@ -87,13 +89,29 @@ export class MmMessageSelectorDialogComponent {
     });
 
     this.isLoading = true;
-    this.projectService.getProjectList().subscribe({
-      next: next => {
-        this.isLoading = false;
-        this.projectList = next;
-        this.projectId = next[0].id;
-      },
-    });
+    const obs = [
+      this.teamService.getTeamList(),
+      this.projectService.getProjectList(),
+    ];
+    safeForkJoin<Team[] | Project[]>(obs)
+      .subscribe({
+        next: next => {
+          this.isLoading = false;
+          const teamList = next[0] as Team[];
+          const aloneTeamIdList = teamList.filter(t => t.teamType === 'Alone').map(t => t.id);
+          if (aloneTeamIdList.length > 0) {
+            this.projectList = next[1] as Project[];
+            const defaultProject = this.projectList.find(p => aloneTeamIdList.includes(p.teamId) && p.visibility === 'Default');
+            if (defaultProject) {
+              this.projectId = defaultProject.id;
+            } else {
+              this.projectId = this.projectList[0].id;
+            }
+          } else {
+            this.projectId = this.projectList[0].id;
+          }
+        },
+      });
   }
   // ショートカットが選択されたときに日時を設定
   onTimeShortcutChange(shortcut: { value: ShortcutType }): void {

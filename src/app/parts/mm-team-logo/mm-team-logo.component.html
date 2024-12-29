@@ -1,27 +1,27 @@
-@if(mmTeam){
+@if(mmTeam()){
 
-@if(mmTeam.msg_count>0){
+@if(mmTeam().msg_count>0){
 <!-- 未読ありの場合はマークをつける -->
-@if(mmTeam.mention_count>0){
+@if(mmTeam().mention_count>0){
 <!-- メンション付き -->
-<div class="mark-mention">{{mmTeam.mention_count>99?'99+':mmTeam.mention_count}}</div>
+<div class="mark-mention">{{mmTeam().mention_count>99?'99+':mmTeam().mention_count}}</div>
 } @else {
 <!-- メンション無し -->
 <div class="mark-unread"></div>
 }
 }
 
-@if(mmTeam.id==='timeline'){
+@if(mmTeam().id==='timeline'){
 <!-- 無理矢理だけどタイムラインのアイコンを固定でセット -->
-<img class="logo" [ngStyle]="{width: (width||42)+'px'}" (error)="isImage=false" src="./image/ribbon-mid.png">
-}@else if(mmTeam.id==='timeline'){
+<img class="logo" [ngStyle]="{width: (width()||42)+'px'}" (error)="isImage=false" src="./image/ribbon-mid.png">
+}@else if(mmTeam().id==='timeline'){
 }@else if(isImage){
-<img class="logo" [ngStyle]="{width: (width||42)+'px'}" (error)="isImage=false"
-    src="/api{{apiMattermostService.baseUrl}}/teams/{{mmTeam.id}}/image">
+<img class="logo" [ngStyle]="{width: (width()||42)+'px'}" (error)="isImage=false"
+    src="/api{{apiMattermostService.baseUrl}}/teams/{{mmTeam().id}}/image">
 <!-- , 'border-radius':((width||42)/(5.25))+'px' -->
 }@else{
-<div class="logo" [ngStyle]="{width: (width||42)+'px', height: (width||42)+'px', 'line-height': (width||42)+'px'}">
-    {{(mmTeam.display_name||'').substring(0,2)}}</div>
+<div class="logo" [ngStyle]="{width: (width()||42)+'px', height: (width()||42)+'px', 'line-height': (width()||42)+'px'}">
+    {{(mmTeam().display_name||'').substring(0,2)}}</div>
 }
 
 }

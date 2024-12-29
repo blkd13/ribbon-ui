@@ -9,13 +9,15 @@ export class DomUtils {
         const distanceToBottom = end - elem.scrollTop;
 
         // 下端から100px以内にいる場合のみ、スクロールを行う
-        if (distanceToBottom <= 300) {
-            elem.scrollTop = end;
-            return end - elem.scrollTop; // 実際に移動した量を返す
-        } else {
-            console.log('skipped');
-            return 0; // 移動しなかった場合は0を返す
-        }
+        // // console.log(`distanceToBottom = ${distanceToBottom} = ${end} - ${elem.scrollTop}`);
+        // if (distanceToBottom <= 300) {
+        //     elem.scrollTop = end;
+        //     return end - elem.scrollTop; // 実際に移動した量を返す
+        // } else {
+        //     console.log('skipped');
+        //     return 0; // 移動しなかった場合は0を返す
+        // }
+        return 0;
     }
 
     static scrollToBottomIfNeededSmooth(elem: HTMLElement): void {
@@ -25,14 +27,14 @@ export class DomUtils {
         const scrollTop = elem.scrollTop;
 
         // スクロールが必要かどうかを判断するしきい値（ピクセル単位）
-        const threshold = 200;
+        const threshold = 0;
 
-        // console.log(`scrollHeight=${scrollHeight}, clientHeight=${clientHeight}, scrollTop=${scrollTop}, LEFT=${scrollTop + clientHeight + threshold} RIGHT=${scrollHeight}`);
+        console.log(`${scrollTop + clientHeight + threshold < scrollHeight}:scrollHeight=${scrollHeight}, clientHeight=${clientHeight}, scrollTop=${scrollTop}, LEFT=${scrollTop + clientHeight + threshold} RIGHT=${scrollHeight}`);
         // 現在のスクロール位置+閾値が要素の一番下でない場合、スムーススクロールを実行
         if (scrollTop + clientHeight + threshold < scrollHeight) {
             elem.scrollTo({
                 top: scrollHeight - clientHeight,
-                behavior: 'smooth'
+                behavior: 'smooth',
             });
         }
     }

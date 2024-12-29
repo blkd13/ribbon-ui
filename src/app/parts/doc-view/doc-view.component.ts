@@ -5,12 +5,14 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { detect } from 'jschardet';
 import { ContentPart } from '../../models/project-models';
-import { FileEntityForView, FileGroupEntityForView, FileManagerService } from './../../services/file-manager.service';
+import { FileEntity, FileEntityForView, FileGroupEntityForView, FileManagerService } from './../../services/file-manager.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { CommonModule } from '@angular/common';
 import { MatDividerModule } from '@angular/material/divider';
+import { SelectTreeComponent } from '../select-tree/select-tree.component';
+import { DragDeltaDirective } from '../drag-delta.directive';
 
 
 
@@ -28,8 +30,10 @@ interface FileNode {
 
 @Component({
   selector: 'app-doc-view',
-  standalone: true,
-  imports: [CommonModule, FormsModule, MarkdownModule, MatIconModule, MatButtonModule, MatCheckboxModule, MatDividerModule],
+  imports: [
+    CommonModule, FormsModule, MarkdownModule, MatIconModule, MatButtonModule, MatCheckboxModule, MatDividerModule,
+    SelectTreeComponent, DragDeltaDirective
+  ],
   templateUrl: './doc-view.component.html',
   styleUrl: './doc-view.component.scss'
 })
@@ -151,11 +155,11 @@ export class DocViewComponent {
   // ディレクトリ/ファイルのチェック状態更新
   checkFile(file: FileEntityForView): void {
     this.setIndeterminate();
-    this.fileManagerService.activateFile(file.isActive, [file.id]).subscribe({
-      next: next => {
-        console.log(next);
-      },
-    });
+    // this.fileManagerService.activateFile(file.isActive, [file.id]).subscribe({
+    //   next: next => {
+    //     console.log(next);
+    //   },
+    // });
   }
 
   // ディレクトリチェック切り替え
@@ -163,13 +167,13 @@ export class DocViewComponent {
     // ディレクトリ内の全ファイルをチェック状態に合わせる
     this.setDirectoryActive(node, node.isActive);
 
-    // ファイル群を更新
-    const ids: string[] = this.collectFileIds(node);
-    this.fileManagerService.activateFile(node.isActive, ids).subscribe({
-      next: next => {
-        console.log(next);
-      },
-    });
+    // // ファイル群を更新
+    // const ids: string[] = this.collectFileIds(node);
+    // this.fileManagerService.activateFile(node.isActive, ids).subscribe({
+    //   next: next => {
+    //     console.log(next);
+    //   },
+    // });
 
     // 親ディレクトリを遡ってindeterminateやisActiveを更新する処理が必要な場合は、
     // 表示前にbuildFileTree時などに参照を持たせておくか、全体を再評価するメソッドを利用します。
@@ -260,6 +264,15 @@ export class DocViewComponent {
     }, {} as { [fileType: string]: { isActive: boolean, indeterminate: boolean, disabled: boolean } });
   }
 
+  setFile(file: FileEntityForView): void {
+    // this.fileManagerService.activateFile(file.isActive, [file.id]).subscribe({
+    //   next: next => {
+    //     console.log(next);
+    //   },
+    // });
+
+    this.setIndex(this.fileGroup.files.findIndex(f => f.id === file.id));
+  }
   setIndex(index: number): void {
     if (index === this.index) return;
     this.index = index;
@@ -271,8 +284,10 @@ export class DocViewComponent {
         this.dataUrl = next;
         if (this.dataUrl.startsWith('data:image/')) {
           this.type = 'image';
-        } else if (this.dataUrl.startsWith('data:text/')
+        } else if (false
+          || this.dataUrl.startsWith('data:text/')
           || this.dataUrl.startsWith('data:application/octet-stream')
+          || this.dataUrl.startsWith('data:application/json')
           || this.dataUrl.startsWith('data:application/x-csh')
           || this.dataUrl.startsWith('data:application/x-sh')
           || this.dataUrl.startsWith('data:application/x-sql')
@@ -370,11 +385,11 @@ export class DocViewComponent {
     // fileTypeMapの状態を更新
     this.fileTypeMap[fileType].indeterminate = false;
 
-    this.fileManagerService.activateFile(this.fileTypeMap[fileType].isActive, ids).subscribe({
-      next: next => {
-        console.log(next);
-      },
-    });
+    // this.fileManagerService.activateFile(this.fileTypeMap[fileType].isActive, ids).subscribe({
+    //   next: next => {
+    //     console.log(next);
+    //   },
+    // });
   }
 
   decode(): string {

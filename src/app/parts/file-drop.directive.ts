@@ -1,4 +1,4 @@
-import { Directive, HostListener, EventEmitter, Output, HostBinding, inject } from '@angular/core';
+import { Directive, HostListener, HostBinding, inject, output } from '@angular/core';
 import { FileManagerService, FullPathFile } from '../services/file-manager.service';
 
 @Directive({
@@ -9,8 +9,8 @@ export class FileDropDirective {
 
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
 
-  @Output() filesDropped = new EventEmitter<FullPathFile[]>();
-  @Output() filesHovered = new EventEmitter<boolean>();
+  readonly filesDropped = output<FullPathFile[]>();
+  readonly filesHovered = output<boolean>();
 
   @HostBinding('class.hovered') public isHovered = false;
 

@@ -128,7 +128,7 @@
     <div class="drop-zone relative" appFileDrop (filesDropped)="onFilesDropped($event)">
         <div class="w-full flex items-center justify-between gap-5">
             <div style="min-width: 0;flex-grow: 1;"></div>
-            <div class="command-dock">
+            <div class="command-dock" style="line-height: 0;">
                 <div class="grid-layout mr-2">
                     <div class="grid-label">Tokens : </div>
                     <div class="grid-item">
@@ -237,7 +237,7 @@
             @for(thread of selectedThreadGroup.threadList;track $index) {
             <mat-tab label="[Tab{{$index+1}}] {{thread.inDto.args.model}}">
                 <div #textBodyElem style="height: calc(100vh - 100px);" (scroll)="saveScrollPosition($index)"
-                    class="custom-scroll overflow-x-auto w-full px-2 pt-2 pb-52 relative flex flex-col gap-1">
+                    class="custom-scroll w-full px-2 pt-2 pb-52 relative flex flex-col gap-1">
                     @for(messageGroupId of messageGroupIdListMas[thread.id];track $index){
                     @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
 
@@ -251,11 +251,13 @@
                         (modelChange)="modelCheck([$event])">
                     </app-chat-panel-system>
                     } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-                    <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-                        [layout]="userService.chatLayout" (edit)="editChat($event)"
-                        (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-                        (remove)="removeMessageGroup($event)">
-                    </app-chat-panel-message>
+                    <div #anchor> <!-- スクロール用のただのアンカー -->
+                        <app-chat-panel-message #chatPanelList [messageGroup]="messageGroup" [bitCounter]="bitCounter"
+                            [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
+                            (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
+                            (remove)="removeMessageGroup($event)">
+                        </app-chat-panel-message>
+                    </div>
                     }
 
                     }
@@ -282,7 +284,8 @@
 
             <div class="flex flex-col w-full gap-1 relative">
                 @for(index of indexList; track $index) {
-                <div class="flex gap-1 w-full" [ngStyle]="index===0?{position:'sticky',top:0,zIndex:1}:{}">
+                <div #chatPanelGroupElem class="flex gap-1 w-full"
+                    [ngStyle]="index===0?{position:'sticky',top:0,zIndex:2}:{}">
                     @for(thread of selectedThreadGroup.threadList;track $index){
 
                     <div class="w-0 flex-grow">
@@ -299,7 +302,7 @@
                         </app-chat-panel-system>
                         } @else if(['assistant', 'user'].includes(messageGroup.role)) {
                         <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-                            [layout]="userService.chatLayout" (edit)="editChat($event)"
+                            [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
                             (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
                             (remove)="removeMessageGroup($event)">
                         </app-chat-panel-message>
@@ -362,7 +365,7 @@
                 @for(content of inputArea.content; track $index){
                 @if(content.type==='text'){
                 <textarea (keydown)="onKeyDown($event)" #textAreaElem
-                    [placeholder]="appFileDrop?.isHovered?'ファイルドロップ':(placeholder||'メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
+                    [placeholder]="appFileDrop()?.isHovered?'ファイルドロップ':(placeholder||'メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
                     [(ngModel)]="content.text" (change)="onChange()"></textarea>
 
                 @if(chatStreamSubscriptionList[selectedThreadGroup.id]){

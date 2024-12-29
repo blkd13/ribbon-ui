@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DocViewComponent } from '../doc-view/doc-view.component';
@@ -9,31 +9,27 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-doc-tag',
-  standalone: true,
   imports: [MatIconModule, MatDialogModule, MatTooltipModule, CommonModule],
   templateUrl: './doc-tag.component.html',
   styleUrl: './doc-tag.component.scss'
 })
 export class DocTagComponent {
 
-  @Input()
-  removable = true;
+  readonly removable = input(true);
 
-  @Input()
-  content!: (ContentPart | ChatContent);
+  readonly content = input.required<(ContentPart | ChatContent)>();
 
-  @Output()
-  remove: EventEmitter<ContentPart | ChatContent> = new EventEmitter();
+  readonly remove = output<ContentPart | ChatContent>();
 
   readonly dialog: MatDialog = inject(MatDialog);
 
   open(): void {
-    this.dialog.open<DocViewComponent>(DocViewComponent, { width: '80vw', data: { content: this.content } });
+    this.dialog.open<DocViewComponent>(DocViewComponent, { width: '80vw', data: { content: this.content() } });
   }
 
   onRemove($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
-    this.remove.emit(this.content);
+    this.remove.emit(this.content());
   }
 }

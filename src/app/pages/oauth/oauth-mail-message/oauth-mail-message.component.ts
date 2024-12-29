@@ -2,11 +2,10 @@ import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
-  selector: 'app-oauth-mail-message',
-  standalone: true,
-  imports: [],
-  templateUrl: './oauth-mail-message.component.html',
-  styleUrl: './oauth-mail-message.component.scss'
+    selector: 'app-oauth-mail-message',
+    imports: [],
+    templateUrl: './oauth-mail-message.component.html',
+    styleUrl: './oauth-mail-message.component.scss'
 })
 export class OAuthMailMessageComponent {
 

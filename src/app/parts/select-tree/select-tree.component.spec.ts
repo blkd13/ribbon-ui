@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ChatPanelBaseComponent } from './chat-panel-base.component';
+import { SelectTreeComponent } from './select-tree.component';
 
-describe('ChatPanelBaseComponent', () => {
-  let component: ChatPanelBaseComponent;
-  let fixture: ComponentFixture<ChatPanelBaseComponent>;
+describe('SelectTreeComponent', () => {
+  let component: SelectTreeComponent;
+  let fixture: ComponentFixture<SelectTreeComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ChatPanelBaseComponent]
+      imports: [SelectTreeComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(ChatPanelBaseComponent);
+    fixture = TestBed.createComponent(SelectTreeComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

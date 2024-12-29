@@ -19,8 +19,8 @@ import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 import { CollectionViewer, SelectionChange, DataSource } from '@angular/cdk/collections';
 import { FlatTreeControl } from '@angular/cdk/tree';
 import { OnInit, Component, Injectable, inject } from '@angular/core';
-import { BehaviorSubject, merge, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { BehaviorSubject, merge, Observable, Subject } from 'rxjs';
+import { map, single, startWith, tap } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 
 // フラットなノード構造の定義
@@ -66,39 +66,63 @@ interface BoxResponse {
 export class DynamicDatabase {
   // box: BoxService = inject(BoxService);
 
-  // 初期データの生成
-  getInitialData(jsonData: BoxResponse): DynamicFlatNode[] {
-    return jsonData.entries.map(item => new DynamicFlatNode(
-      item.name,
-      item.type,
-      item.id,
-      0,
-      item.type === 'folder'
-    ));
-  }
-
+  store: { [key: string]: DynamicFlatNode[] } = localStorage.getItem('box') ? JSON.parse(localStorage.getItem('box')!) : {};
   http: HttpClient = inject(HttpClient);
+
+
+  // // 初期データの生成
+  // getInitialData(jsonData: BoxResponse): DynamicFlatNode[] {
+  //   return jsonData.entries.map(item => new DynamicFlatNode(
+  //     item.name,
+  //     item.type,
+  //     item.id,
+  //     0,
+  //     item.type === 'folder'
+  //   ));
+  // }
 
   // 子ノードの取得（ダミーAPI）
   getChildren(nodeId: string): Observable<DynamicFlatNode[]> {
-    return this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/${nodeId}/items`)
+    // 事前にキャッシュを取り出す
+    const cached = this.store[nodeId];
+
+    // HTTPリクエストの Observable
+    const request$ = this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/${nodeId}/items`)
       .pipe(
-        map(response => response.entries.map(item =>
-          new DynamicFlatNode(
-            item.name,
-            item.type,
-            item.id,
-            0,  // レベルは呼び出し側で適切に設定
-            item.type === 'folder'
+        map(response =>
+          response.entries.map(item =>
+            new DynamicFlatNode(
+              item.name,
+              item.type,
+              item.id,
+              0,
+              item.type === 'folder'
+            )
           )
-        ))
+        ),
+        tap(mapped => {
+          // HTTPで取れたデータは store にキャッシュ
+          this.store[nodeId] = mapped;
+          localStorage.setItem('box', JSON.stringify(this.store));
+        })
       );
+
+    if (cached) {
+      // キャッシュがあれば「キャッシュを先に吐く → HTTPレスポンスを流す」の二発更新
+      return request$.pipe(
+        // 「ストリームの先頭にキャッシュを流す」(二発更新の 1 発目)
+        startWith(cached)
+      );
+    } else {
+      // キャッシュが無ければ普通に HTTPレスポンスのみ流す
+      return request$;
+    }
   }
+
 
   // ダウンロードメソッドを追加
   downloadFile(fileId: string, fileName: string): Observable<void> {
-    return this.http.get(
-      `/user/oauth/api/proxy/box/2.0/files/${fileId}/content`,
+    return this.http.get(`/user/oauth/api/proxy/box/2.0/files/${fileId}/content`,
       { responseType: 'blob' }
     ).pipe(
       map(blob => {
@@ -158,21 +182,39 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
     this.dataChange.next(this.data);
 
     if (expand) {
+      // this._database.getChildren(node.id).subscribe(children => {
+      //   const index = this.data.indexOf(node);
+      //   if (index < 0) return;
+
+      //   // 子ノードのレベルを設定
+      //   const nodes = children.map(child => {
+      //     child.level = node.level + 1;
+      //     return child;
+      //   });
+
+      //   // データの挿入
+      //   this.data.splice(index + 1, 0, ...nodes);
+      //   node.isLoading = false;
+      //   this.dataChange.next(this.data);
+      // });
+
       this._database.getChildren(node.id).subscribe(children => {
         const index = this.data.indexOf(node);
         if (index < 0) return;
 
-        // 子ノードのレベルを設定
-        const nodes = children.map(child => {
-          child.level = node.level + 1;
-          return child;
-        });
+        // いったん "node より下の階層" を全部消してから
+        let count = 0;
+        for (let i = index + 1; i < this.data.length && this.data[i].level > node.level; i++, count++) { }
+        this.data.splice(index + 1, count);
 
-        // データの挿入
-        this.data.splice(index + 1, 0, ...nodes);
+        // 最新データを挿入
+        children.forEach(child => child.level = node.level + 1);
+        this.data.splice(index + 1, 0, ...children);
+
         node.isLoading = false;
         this.dataChange.next(this.data);
       });
+
     } else {
       const index = this.data.indexOf(node);
       let count = 0;
@@ -186,7 +228,6 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
 
 @Component({
   selector: 'app-box',
-  standalone: true,
   imports: [
     CommonModule, FormsModule,
     MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
@@ -237,13 +278,16 @@ export class BoxComponent implements OnInit {
   }
 
   onTop(): void {
-    this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/0/items`).subscribe({
+
+    this.database.getChildren('0').subscribe({
+      // this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/0/items`).subscribe({
       next: next => {
-        this.boxSearchResult = next;
+        // this.boxSearchResult = next;
         console.log(next);
 
-        // 初期データの設定
-        this.dataSource.data = this.database.getInitialData(next);
+        // // 初期データの設定
+        // this.dataSource.data = this.database.getInitialData(next);
+        this.dataSource.data = next;
       }
     });
   }
@@ -267,8 +311,9 @@ export class BoxComponent implements OnInit {
         this.boxSearchResult = next;
         console.log(next);
 
-        // 初期データの設定
-        this.dataSource.data = this.database.getInitialData(next);
+        // // 初期データの設定
+        // this.dataSource.data = this.database.getInitialData(next);
+        this.dataSource.data = next;
       },
       error: error => {
         console.error(error);

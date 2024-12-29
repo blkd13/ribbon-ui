@@ -1,4 +1,4 @@
-import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection, isDevMode, APP_INITIALIZER, inject } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection, isDevMode, inject, provideAppInitializer } from '@angular/core';
 import { provideRouter, withHashLocation, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -49,15 +49,14 @@ export const appConfig: ApplicationConfig = {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000'
     }),
-    {
-      provide: APP_INITIALIZER,
-      multi: true,
-      useFactory: () => {
+    provideAppInitializer(() => {
+        const initializerFn = (() => {
         const iconRegistry = inject(MatIconRegistry);
         return () => {
           iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
         };
-      },
-    }
+      })();
+        return initializerFn();
+      })
   ]
 };

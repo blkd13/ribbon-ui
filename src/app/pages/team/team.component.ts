@@ -18,11 +18,10 @@ import { EditTeamMemberDialogComponent } from '../../parts/edit-team-member-dial
 import { Utils } from '../../utils';
 
 @Component({
-  selector: 'app-team',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, RelativeTimePipe, MatIconModule, MatButtonModule],
-  templateUrl: './team.component.html',
-  styleUrl: './team.component.scss'
+    selector: 'app-team',
+    imports: [CommonModule, FormsModule, RouterModule, RelativeTimePipe, MatIconModule, MatButtonModule],
+    templateUrl: './team.component.html',
+    styleUrl: './team.component.scss'
 })
 export class TeamComponent implements OnInit {
   readonly authService: AuthService = inject(AuthService);

@@ -12,11 +12,10 @@ import { PredictHistoryComponent } from '../../parts/predict-history/predict-his
 import { MatSelectModule } from '@angular/material/select';
 
 @Component({
-  selector: 'app-department-management',
-  standalone: true,
-  imports: [CommonModule, FormsModule, MatRadioModule, MatSelectModule],
-  templateUrl: './department-management.component.html',
-  styleUrl: './department-management.component.scss'
+    selector: 'app-department-management',
+    imports: [CommonModule, FormsModule, MatRadioModule, MatSelectModule],
+    templateUrl: './department-management.component.html',
+    styleUrl: './department-management.component.scss'
 })
 export class DepartmentManagementComponent implements OnInit {
 
@@ -67,7 +66,7 @@ export class DepartmentManagementComponent implements OnInit {
 
   eventCancel($event: MouseEvent): void {
     $event.stopImmediatePropagation();
-    $event.preventDefault();
+    // $event.preventDefault();
   }
 
   updateUserStatus(member: DepartmentMember): void {

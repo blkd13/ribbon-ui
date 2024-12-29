@@ -1,22 +1,19 @@
 import { CommonModule } from '@angular/common';
 import { ApiMattermostService, MattermostTeamForView } from './../../services/api-mattermost.service';
-import { Component, inject, Input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 
 @Component({
-  selector: 'app-mm-team-logo',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './mm-team-logo.component.html',
-  styleUrl: './mm-team-logo.component.scss'
+    selector: 'app-mm-team-logo',
+    imports: [CommonModule],
+    templateUrl: './mm-team-logo.component.html',
+    styleUrl: './mm-team-logo.component.scss'
 })
 export class MmTeamLogoComponent {
   readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
 
-  @Input()
-  mmTeam!: MattermostTeamForView;
+  readonly mmTeam = input.required<MattermostTeamForView>();
 
-  @Input()
-  width?: number;
+  readonly width = input<number>();
 
   isImage: boolean = true;
 }

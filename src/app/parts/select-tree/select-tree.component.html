@@ -1,0 +1,82 @@
+<!-- MIMEツリー -->
+<div>
+    <div>MIME/拡張子ツリー</div>
+    <ul style="margin-left: -40px;">
+        @for(extNode of extTree;track $index){
+        <li>
+            @if(extNode.children.length > 1){
+
+            <mat-checkbox (click)="stopPropagation($event)" (change)="toggleMimeSelection(extNode)"
+                [indeterminate]="extNode.indeterminate" [color]="extNode.indeterminate?'secondary':'primary'"
+                [checked]="extNode.isActive" [disabled]="extNode.disabled">
+                <!-- {{ extNode.depth }}- -->
+                {{ extNode.name || '(拡張子無し)' }}
+            </mat-checkbox>
+            <ul>
+                @for(mime of extNode.children;track $index){
+                <li>
+                    <mat-checkbox (click)="stopPropagation($event)" (change)="toggleMimeSelection(mime)"
+                        [checked]="mime.isActive" [disabled]="mime.disabled"
+                        [color]="mime.indeterminate?'secondary':'primary'">
+                        {{mime.name}}
+                    </mat-checkbox>
+                </li>
+                }
+            </ul>
+
+            } @else {
+            <!-- 1個しかない場合は1行表示 -->
+            <mat-checkbox (click)="stopPropagation($event)" (change)="toggleMimeSelection(extNode.children[0])"
+                [checked]="extNode.children[0].isActive" [disabled]="extNode.disabled" color="primary">
+                {{ extNode.name || 'no-ext' }}
+                ({{extNode.children[0].name}})
+            </mat-checkbox>
+            }
+        </li>
+        }
+    </ul>
+</div>
+
+<!-- ファイルツリー -->
+<div>
+    <div>ファイルツリー</div>
+    <ul style="margin-left: -40px;">
+        @for(node of fileTree;track $index){
+        <ng-container *ngTemplateOutlet="renderNode; context: { $implicit: node }"></ng-container>
+        }
+    </ul>
+    <ng-template #renderNode let-node>
+        <li>
+            @switch (node.type) {
+            @case ('folder') {
+            <div (click)="switchFolder(node)" style="display: flex;align-items: center;">
+                <mat-icon color="primary"
+                    style="display: flex;justify-content: center;align-items: center;height:40px;width:40px;transform: translateY(0);">{{node.expanded?'folder_open':'folder'}}</mat-icon>
+                <div class="flex items-center" [title]="node.path">
+                    <mat-checkbox [indeterminate]="node.indeterminate"
+                        [color]="node.indeterminate?'secondary':'primary'" (click)="stopPropagation($event)"
+                        (change)="toggleFolder(node)" [checked]="node.isActive" [disabled]="node.disabled">
+                    </mat-checkbox>
+                    <div class="truncate cursor-pointer">{{node.name}}</div>
+                </div>
+            </div>
+            @if(node.children && node.expanded){
+            <ul style="padding-left: 40px;">
+                @for(child of node.children;track $index){
+                <ng-container *ngTemplateOutlet="renderNode; context: { $implicit: child }"></ng-container>
+                }
+            </ul>
+            }
+            }
+            @case ('file') {
+            <div class="flex items-center" [title]="node.path">
+                <mat-checkbox color="primary" (change)="toggleFile(node)" [checked]="node.isActive"
+                    [disabled]="node.disabled"></mat-checkbox>
+                <div class="truncate cursor-pointer w-40" (click)="selectFile(node)"
+                    [title]="node.disabled?'このファイルは無効です':node.path">{{node.name}}</div>
+            </div>
+            }
+            }
+        </li>
+    </ng-template>
+</div>

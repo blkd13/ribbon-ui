@@ -1,12 +1,15 @@
 // cursor-position.directive.ts
-import { Directive, ElementRef, HostListener, Renderer2, Output, EventEmitter } from '@angular/core';
+import { Directive, ElementRef, HostListener, Renderer2, output } from '@angular/core';
 
 @Directive({
   selector: '[appCursorPosition]',
   standalone: true,
 })
 export class CursorPositionDirective {
-  @Output() cursorPositionChange = new EventEmitter<{ x: number, y: number }>();
+  readonly cursorPositionChange = output<{
+    x: number;
+    y: number;
+}>();
   private mirror: HTMLElement | null = null;
   cursorX: number = 0;
   cursorY: number = 0;
