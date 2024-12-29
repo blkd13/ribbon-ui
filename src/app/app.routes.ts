@@ -16,7 +16,15 @@ export const routes: Routes = [
             ],
         }, { path: '**', redirectTo: 'timeline' }],
     },
-    { path: 'box', canActivate: [oAuthGuardGenerator('box')], loadComponent: () => import('./pages/box/box.component').then(m => m.BoxComponent) },
+    {
+        path: 'box', canActivate: [oAuthGuardGenerator('box')], children: [{
+            path: ':type', children: [
+                { path: ':id', loadComponent: () => import('./pages/box/box.component').then(m => m.BoxComponent) },
+                { path: '**', redirectTo: '0' }
+            ],
+        }, { path: '**', redirectTo: 'folder' }]
+    },
+    { path: 'gitlab', canActivate: [oAuthGuardGenerator('gitlab')], loadComponent: () => import('./pages/gitlab/gitlab.component').then(m => m.GitlabComponent) },
     { path: 'department', canActivate: [departmentGuard], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
     {
         path: 'chat', children: [{

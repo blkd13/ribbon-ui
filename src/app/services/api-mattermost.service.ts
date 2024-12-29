@@ -32,7 +32,7 @@ export class ApiMattermostService {
     if (userIds.length === 0 && userNames.length === 0) {
       return of([]);
     } else {
-      const url = `/user/oauth/api/mattermost/user`;
+      const url = `/user/mattermost/user`;
       return this.http.post<MattermostUser[]>(url, { ids: userIds, names: userNames }).pipe(tap(users =>
         users.forEach(user => user.nickname = user.nickname || user.last_name || user.first_name || user.username)
       ));

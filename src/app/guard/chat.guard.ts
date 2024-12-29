@@ -18,7 +18,7 @@ export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateF
           },
           error: (err) => {
             // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
-            location.href = `/api/oauth/${oAuthProvider}/login/home`;
+            location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
             console.error(err);
           },
         });
@@ -26,7 +26,7 @@ export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateF
       } else {
         console.log('OAuth2ログインが必要です');
         // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
-        location.href = `/api/oauth/${oAuthProvider}/login/home`;
+        location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
         // router.navigate(['/home']);
         return false;
       }

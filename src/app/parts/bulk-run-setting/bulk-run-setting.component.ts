@@ -1,5 +1,5 @@
 import { MatInputModule } from '@angular/material/input';
-import { Component, ElementRef, inject, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Component, ElementRef, inject, viewChild, viewChildren } from '@angular/core';
 import { FormsModule, NgModel } from '@angular/forms';
 import { concatMap, from, map, mergeMap, of, Subscription, switchMap } from 'rxjs';
 
@@ -37,11 +37,9 @@ export class BulkRunSettingComponent {
   dataSource: ({ type: 'text', text: string } | { type: 'file', text: string, fileGroupId: string })[] = [];
 
   promptTemplate = ``;
-  @ViewChild('promptTemplateElement')
-  promptTemplateElement!: ElementRef<HTMLTextAreaElement>;
+  readonly promptTemplateElement = viewChild.required<ElementRef<HTMLTextAreaElement>>('promptTemplateElement');
 
-  @ViewChildren('valueElement')
-  valueElement!: QueryList<ElementRef<HTMLInputElement>>;
+  readonly valueElement = viewChildren<ElementRef<HTMLInputElement>>('valueElement');
 
 
   contents: ContentPart[] = [];
@@ -132,25 +130,25 @@ export class BulkRunSettingComponent {
   onKeyDown($event: KeyboardEvent, index: number = -1): void {
     // Enterが押されたら次の行に移る
     if ($event.key === 'Enter') {
-      if (this.valueElement.length > index + 1) {
+      if (this.valueElement().length > index + 1) {
       } else {
         this.addRow();
       }
       setTimeout(() => {
-        this.valueElement.get(index + 1)?.nativeElement.focus();
+        this.valueElement().at(index + 1)?.nativeElement.focus();
       }, 100);
     } else if ($event.key === 'ArrowUp') {
       if (index > 0) {
-        this.valueElement.get(index - 1)?.nativeElement.focus();
+        this.valueElement().at(index - 1)?.nativeElement.focus();
         setTimeout(() => {
-          this.valueElement.get(index - 1)?.nativeElement.select();
+          this.valueElement().at(index - 1)?.nativeElement.select();
         }, 0);
       }
     } else if ($event.key === 'ArrowDown') {
-      if (this.valueElement.length > index + 1) {
-        this.valueElement.get(index + 1)?.nativeElement.focus();
+      if (this.valueElement().length > index + 1) {
+        this.valueElement().at(index + 1)?.nativeElement.focus();
         setTimeout(() => {
-          this.valueElement.get(index + 1)?.nativeElement.select();
+          this.valueElement().at(index + 1)?.nativeElement.select();
         }, 0);
       }
     }

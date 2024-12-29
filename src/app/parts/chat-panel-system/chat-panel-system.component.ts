@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, Output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,25 +15,23 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DialogComponent } from '../dialog/dialog.component';
 
 @Component({
-    selector: 'app-chat-panel-system',
-    imports: [
-        CommonModule, FormsModule, DocTagComponent,
-        MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
-        MatDialogModule,
-    ],
-    templateUrl: './chat-panel-system.component.html',
-    styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss']
+  selector: 'app-chat-panel-system',
+  imports: [
+    CommonModule, FormsModule, DocTagComponent,
+    MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
+    MatDialogModule,
+  ],
+  templateUrl: './chat-panel-system.component.html',
+  styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss']
 })
 export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
-  @Input() thread!: Thread;
-  @Input() removable!: boolean;
+  readonly thread = input.required<Thread>();
+  readonly removable = input.required<boolean>();
 
-  @Output('removeThread')
-  removeThreadEmitter: EventEmitter<Thread> = new EventEmitter();
+  readonly removeThreadEmitter = output<Thread>({ alias: 'removeThread' });
 
-  @Output('modelChange')
-  modelChangeEmitter: EventEmitter<string> = new EventEmitter();
+  readonly modelChangeEmitter = output<string>({ alias: 'modelChange' });
 
   readonly dialog: MatDialog = inject(MatDialog);
 
@@ -41,13 +39,14 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
   removeThread($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
-    this.removeThreadEmitter.emit(this.thread);
+    this.removeThreadEmitter.emit(this.thread());
   }
 
   modelChange(): void {
-    this.modelChangeEmitter.emit(this.thread.inDto.args.model);
+    const thread = this.thread();
+    this.modelChangeEmitter.emit(thread.inDto.args.model || '');
     // console.log(`Change---------------${this.thread.inDto.args.model}`);
-    this.modelCheck([this.thread.inDto.args.model || '']);
+    this.modelCheck([thread.inDto.args.model || '']);
   }
 
   modelCheck(modelList: string[] = []): void {

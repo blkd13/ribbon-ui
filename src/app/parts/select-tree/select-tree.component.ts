@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, input, OnInit, output } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
+import { FileEntity, FileEntityForView, FileGroupEntity, FileGroupEntityForView, FileManagerService } from '../../services/file-manager.service';
 
 interface OrgStruct {
   pare: OrgNode | undefined;
@@ -133,12 +134,14 @@ function buildFileTreeFromFileInfo(files: FileInfo[]): { root: TreeNode[], folde
 }
 
 function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
-  // const extList = Array.from(new Set(_files.map(file => file.path.split('.').pop() || ''))).sort();
+  // const extList = Array.from(new Set(_files.map(file => file.name.split('.').pop() || ''))).sort();
   const extList: MimeTreeNode[] = [];
   const extMap = {} as { [ext: string]: MimeTreeNode };
   const extMimeMap = {} as { [ext: string]: { [fileType: string]: MimeTreeNode } };
   _files.forEach(file => {
-    const ext = file.path.includes('.') ? (file.path.split('.').pop() || '') : '';
+    // .から始まるものは拡張子ではないので削ってからsplitする
+    const trimedName = file.name.replaceAll(/^\.*/g, '');
+    const ext = trimedName.includes('.') ? (trimedName.split('.').pop() || '') : '';
     file.ext = ext;
     if (!extMap[ext]) {
       extMap[ext] = {
@@ -191,10 +194,10 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
 }
 
 @Component({
-    selector: 'app-file-tree',
-    imports: [CommonModule, MatCheckboxModule, MatIconModule],
-    templateUrl: './select-tree.component.html',
-    styleUrls: ['./select-tree.component.scss']
+  selector: 'app-file-tree',
+  imports: [CommonModule, MatCheckboxModule, MatIconModule],
+  templateUrl: './select-tree.component.html',
+  styleUrls: ['./select-tree.component.scss']
 })
 export class SelectTreeComponent implements OnInit {
   fileTree: TreeNode[] = [];
@@ -216,7 +219,66 @@ export class SelectTreeComponent implements OnInit {
     { ...this.initFile(), fileSize: 5120, path: '/var/www/assets/images/image2.jpg', name: 'image2.jpg', fileType: 'image/jpeg' },
     { ...this.initFile(), fileSize: 1024, path: '/home/user/backups/system/backup1.tar.gz', name: 'backup1.tar.gz', fileType: 'application/gzip' },
   ];
+
+  readonly fileGroup = input.required<FileGroupEntityForView>();
+  readonly selectedFile = input<FileEntityForView>();
+
+  readonly selectFile$ = output<FileEntityForView>();
+  selectFile(file: OrgNode): void {
+    this.selectFile$.emit(file as any as FileEntityForView);
+  }
+  // readonly messageGroup = input.required<MessageGroupForView>();
+  // readonly index = input<number>();
+  // // チャット入力欄
+  // readonly textAreaElem = viewChild<ElementRef<HTMLTextAreaElement>>('textAreaElem');
+  // readonly textBodyElem = viewChild<ElementRef<HTMLDivElement>>('textBodyElem');
+  // readonly placeholder = input<string>();
+  // readonly exPanel = viewChild.required<MatExpansionPanel>('exPanel');
+  // readonly layout = input.required<'flex' | 'grid'>();
+  invalidMimeTypes = [
+    'application/octet-stream',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/java-vm',
+    'application/x-elf',
+    'application/xml',
+    'application/x-msdownload',
+    'application/zip',
+    'image/x-icon',
+  ];
+  invalidDirNames = [
+    '.git',
+    '.svn',
+    'node_modules',
+    // 'bower_components',
+    // 'dist',
+    // 'build',
+    // 'target',
+  ];
   ngOnInit(): void {
+    this.fileInfos = [];
+
+    this.fileGroup().files.filter((file, index) => {
+      // (file as any).index = index;
+      // // 除外するファイルを指定
+      // if (this.invalidMimeTypes.includes(file.fileType)) {
+      //   return false;
+      // } else if (this.invalidDirNames.includes(file.filePath.split('/').pop() || '')) {
+      //   return false;
+      // } else { }
+      return true;
+    }).forEach(file => {
+      const fileInfo = Object.assign(file, {
+        index: this.fileInfos.length,
+        // 構造化用の情報を追加。元オブジェクトの参照を切らさないためにObject.assignを使う
+        path: file.filePath,
+        name: file.fileName,
+        disabled: false,
+        depth: -1,
+        pare: undefined,
+        type: 'file' as 'file',
+      });
+      this.fileInfos.push(fileInfo);
+    });
     const { root, folderList } = buildFileTreeFromFileInfo(this.fileInfos);
     this.fileTree = root;
     this.folderList = folderList;
@@ -224,8 +286,10 @@ export class SelectTreeComponent implements OnInit {
 
     this.fileInfos.sort((a, b) => a.path.localeCompare(b.path));
     this.fileInfos.forEach(file => {
-      // TODO mime等でのフィルターを考慮してisCheckedの初期値を設定
-      file.isActive = true;
+      if (this.invalidMimeTypes.includes(file.fileType)) {
+        file.isActive = false;
+        file.disabled = true;
+      } else { }
     });
 
     this.folderList.sort((a, b) => a.path.localeCompare(b.path));
@@ -233,6 +297,11 @@ export class SelectTreeComponent implements OnInit {
       // TODO .git, .svn等の特定のフォルダを除外する場合はここでチェックを外す .gitignore等を参照
       // folder.isActive = true;
       folder.expanded = folder.depth as number < 2;
+      if (this.invalidDirNames.includes(folder.name)) {
+        folder.isActive = false;
+        folder.disabled = true;
+        folder.expanded = false;
+      }
     });
   }
 
@@ -291,6 +360,12 @@ export class SelectTreeComponent implements OnInit {
     }
   }
 
+  readonly fileManagerService: FileManagerService = inject(FileManagerService);
+  applyIsActives(files: OrgStruct[]): void {
+    const ids = files.filter(file => file.type === 'file').map(file => (file as any as FileEntity).id) as string[];
+    this.fileManagerService.activateFile(files[0].isActive, ids).subscribe();
+  }
+
   switchFolder(folder: TreeNode): void {
     folder.expanded = !folder.expanded;
   }
@@ -300,6 +375,7 @@ export class SelectTreeComponent implements OnInit {
     const changedList: OrgStruct[] = [folder];
     this.setActiveRecursiveDown(folder, folder.isActive, changedList);
     this.setActiveRecursiveUp(folder, folder.isActive, changedList);
+    this.applyIsActives(changedList);
   }
   toggleMimeSelection(mimeNode: MimeTreeNode): void {
     mimeNode.isActive = !mimeNode.isActive;
@@ -330,11 +406,14 @@ export class SelectTreeComponent implements OnInit {
     changeDetailList.forEach(node => {
       this.setActiveRecursiveUp(node, node.isActive, changedList);
     });
+
+    this.applyIsActives(changedList);
   }
   toggleFile(file: OrgStruct): void {
     file.isActive = !file.isActive;
     const changedList: OrgStruct[] = [file];
     this.setActiveRecursiveUp(file, file.isActive, changedList);
+    this.applyIsActives(changedList);
   }
 
   /** イベント伝播しないように止める */

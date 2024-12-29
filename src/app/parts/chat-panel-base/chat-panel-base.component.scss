@@ -20,7 +20,7 @@
 
 .message-notediting {
     border: 1px solid #444;
-    padding: 8px 12px 0;
+    padding: 2px 6px 2px;
 }
 
 .chat-input {
@@ -46,8 +46,13 @@
     font-weight: bold;
 }
 
-.message.user {
+.message.user,
+.message.user .controller-bottom {
     background-color: rgb(42, 50, 53);
+
+    .message-notediting {
+        border: 1px solid lighten(rgb(42, 50, 53), 7%);
+    }
 }
 
 .user {
@@ -60,8 +65,13 @@
     }
 }
 
-.message.assistant {
+.message.assistant,
+.message.assistant .controller-bottom {
     background-color: rgb(56, 53, 49);
+
+    .message-notediting {
+        border: 1px solid lighten(rgb(56, 53, 49), 7%);
+    }
 }
 
 .assistant {
@@ -74,7 +84,8 @@
     }
 }
 
-.message.cached {
+.message.cached,
+.message.cached .controller-bottom {
     background-color: #313131;
 }
 
@@ -117,4 +128,30 @@
             padding: 0 12px 8px;
         }
     }
+}
+
+.controller-bottom {
+    padding: 0 8px;
+    justify-content: end;
+    position: absolute;
+    bottom: 10px;
+    display: flex;
+    top: auto;
+    right: 0;
+    border-radius: 40px;
+    border: 1px solid rgb(68, 68, 68);
+}
+
+.controller-bottom {
+    opacity: 0.1;
+    transition: opacity 0.3s;
+}
+
+.controller-bottom--hide {
+    bottom: 4px;
+    opacity: 0;
+}
+
+.controller-bottom:hover {
+    opacity: 1;
 }

@@ -2,7 +2,7 @@ import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MattermostChannelsCategoriesResponse, MattermostChannelsCategory, MattermostChannelsMembers, MattermostChannelsMembersResponse, MattermostEmoji, MattermostPost, MattermostReaction, MattermostTeamForView, MattermostTimeline, MattermostTimelineChannel, MattermostTimelineService, ToAiFilterType, ToAiIdType } from './../../services/api-mattermost.service';
 import { ApiMattermostService, ChannelPosts, MattermostChannel, MattermostChannelForView, MattermostTeam, MattermostTeamUnread, MattermostThread, MattermostUser, Post, Preference } from '../../services/api-mattermost.service';
-import { ChangeDetectorRef, Component, ElementRef, inject, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, inject, OnInit, viewChild, viewChildren } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -48,15 +48,15 @@ type InDtoSub = { message: string, fileList: FullPathFile[] };
 type InDto = Record<InType, InDtoSub>;
 
 @Component({
-    selector: 'app-mattermost',
-    imports: [
-        CommonModule, FormsModule, RouterModule, MarkdownModule, MatAutocompleteModule, MatSelectModule,
-        MatButtonModule, MatProgressSpinnerModule,
-        MatExpansionModule, MatIconModule, MatCheckboxModule, MatBadgeModule, MatMenuModule, MatDividerModule, MatTooltipModule, MatRadioModule,
-        MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
-    ],
-    templateUrl: './mattermost.component.html',
-    styleUrl: './mattermost.component.scss'
+  selector: 'app-mattermost',
+  imports: [
+    CommonModule, FormsModule, RouterModule, MarkdownModule, MatAutocompleteModule, MatSelectModule,
+    MatButtonModule, MatProgressSpinnerModule,
+    MatExpansionModule, MatIconModule, MatCheckboxModule, MatBadgeModule, MatMenuModule, MatDividerModule, MatTooltipModule, MatRadioModule,
+    MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
+  ],
+  templateUrl: './mattermost.component.html',
+  styleUrl: './mattermost.component.scss'
 })
 export class MattermostComponent implements OnInit {
   readonly authService: AuthService = inject(AuthService);
@@ -559,7 +559,8 @@ export class MattermostComponent implements OnInit {
               post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
                 if (index % 2 == 0) {
                   return block.split('\n').map(line => {
-                    if (line.trim()[0] === '|' && line.trim()[line.trim().length - 1] === '|') {
+                    const trimed = line.trim();
+                    if (trimed[0] === '|' && trimed[trimed.length - 1] === '|') {
                       return line;
                     } else {
                       return line + '\n';
@@ -598,7 +599,7 @@ export class MattermostComponent implements OnInit {
                 if (bef) {
                   if (post.channel_id === bef.channel_id && post.user_id == bef.user_id && post.root_id === bef.root_id && post.create_at - bef.create_at < 1000 * 60 * 5) {
                     // 1個前のやつにくっつける
-                    this.mmGroupedSerializedPostList[this.mmGroupedSerializedPostList.length - 1].push(post);
+                    this.mmGroupedSerializedPostList.at(-1)!.push(post);
                   } else {
                     this.mmGroupedSerializedPostList.push([post]);
                   }
@@ -626,7 +627,7 @@ export class MattermostComponent implements OnInit {
               if (this.mmThread && this.mmThread.length > 0) {
                 this.mmThread = this.mmThreadMas[this.mmThread[0][0].id];
                 // thread用のスクローラを最下端に持っていく
-                setTimeout(() => this.rScroll.nativeElement.scrollTop = this.rScroll.nativeElement.scrollHeight, 500);
+                setTimeout(() => this.rScroll().nativeElement.scrollTop = this.rScroll().nativeElement.scrollHeight, 500);
               } else { }
 
               this.mmGroupedFilteredPostList = this.mmGroupedSerializedPostList.filter(postGroup => this.selectedChannelIds.includes(postGroup[0].channel_id));
@@ -738,7 +739,8 @@ export class MattermostComponent implements OnInit {
           post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
             if (index % 2 == 0) {
               return block.split('\n').map(line => {
-                if (line.trim()[0] === '|' && line.trim()[line.trim().length - 1] === '|') {
+                const trimed = line.trim();
+                if (trimed[0] === '|' && trimed[trimed.length - 1] === '|') {
                   return line;
                 } else {
                   return line + '\n';
@@ -838,11 +840,11 @@ export class MattermostComponent implements OnInit {
               } else {
                 // 存在しないpostなら追加する。
                 this.mmPosts[post.id] = post;
-                const bef = this.mmGroupedSerializedPostList[this.mmGroupedSerializedPostList.length - 1][this.mmGroupedSerializedPostList[this.mmGroupedSerializedPostList.length - 1].length - 1];
+                const bef = this.mmGroupedSerializedPostList.at(-1)!.at(-1);
                 if (bef) {
                   if (post.channel_id === bef.channel_id && post.user_id == bef.user_id && post.root_id === bef.root_id && post.create_at - bef.create_at < 1000 * 60 * 2) {
                     // 1個前のやつにくっつける
-                    this.mmGroupedSerializedPostList[this.mmGroupedSerializedPostList.length - 1].push(post);
+                    this.mmGroupedSerializedPostList.at(-1)!.push(post);
                   } else {
                     this.mmGroupedSerializedPostList.push([post]);
                   }
@@ -899,7 +901,7 @@ export class MattermostComponent implements OnInit {
             if (bef) {
               if (post.channel_id === bef.channel_id && post.user_id == bef.user_id && post.root_id === bef.root_id && post.create_at - bef.create_at < 1000 * 60 * 2) {
                 // 1個前のやつにくっつける
-                this.mmGroupedSerializedPostList[this.mmGroupedSerializedPostList.length - 1].push(post);
+                this.mmGroupedSerializedPostList.at(-1)!.push(post);
               } else {
                 this.mmGroupedSerializedPostList.push([post]);
               }
@@ -927,7 +929,7 @@ export class MattermostComponent implements OnInit {
           if (this.mmThread && this.mmThread.length > 0) {
             this.mmThread = this.mmThreadMas[this.mmThread[0][0].id];
             // thread用のスクローラを最下端に持っていく
-            setTimeout(() => this.rScroll.nativeElement.scrollTop = this.rScroll.nativeElement.scrollHeight, 500);
+            setTimeout(() => this.rScroll().nativeElement.scrollTop = this.rScroll().nativeElement.scrollHeight, 500);
           } else { }
 
           this.mmGroupedFilteredPostList = this.mmGroupedSerializedPostList.filter(postGroup => this.selectedChannelIds.includes(postGroup[0].channel_id));
@@ -1157,8 +1159,8 @@ export class MattermostComponent implements OnInit {
   }
 
   scrollToBottom(force: boolean = false): void {
-    if (force || this.scroll.nativeElement.scrollHeight - this.scroll.nativeElement.scrollTop < 600) {
-      setTimeout(() => this.scroll.nativeElement.scrollTop = this.scroll.nativeElement.scrollHeight, 300);
+    if (force || this.scroll().nativeElement.scrollHeight - this.scroll().nativeElement.scrollTop < 600) {
+      setTimeout(() => this.scroll().nativeElement.scrollTop = this.scroll().nativeElement.scrollHeight, 300);
     } else {
       // TODO 最下端に行くボタンを出す
     }
@@ -1277,7 +1279,7 @@ export class MattermostComponent implements OnInit {
           setTimeout(() => this.onScroll(event), 1000);
         }, 500);
       } else {
-        const scroller = this.scroll.nativeElement;
+        const scroller = this.scroll().nativeElement;
         if (scroller) {
           if (Math.ceil(scrollTop + scroller.clientHeight + 10) >= scroller.scrollHeight) {
             // 下端についたら表示量を絞る。
@@ -1521,7 +1523,7 @@ export class MattermostComponent implements OnInit {
                 if (bef) {
                   if (post.channel_id === bef.channel_id && post.user_id == bef.user_id && post.root_id === bef.root_id && post.create_at - bef.create_at < 1000 * 60 * 2) {
                     // 1個前のやつにくっつける
-                    this.mmGroupedSerializedPostList[this.mmGroupedSerializedPostList.length - 1].push(post);
+                    this.mmGroupedSerializedPostList.at(-1)!.push(post);
                   } else {
                     this.mmGroupedSerializedPostList.push([post]);
                   }
@@ -1562,8 +1564,8 @@ export class MattermostComponent implements OnInit {
       this.mmThread = this.mmThreadMas[post.root_id];
       // thread用のスクローラを最下端に持っていく
       setTimeout(() => {
-        this.rScroll.nativeElement.scrollTop = this.rScroll.nativeElement.scrollHeight;
-        this.textAreaElemThread.nativeElement.focus();
+        this.rScroll().nativeElement.scrollTop = this.rScroll().nativeElement.scrollHeight;
+        this.textAreaElemThread().nativeElement.focus();
       }, 500);
     }
   }
@@ -1576,17 +1578,13 @@ export class MattermostComponent implements OnInit {
   }
   summaryText = '';
 
-  @ViewChild('textAreaElemMain', { static: false })
-  textAreaElemMain!: ElementRef<HTMLTextAreaElement>;
+  readonly textAreaElemMain = viewChild.required<ElementRef<HTMLTextAreaElement>>('textAreaElemMain');
 
-  @ViewChild('textAreaElemThread', { static: false })
-  textAreaElemThread!: ElementRef<HTMLTextAreaElement>;
+  readonly textAreaElemThread = viewChild.required<ElementRef<HTMLTextAreaElement>>('textAreaElemThread');
 
-  @ViewChild('scroll', { static: false })
-  scroll!: ElementRef<HTMLDivElement>;
+  readonly scroll = viewChild.required<ElementRef<HTMLDivElement>>('scroll');
 
-  @ViewChild('rScroll', { static: false })
-  rScroll!: ElementRef<HTMLDivElement>;
+  readonly rScroll = viewChild.required<ElementRef<HTMLDivElement>>('rScroll');
 
   selectChannel(mmChannelId: string): Observable<any> {
     const selectedChannels = [mmChannelId];
@@ -1650,7 +1648,7 @@ export class MattermostComponent implements OnInit {
     });
   }
   // メンションリストのスクロールを操作するのに使う
-  @ViewChildren('mentionElem') mentionElems!: QueryList<ElementRef>;
+  readonly mentionElems = viewChildren<ElementRef>('mentionElem');
   timeoutId: any;
   onKeyDown(type: InType, $event: KeyboardEvent, channel_id: string, root_id?: string): void {
     if (this.mentionPosition) {
@@ -1664,7 +1662,7 @@ export class MattermostComponent implements OnInit {
 
         // 選択変更後、次のレンダリングサイクルで要素をスクロール
         setTimeout(() => {
-          const elements = this.mentionElems.toArray();
+          const elements = this.mentionElems();
           if (elements[this.mentionSelectorIndex]) {
             elements[this.mentionSelectorIndex].nativeElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           } else { }
@@ -1752,7 +1750,7 @@ export class MattermostComponent implements OnInit {
             // スレッド内の最後の発言者を取得して先頭に移動
             if (type === 'thread' && this.mmThreadMas[root_id || '']) {
               const threadList = this.mmThreadMas[root_id || ''];
-              const lastPostUserId = threadList[threadList.length - 1][0].user_id;
+              const lastPostUserId = threadList.at(-1)![0].user_id;
 
               // 最後の発言者をリストから探して先頭に移動
               const lastPosterIndex = this.mentionList.findIndex(user => user.id === lastPostUserId);
@@ -1799,8 +1797,10 @@ export class MattermostComponent implements OnInit {
     this.cursorPosition = $event;
   }
 
-  @ViewChildren(FileDropDirective)
-  appFileDropList?: QueryList<FileDropDirective>;
+  // @ViewChildren(FileDropDirective)
+  // appFileDropList?: QueryList<FileDropDirective>;
+
+  readonly appFileDropList = viewChildren<FileDropDirective>(FileDropDirective);
 
   onFilesDropped(type: InType, channel_id: string, files: FullPathFile[]): Subscription {
     // // 複数ファイルを纏めて追加したときは全部読み込み終わってからカウントする。

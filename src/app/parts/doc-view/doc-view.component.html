@@ -3,6 +3,7 @@
         display: block;
         padding: 20px;
         text-align: center;
+        height: calc(100vh - 100px);
     }
 
     .content {
@@ -14,44 +15,13 @@
 
 <div class="flex justify-center w-full">
     @if(fileGroup){
-    <div class="w-1/4">
-        <div class="w-full custom-scroll" style="height: calc(100vh - 210px)">
-            <div class="w-full sticky top-0 ">
-                <div class="w-full p-[10px]">ファイル種別</div>
-                @for(fileType of fileTypeList;track $index){
-                <div [title]="fileTypeMap[fileType].disabled?'この形式は対応していません':''"
-                    [ngClass]="{'cursor-not-allowed': fileTypeMap[fileType].disabled}">
-                    <mat-checkbox color="primary" [(ngModel)]="fileTypeMap[fileType].isActive"
-                        [disabled]="fileTypeMap[fileType].disabled"
-                        [indeterminate]="fileTypeMap[fileType].indeterminate" (change)="checkFileType(fileType)"
-                        class="text-left text-nowrap w-full">
-                        {{fileType}}
-                    </mat-checkbox>
-                </div>
-                }
-                <mat-divider></mat-divider>
-                <div class="w-full p-[10px]">ファイル一覧</div>
-            </div>
-
-            @for(file of fileGroup.files;track $index){
-            <div class="text-left text-nowrap cursor-pointer" [ngClass]="{'bg-gray-700':index==$index}"
-                (click)="setIndex($index)">
-                <mat-checkbox color="primary" [(ngModel)]="file.isActive" (change)="checkFile(file)"
-                    [disabled]="fileTypeMap[file.fileType].disabled"
-                    [ngClass]="{'cursor-not-allowed': fileTypeMap[file.fileType].disabled}"></mat-checkbox>
-                <span [title]="fileTypeMap[file.fileType].disabled?'この形式は対応していません':''">
-                    {{file.fileName}}
-                </span>
-            </div>
-            }
-        </div>
+    <div class="custom-scroll custom-scroll--thin content" #fileTree style="width: 250px">
+        <app-file-tree class="min-w-60" [fileGroup]="fileGroup" (selectFile$)="setFile($event)"></app-file-tree>
     </div>
-
-    <!-- @if(fileGroup.files.length&&index>0){
-    <button mat-icon-button (click)="setIndex(index-1)"><mat-icon>arrow_back_ios</mat-icon></button>
-    }
-    -->
-    <div class="custom-scroll w-full">
+    <div class="flex items-center cursor-ew-resize" [appDragDelta]="fileTree" position="right">
+        <mat-icon class="rotate-90 ">drag_handle</mat-icon>
+    </div>
+    <div class="custom-scroll flex-grow w-0">
         <h3>{{label}}</h3>
         @if(type==='image'){
         <img class="content" [src]="dataUrl" />

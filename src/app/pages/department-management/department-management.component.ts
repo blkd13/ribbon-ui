@@ -66,7 +66,7 @@ export class DepartmentManagementComponent implements OnInit {
 
   eventCancel($event: MouseEvent): void {
     $event.stopImmediatePropagation();
-    $event.preventDefault();
+    // $event.preventDefault();
   }
 
   updateUserStatus(member: DepartmentMember): void {

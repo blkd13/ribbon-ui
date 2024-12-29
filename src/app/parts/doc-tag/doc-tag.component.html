@@ -1,4 +1,4 @@
-<div class="doc-tag" (click)="open()" [matTooltip]="content.text||''" matTooltipPosition="above">
+<div class="doc-tag" (click)="open()" [matTooltip]="content().text||''" matTooltipPosition="above">
     <div class="thumbnail">
         <!-- @if (content.image_url.url.startsWith('data:image/')) {
         <img [src]="content.image_url.url" />
@@ -6,8 +6,8 @@
         <div>doc</div>
         } -->
     </div>
-    <div class="label">{{content.text || 'オブジェクト'}}</div>
-    @if(removable){
+    <div class="label">{{content().text || 'オブジェクト'}}</div>
+    @if(removable()){
     <mat-icon class="close" (click)="onRemove($event)">close</mat-icon>
     }
 </div>

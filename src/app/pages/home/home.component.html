@@ -6,7 +6,7 @@
             <div class="flex flex-col justify-between gap-3 items-end">
                 <select [(ngModel)]="model" class="model-select" (change)="changeModel()">
                     @for(option of chatService.modelList;track $index){
-                    <option [value]="option.id">{{option.tag}}：{{option.id}}</option>
+                    <option [ngClass]="[option.tag]" [value]="option.id">{{option.tag}}：{{option.id}}</option>
                     }
                 </select>
             </div>

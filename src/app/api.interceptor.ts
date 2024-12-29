@@ -35,7 +35,7 @@ export class ApiInterceptor implements HttpInterceptor {
         } else {
             // request.headers.set('Authorization', 'xxx');
         }
-        request = request.clone({ url, method,headers: request.headers.set('X-App-Version', this.g.version) });
+        request = request.clone({ url, method, headers: request.headers.set('X-App-Version', this.g.version) });
 
         // // 同時リクエストが多くなるとブラウザエラーになることがあったので適当に遅延させる機能を付けた
         // // pipe(delay)だと結果読み出しが遅延するだけで発射が遅延しないのでsetTimeoutを使う
@@ -67,8 +67,15 @@ export class ApiInterceptor implements HttpInterceptor {
                 // ログインページにリダイレクトするために401エラーをキャッチする
                 catchError((error: HttpErrorResponse) => {
                     if (this.g.autoRedirectToLoginPageIfAuthError && error.status === 401) {
-                        // 未認証の場合、ログインページにリダイレクト
-                        this.router.navigate(['/login']);
+                        if (request.url.startsWith(`/api/user/oauth/api/`)) {
+                            const provider = request.url.split('/')[6];
+                            // ログインページにリダイレクトする場合、リクエストURLを保存しておく
+                            location.href = `/api/oauth/${provider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+                            console.log(`redirect to login page: ${location.href}`);
+                        } else {
+                            // 未認証の場合、ログインページにリダイレクト
+                            this.router.navigate(['/login']);
+                        }
                     }
                     return throwError(() => error);
                 }),
