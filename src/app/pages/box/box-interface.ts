@@ -235,7 +235,7 @@ export interface BoxApiPermissions {
 }
 
 export interface BoxApiFolderItemEntry {
-    type: "folder";
+    type: 'folder';
     id: string;
     etag: string;
     name: string;
@@ -250,7 +250,7 @@ export interface BoxApiFolderItemEntry {
 }
 
 export interface BoxApiFileItemEntry {
-    type: "file";
+    type: 'file';
     id: string;
     etag: string;
     name: string;
@@ -267,8 +267,8 @@ export interface BoxApiFileItemEntry {
 }
 
 export interface BoxApiOrder {
-    by: "type" | "name";
-    direction: "ASC" | "DESC";
+    by: 'type' | 'name';
+    direction: 'ASC' | 'DESC';
 }
 
 export interface BoxApiFolderItemListResponse {

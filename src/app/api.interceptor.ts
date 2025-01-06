@@ -72,6 +72,11 @@ export class ApiInterceptor implements HttpInterceptor {
                             // ログインページにリダイレクトする場合、リクエストURLを保存しておく
                             location.href = `/api/oauth/${provider}/login?fromUrl=${encodeURIComponent(location.href)}`;
                             console.log(`redirect to login page: ${location.href}`);
+                        } else if (request.url.startsWith(`/api/user/oauth/account/`) && !request.url.includes('/logout') && !request.url.includes('/revoke')) { // logoutは除外する
+                            const provider = request.url.split('/')[5];
+                            // ログインページにリダイレクトする場合、リクエストURLを保存しておく
+                            location.href = `/api/oauth/${provider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+                            console.log(`redirect to login page: ${location.href}`);
                         } else {
                             // 未認証の場合、ログインページにリダイレクト
                             this.router.navigate(['/login']);

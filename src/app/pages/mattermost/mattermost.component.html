@@ -2,7 +2,7 @@
     <div class="h-0 flex-grow w-full flex">
         <div
             class="flex flex-col gap-1 p-2 team-sidebar custom-scroll custom-scroll--thin h-full w-[77px] items-center">
-            <a class="home" [routerLink]="['/home']">
+            <a class="home" [routerLink]="['/home']" href="#/home" (click)="stopPropagation($event)">
                 <mat-icon>home</mat-icon>
             </a>
             @for(mmTeam of mmTeamList; track $index){
