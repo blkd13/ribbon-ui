@@ -216,6 +216,20 @@ html>body {
         text-decoration: underline;
     }
 
+    .unstyled-link {
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+
+        &:focus,
+        &:hover {
+            text-decoration: none;
+            color: inherit;
+        }
+    }
+
+
+
     --mdc-fab-container-color: rgba(105, 184, 205, 20%);
 
     .mat-primary.mat-mdc-button-base {
@@ -223,6 +237,10 @@ html>body {
         --mat-icon-button-state-layer-color: rgb(105 184 205);
         --mat-icon-button-ripple-color: rgb(105 184 205);
     }
+
+    // var(--mdc-filled-text-field-input-text-color, var(--mat-sys-on-surface));
+    // caret-color: var(--mdc-filled-text-field-caret-color, var(--mat-sys-primary));
+    --mat-sys-primary: rgb(105 184 205);
 
     /* カスタムスクロールバー */
     .custom-scroll {

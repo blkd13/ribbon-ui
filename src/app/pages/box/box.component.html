@@ -1,33 +1,227 @@
-<!-- 検索ボックス -->
-<div class="search-box">
-    <input type="text" matInput placeholder="検索キーワード" [(ngModel)]="searchKeyword">
-    <button (click)="onSearch()">検索</button>
-</div>
-
-<button (click)="onTop()">トップへ移動</button>
-<mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
-    <!-- フォルダノード -->
-    <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding>
-        <div matTreeNodeToggle class="flex items-center cursor-pointer">
-            <button mat-icon-button>
-                @if(node.isLoading){
-                <mat-spinner diameter="20"></mat-spinner>
-                } @else {
-                <mat-icon>
-                    {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-                </mat-icon>
-                }
-            </button>
-            <mat-icon>folder</mat-icon>
-            {{node.name}}
+<div class="flex w-full">
+    <div class="">
+        <div class="p-6">
+            <a href="/#/box/folder/0" class="unstyled-link">
+                <button mat-button (click)="move($event,'0')">
+                    <mat-icon>folder</mat-icon>
+                    すべてのファイル
+                </button>
+            </a>
         </div>
-    </mat-tree-node>
 
-    <!-- ファイルノード -->
-    <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
-        <button mat-icon-button disabled></button>
-        <mat-icon>insert_drive_file</mat-icon>
-        <!-- <span class="file-node" (click)="onNodeClick(node)">{{node.name}}</span> -->
-        <a [href]="'/api/user/oauth/api/proxy/box/2.0/files/' + node.id + '/content'" download>{{node.name}}</a>
-    </mat-tree-node>
-</mat-tree>
+        @for(entry of collectionList?.entries;track $index) {
+
+        <mat-expansion-panel (opened)="onOpenCollection(entry)">
+            <mat-expansion-panel-header>
+                <mat-panel-title>
+                    <div class="cursor-pointer flex items-center p-2">
+                        <mat-icon>{{entry.collection_type==='favorites'?'bookmark_star':'bookmark'}}</mat-icon>
+                        {{entry.name}}
+                    </div>
+                </mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="p-5">
+                @if(entry.items) {
+
+                @if(entry.items.entries.length>0){
+                @for(item of entry.items.entries;track $index) {
+                <a href="/#/box/folder/0" (click)="move($event, item.id)" class="unstyled-link flex items-center p-2">
+                    <mat-icon>{{item.type}}</mat-icon>
+                    {{item.name}}
+                </a>
+                }
+                } @else {
+                <div>データがありません</div>
+                }
+
+                } @else {
+                <!-- <mat-spinner></mat-spinner> -->
+                Loading...
+                }
+            </div>
+        </mat-expansion-panel>
+        }
+
+        <!-- コレクション登録フォーム -->
+        <div class="flex items-center gap-2 p-2">
+            <mat-form-field>
+                <mat-label>コレクションID</mat-label>
+                <input matInput [(ngModel)]="collectionId" type="text" (input)="checkCollectionId($event)">
+            </mat-form-field>
+            <button [disabled]="!enableCollectionId" mat-raised-button color="primary" (click)="registCollection()"
+                style="width: 80px;">登録</button>
+        </div>
+
+    </div>
+
+    <div class="w-full">
+        <div>
+            <!-- 検索ボックス -->
+            <div class="flex items-center gap-2 p-2">
+                <mat-form-field>
+                    <mat-label>検索キーワード</mat-label>
+                    <input type="text" matInput placeholder="検索キーワード" [(ngModel)]="searchKeyword"
+                        (input)="onSearch($event)">
+                    <button mat-icon-button matSuffix (click)="searchKeyword='';boxSearchResult=undefined">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                </mat-form-field>
+                <!-- <button mat-raised-button color="primary" (click)="onSearch($event)">検索</button> -->
+            </div>
+
+            @if(boxSearchResult){
+            <div class="absolute bg-[#212121] border rounded-md shadow-md"
+                style="margin-left: 10px;margin-top: -20px;z-index: 1;border: 1px solid rgb(99 75 85 / var(--tw-border-opacity));"
+                (click)="searchKeyword='';boxSearchResult=undefined">
+                @for(entry of boxSearchResult.entries;track $index){
+
+                @if(entry.type === 'folder'){
+                <a href="/#/box/folder/{{entry.id}}" class="cursor-pointer unstyled-link" mat-menu-item
+                    (click)="searchKeyword='';boxSearchResult=undefined;move($event, entry.id)">
+                    <div class="p-2">
+                        <div class="flex items-center"><mat-icon>{{entry.type}}</mat-icon>{{entry.name}}</div>
+                        <div class="flex items-center gap-2 ml-10">
+                            <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                            <div>{{entry.modified_by.name}}</div>
+                            <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
+                        </div>
+                    </div>
+                </a>
+                } @else if(entry.type === 'file'){
+
+                <div class="cursor-pointer" mat-menu-item>
+                    <a class="p-2 block unstyled-link" href="{{boxOriginUri}}/file/{{entry.id}}" target="_blank">
+                        <div class="flex items-center">
+                            <mat-icon>insert_drive_file</mat-icon>{{entry.name}}<mat-icon>open_in_new</mat-icon>
+                        </div>
+                        <div class="flex items-center gap-2 ml-10 unstyled-link">
+                            <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                            <div>{{entry.modified_by.name}}</div>
+                            <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
+                        </div>
+                    </a>
+                </div>
+                <!-- 
+                -->
+                } @else {
+                {{entry|json}}
+                <!--
+                <div class="cursor-pointer flex items-center p-5">
+                    <div>{{entry.name}}</div>
+                    <div class="flex items-center gap-2">
+                        <div>{{entry.created_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                        <div>{{entry.created_by.name}}</div>
+                        <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
+                    </div>
+                </div>
+                -->
+                }
+
+                }
+            </div>
+            }
+        </div>
+
+        @if(tabList.length>0){
+        <mat-tab-group>
+            @for(tab of tabList;track tab.id) {
+            <mat-tab [label]="tab.name" (click)="move($event, tab.id)"></mat-tab>
+            }
+        </mat-tab-group>
+        }
+
+        <div>
+
+            @if(item && item.item_collection && item.item_collection.entries) {
+
+            <div>
+
+                <div class=" flex items-center gap-2 p-2">
+                    <button class="channel-menu flex items-center" mat-icon-button [matMenuTriggerFor]="onTreeList">
+                        <mat-icon class="cursor-pointer mr-2">account_tree</mat-icon>
+                    </button>
+                    @if(item.path_collection.entries.at(-1); as entry) {
+                    <a href="/#/box/folder/{{entry.id}}" class="unstyled-link" (click)="move($event, entry.id)">
+                        {{entry.name}}
+                    </a>
+                    /
+                    }
+                    <span class="cursor-pointer font-bold">{{item.name}}</span>
+                </div>
+                <mat-menu #onTreeList="matMenu">
+                    @for(entry of item.path_collection.entries;track $index){
+                    <a href="/#/box/folder/{{entry.id}}" class="unstyled-link" (click)="move($event, entry.id)"
+                        mat-menu-item>
+                        {{entry.name}}
+                    </a>
+                    <!-- 
+                    <div class="cursor-pointer flex items-center p-2" mat-menu-item
+                        [routerLink]="['/box', 'folder', entry.id]">
+                        {{entry.name}}
+                    </div>
+                    -->
+                    }
+                </mat-menu>
+
+            </div>
+
+            <div class="p-5">
+                @for(entry of item.item_collection.entries;track $index) {
+
+                @if(entry.type === 'folder'){
+                <!--
+                    <div [routerLink]="['/box', 'folder', entry.id]" class="cursor-pointer flex items-center p-2">
+                        <mat-icon>{{entry.type}}</mat-icon>
+                        <div>{{entry.name}}</div>
+                    </div>
+                -->
+                <a href="/#/box/folder/{{entry.id}}" class="unstyled-link flex justify-between items-center p-2">
+                    <div class="flex items-center p-2" (click)="move($event, entry.id)">
+                        <mat-icon>{{entry.type}}</mat-icon>
+                        <div>{{entry.name}}</div>
+                    </div>
+                    <div class="">
+                        @if(entry.modified_at){
+                        <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                        <div class="flex items-center gap-2">
+                            <div>{{entry.modified_by?.name}}</div>
+                            <div>{{entry.size|number}}</div>
+                        </div>
+                        } @else {
+                        <div>Loading...</div>
+                        <div>...</div>
+                        }
+                    </div>
+                </a>
+
+                } @else {
+                <a href="{{boxOriginUri}}/file/{{entry.id}}" target="_blank"
+                    class="flex justify-between items-center p-2">
+                    <div class="cursor-pointer flex items-center p-2">
+                        <mat-icon>insert_drive_file</mat-icon>
+                        <div>{{entry.name}}</div>
+                        <mat-icon>open_in_new</mat-icon>
+                    </div>
+                    <div class="unstyled-link">
+                        @if(entry.modified_at){
+                        <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                        <div class="flex items-center gap-2">
+                            <div>{{entry.modified_by?.name}}</div>
+                            <div>{{entry.size|number}}</div>
+                        </div>
+                        } @else {
+                        <div>Loading...</div>
+                        <div>...</div>
+                        }
+                    </div>
+                </a>
+                }
+
+                }
+            </div>
+
+            }
+        </div>
+    </div>
+
+</div>

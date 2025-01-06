@@ -990,8 +990,9 @@ export class MattermostComponent implements OnInit {
     // TODO 本来は pipe->switchMap だけでやらないとダメな気はしている。
     return this.authService.getOAuthAccountList().pipe(switchMap(next => {
       const oAuthAccountList = next.oauthAccounts;
-      this.mmUser = oAuthAccountList.find(oAuthAccount => oAuthAccount.provider === 'mattermost');
-      if (this.mmUser) {
+      const mmUser = oAuthAccountList.find(oAuthAccount => oAuthAccount.provider === 'mattermost');
+      if (mmUser) {
+        this.mmUser = mmUser;
         // mattermost認証済みだったら初回ロード時用のものを全部持ってくる。
         return this.apiMattermostService.mattermostMe().pipe(switchMap(me => safeForkJoin<Preference[] | MattermostTeam[] | MattermostTeamUnread[] | MattermostChannel[] | MattermostTimeline[] | MattermostUser[]>([
           this.apiMattermostService.preference(),

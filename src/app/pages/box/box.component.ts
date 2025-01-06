@@ -1,5 +1,5 @@
 import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 
@@ -16,242 +16,31 @@ import { ApiBoxService } from '../../services/api-box.service';
 
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 
-import { CollectionViewer, SelectionChange, DataSource } from '@angular/cdk/collections';
-import { FlatTreeControl } from '@angular/cdk/tree';
-import { OnInit, Component, Injectable, inject } from '@angular/core';
-import { BehaviorSubject, merge, Observable, Subject } from 'rxjs';
-import { map, single, startWith, tap } from 'rxjs/operators';
+import { OnInit, Component, inject, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-
-// フラットなノード構造の定義
-export class DynamicFlatNode {
-  constructor(
-    public name: string,
-    public type: string,
-    public id: string,
-    public level: number,
-    public expandable: boolean,
-    public isLoading = false
-  ) { }
-}
-// 型定義
-interface BoxEntry {
-  type: 'folder' | 'file' | 'web_link';
-  id: string;
-  sequence_id: string;
-  etag: string;
-  name: string;
-  file_version?: {
-    type: string;
-    id: string;
-    sha1: string;
-  };
-  sha1?: string;
-}
-
-interface BoxResponse {
-  total_count: number;
-  entries: BoxEntry[];
-  offset: number;
-  limit: number;
-  order: {
-    by: string;
-    direction: string;
-  }[];
-}
-
-
-// データベースサービス
-@Injectable({ providedIn: 'root' })
-export class DynamicDatabase {
-  // box: BoxService = inject(BoxService);
-
-  store: { [key: string]: DynamicFlatNode[] } = localStorage.getItem('box') ? JSON.parse(localStorage.getItem('box')!) : {};
-  http: HttpClient = inject(HttpClient);
-
-
-  // // 初期データの生成
-  // getInitialData(jsonData: BoxResponse): DynamicFlatNode[] {
-  //   return jsonData.entries.map(item => new DynamicFlatNode(
-  //     item.name,
-  //     item.type,
-  //     item.id,
-  //     0,
-  //     item.type === 'folder'
-  //   ));
-  // }
-
-  // 子ノードの取得（ダミーAPI）
-  getChildren(nodeId: string): Observable<DynamicFlatNode[]> {
-    // 事前にキャッシュを取り出す
-    const cached = this.store[nodeId];
-
-    // HTTPリクエストの Observable
-    const request$ = this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/${nodeId}/items`)
-      .pipe(
-        map(response =>
-          response.entries.map(item =>
-            new DynamicFlatNode(
-              item.name,
-              item.type,
-              item.id,
-              0,
-              item.type === 'folder'
-            )
-          )
-        ),
-        tap(mapped => {
-          // HTTPで取れたデータは store にキャッシュ
-          this.store[nodeId] = mapped;
-          localStorage.setItem('box', JSON.stringify(this.store));
-        })
-      );
-
-    if (cached) {
-      // キャッシュがあれば「キャッシュを先に吐く → HTTPレスポンスを流す」の二発更新
-      return request$.pipe(
-        // 「ストリームの先頭にキャッシュを流す」(二発更新の 1 発目)
-        startWith(cached)
-      );
-    } else {
-      // キャッシュが無ければ普通に HTTPレスポンスのみ流す
-      return request$;
-    }
-  }
-
-
-  // ダウンロードメソッドを追加
-  downloadFile(fileId: string, fileName: string): Observable<void> {
-    return this.http.get(`/user/oauth/api/proxy/box/2.0/files/${fileId}/content`,
-      { responseType: 'blob' }
-    ).pipe(
-      map(blob => {
-        // blobからファイルを作成してダウンロード
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.click();
-        window.URL.revokeObjectURL(url);
-      })
-    );
-  }
-}
-
-// データソース
-export class DynamicDataSource implements DataSource<DynamicFlatNode> {
-  dataChange = new BehaviorSubject<DynamicFlatNode[]>([]);
-
-  get data(): DynamicFlatNode[] {
-    return this.dataChange.value;
-  }
-  set data(value: DynamicFlatNode[]) {
-    this._treeControl.dataNodes = value;
-    this.dataChange.next(value);
-  }
-
-  constructor(
-    private _treeControl: FlatTreeControl<DynamicFlatNode>,
-    private _database: DynamicDatabase,
-  ) { }
-
-  connect(collectionViewer: CollectionViewer): Observable<DynamicFlatNode[]> {
-    this._treeControl.expansionModel.changed.subscribe(change => {
-      if ((change as SelectionChange<DynamicFlatNode>).added ||
-        (change as SelectionChange<DynamicFlatNode>).removed) {
-        this.handleTreeControl(change as SelectionChange<DynamicFlatNode>);
-      }
-    });
-
-    return merge(collectionViewer.viewChange, this.dataChange).pipe(map(() => this.data));
-  }
-
-  disconnect(collectionViewer: CollectionViewer): void { }
-
-  handleTreeControl(change: SelectionChange<DynamicFlatNode>) {
-    if (change.added) {
-      change.added.forEach(node => this.toggleNode(node, true));
-    }
-    if (change.removed) {
-      change.removed.slice().reverse().forEach(node => this.toggleNode(node, false));
-    }
-  }
-
-  toggleNode(node: DynamicFlatNode, expand: boolean) {
-    node.isLoading = true;
-    this.dataChange.next(this.data);
-
-    if (expand) {
-      // this._database.getChildren(node.id).subscribe(children => {
-      //   const index = this.data.indexOf(node);
-      //   if (index < 0) return;
-
-      //   // 子ノードのレベルを設定
-      //   const nodes = children.map(child => {
-      //     child.level = node.level + 1;
-      //     return child;
-      //   });
-
-      //   // データの挿入
-      //   this.data.splice(index + 1, 0, ...nodes);
-      //   node.isLoading = false;
-      //   this.dataChange.next(this.data);
-      // });
-
-      this._database.getChildren(node.id).subscribe(children => {
-        const index = this.data.indexOf(node);
-        if (index < 0) return;
-
-        // いったん "node より下の階層" を全部消してから
-        let count = 0;
-        for (let i = index + 1; i < this.data.length && this.data[i].level > node.level; i++, count++) { }
-        this.data.splice(index + 1, count);
-
-        // 最新データを挿入
-        children.forEach(child => child.level = node.level + 1);
-        this.data.splice(index + 1, 0, ...children);
-
-        node.isLoading = false;
-        this.dataChange.next(this.data);
-      });
-
-    } else {
-      const index = this.data.indexOf(node);
-      let count = 0;
-      for (let i = index + 1; i < this.data.length && this.data[i].level > node.level; i++, count++) { }
-      this.data.splice(index + 1, count);
-      node.isLoading = false;
-      this.dataChange.next(this.data);
-    }
-  }
-}
+import { BoxApiCollection, BoxApiCollectionList, BoxApiFolder, BoxApiSearchResults } from './box-interface';
+import { Observable, Subscription } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { MatMenu, MatMenuModule } from '@angular/material/menu';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatTabsModule } from '@angular/material/tabs';
 
 @Component({
   selector: 'app-box',
   imports: [
-    CommonModule, FormsModule,
+    CommonModule, FormsModule, RouterModule,
     MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
+    MatMenuModule, MatFormFieldModule, MatInputModule, MatExpansionModule, MatAutocompleteModule,
+    MatTabsModule,
     UserMarkComponent,
   ],
   templateUrl: './box.component.html',
   styleUrl: './box.component.scss'
 })
 export class BoxComponent implements OnInit {
-
-  treeControl: FlatTreeControl<DynamicFlatNode>;
-  dataSource: DynamicDataSource;
-
-  database = inject(DynamicDatabase);
-
-  constructor() {
-    this.treeControl = new FlatTreeControl<DynamicFlatNode>(
-      node => node.level,
-      node => node.expandable
-    );
-    this.dataSource = new DynamicDataSource(this.treeControl, this.database);
-  }
-
-  hasChild = (_: number, node: DynamicFlatNode) => node.expandable;
 
   readonly authService: AuthService = inject(AuthService);
   readonly dialog: MatDialog = inject(MatDialog);
@@ -266,58 +55,212 @@ export class BoxComponent implements OnInit {
   readonly http: HttpClient = inject(HttpClient);
   // readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
 
-  boxSearchResult!: BoxResponse;
+  item?: BoxApiFolder;
+  boxOriginUri = environment.boxOriginUri;
+
+  collectionList?: BoxApiCollectionList;
+
+  tabList: { id: string, name: string }[] = [];
+
+  constructor() {
+    this.apiBoxService.getCollection().subscribe({
+      next: (response) => {
+        // console.log('コレクション取得成功:', response);
+        this.collectionList = response;
+      },
+      error: (error) => {
+        console.error('コレクション取得失敗:', error);
+        this.snackBar.open('コレクション取得に失敗しました', '閉じる', { duration: 3000 });
+      },
+    });
+  }
 
   ngOnInit(): void {
-    this.http.get<any>(`/user/oauth/api/proxy/box/2.0/users/me`).subscribe({
-      next: next => {
-        console.log(next);
-        this.onTop();
-      }
+    this.activatedRoute.params.subscribe(params => {
+      const { type, id } = params as { type: string, id: string };
+      this.load(id);
     });
   }
 
-  onTop(): void {
-
-    this.database.getChildren('0').subscribe({
-      // this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/0/items`).subscribe({
-      next: next => {
-        // this.boxSearchResult = next;
-        console.log(next);
-
-        // // 初期データの設定
-        // this.dataSource.data = this.database.getInitialData(next);
-        this.dataSource.data = next;
-      }
-    });
-  }
-
-  // ファイルクリックハンドラを追加
-  onNodeClick(node: DynamicFlatNode): void {
-    if (node.type === 'file') {
-      this.database.downloadFile(node.id, node.name).subscribe({
-        error: (error) => {
-          console.error('Download failed:', error);
-          // エラー時の処理（例：エラーメッセージの表示）
-        }
-      });
+  addTabId: string = '';
+  move($event: MouseEvent, itemId: string): void {
+    if ($event.ctrlKey || $event.shiftKey || $event.altKey) {
+      // メタキーが押されている場合はブラウザのデフォルト動作を行う
+    } else {
+      this.router.navigate(['/box', 'folder', itemId]);
+      this.stopImmediatePropagation($event);
     }
+    // タブ機能は難しい上にブラウザでやった方がいい気もしてきたので一旦やめた
+    // if ($event.ctrlKey) {
+    //   if (this.item) {
+    //     if (this.tabList.map(tab => tab.id).includes(this.item.id)) {
+    //     } else {
+    //       this.tabList.push(this.item);
+    //     }
+    //   } else { }
+    //   this.addTabId = itemId;
+    //   this.load(itemId);
+    //   if ($event.shiftKey) {
+    //     // 継続⇒新規タブに遷移
+    //   } else {
+    //     return;
+    //   }
+    // } else { }
+  }
+  deleteTab(index: number): void {
+    this.tabList.splice(index, 1);
   }
 
-  searchKeyword = '';
-  onSearch(): void {
-    this.http.get<any>(`/user/oauth/api/proxy/box/2.0/search?query=${this.searchKeyword}&type=file`).subscribe({
+  currentSubscription: Subscription | null = null;
+  load(itemId: string = '0'): void {
+    if (this.currentSubscription) {
+      // 既存のサブスクリプションを破棄しないと追い越しが発生してしまうので
+      this.currentSubscription.unsubscribe();
+    } else { }
+    this.currentSubscription = this.apiBoxService.folder(itemId).subscribe({
       next: next => {
-        this.boxSearchResult = next;
-        console.log(next);
-
-        // // 初期データの設定
-        // this.dataSource.data = this.database.getInitialData(next);
-        this.dataSource.data = next;
+        // console.log(next);
+        this.item = next;
+        // // tabListに追加
+        // if (this.tabList.map(tab => tab.id).includes(itemId)) {
+        // } else if (this.addTabId === itemId) {
+        //   this.tabList.push(next);
+        // }
       },
       error: error => {
         console.error(error);
       },
     });
+  }
+
+  onOpenCollection(collection: BoxApiCollection): void {
+    this.apiBoxService.boxCollectionItem(collection.id).subscribe({
+      next: (response) => {
+        // console.log('コレクション取得成功:', response);
+        collection.items = response;
+      },
+      error: (error) => {
+        console.error('コレクション取得失敗:', error);
+        this.snackBar.open('コレクション取得に失敗しました', '閉じる', { duration: 3000 });
+      },
+    });
+  }
+
+  historyView(): void {
+    this.apiBoxService.boxEvents().subscribe({  // ファイルの更新履歴を取得
+      next: next => {
+        // console.log(next);
+        next.entries.map(entry => {
+          // console.log(entry);
+        });
+      },
+      error: error => {
+        console.error(error);
+      },
+    });
+  }
+
+  // ファイルクリックハンドラを追加
+  onNodeClick(itemId: string): void {
+    this.router.navigate(['/box', 'folder', itemId]);
+  }
+
+  boxSearchResult?: BoxApiSearchResults;
+  searchKeyword = '';
+  onSearch($event: Event): void {
+    this.apiBoxService.boxSearch(this.searchKeyword).subscribe({
+      next: next => {
+        // console.log(next);
+        this.boxSearchResult = next;
+      },
+      error: error => {
+        console.error(error);
+      },
+    });
+  }
+
+  checkCollectionIdSubscription: Subscription | null = null;
+  enableCollectionId: boolean = false;
+  checkCollectionId($event: Event): void {
+    // console.log(this.collectionId);
+    this.enableCollectionId = false;
+    if (this.collectionId && Number(this.collectionId) > 0) {
+      if (this.checkCollectionIdSubscription) {
+        this.checkCollectionIdSubscription?.unsubscribe();
+      } else { }
+      this.checkCollectionIdSubscription = this.apiBoxService.boxCollection(this.collectionId).subscribe({
+        next: (response) => {
+          // console.log('コレクション取得成功:', response);
+          this.enableCollectionId = true;
+        },
+        error: (error) => {
+          console.error('コレクション取得失敗:', error);
+          this.snackBar.open('コレクション取得に失敗しました', '閉じる', { duration: 3000 });
+        },
+      });
+    } else {
+      this.snackBar.open('コレクションIDを入力してください', '閉じる', { duration: 3000 });
+    }
+  }
+
+  registCollectionId(collectionId: string): void {
+    // this.snackBar.open('コレクションが取得されました', '閉じる', { duration: 3000 });
+    // 必要に応じて、取得後の処理（例：リストの更新）を追加
+    this.apiBoxService.registCollectionId(this.collectionId).subscribe({
+      next: (response) => {
+        // console.log('コレクション登録成功:', response);
+        this.snackBar.open('コレクションが登録されました', '閉じる', { duration: 3000 });
+        // 必要に応じて、登録後の処理（例：リストの更新）を追加
+        this.collectionId = ''; // 入力フォームをクリア
+      },
+      error: (error) => {
+        console.error('コレクション登録失敗:', error);
+        this.snackBar.open('コレクション登録に失敗しました', '閉じる', { duration: 3000 });
+      },
+    });
+  }
+
+  collectionId: string = '';
+  registCollection(): void {
+    if (!this.collectionId) {
+      this.snackBar.open('コレクションIDを入力してください', '閉じる', { duration: 3000 });
+      return;
+    }
+
+    this.apiBoxService.registCollectionId(this.collectionId).subscribe({
+      next: (response) => {
+        // console.log('コレクション登録成功:', response);
+        this.snackBar.open('コレクションが登録されました', '閉じる', { duration: 3000 });
+        // 必要に応じて、登録後の処理（例：リストの更新）を追加
+        this.collectionId = ''; // 入力フォームをクリア
+      },
+      error: (error) => {
+        console.error('コレクション登録失敗:', error);
+        this.snackBar.open('コレクション登録に失敗しました', '閉じる', { duration: 3000 });
+      },
+    });
+  }
+
+  sort(type: 'name' | 'timestamp' | 'size'): void {
+    if (this.item) {
+      this.item.item_collection.entries.sort((a, b) => {
+        const aName = a.name.toLowerCase();
+        const bName = b.name.toLowerCase();
+        if (type === 'name' || a.modified_at === undefined || b.modified_at === undefined || a.size === undefined || b.size === undefined) {
+          return aName.localeCompare(bName);
+        } else if (type === 'timestamp') {
+          return a.modified_at.localeCompare(b.modified_at);
+        } else if (type === 'size') {
+          return a.size - b.size;
+        } else {
+          return 0;
+        }
+      });
+    }
+  }
+
+  stopImmediatePropagation($event: Event): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
   }
 }

@@ -2,7 +2,7 @@ import { AuthService, OAuth2Provider } from './../services/auth.service';
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, ActivatedRoute } from '@angular/router';
 import { ProjectService, TeamService, ThreadService } from '../services/project.service';
-import { map, of, switchMap, tap } from 'rxjs';
+import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
 import { UserRole } from '../models/models';
 
@@ -10,8 +10,8 @@ export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateF
   const guardFunc: CanActivateFn = (route, state) => {
     const authService: AuthService = inject(AuthService);
     // const router = inject(Router);
-    return authService.getOAuthAccountList().pipe(map(next => {
-      if (next.oauthAccounts.find(oAuthAccount => oAuthAccount.provider === oAuthProvider)) {
+    return authService.getOAuthAccount(oAuthProvider).pipe(
+      map(oAuthAccount => {
         authService.getOAuthUserInfo(oAuthProvider, 'user-info').subscribe({
           next: (res) => {
             console.log(res);
@@ -23,14 +23,15 @@ export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateF
           },
         });
         return true;
-      } else {
+      }),
+      catchError(err => {
         console.log('OAuth2ログインが必要です');
         // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
         location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
-        // router.navigate(['/home']);
-        return false;
-      }
-    }));
+        console.error(err);
+        return of(false);
+      }),
+    );
   };
   return guardFunc;
 }

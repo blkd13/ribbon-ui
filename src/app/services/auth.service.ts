@@ -6,6 +6,7 @@ import { User, TwoFactorAuthDetails } from '../models/models';
 import { PredictTransaction } from './department.service';
 
 export type OAuth2Provider = 'box' | 'mattermost' | 'gitlab' | 'gitea';
+export type OAuthAccount = { id: string, userInfo: string, provider: string, providerUserId: string, providerEmail: string };
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -214,9 +215,18 @@ export class AuthService {
    * OAuth2連携済み一覧
    * @returns 
    */
-  getOAuthAccountList(): Observable<{ oauthAccounts: any[] }> {
+  getOAuthAccountList(): Observable<{ oauthAccounts: OAuthAccount[] }> {
     const url = `/user/oauth/account`;
-    return this.http.get<{ oauthAccounts: any[] }>(url);
+    return this.http.get<{ oauthAccounts: OAuthAccount[] }>(url);
+  }
+
+  /**
+   * OAuth2連携済み一覧
+   * @returns 
+   */
+  getOAuthAccount(provider: string): Observable<{ oauthAccount: OAuthAccount }> {
+    const url = `/user/oauth/account/${provider}`;
+    return this.http.get<{ oauthAccount: OAuthAccount }>(url);
   }
 
   getOAuthUserInfo(provider: OAuth2Provider, api: 'user-info'): Observable<any> {
