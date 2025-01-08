@@ -1,4 +1,4 @@
-<div class="flex w-full" appFileDrop (filesDropped)="onFilesDropped($event)">
+<div class="flex w-full h-full" appFileDrop (filesDropped)="onFilesDropped($event)">
     <div class="">
         <div class="p-6">
             <a href="/#/box/folder/0" class="unstyled-link" [routerLink]="['/home']" href="#/home"
@@ -84,7 +84,7 @@
 
     </div>
 
-    <div class="w-full">
+    <div class="w-full flex flex-col h-full">
         <div>
             <div class="flex gap-8 items-center">
                 <div>
@@ -101,9 +101,6 @@
                         <!-- <button mat-raised-button color="primary" (click)="onSearch($event)">検索</button> -->
                     </div>
 
-                    @if(isSearching){
-
-                    }
                     @if(isSearching || boxSearchResult){
                     <div class="absolute bg-[#212121] rounded-md shadow-md custom-scroll overflow-auto"
                         style="margin-left: 10px;margin-top: -20px;z-index: 1;max-height: calc(100vh - 500px)">
@@ -119,6 +116,7 @@
                                 <div class="flex items-center gap-2 ml-10">
                                     <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
                                     <div>{{entry.modified_by.name}}</div>
+                                    <div class="w-0 flex-grow"></div>
                                     <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
                                 </div>
                             </div>
@@ -133,6 +131,7 @@
                                 <div class="flex items-center gap-2 ml-10 unstyled-link">
                                     <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
                                     <div>{{entry.modified_by.name}}</div>
+                                    <div class="w-0 flex-grow"></div>
                                     <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
                                 </div>
                             </div>
@@ -172,112 +171,120 @@
         </mat-tab-group>
         }
 
+        @if(item && item.item_collection && item.item_collection.entries) {
+
         <div>
-
-            @if(item && item.item_collection && item.item_collection.entries) {
-
-            <div>
-
-                <div class=" flex items-center gap-2 p-2">
-                    <button class="channel-menu flex items-center" mat-icon-button [matMenuTriggerFor]="onTreeList">
-                        <mat-icon class="cursor-pointer mr-2">account_tree</mat-icon>
-                    </button>
-                    @if(item.path_collection.entries.at(-1); as entry) {
-                    <a href="/#/box/folder/{{entry.id}}" class="unstyled-link" (click)="move($event, entry.id)">
-                        {{entry.name}}
-                    </a>
-                    /
-                    }
-                    <span class="cursor-pointer font-bold">{{item.name}}</span>
-                </div>
-                <mat-menu #onTreeList="matMenu">
-                    @for(entry of item.path_collection.entries;track $index){
-                    <a href="/#/box/folder/{{entry.id}}" class="unstyled-link" (click)="move($event, entry.id)"
-                        mat-menu-item>
-                        {{entry.name}}
-                    </a>
-                    <!-- 
+            <div class=" flex items-center gap-2 p-2">
+                <!-- @if(item.path_collection.entries.length>2){} -->
+                <button class="channel-menu flex items-center" mat-icon-button [matMenuTriggerFor]="onTreeList">
+                    <mat-icon class="cursor-pointer mr-2">account_tree</mat-icon>
+                </button>
+                @for(index of [-2, -1];track $index){
+                @if(item.path_collection.entries.at(index); as entry) {
+                <a href="/#/box/folder/{{entry.id}}" class="unstyled-link line" (click)="move($event, entry.id)"
+                    [title]="entry.name">
+                    {{entry.name}}
+                </a>
+                /
+                }
+                }
+                <span class="font-bold line" [title]="item.name">{{item.name}}</span>
+            </div>
+            <mat-menu #onTreeList="matMenu">
+                @for(entry of item.path_collection.entries;track $index){
+                <a href="/#/box/folder/{{entry.id}}" class="unstyled-link line" (click)="move($event, entry.id)"
+                    mat-menu-item>
+                    {{entry.name}}
+                </a>
+                <!-- 
                     <div class="cursor-pointer flex items-center p-2" mat-menu-item
                         [routerLink]="['/box', 'folder', entry.id]">
                         {{entry.name}}
                     </div>
                     -->
-                    }
-                </mat-menu>
+                }
+            </mat-menu>
 
-            </div>
+        </div>
 
-            <div class="p-5">
-                @if(item.item_collection.entries.length>1){
+        <div class="p-5 h-0 flex-grow custom-scroll">
+            @if(item.item_collection.entries.length>0){
 
-                @for(entry of item.item_collection.entries;track $index) {
+            @for(entry of item.item_collection.entries;track $index) {
 
-                @if(entry.type === 'folder'){
-                <!--
+            @if(entry.type === 'folder'){
+            <!--
                     <div [routerLink]="['/box', 'folder', entry.id]" class="cursor-pointer flex items-center p-2">
                         <mat-icon>{{entry.type}}</mat-icon>
                         <div>{{entry.name}}</div>
                     </div>
                 -->
-                <a href="/#/box/folder/{{entry.id}}" class="unstyled-link flex justify-between items-center p-2"
-                    [title]="entry.name" (click)="move($event, entry.id)">
-                    <div class="flex items-center gap-2 p-2">
-                        <mat-icon>{{entry.type}}</mat-icon>
-                        <div>{{entry.name}}</div>
+            <a href="/#/box/folder/{{entry.id}}" class="unstyled-link flex justify-between items-center p-2"
+                [title]="entry.name" (click)="move($event, entry.id)">
+                <div class="flex items-center gap-2 p-2">
+                    @if(getFolderIcon(entry.name); as folderIconType){
+                    @if(folderIconType==='folder'){
+                    <mat-icon>{{entry.type}}</mat-icon>
+                    } @else {
+                    <img src="./vsc-material-icons/icons/{{folderIconType}}.svg" class="w-6 h-6">
+                    }
+                    }
+                    <div>{{entry.name}}</div>
+                </div>
+                <div class="text-sm text-gray-300 text-right">
+                    @if(entry.modified_at){
+                    <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                    <div class="flex items-center gap-2">
+                        <div>{{entry.modified_by?.name}}</div>
+                        <div class="text-right w-20">{{entry.size|fileSize:1}}</div>
                     </div>
-                    <div class="text-sm text-gray-300 text-right">
-                        @if(entry.modified_at){
-                        <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
-                        <div class="flex items-center gap-2">
-                            <div>{{entry.modified_by?.name}}</div>
-                            <div class="text-right w-20">{{entry.size|fileSize:1}}</div>
-                        </div>
-                        } @else {
-                        <div>Loading...</div>
-                        <div>...</div>
-                        }
-                    </div>
-                </a>
+                    } @else {
+                    <div>Loading...</div>
+                    <div>...</div>
+                    }
+                </div>
+            </a>
 
-                } @else {
-                <a href="{{boxOriginUri}}/file/{{entry.id}}" class="unstyled-link flex justify-between items-center p-2"
-                    [title]="entry.name" target="_blank">
-                    <div class="flex items-center gap-2 p-2">
-                        @if(iconMas[entry.extension||'']===false) {
-                        <mat-icon>insert_drive_file</mat-icon>
-                        } @else {
-                        <!-- undefinedの時もこっちに来るのが重要。じゃないとロードが掛からない。 -->
-                        <img src="./vsc-material-icons/icons/{{(extenstionMas[entry.extension||'']||entry.extension)}}.svg"
-                            class="w-6 h-6" (load)="iconMas[entry.extension||'']=true"
-                            (error)="iconMas[entry.extension||'']=false">
-                        }
-                        <div>{{entry.name}}</div>
-                        <mat-icon>open_in_new</mat-icon>
-                    </div>
-                    <div class="text-sm text-gray-300 text-right">
-                        @if(entry.modified_at){
-                        <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
-                        <div class="flex items-center gap-2">
-                            <div>{{entry.modified_by?.name}}</div>
-                            <div class="text-right w-20">{{entry.size|fileSize:1}}</div>
-                        </div>
-                        } @else {
-                        <div>Loading...</div>
-                        <div>...</div>
-                        }
-                    </div>
-                </a>
-                }
+            } @else {
+            <a href="{{boxOriginUri}}/file/{{entry.id}}" class="unstyled-link flex justify-between items-center p-2"
+                [title]="entry.name" target="_blank">
+                <div class="flex items-center gap-2 p-2">
 
-                }
+                    @if(getFileIcon(entry); as fileIconType){
+                    @if(fileIconType==='file'){
+                    <mat-icon>insert_drive_file</mat-icon>
+                    } @else {
+                    <img src="./vsc-material-icons/icons/{{fileIconType}}.svg" class="w-6 h-6">
+                    }
+                    }
 
-                } @else {
-                何もありません。
-                }
-            </div>
+                    <div>{{entry.name}}</div>
+                    <mat-icon>open_in_new</mat-icon>
+                </div>
+                <div class="text-sm text-gray-300 text-right">
+                    @if(entry.modified_at){
+                    <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                    <div class="flex items-center gap-2">
+                        <div>{{entry.modified_by?.name}}</div>
+                        <div class="text-right w-20">{{entry.size|fileSize:1}}</div>
+                    </div>
+                    } @else {
+                    <div>Loading...</div>
+                    <div>...</div>
+                    }
+                </div>
+            </a>
+            }
 
             }
+
+            } @else {
+            何もありません。
+            }
         </div>
+
+        }
+
     </div>
 
 </div>

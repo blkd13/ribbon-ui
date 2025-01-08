@@ -1,3 +1,7 @@
+:host {
+    height: 100%;
+}
+
 .unstyled-link {
     border-radius: 10px;
     transition: background-color 0.3s 0s linear;
@@ -5,4 +9,10 @@
     &:hover {
         background-color: #111;
     }
+}
+
+.line {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }

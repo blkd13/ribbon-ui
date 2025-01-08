@@ -31,6 +31,7 @@ import { FileSizePipe } from '../../pipe/file-size.pipe';
 import { MatRadioModule } from '@angular/material/radio';
 import { FullPathFile } from '../../services/file-manager.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
+import { fileIcons, folderIcons } from '../../ext/vscode-material-icon-theme/core';
 
 @Component({
   selector: 'app-box',
@@ -71,42 +72,30 @@ export class BoxComponent implements OnInit {
 
   // 拡張子に応じたアイコン
   iconMas: { [extension: string]: boolean } = {};
-  extenstionMas: { [extension: string]: string } = {
-    py: 'python',
-    cu: 'cuda',
-    ts: 'typescript',
-    js: 'javascript',
-    tml: 'taml',
-    yml: 'yaml',
-    sh: 'console',
-    bash: 'console',
-    csh: 'console',
-    ksh: 'console',
-    tsh: 'console',
-    zsh: 'console',
-    cmd: 'console',
-    dockerfile: 'docker',
-    class: 'javaclass',
-    map: 'javascript-map',
-    ipython: 'jupyter',
-    sql: 'database',
-    ddl: 'database',
-    pptx: 'powerpoint',
-    ppt: 'powerpoint',
-    xlsx: 'table',
-    xlsm: 'table',
-    xlsb: 'table',
-    docx: 'word',
-    doc: 'word',
-    jpg: 'image',
-    jpeg: 'image',
-    png: 'image',
-    bmp: 'image',
-    gif: 'image',
-  };
 
   constructor() {
     this.refreshCollection();
+  }
+
+  getFileIcon(entry: { name: string, extension?: string }): string {
+    const splitted = entry.name.split('\.');
+    const extension1 = (splitted.pop() || '').toLocaleLowerCase();
+    splitted.shift();
+    const extension2 = splitted.join('.').toLocaleLowerCase();
+    const icon = fileIcons.icons.find(icon => {
+      return icon.fileNames?.includes(entry.name) || icon.fileExtensions?.includes(extension2) || icon.fileExtensions?.includes(extension1);
+    })
+    return icon ? icon.name : fileIcons.defaultIcon.name;
+  }
+  getFolderIcon(name: string): string {
+    name = name.toLocaleLowerCase();
+    const icon = folderIcons.map(icon => {
+      return icon.icons?.find(icon => {
+        return icon.folderNames.includes(name);
+      })
+    }).find(icon => icon);
+    // console.log(icon ? icon.name : fileIcons.defaultIcon.name);
+    return icon ? icon.name : 'folder';
   }
 
   refreshCollection(): void {
@@ -236,9 +225,10 @@ export class BoxComponent implements OnInit {
   onSearch($event: Event): void {
     this.isSearching = true;
     if (this.searchObserver) {
+      // 投げてある場合はキャンセルする
       this.searchObserver.unsubscribe();
     } else { }
-    this.searchObserver = this.apiBoxService.boxSearch(this.searchKeyword).subscribe({
+    this.searchObserver = this.apiBoxService.boxSearch(($event as InputEvent).data || '').subscribe({
       next: next => {
         // console.log(next);
         this.boxSearchResult = next;
@@ -346,7 +336,7 @@ export class BoxComponent implements OnInit {
   // ファイルをアップロード
   uploadFiles(folderId: string) {
     this.selectedFiles.forEach((file) => {
-      this.apiBoxService.uploadFile(file.file, folderId).subscribe({
+      this.apiBoxService.uploadFilePreflight(file.file, folderId).subscribe({
         next: response => {
           console.log('アップロード成功:', response);
           this.uploadStatus = `ファイル "${file.file.name}" がアップロードされました。`;
@@ -407,7 +397,11 @@ export class BoxComponent implements OnInit {
               const split = file.fullPath.split('/');
               const name = split.pop() || '';
               const id = direMap[split.join('/')] || itemId;
-              return this.apiBoxService.uploadFile(file.file, id).pipe();
+              return this.apiBoxService.uploadFilePreflight(file.file, id).pipe(
+                switchMap(res => {
+                  return this.apiBoxService.uploadFile(file.file, id, res);
+                }),
+              );
             }),
           )
         ),

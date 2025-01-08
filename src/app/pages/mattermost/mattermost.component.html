@@ -91,7 +91,7 @@
                         </mat-radio-button>
                         @if(messageCountMas[channel.channelId] && messageCountMas[channel.channelId].mention_count
                         && messageCountMas[channel.channelId].mention_count>0){
-                        <div class="badge" style="font-weight: normal;top: 3px;padding-top: 5px;">
+                        <div class="badge" style="font-weight: normal;top: 3px;">
                             {{messageCountMas[channel.channelId] ?
                             messageCountMas[channel.channelId].mention_count:''}}
                         </div>
@@ -316,7 +316,7 @@
             (click)="stopPropagation($event)">
             @if(messageCountMas[channelId] && messageCountMas[channelId].mention_count &&
             messageCountMas[channelId].mention_count>0){
-            <div class="badge" style="font-weight: normal;top: 3px;padding-top: 5px;">
+            <div class="badge" style="font-weight: normal;top: 3px;">
                 {{messageCountMas[channelId] ? messageCountMas[channelId].mention_count:''}}
             </div>
             }

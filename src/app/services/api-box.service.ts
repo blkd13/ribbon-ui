@@ -140,47 +140,18 @@ export class ApiBoxService {
   }
 
   // ファイルをアップロード
-  uploadFile(file: File, folderId: string): Observable<{ upload_url: string, upload_token: string }> {
+  uploadFilePreflight(file: File, folderId: string): Observable<{ upload_url: string, upload_token: string }> {
+    const url = `${this.basePath}/2.0/files/content/preflight`;
+    return this.http.post<{ upload_url: string, upload_token: string }>(url, { name: file.name, parent: { id: folderId }, });
+  }
+  // ファイルをアップロード
+  uploadFile(file: File, folderId: string, attributes: { upload_url: string, upload_token: string }): Observable<{ entries: (BoxApiFolderItemEntry | BoxApiFileItemEntry)[] }> {
     const formData = new FormData();
-    formData.append('attributes', JSON.stringify({
-      name: file.name,
-      parent: { id: folderId },
-    }));
+    formData.append('upload_url', attributes.upload_url);
+    formData.append('attributes', JSON.stringify({ name: file.name, parent: { id: folderId }, }));
     formData.append('file', file, file.name);
     const url = `${this.basePath}/2.0/files/content`;
-    return this.http.post<{ upload_url: string, upload_token: string }>(url, formData);
-    // return this.http.post<{ upload_url: string, upload_token: string }>(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-    //   // return this.http.post<{ entries: BoxApiFolder[] }>(url, formData);
-    //   return this.http.post<{ upload_url: string, upload_token: string }>(url, { name: file.name, parent: { id: folderId }, size: file.size }).pipe(
-    //     tap(res => {
-    //       console.log(res);
-    //       res.upload_url;
-    //       const formData = new FormData();
-    //       const attributes = {
-    //         name: file.name,
-    //         parent: { id: folderId }, // 親フォルダのID
-    //       };
-
-    //       formData.append('attributes', JSON.stringify(attributes));
-    //       formData.append('file', this.selectedFile, this.selectedFile.name);
-
-    //       const headers = new HttpHeaders({
-    //         'Authorization': `Bearer ${this.accessToken}`,
-    //       });
-
-    //       this.http.post('https://upload.box.com/api/2.0/files/content', formData, { headers })
-    //         .subscribe(
-    //           (response) => {
-    //             console.log('Upload successful:', response);
-    //             // アップロード成功時の処理
-    //           },
-    //           (error) => {
-    //             console.error('Upload failed:', error);
-    //             // アップロード失敗時の処理
-    //           }
-    //         );
-    //     }),
-    //   );
-    // }
+    // const url = attributes.upload_url; # 直接アップロードする場合。※ただしTokenを取ってきてからじゃないとできない。
+    return this.http.post<{ entries: (BoxApiFolderItemEntry | BoxApiFileItemEntry)[] }>(url, formData);
   }
 }
