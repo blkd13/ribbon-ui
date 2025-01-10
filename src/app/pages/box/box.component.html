@@ -17,7 +17,7 @@
             </a>
         </div>
 
-        <!-- コレクション登録フォーム -->
+        <!-- BoxのURLリンク解釈 -->
         <form class="flex items-center gap-2 p-2" (submit)="boxUrlMove()">
             <mat-form-field>
                 <mat-label>BoxのURL</mat-label>
@@ -26,6 +26,7 @@
             <button type="submit" mat-raised-button color="primary" style="width: 80px;">開く</button>
         </form>
 
+        <!-- コレクション一覧 -->
         @for(entry of collectionList?.entries;track $index) {
 
         <mat-expansion-panel (opened)="onOpenCollection(entry)">
@@ -46,11 +47,11 @@
                 <a href="/#/box/folder/0" (click)="move($event, item.id)" style="width: 280px;"
                     class="unstyled-link flex items-center p-2 pr-0" [title]="item.name">
                     @if(item.type==='folder'){
-                    <mat-icon style="width: 40px;">{{item.type}}</mat-icon>
+                    <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:item}"></ng-container>
                     } @else {
-                    <mat-icon style="width: 40px;">insert_drive_file</mat-icon>
+                    <ng-container *ngTemplateOutlet="fileIconTmpl; context:{$implicit:item}"></ng-container>
                     }
-                    <span class="truncate flex-grow w-0">{{item.name}}</span>
+                    <span class="truncate flex-grow w-0 ml-2">{{item.name}}</span>
                 </a>
                 }
                 } @else {
@@ -84,7 +85,7 @@
 
     </div>
 
-    <div class="w-full flex flex-col h-full">
+    <div class="w-0 flex-grow flex flex-col h-full">
         <div>
             <div class="flex gap-8 items-center">
                 <div>
@@ -101,6 +102,7 @@
                         <!-- <button mat-raised-button color="primary" (click)="onSearch($event)">検索</button> -->
                     </div>
 
+                    <!-- 検索結果表示 -->
                     @if(isSearching || boxSearchResult){
                     <div class="absolute bg-[#212121] rounded-md shadow-md custom-scroll overflow-auto"
                         style="margin-left: 10px;margin-top: -20px;z-index: 1;max-height: calc(100vh - 500px)">
@@ -112,10 +114,14 @@
                         <a class="unstyled-link" href="/#/box/folder/{{entry.id}}" mat-menu-item
                             (click)="searchKeyword='';boxSearchResult=undefined;move($event, entry.id)">
                             <div class="p-2">
-                                <div class="flex items-center"><mat-icon>{{entry.type}}</mat-icon>{{entry.name}}</div>
+                                <div class="flex items-center">
+                                    <ng-container
+                                        *ngTemplateOutlet="folderIconTmpl; context:{$implicit:entry}"></ng-container>
+                                    {{entry.name}}
+                                </div>
                                 <div class="flex items-center gap-2 ml-10">
-                                    <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
-                                    <div>{{entry.modified_by.name}}</div>
+                                    <div>{{entry.modified_at|date:dateFormat}}</div>
+                                    <div>{{entry.modified_by.name||'以前のコラボレータ'}}</div>
                                     <div class="w-0 flex-grow"></div>
                                     <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
                                 </div>
@@ -126,17 +132,24 @@
                             (click)="searchKeyword='';boxSearchResult=undefined" target="_blank">
                             <div class="p-2">
                                 <div class="flex items-center">
-                                    <mat-icon>insert_drive_file</mat-icon>{{entry.name}}<mat-icon>open_in_new</mat-icon>
+                                    <ng-container
+                                        *ngTemplateOutlet="fileIconTmpl; context:{$implicit:entry}"></ng-container>
+                                    {{entry.name}}
+                                    @if(entry.version_number>1){
+                                    <span class="border: 1px solid gray;">v{{entry.version_number}}</span>
+                                    }
+                                    <mat-icon>open_in_new</mat-icon>
                                 </div>
                                 <div class="flex items-center gap-2 ml-10 unstyled-link">
-                                    <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
-                                    <div>{{entry.modified_by.name}}</div>
+                                    <div>{{entry.modified_at|date:dateFormat}}</div>
+                                    <div>{{entry.modified_by.name||'以前のコラボレータ'}}</div>
                                     <div class="w-0 flex-grow"></div>
                                     <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
                                 </div>
                             </div>
                         </a>
                         } @else {
+                        <!-- web_linkが検索結果に上がってくることはないのではないか？ -->
                         {{entry|json}}
                         }
 
@@ -171,109 +184,76 @@
         </mat-tab-group>
         }
 
-        @if(item && item.item_collection && item.item_collection.entries) {
+        @if(item) {
 
-        <div>
-            <div class=" flex items-center gap-2 p-2">
-                <!-- @if(item.path_collection.entries.length>2){} -->
-                <button class="channel-menu flex items-center" mat-icon-button [matMenuTriggerFor]="onTreeList">
-                    <mat-icon class="cursor-pointer mr-2">account_tree</mat-icon>
-                </button>
-                @for(index of [-2, -1];track $index){
-                @if(item.path_collection.entries.at(index); as entry) {
-                <a href="/#/box/folder/{{entry.id}}" class="unstyled-link line" (click)="move($event, entry.id)"
-                    [title]="entry.name">
-                    {{entry.name}}
-                </a>
-                /
-                }
-                }
-                <span class="font-bold line" [title]="item.name">{{item.name}}</span>
-            </div>
-            <mat-menu #onTreeList="matMenu">
-                @for(entry of item.path_collection.entries;track $index){
-                <a href="/#/box/folder/{{entry.id}}" class="unstyled-link line" (click)="move($event, entry.id)"
-                    mat-menu-item>
-                    {{entry.name}}
-                </a>
-                <!-- 
-                    <div class="cursor-pointer flex items-center p-2" mat-menu-item
-                        [routerLink]="['/box', 'folder', entry.id]">
-                        {{entry.name}}
-                    </div>
-                    -->
-                }
-            </mat-menu>
-
+        <!-- パスツリー -->
+        @if(item.item_collection && item.item_collection.entries){
+        <div class=" flex items-center gap-2 p-2">
+            <!-- @if(item.path_collection.entries.length>2){} -->
+            <button class="channel-menu flex items-center" mat-icon-button [matMenuTriggerFor]="onTreeList">
+                <mat-icon class="cursor-pointer mr-2">account_tree</mat-icon>
+            </button>
+            @for(index of [-2, -1];track $index){
+            @if(item.path_collection.entries.at(index); as entry) {
+            <a href="/#/box/folder/{{entry.id}}" class="unstyled-link line" (click)="move($event, entry.id)"
+                [title]="entry.name">
+                {{entry.name}}
+            </a>
+            /
+            }
+            }
+            <span class="font-bold line" [title]="item.name">{{item.name}}</span>
         </div>
+        }
+        <mat-menu #onTreeList="matMenu">
+            @for(entry of item.path_collection.entries;track $index){
+            <a href="/#/box/folder/{{entry.id}}" class="unstyled-link line" (click)="move($event, entry.id)"
+                mat-menu-item>
+                {{entry.name}}
+            </a>
+            }
+        </mat-menu>
 
+        <!-- コレクション一覧 -->
         <div class="p-5 h-0 flex-grow custom-scroll">
-            @if(item.item_collection.entries.length>0){
+            @if(item.item_collection && item.item_collection.entries && item.item_collection.entries.length>0){
 
             @for(entry of item.item_collection.entries;track $index) {
 
             @if(entry.type === 'folder'){
-            <!--
-                    <div [routerLink]="['/box', 'folder', entry.id]" class="cursor-pointer flex items-center p-2">
-                        <mat-icon>{{entry.type}}</mat-icon>
-                        <div>{{entry.name}}</div>
-                    </div>
-                -->
             <a href="/#/box/folder/{{entry.id}}" class="unstyled-link flex justify-between items-center p-2"
                 [title]="entry.name" (click)="move($event, entry.id)">
                 <div class="flex items-center gap-2 p-2">
-                    @if(getFolderIcon(entry.name); as folderIconType){
-                    @if(folderIconType==='folder'){
-                    <mat-icon>{{entry.type}}</mat-icon>
-                    } @else {
-                    <img src="./vsc-material-icons/icons/{{folderIconType}}.svg" class="w-6 h-6">
-                    }
-                    }
+                    <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:entry}"></ng-container>
                     <div>{{entry.name}}</div>
                 </div>
-                <div class="text-sm text-gray-300 text-right">
-                    @if(entry.modified_at){
-                    <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
-                    <div class="flex items-center gap-2">
-                        <div>{{entry.modified_by?.name}}</div>
-                        <div class="text-right w-20">{{entry.size|fileSize:1}}</div>
-                    </div>
-                    } @else {
-                    <div>Loading...</div>
-                    <div>...</div>
-                    }
-                </div>
+                <ng-container *ngTemplateOutlet="itemInfoTempl; context:{$implicit:entry}"></ng-container>
             </a>
-
-            } @else {
+            } @else if(entry.type==='file') {
             <a href="{{boxOriginUri}}/file/{{entry.id}}" class="unstyled-link flex justify-between items-center p-2"
                 [title]="entry.name" target="_blank">
                 <div class="flex items-center gap-2 p-2">
-
-                    @if(getFileIcon(entry); as fileIconType){
-                    @if(fileIconType==='file'){
-                    <mat-icon>insert_drive_file</mat-icon>
-                    } @else {
-                    <img src="./vsc-material-icons/icons/{{fileIconType}}.svg" class="w-6 h-6">
+                    <ng-container *ngTemplateOutlet="fileIconTmpl; context:{$implicit:entry}"></ng-container>
+                    <div>{{entry.name}}</div>
+                    @if(entry.version_number>1){
+                    <span class="px-3 py-0 bg-[#333] rounded-sm border border-gray-800">v{{entry.version_number}}</span>
                     }
-                    }
-
+                    <mat-icon>open_in_new</mat-icon>
+                </div>
+                <ng-container *ngTemplateOutlet="itemInfoTempl; context:{$implicit:entry}"></ng-container>
+            </a>
+            } @else if(entry.type === 'web_link'){
+            <a [href]="entry.url" class="unstyled-link flex justify-between items-center p-2" [title]="entry.name"
+                target="_blank">
+                <div class="flex items-center gap-2 p-2">
+                    <mat-icon>link</mat-icon>
                     <div>{{entry.name}}</div>
                     <mat-icon>open_in_new</mat-icon>
                 </div>
-                <div class="text-sm text-gray-300 text-right">
-                    @if(entry.modified_at){
-                    <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
-                    <div class="flex items-center gap-2">
-                        <div>{{entry.modified_by?.name}}</div>
-                        <div class="text-right w-20">{{entry.size|fileSize:1}}</div>
-                    </div>
-                    } @else {
-                    <div>Loading...</div>
-                    <div>...</div>
-                    }
-                </div>
+                <ng-container *ngTemplateOutlet="itemInfoTempl; context:{$implicit:entry}"></ng-container>
             </a>
+            } @else {
+            {{entry|json}}
             }
 
             }
@@ -296,3 +276,65 @@
     <mat-spinner></mat-spinner>
 </div>
 }
+
+<ng-template #itemInfoTempl let-entry>
+    <div class="flex items-center gap-2">
+        <div class="text-sm text-gray-300 text-right flex flex-col items-end">
+            @if(entry.modified_at){
+            <div>{{entry.modified_at|date:dateFormat}}</div>
+            <div class="flex items-center gap-2">
+                <div>{{entry.modified_by?.name||'以前のコラボレータ'}}</div>
+                <div class="text-right w-20">{{entry.size|fileSize:1}}</div>
+            </div>
+            } @else {
+            <div>Loading...</div>
+            <div>...</div>
+            }
+        </div>
+        <div>
+            <button mat-icon-button (click)="stopImmediatePropagation($event)" [matMenuTriggerFor]="itemMenu">
+                <mat-icon>more_vert</mat-icon>
+            </button>
+        </div>
+    </div>
+    <mat-menu #itemMenu="matMenu">
+        <a mat-menu-item class="unstyled-link" (click)="remove(entry)" mat-menu-item>
+            <mat-icon>delete</mat-icon>ゴミ箱へ
+        </a>
+        <a mat-menu-item class="unstyled-link" [href]="entry.url" target="_blank">
+            <mat-icon>open_in_new</mat-icon>BOXで開く
+        </a>
+    </mat-menu>
+</ng-template>
+
+<ng-template #folderIconTmpl let-entry>
+    @if(getFolderIcon(entry.name); as folderIconType){
+    @if(folderIconType==='folder'){
+    <mat-icon>{{entry.type}}</mat-icon>
+    } @else {
+    <img src="./vsc-material-icons/icons/{{folderIconType}}.svg" class="w-6 h-6">
+    }
+    }
+</ng-template>
+
+<ng-template #fileIconTmpl let-entry>
+    @if(getFileIcon(entry); as fileIconType){
+    @if(fileIconType==='file'){
+    <mat-icon>insert_drive_file</mat-icon>
+    } @else {
+    @if(fileIconType==='image') {
+    <!-- imageの時はローディング中の時は両方表示、結果が出たらどっちか表示 -->
+    @if(thumbnailStatusMas[entry.id]!=='error'){
+    <img src="/api/user/oauth/api/proxy/box/2.0/files/{{entry.id}}/thumbnail.png" class="w-6 h-6"
+        (load)="thumbnailStatusMas[entry.id]='fine'" (error)="thumbnailStatusMas[entry.id]='error'"
+        [hidden]="!thumbnailStatusMas[entry.id]">
+    }
+    @if(thumbnailStatusMas[entry.id]!=='fine'){
+    <img src="./vsc-material-icons/icons/{{fileIconType}}.svg" class="w-6 h-6">
+    }
+    } @else {
+    <img src="./vsc-material-icons/icons/{{fileIconType}}.svg" class="w-6 h-6">
+    }
+    }
+    }
+</ng-template>

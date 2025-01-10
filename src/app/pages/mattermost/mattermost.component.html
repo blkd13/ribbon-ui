@@ -138,14 +138,14 @@
             <mat-icon class="rotate-90 ">drag_handle</mat-icon>
         </div>
 
-        <div class="relative flex-grow min-w-1 w-1 z-10">
+        <div class="relative flex-grow min-w-1 w-1 z-10" appFileDrop
+            (filesDropped)="onFilesDropped('main', selectedChannelIds[0], $event)">
             <div class="absolute right-14 top-2 z-10">
                 <button mat-raised-button (click)="sendToAI(undefined)">
                     <mat-icon>summarize</mat-icon>AI要約
                 </button>
             </div>
-            <div appFileDrop (filesDropped)="onFilesDropped('main', selectedChannelIds[0], $event)"
-                class="custom-scroll h-full w-full relative" #scroll (scroll)="onScroll($event)">
+            <div class="custom-scroll h-full w-full relative" #scroll (scroll)="onScroll($event)">
                 @if(viewPostCount>viewPostCountDelta){
                 <button type="button" class="scroll-to-bottom-button" (click)="scrollToBottom(true)">下端にスクロール</button>
                 }
@@ -160,7 +160,7 @@
                 }
 
                 @if($index>0&&postGroup[0].create_at>newMessageDate&&newMessageDate>mmGroupedFilteredLimitedPostList[$index-1][0].create_at){
-                <div class="sepa-row newmessage">
+                <div class="sepa-row newmessage" #newMessagesElem>
                     <div class="sepa-line newmessage"></div>
                     <div class="sepa newmessage">New Messages
                         <!-- 
@@ -181,29 +181,28 @@
             </div>
             <div class="textarea-wrapper">
                 <div class="flex flex-col grow w-0">
-                    @for(file of inDto.main.fileList;track $index) {
-                    <div class="doc-tag" [matTooltip]="file.fullPath" matTooltipPosition="above">
-                        <div class="thumbnail">
-                            <!-- @if (content.image_url.url.startsWith('data:image/')) {
-                                <img [src]="content.image_url.url" />
+                    <div class="flex gap-4 mb-3 overflow-x-auto w-auto custom-scroll">
+                        @for(file of inDto.main.fileList;track $index) {
+                        <div class="doc-tag" [title]="file.fullPath">
+                            <div class="thumbnail">
+                                @if (file.base64String.startsWith('data:image/')) {
+                                <img [src]="file.base64String" />
                                 } @else {
                                 <div>doc</div>
-                                } -->
+                                }
+                            </div>
+                            <div class="label">{{file.fullPath}}</div>
+                            <mat-icon class="close" (click)="inDto.main.fileList.splice($index,1)">close</mat-icon>
                         </div>
-                        <div class="label">{{file.fullPath}}</div>
-                        <mat-icon class="close" (click)="inDto.main.fileList.splice($index,1)">close</mat-icon>
+                        }
                     </div>
-                    <!-- <app-doc-tag [contents]="inputArea.content" [index]="$index"
-                            (remove)="removeDoc(inputArea.content, $index)"></app-doc-tag> -->
-                    }
                     <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
                         (keydown)="onKeyDown('main', $event, selectedChannelIds[0])"
-                        (input)="onInput('main', $event, selectedChannelIds[0])"
-                        [placeholder]="appFileDropList().at(0)?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
+                        [placeholder]="appFileDropList().at(0)?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
                         #textAreaElemMain [(ngModel)]="inDto.main.message" (blur)="clearMention()"
-                        (change)="onChange(selectedChannelIds[0])"
+                        (change)="onChange('main', selectedChannelIds[0])"
                         [disabled]="selectedChannelIds.length!==1"></textarea>
-                    @if(mentionInputType==='main' && mentionPosition){
+                    @if(mentionInputType==='main'){
                     <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
                     }
                 </div>
@@ -240,15 +239,31 @@
                 }
             </div>
             <div class="textarea-wrapper">
-                <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
-                    (keydown)="onKeyDown('thread', $event, mmThread[0][0].channel_id,mmThread[0][0].id)"
-                    (input)="onInput('thread', $event, mmThread[0][0].channel_id,mmThread[0][0].id)"
-                    [placeholder]="appFileDropList().at(-1)?.isHovered?'ファイルドロップ':('メッセージを入力...。 Shift+Enterで改行。 ファイル貼り付けは未対応です。。')"
-                    #textAreaElemThread [(ngModel)]="inDto.thread.message" (blur)="clearMention()"
-                    (change)="onChange(mmThread[0][0].channel_id)"></textarea>
-                @if(mentionInputType==='thread' && mentionPosition){
-                <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
-                }
+                <div class="flex flex-col grow w-0">
+                    <div class="flex gap-4 mb-3 overflow-x-auto w-auto custom-scroll">
+                        @for(file of inDto.thread.fileList;track $index) {
+                        <div class="doc-tag" [title]="file.fullPath">
+                            <div class="thumbnail">
+                                @if (file.base64String.startsWith('data:image/')) {
+                                <img [src]="file.base64String" />
+                                } @else {
+                                <div>doc</div>
+                                }
+                            </div>
+                            <div class="label">{{file.fullPath}}</div>
+                            <mat-icon class="close" (click)="inDto.thread.fileList.splice($index,1)">close</mat-icon>
+                        </div>
+                        }
+                    </div>
+                    <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
+                        (keydown)="onKeyDown('thread', $event, mmThread[0][0].channel_id, mmThread[0][0].id)"
+                        [placeholder]="appFileDropList().at(-1)?.isHovered?'ファイルドロップ':('メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
+                        #textAreaElemThread [(ngModel)]="inDto.thread.message" (blur)="clearMention()"
+                        (change)="onChange('thread', mmThread[0][0].channel_id, mmThread[0][0].id)"></textarea>
+                    @if(mentionInputType==='thread'){
+                    <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
+                    }
+                </div>
                 <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
                     [disabled]="inDto.thread.message.length===0 || isLoading"
                     (click)="post('thread', mmThread[0][0].channel_id, mmThread[0][0].id)">
@@ -263,17 +278,19 @@
 </div>
 
 <ng-template #mentionTemplate>
-    @if(mentionPosition){
+    @if(mentionPosition && mentionList && mentionList.length > 0){
     <div class="custom-scroll mention-container"
-        [ngStyle]="{top: (mentionPosition.y-300)+'px', left: mentionPosition.x+'px'}">
+        [ngStyle]="{top: (mentionPosition.y > 350 ? mentionPosition.y - 300 : mentionPosition.y + 40)+'px', left: mentionPosition.x+'px'}">
         @for(mention of mentionList;track $index){
         @if($index===0){
         <div>CHANNEL MEMBERS</div>
-        }@else if(mention.roles!==mentionList[$index-1].roles&&mention.roles==='special'){
+        } @else if (mention.roles!==mentionList[$index-1].roles&&mention.roles==='special'){
         <div>SPECIAL MENTIONS</div>
         }
-        <div #mentionElem style="padding: 5px;" [ngClass]="{selected:mentionSelectorIndex===$index}"
-            (mouseenter)="mentionSelectorIndex=$index;">
+        <!-- mousedownイベントじゃないとtextareaのblurイベントに負けるので、敢えてclickじゃなくてmousedownにしている。 -->
+        <div #mentionElem class="cursor-pointer p-2"
+            (mousedown)="setMention(mentionInputType, mention.username); $event.preventDefault()"
+            [ngClass]="{selected:mentionSelectorIndex===$index}" (mouseenter)="mentionSelectorIndex=$index;">
             <span>{{'@'+mention.username}}</span>
             <span style="color: #999;margin-left: 10px;">{{mention.nickname}}</span>
         </div>
@@ -375,6 +392,7 @@
                 src="{{mattermostOriginUri}}/static/emoji/1f600.png">
             <img class="icon-mini" (click)="reaction(post, 'arigatou_2')"
                 src="/api{{apiMattermostService.baseUrl}}/emoji/x5ckjocskfy7ppc39kus45qu4a/image">
+            <!-- <button (click)="emojiPicker()">Emoji</button> -->
             @if(selectedTimeline && selectedTimeline.channels && selectedTimeline.channels.length>1){
             <button mat-icon-button style="color:#add8e6;" class="cursor-pointer" matTooltip="1チャネル表示にする"
                 (click)="setRadioSelectedId(radioSelectedId===selectedTimeline.channelIdMas[postGroup[0].channel_id].id ? selectedTimeline.id : selectedTimeline.channelIdMas[postGroup[0].channel_id].id )">
@@ -422,7 +440,7 @@
         @if(post.metadata){
 
         @if(post.metadata.files){
-        <div class="flex gap-3">
+        <div class="flex gap-3 overflow-x-auto py-3 mb-3">
             @for(file of post.metadata.files;track $index){
             @if(file.mime_type==='image/png' || file.mime_type==='image/jpeg' ){
             <img src="/api{{apiMattermostService.baseUrl}}/files/{{file.id}}/preview" (load)="onImageLoad($event, file)"

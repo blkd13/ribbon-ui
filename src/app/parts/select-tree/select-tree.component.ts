@@ -237,12 +237,12 @@ export class SelectTreeComponent implements OnInit {
   // readonly layout = input.required<'flex' | 'grid'>();
   invalidMimeTypes = [
     'application/octet-stream',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/java-vm',
     'application/x-elf',
     'application/xml',
     'application/x-msdownload',
     'application/zip',
+    'application/x-7z-compressed',
     'image/x-icon',
   ];
   invalidDirNames = [

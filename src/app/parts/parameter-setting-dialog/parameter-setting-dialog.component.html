@@ -47,12 +47,12 @@
           </mat-select>
         </mat-form-field>
         <div class="flex items-center" style="width: 150px;"
-          [matTooltip]="args.model.startsWith('gemini-1.5')?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini-1.5以外では使用できません。'"
-          [ngStyle]="{opacity: args.model.startsWith('gemini-1.5')?1:0.5}">
+          [matTooltip]="chatService.modelMap[args.model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini-1.5以外では使用できません。'"
+          [ngStyle]="{opacity: chatService.modelMap[args.model].isGSearch?1:0.5}">
           <img src="./image/google-icon.svg" alt="Googleアイコン" class="w-8 h-8"
             [ngStyle]="{opacity: args.isGoogleSearch ? 1 : 0.3}">
           <mat-checkbox [(ngModel)]="args.isGoogleSearch" color="primary"
-            [disabled]="!args.model.startsWith('gemini-1.5')">Google<br />検索統合</mat-checkbox>
+            [disabled]="!chatService.modelMap[args.model].isGSearch">Google<br />検索統合</mat-checkbox>
         </div>
       </div>
 

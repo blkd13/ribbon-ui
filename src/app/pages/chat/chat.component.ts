@@ -154,6 +154,7 @@ export class ChatComponent implements OnInit {
   readonly ngZone: NgZone = inject(NgZone);
 
   ngOnInit(): void {
+    document.title = `AI`;
     of(0).pipe(
       switchMap(() => this.loadTeams()),
       switchMap(() => this.loadProjects()),
@@ -302,6 +303,7 @@ export class ChatComponent implements OnInit {
     let noSend = true;
     if (threadGroupId === 'new-thread') {
       this.messageService.clear(); // ストック情報を全消ししておく。
+      document.title = `AI: new thread`;
       // 新規スレッド作成
       this.selectedThreadGroup = this.threadService.genInitialThreadGroupEntity(this.selectedProject.id);
       this.selectedThreadGroup.threadList.forEach(thread => {
@@ -432,7 +434,7 @@ export class ChatComponent implements OnInit {
               // this.router.navigate(['chat', this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
               setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
-              document.title = `AI : ${this.selectedThreadGroup?.title || 'Ribbon UI'}`;
+              document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
             }),
           ).subscribe({
             error: error => {
@@ -590,8 +592,8 @@ export class ChatComponent implements OnInit {
   calcCost(): number {
     const charCount = (this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video);
     const isLarge = this.tokenObj.totalTokens > 128000 ? 2 : 0;
-    // const cost = charCount / 1000 * this.chatService.priceMap[this.inDto.args.model || 'gemini-1.5-pro'].price[isLarge];
-    const cost = this.selectedThreadGroup.threadList.map(thread => thread.inDto.args).reduce((prev, curr) => prev + charCount / 1000 * this.chatService.priceMap[curr.model || 'gemini-1.5-pro'].price[isLarge], 0);
+    // const cost = charCount / 1000 * this.chatService.modelMap[this.inDto.args.model || 'gemini-1.5-pro'].price[isLarge];
+    const cost = this.selectedThreadGroup.threadList.map(thread => thread.inDto.args).reduce((prev, curr) => prev + charCount / 1000 * this.chatService.modelMap[curr.model || 'gemini-1.5-pro'].price[isLarge], 0);
     return cost;
   }
 
@@ -658,7 +660,11 @@ export class ChatComponent implements OnInit {
             },
           }).subscribe({
             next: next => {
-              next.observer.pipe(tap(text => threadGroup.title += text), toArray()).subscribe({
+              next.observer.pipe(
+                tap(text => threadGroup.title += text),
+                toArray(),
+                tap(text => document.title = `AI : ${threadGroup.title}`),
+              ).subscribe({
                 next: next => this.saveThreadGroup(threadGroup).subscribe()
               });
             },
@@ -789,7 +795,7 @@ export class ChatComponent implements OnInit {
     for (const thread of threadList) {
       const tailMessageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id].at(-1)!];
       const modelName = thread.inDto.args.model ?? '';
-      const model = this.chatService.priceMap[modelName];
+      const model = this.chatService.modelMap[modelName];
       const args = thread.inDto.args;
 
       // バリデーションエラー
@@ -798,8 +804,8 @@ export class ChatComponent implements OnInit {
       } else if (this.tokenObj.totalTokens > model.maxInputTokens) {
         this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`, 'close', { duration: 3000 });
         throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`);
-      } else if (args.isGoogleSearch && !args.model.startsWith('gemini-1.5')) {
-        this.snackBar.open(`Google検索統合は Gemini-1.5 系統以外では使えません。`, 'close', { duration: 3000 });
+      } else if (args.isGoogleSearch && !this.chatService.modelMap[args.model].isGSearch) {
+        this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
       } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0) {

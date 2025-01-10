@@ -42,6 +42,7 @@ import { CursorPositionDirective } from '../../parts/cursor-position.directive';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSelectModule } from '@angular/material/select';
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
+import { MmEmojiPickerComponent } from '../../parts/mm-emoji-picker/mm-emoji-picker.component';
 
 type InType = 'main' | 'thread';
 type InDtoSub = { message: string, fileList: FullPathFile[] };
@@ -53,7 +54,7 @@ type InDto = Record<InType, InDtoSub>;
     CommonModule, FormsModule, RouterModule, MarkdownModule, MatAutocompleteModule, MatSelectModule,
     MatButtonModule, MatProgressSpinnerModule,
     MatExpansionModule, MatIconModule, MatCheckboxModule, MatBadgeModule, MatMenuModule, MatDividerModule, MatTooltipModule, MatRadioModule,
-    MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
+    MmEmojiPickerComponent, MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
   ],
   templateUrl: './mattermost.component.html',
   styleUrl: './mattermost.component.scss'
@@ -70,6 +71,10 @@ export class MattermostComponent implements OnInit {
   readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
   readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
   readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
+
+  emojiPicker(): void {
+    this.dialog.open(MmEmojiPickerComponent, {});
+  }
 
   copyToClipBoard = DomUtils.copyToClipboard;
   title: string = '';
@@ -391,7 +396,7 @@ export class MattermostComponent implements OnInit {
       map(next => {
         const categories = next as MattermostChannelsCategoriesResponse;
         // const unreadsCategory = this.mmCategoriesList[0];
-        console.log(categories);
+        // console.log(categories);
         // console.log('allall', mmTeam.id, categories, categories.order.map(id => cateMas[id].display_name));
         const cateMas = categories.categories.reduce((mas, cate) => {
           mas[cate.id] = cate;
@@ -540,6 +545,7 @@ export class MattermostComponent implements OnInit {
               // 未読フラグ系の設定
               this.updateUnreadAndMentionCount(post);
 
+              // TODO ここはバグっている。別チャネルのスレッドを表示中にそのスレッドの更新があったら反映させるべきだがスレッドが無視されている。本来メイン系とスレッド系でフローを分けるべきだったかもしれない。
               if (this.initializedChannelList.includes(post.channel_id)) {
                 // タイムラインに設定されているチャネル以外のものはメッセージ本体はいじらないのでここでおしまい
               } else {
@@ -624,7 +630,7 @@ export class MattermostComponent implements OnInit {
               });
 
               // スレッド表示中の場合はスレッドを更新
-              if (this.mmThread && this.mmThread.length > 0) {
+              if (this.mmThread && this.mmThread.length > 0 && this.mmThreadMas[this.mmThread[0][0].id].length > 0) {
                 this.mmThread = this.mmThreadMas[this.mmThread[0][0].id];
                 // thread用のスクローラを最下端に持っていく
                 setTimeout(() => this.rScroll().nativeElement.scrollTop = this.rScroll().nativeElement.scrollHeight, 500);
@@ -926,7 +932,7 @@ export class MattermostComponent implements OnInit {
           });
 
           // スレッド表示中の場合はスレッドを更新
-          if (this.mmThread && this.mmThread.length > 0) {
+          if (this.mmThread && this.mmThread.length > 0 && this.mmThreadMas[this.mmThread[0][0].id].length > 0) {
             this.mmThread = this.mmThreadMas[this.mmThread[0][0].id];
             // thread用のスクローラを最下端に持っていく
             setTimeout(() => this.rScroll().nativeElement.scrollTop = this.rScroll().nativeElement.scrollHeight, 500);
@@ -974,7 +980,7 @@ export class MattermostComponent implements OnInit {
             if (emojis) {
               emojis.reactions = emojis.reactions?.filter(r0 => r0.user_id !== reaction.user_id);
             }
-            console.log(this.mmPosts[reaction.post_id].metadata.reactions);
+            // console.log(this.mmPosts[reaction.post_id].metadata.reactions);
           } else {/** 取得していないpostは無視する */ }
         } else if (next.event === 'close' || next.event === 'error') {
           this.snackBar.open(`切断されました。リロードしてください。`, 'close', { duration: 10000 });
@@ -1371,11 +1377,42 @@ export class MattermostComponent implements OnInit {
 
     this.setTitle();
 
+    // 入力エリアの初期値設定
+    this.inDto.main.message = '';
+    this.inDto.main.fileList = [];
+    // draftから復元 これは正規の流れと切り離してもいいような気がするのでここで打つ。
+    if (mmChannelIdList.length === 1) {
+      // チャネル数が1の時だけドラフトを取るF
+      from(
+        Array
+          // ダイレクトの時はチームが不明なので、とりあえず先頭のチームを選択する（0はtimelinie、1はdirectなので2を取る）
+          .from(new Set(this.selectedChannelIds.map(channelId => this.mmChannelMas[channelId].team_id).map(team_id => team_id === 'direct' ? this.mmTeamMas[Object.keys(this.mmTeamMas)[2]].id : team_id)))
+          .map(team_id => this.apiMattermostService.mattermostGetDrafts(team_id))
+      ).pipe(
+        mergeMap(_ => _, 1), // worker=1
+        tap(drafts => drafts.forEach(draft => this.draftMap[draft.channel_id] = draft)),
+        toArray(),
+        tap(_ => {
+          const draft = this.draftMap[mmChannelIdList[0]];
+          this.inDto.main.message = draft.message;
+          // console.log(draft.message);
+          this.inDto.main.fileList = draft.file_ids
+            .map(file_id => draft.metadata.files.find(file => file.id === file_id))
+            .filter(file => !!file).map(file => ({
+              id: file.id,
+              file: file as any as File, // ごまかし
+              fullPath: file.name,
+              base64String: `data:${file.mime_type};base64,${file.mini_preview}`,
+            }));
+        }),
+      ).subscribe();
+    } else { }
+
     // from で配列自体のObservableを作ることで mergeMap で並列実行数を絞る。
     return from(mmChannelIdList.filter(chId => this.mmChannelMas[chId] && !this.initializedChannelList.includes(chId)).map(channelId =>
       this.apiMattermostService.mattermostChannelsPosts(channelId, page, perPage, span).pipe(map(channelPosts => ({ channelId, channelPosts })))
     )).pipe(
-      mergeMap(request => request, 1), // worker=3みたいなもの
+      mergeMap(request => request, 1), // worker=1みたいなもの
       tap(next => {
         // load済みチャンネルID
         this.initializedChannelList.push(next.channelId);
@@ -1475,7 +1512,6 @@ export class MattermostComponent implements OnInit {
                 });
               }
 
-              let sb = '';
               const mmSerializedPostList = [] as Post[];
               Object.entries(allChannelPosts).forEach(([channelId, posts]) => {
                 posts.forEach(post => {
@@ -1498,7 +1534,6 @@ export class MattermostComponent implements OnInit {
                   }).join('') + '\n';
                 });
               });
-              this.summaryText = sb;
 
               this.mmGroupedSerializedPostList = [];
               this.mmGroupedFilteredPostList = [];
@@ -1556,6 +1591,8 @@ export class MattermostComponent implements OnInit {
       })
     );
   }
+  // ドラフトのマップ
+  draftMap: { [channel_id: string]: MattermostPost } = {};
 
   viewThread(post: Post): void {
     if (this.mmThread && this.mmThread.length > 0 && this.mmThread[0].length > 0 && this.mmThread[0][0].root_id === post.root_id) {
@@ -1570,14 +1607,6 @@ export class MattermostComponent implements OnInit {
       }, 500);
     }
   }
-
-  mmCurrentSummary(): void {
-    const span = 1000 * 60 * 60 * 10;
-    // console.log(`this.mmChannels.length=${this.mmChannelMas}`);
-    const targetChannelIds = Object.entries(this.mmChannelMas).filter(([channelId, mmChannel]) => mmChannel.isChecked && mmChannel.last_post_at > Date.now() - span).map(([channelId, mmChannel]) => channelId);
-    this.mmLoadChannels(targetChannelIds, 0, 60, span);
-  }
-  summaryText = '';
 
   readonly textAreaElemMain = viewChild.required<ElementRef<HTMLTextAreaElement>>('textAreaElemMain');
 
@@ -1615,6 +1644,7 @@ export class MattermostComponent implements OnInit {
     this.apiMattermostService.mattermostCreatePost({ channel_id: channel_id, message: targetInDto.message, file_ids: targetInDto.fileList.map(file => file.id || '').filter(name => name), root_id }).subscribe({
       next: next => {
         // console.log(next);
+        this.apiMattermostService.mattermostCreateDraft({ channel_id: channel_id, message: '', file_ids: [], root_id }).subscribe(); // メッセージ送信が成功したらドラフトを消しておく
       },
       error: error => {
         // エラーの時は入力を元に戻す。
@@ -1653,6 +1683,9 @@ export class MattermostComponent implements OnInit {
   timeoutId: any;
   onKeyDown(type: InType, $event: KeyboardEvent, channel_id: string, root_id?: string): void {
     if (this.mentionPosition) {
+      // メンション表示中であればメンション部分の操作をする
+
+      let isArrowType = false;
       // 上を押したらmentionListの選択を上に移動
       if (this.mentionList.length > 0 && ['ArrowUp', 'ArrowDown'].includes($event.key)) {
         if ($event.key === 'ArrowUp') {
@@ -1668,29 +1701,30 @@ export class MattermostComponent implements OnInit {
             elements[this.mentionSelectorIndex].nativeElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           } else { }
         });
+        isArrowType = true;
 
         $event.preventDefault();
+        return;
       }
       if ($event.key === 'Escape') {
         this.clearMention();
+        return;
       }
       if ($event.key === 'Enter') {
-        const inputText = this.inDto[type].message;
-        const atIndex = inputText.lastIndexOf('@');
-        const mention = inputText.slice(atIndex + 1).split(' ')[0];
-        const replacedText = `${inputText.slice(0, atIndex + 1)}${this.mentionList[this.mentionSelectorIndex].username} ${inputText.slice(atIndex + 1 + mention.length)}`;
-        this.inDto[type].message = replacedText;
-        this.clearMention();
+        const mentionKeyword = this.mentionList[this.mentionSelectorIndex].username;
+        this.setMention(type, mentionKeyword);
         $event.preventDefault();
       } else {
-        // 最後のキー入力から1000秒後にonChangeが動くようにする。1000秒経たずにここに来たら前回のタイマーをキャンセルする
-        clearTimeout(this.timeoutId);
-        this.timeoutId = setTimeout(() => this.onChange(channel_id, root_id), 1000);
+
+        if (!isArrowType) setTimeout(() => { this.checkMention(type); }, 0);
+
+        this.onChange(type, channel_id, root_id);
       }
     } else {
+      // メンション表示中ではない場合。
       if ($event.key === 'Enter') {
         if ($event.shiftKey) {
-          this.onChange(channel_id, root_id);
+          this.onChange(type, channel_id, root_id);
         } else if ($event.ctrlKey) {
           this.post(type, channel_id, root_id);
         } else {
@@ -1698,99 +1732,152 @@ export class MattermostComponent implements OnInit {
           // this.post(type, channel_id, root_id);
         }
       } else {
-        // 最後のキー入力から1000秒後にonChangeが動くようにする。1000秒経たずにここに来たら前回のタイマーをキャンセルする
-        clearTimeout(this.timeoutId);
-        this.timeoutId = setTimeout(() => this.onChange(channel_id, root_id), 1000);
+
+        setTimeout(() => { this.checkMention(type); }, 0);
+
+        this.onChange(type, channel_id, root_id);
       }
     }
   }
 
-  mentionKeyword: string = '';
-  mentionList: MattermostUser[] = [];
-  mentionPosition?: { x: number, y: number };
-  mentionSelectorIndex: number = -1;
-  mentionInputType: 'main' | 'thread' = 'main';
-
-  onInput(type: InType, $event: Event, channel_id: string, root_id?: string): void {
-    //TODO メンション機能。うまくいってない。途中でメンションするときの動きが出来てない。lastの@を固定でとってしまっているので。
+  setMention(type: InType, mentionKeyword: string): void {
+    let inputElement: HTMLTextAreaElement;
+    if (type === 'main') {
+      inputElement = this.textAreaElemMain().nativeElement;
+    } else if (type === 'thread') {
+      inputElement = this.textAreaElemThread().nativeElement;
+    } else { return; }
     const inputText = this.inDto[type].message;
-    const atIndex = inputText.lastIndexOf('@');
-    if (atIndex === -1 || (atIndex > 0 && inputText[atIndex - 1] !== ' ')) {
-      this.mentionList = [];
-      this.mentionPosition = undefined;
-      return;
+    const left = inputText.substring(0, this.mentionAtIndex);
+    const right = inputText.substring(inputElement.selectionStart || 0);
+    this.inDto[type].message = left + `@${mentionKeyword} ` + right;
+    this.clearMention();
+  }
+
+  checkMention(type: InType): void {
+    let inputElement: HTMLTextAreaElement;
+    let channel_id: string;
+    let root_id: string | undefined;
+
+    if (type === 'main') {
+      inputElement = this.textAreaElemMain().nativeElement;
+      channel_id = this.selectedChannelIds[0];
+      root_id = undefined;
+    } else if (type === 'thread') {
+      inputElement = this.textAreaElemThread().nativeElement;
+      channel_id = this.mmThread[0][0].channel_id;
+      root_id = this.mmThread[0][0].id;
+    } else { return; }
+
+    if (inputElement.selectionStart === inputElement.selectionEnd) {
+      // シングルカーソルの時だけOK
     } else {
-      const mention = inputText.slice(atIndex + 1).split(' ')[0];
+      // 文字列選択しているときはメンションoff
+      this.clearMention();
+      return;
+    }
+
+    const leftText = this.inDto[type].message.substring(0, inputElement.selectionStart || 1);
+    // 簡単に言うと、カーソル左側の文字列を末尾から英数記号の連続する限り切り出して、その先頭が単一の@である場合のみをメンションの発動条件とする。
+    const match = leftText.match(/[A-Za-z0-9_.@-]+$/); // メンション文字列として使用可能な文字の連続を取得する。
+    // console.log(`leftText=${leftText}`);
+    if (match && match[0] && match[0].lastIndexOf('@') === 0) { // lastIndexOfで@位置を取得し、0であれば文字列中唯一の@が先頭に存在することを担保できる
+      this.mentionAtIndex = leftText.length - match[0].length;
+      this.mentionPosition = this.cursorPosition;
+
+      const mentionText = match[0].substring(1);
+      // console.log(mentionText);
+
       const team = this.mmTeamMas[this.mmChannelMas[channel_id].team_id];
       const teamId = team.id === 'direct' ? this.mmTeamList[2].id : (team.id === 'timeline' ? this.mmChannelMas[channel_id].team_id : team.id);
 
-      if (this.mentionKeyword && mention.startsWith(this.mentionKeyword) && this.mentionList.length === 0) {
+      if (this.mentionKeyword && mentionText.startsWith(this.mentionKeyword) && this.mentionList.length === 0) {
         // 前方一致検索なのでヒットしなかったメンションキーワードなら追加入力を無視する。
+        this.clearMention();
       } else {
-        this.apiMattermostService.mattermostUserAutocomplete(teamId, channel_id, mention).subscribe({
+        if (this.mentionTimeout) {
+          this.mentionTimeout.unsubscribe();
+        } else { }
+        // 
+        let threadUserList: MattermostUser[] = [];
+        if (this.mentionList.length === 0 && root_id) {
+          // 元が0件でthreadの場合はthreadのユーザーを取ってきて追加しておく。
+          threadUserList = Array.from(new Set(this.mmThreadMas[root_id].map(posts => posts.map(post => post.user_id)).flat().reverse())).map(user_id => this.mmUserMas[user_id]).filter(user => user);
+          this.mentionList = threadUserList;
+        } else {/** mainもしくは元々なんか入ってる場合はそのまま継続 */ }
+        this.mentionTimeout = this.apiMattermostService.mattermostUserAutocomplete(teamId, channel_id, mentionText).subscribe({
           next: next => {
             // console.log(next);
             this.mentionInputType = type;
             this.mentionSelectorIndex = 0;
-            this.mentionList = next.users;
-            this.mentionKeyword = mention;
+
+            const presetUserIds = threadUserList.map(user => user.id);
+            presetUserIds.push(this.mmUser.providerUserId); // 自分は一旦除外
+
+            // presetUserIdsを除外して追加
+            this.mentionList = [...threadUserList, ...next.users.filter(user => !presetUserIds.includes(user.id))];
+
+            // 自分が居たら末尾に追加
+            const currentUser = next.users.find(user => user.id === this.mmUser.providerUserId);
+            if (currentUser) {
+              this.mentionList.push(currentUser); // 自分を末尾に追加
+            } else { }
+            this.mentionKeyword = mentionText;
             next.users.forEach(user => user.roles = user.roles.replaceAll(/.* /g, ''));
-            // // 自分を最後に移動
-            // const currentUserIndex = this.mentionList.findIndex(user => user.id === this.mmUser.id);
-            // if (currentUserIndex !== -1) {
-            //   const currentUser = this.mentionList.splice(currentUserIndex, 1)[0];
-            //   this.mentionList.push(currentUser);
-            // }
+
             const special = [
               { email: '', first_name: '', last_name: '', roles: 'special', id: 'here', username: 'here', nickname: 'Notifies everyone in this channel' },
               { email: '', first_name: '', last_name: '', roles: 'special', id: 'channel', username: 'channel', nickname: 'Notifies everyone in this channel' },
               { email: '', first_name: '', last_name: '', roles: 'special', id: 'all', username: 'all', nickname: 'Notifies everyone in this channel' },
             ] as MattermostUser[];
-            special.filter(user => user.username.startsWith(mention)).forEach(user => this.mentionList.push(user));
+            special.filter(user => user.username.startsWith(mentionText)).forEach(user => this.mentionList.push(user));
 
-            // スレッド内の最後の発言者を取得して先頭に移動
-            if (type === 'thread' && this.mmThreadMas[root_id || '']) {
-              const threadList = this.mmThreadMas[root_id || ''];
-              const lastPostUserId = threadList.at(-1)![0].user_id;
-
-              // 最後の発言者をリストから探して先頭に移動
-              const lastPosterIndex = this.mentionList.findIndex(user => user.id === lastPostUserId);
-              if (lastPosterIndex !== -1) {
-                const lastPoster = this.mentionList.splice(lastPosterIndex, 1)[0];
-                this.mentionList.unshift(lastPoster);
-              }
-            } else { }
-
-            if (this.mentionList.length > 0) {
-              if (this.mentionPosition) {
-                // 既にアンカーがある場合はその位置を使う
-              } else {
-                this.mentionPosition = this.cursorPosition;
-              }
-            } else {
-              this.mentionSelectorIndex = -1;
-              this.mentionPosition = undefined;
-            }
           },
           error: error => {
             this.clearMention();
           },
         });
       }
+    } else {
+      this.clearMention();
     }
   }
 
+  mentionUserMaster: { [name: string]: MattermostUser } = {};
+  mentionKeyword: string = '';
+  mentionList: MattermostUser[] = [];
+  mentionPosition?: { x: number, y: number };
+  mentionAtIndex: number = -1;
+  mentionSelectorIndex: number = -1;
+  mentionInputType: 'main' | 'thread' = 'main';
+  mentionTimeout: Subscription | null = null;
+
   clearMention(): void {
+    this.mentionAtIndex = -1;
     this.mentionSelectorIndex = -1;
     this.mentionList = [];
     this.mentionKeyword = '';
     this.mentionPosition = undefined;
   }
 
-  onChange(channel_id: string, postId?: string): void {
-    // // textareaの縦幅更新。遅延打ちにしないとvalueが更新されていない。
-    // this.textAreaElem && setTimeout(() => { DomUtils.textAreaHeighAdjust(this.textAreaElem.nativeElement); }, 0);
-    this.apiMattermostService.mattermostTyping(channel_id, postId);
+  onChange(type: InType, channel_id: string, root_id?: string): void {
+    // textareaの縦幅更新。遅延打ちにしないとvalueが更新されていないので0遅延打ち。
+    setTimeout(() => {
+      // テキストボックスの高さ調整
+      if (type === 'main') {
+        this.textAreaElemMain() && DomUtils.textAreaHeighAdjust(this.textAreaElemMain().nativeElement); // 高さ調整
+      } else if (type === 'thread') {
+        this.textAreaElemThread() && DomUtils.textAreaHeighAdjust(this.textAreaElemThread().nativeElement); // 高さ調整
+      }
+    }, 0);
+
+    // 最後の変更検知から1000秒後にonChangeが動くようにする。1000秒経たずにここに来たら前回のタイマーをキャンセルする
+    clearTimeout(this.timeoutId);
+    this.timeoutId = setTimeout(() => {
+      const targetInDto = { message: this.inDto[type].message, fileList: [...this.inDto[type].fileList] };
+      this.apiMattermostService.mattermostCreateDraft({ channel_id: channel_id, message: targetInDto.message, file_ids: targetInDto.fileList.map(file => file.id || '').filter(name => name), root_id }).subscribe();;
+      this.apiMattermostService.mattermostTyping(channel_id, root_id);
+    }, 1000);
   }
   cursorPosition: { x: number, y: number } = { x: 0, y: 0 };
   onCursorPositionChange($event: { x: number, y: number }): void {
@@ -1809,13 +1896,21 @@ export class MattermostComponent implements OnInit {
     // this.isLock = true;
     // mattermostにアップロードするのでなんとなくフルパスじゃなくてbasenameにしておく。
     files.forEach(file => file.fullPath = file.fullPath.split('/').pop() || '');
+    // 先に枠だけ作ってしまう。
+    files.forEach(file => this.inDto[type].fileList.push(file));
     return this.apiMattermostService.mattermostFilesUpload(channel_id, files)
       .subscribe({
         next: next => {
           next.forEach((res, index) => {
             res.file_infos.forEach(fileInfo => {
               files[index].id = fileInfo.id;
-              this.inDto[type].fileList.push(files[index]);
+              if (fileInfo.mime_type.startsWith('image/')) {
+                // console.log(files[index].base64String);
+                // files[index].base64String = `data:${fileInfo.mime_type};base64,${files[index].fullPath}`;
+              }
+
+              // this.inDto[type].fileList[indexPlaceholder + index] = files[index];
+              // this.inDto[type].fileList.push(files[index]);
             });
           });
           // this.isLock = false;

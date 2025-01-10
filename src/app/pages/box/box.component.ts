@@ -18,8 +18,8 @@ import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 
 import { OnInit, Component, inject, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BoxApiCollection, BoxApiCollectionList, BoxApiFolder, BoxApiSearchResults } from './box-interface';
-import { concatMap, Observable, Subscription, tap, switchMap, from, toArray } from 'rxjs';
+import { BoxApiCollection, BoxApiCollectionList, BoxApiEntry, BoxApiFolder, BoxApiItemEntry, BoxApiSearchResults, BoxMkdirErrorResponse, BoxUploadErrorResponse } from './box-interface';
+import { concatMap, Observable, Subscription, tap, switchMap, from, toArray, catchError, throwError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { MatMenu, MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -32,6 +32,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { FullPathFile } from '../../services/file-manager.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { fileIcons, folderIcons } from '../../ext/vscode-material-icon-theme/core';
+import { DialogComponent } from '../../parts/dialog/dialog.component';
 
 @Component({
   selector: 'app-box',
@@ -70,8 +71,8 @@ export class BoxComponent implements OnInit {
 
   isLoading = false;
 
-  // 拡張子に応じたアイコン
-  iconMas: { [extension: string]: boolean } = {};
+  dateFormat = 'yyyy 年 MM 月 dd 日 hh 時 mm 分 ss 秒'; // SSS はどうせ000なので表示しないことにした
+  thumbnailStatusMas: { [extension: string]: undefined | 'fine' | 'error' } = {};
 
   constructor() {
     this.refreshCollection();
@@ -187,7 +188,7 @@ export class BoxComponent implements OnInit {
   }
 
   onOpenCollection(collection: BoxApiCollection): void {
-    this.apiBoxService.boxCollectionItem(collection.id).subscribe({
+    this.apiBoxService.collectionItem(collection.id).subscribe({
       next: (response) => {
         // console.log('コレクション取得成功:', response);
         collection.items = response;
@@ -329,98 +330,52 @@ export class BoxComponent implements OnInit {
     }
   }
 
-
-  selectedFiles: FullPathFile[] = [];
-  uploadStatus = '';
-
-  // ファイルをアップロード
-  uploadFiles(folderId: string) {
-    this.selectedFiles.forEach((file) => {
-      this.apiBoxService.uploadFilePreflight(file.file, folderId).subscribe({
-        next: response => {
-          console.log('アップロード成功:', response);
-          this.uploadStatus = `ファイル "${file.file.name}" がアップロードされました。`;
-        },
-        error: err => {
-          console.error('アップロードエラー:', err);
-          this.uploadStatus = `ファイル "${file.file.name}" のアップロードに失敗しました。`;
-        },
-      });
+  remove(entry: BoxApiItemEntry): void {
+    this.dialog.open(DialogComponent, { data: { title: 'Confirm', message: `本当に削除しますか？`, options: ['Cancel', 'OK'] } }).afterClosed().subscribe({
+      next: next => {
+        if (next === 1) {
+          this.apiBoxService.boxRemoveItem(entry).subscribe({
+            next: next => {
+              this.snackBar.open('削除しました。', '閉じる', { duration: 3000 });
+              if (this.item) {
+                const targetIndex = this.item.item_collection.entries.findIndex(e0 => e0.id === entry.id);
+                if (targetIndex >= 0) {
+                  this.item.item_collection.entries.splice(targetIndex, 1);
+                } else { }
+              } else { /** ここには来ない */ }
+            },
+            error: error => {
+              this.snackBar.open('削除に失敗しました。', '閉じる', { duration: 3000 });
+            },
+          });
+        } else {/** キャンセル */ }
+      }
     });
   }
 
+  selectedFiles: FullPathFile[] = [];
   // ファイル選択
   onFilesDropped(files: FullPathFile[]) {
     this.selectedFiles = files;
-
-    /**
-     * ディレクトリパスを1階層ずつ掘るためのリストを作成
-     * @param directories 一意のディレクトリパス一覧
-     * @returns 階層順に並べられたディレクトリリスト
-     */
-    function buildDirectoryHierarchy(directories: string[]): string[] {
-      const allPaths = new Set<string>();
-
-      directories.forEach(directory => {
-        const parts = directory.split(/\/|\\/); // '/'または'\'で分割
-        parts.pop(); // 末尾（ファイル）を削る
-        let currentPath = '';
-        parts.forEach(part => {
-          currentPath = currentPath ? `${currentPath}/${part}` : part; // 階層を構築
-          allPaths.add(currentPath);
-        });
-      });
-
-      // ソートして階層順に整列
-      return Array.from(allPaths).sort((a, b) => a.localeCompare(b));
-    }
-
-    const directoryList = buildDirectoryHierarchy(files.map(file => file.fullPath));
-
     if (this.item) {
-      const itemId = this.item.id;
-      const direMap: { [pare: string]: string } = {};
-      from(directoryList).pipe(
-        concatMap((dire, index) => {
-          console.log(dire);
-          const split = dire.split('/');
-          const name = split.pop() || '';
-          const id = direMap[split.join('/')] || itemId;
-          return this.apiBoxService.createFolder(name, id).pipe(tap(res => {
-            direMap[dire] = res.id;
-          }))
-        }),
-        toArray(),
-        switchMap(
-          res => from(files).pipe(
-            concatMap((file, index) => {
-              const split = file.fullPath.split('/');
-              const name = split.pop() || '';
-              const id = direMap[split.join('/')] || itemId;
-              return this.apiBoxService.uploadFilePreflight(file.file, id).pipe(
-                switchMap(res => {
-                  return this.apiBoxService.uploadFile(file.file, id, res);
-                }),
-              );
-            }),
-          )
-        ),
-      ).subscribe({
+      this.apiBoxService.uploadFiles(this.item.id, files).subscribe({
         next: response => {
+          response.entries.map(entry => {
+            console.log(entry);
+          });
           console.log('アップロード成功:', response);
-          this.uploadStatus = `ファイル "${response}" がアップロードされました。`;
+          this.snackBar.open('アップロード成功', '閉じる', { duration: 3000 });
+          if (this.item) {
+            this.load(this.item.id);
+          }
         },
         error: error => {
-          console.log(`error----------------`, error);
           console.error('アップロードエラー:', error);
-          this.uploadStatus = `ファイル "${files}" のアップロードに失敗しました。`;
+          this.snackBar.open('アップロードエラー', '閉じる', { duration: 3000 });
         }
       });
     } else {
     }
-
-    console.log(`---------------------++++++++++++++++++++++`);
-    console.log(directoryList);
   }
 
   stopImmediatePropagation($event: Event): void {

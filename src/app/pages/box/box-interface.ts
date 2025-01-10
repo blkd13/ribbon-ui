@@ -1,7 +1,7 @@
 export interface BoxApiUser {
     type: 'user';
     id: string;
-    name: string;
+    name?: string;
     login: string;
 }
 
@@ -30,10 +30,11 @@ export interface BoxApiFileVersion {
 }
 
 export interface BoxApiItemEntry {
-    type: 'file';
+    type: 'file' | 'web_link';
     id: string;
     file_version: BoxApiFileVersion;
     sequence_id: string;
+    version_number: number;
     etag: string;
     sha1: string;
     name: string;
@@ -49,6 +50,7 @@ export interface BoxApiItemEntry {
     lock?: null;
     // classification?: null;
     permissions?: Permissions;
+    url?: string; //for web_link only;
 }
 
 export interface BoxApiPathCollection {
@@ -189,6 +191,8 @@ export interface BoxApiFileEntry {
     etag: string;
     sha1: string;
     name: string;
+    version_number: number;
+
     description: string;
     size: number;
     path_collection: BoxApiPathCollection;
@@ -277,4 +281,45 @@ export interface BoxApiFolderItemListResponse {
     offset: number;
     limit: number;
     order: BoxApiOrder[];
+}
+
+
+
+export interface BoxMkdirErrorResponse {
+    type: "error";
+    status: number;
+    code: string;
+    context_info: {
+        conflicts: ConflictInfo[];
+    };
+    help_url: string;
+    message: string;
+    request_id: string;
+}
+export interface BoxUploadErrorResponse {
+    type: "error";
+    status: number;
+    code: string;
+    context_info: {
+        conflicts: ConflictInfo;
+    };
+    help_url: string;
+    message: string;
+    request_id: string;
+}
+
+interface ConflictInfo {
+    type: "file";
+    id: string;
+    file_version: FileVersionInfo;
+    sequence_id: string;
+    etag: string;
+    sha1: string;
+    name: string;
+}
+
+interface FileVersionInfo {
+    type: "file_version";
+    id: string;
+    sha1: string;
 }

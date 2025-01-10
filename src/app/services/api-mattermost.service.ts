@@ -72,6 +72,16 @@ export class ApiMattermostService {
       );
   }
 
+  mattermostCreateDraft(post: { channel_id: string; message: string; root_id?: string; file_ids?: string[]; }): Observable<MattermostPost> {
+    const url = `${this.baseUrl}/drafts`;
+    return this.http.post<MattermostPost>(url, post, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+  }
+  mattermostGetDrafts(teamId: string): Observable<MattermostPost[]> {
+    const url = `${this.baseUrl}/users/me/teams/${teamId}/drafts`;
+    console.log(`drafst ${teamId}`);
+    return this.http.get<MattermostPost[]>(url);
+  }
+
   mattermostTyping(channel_id: string, postId?: string): void {
     this.wsClient.userTyping(channel_id, postId || '');
   }
@@ -190,6 +200,16 @@ export class ApiMattermostService {
   mattermostGetEmojiByName(emoji_name: string): Observable<CustomEmoji> {
     const url = `${this.baseUrl}/emoji/name/${emoji_name}`;
     return this.http.get<CustomEmoji>(url);
+  }
+
+  mattermostGetEmoji(page: number = 0, per_page: number = 200, sort: string = 'name'): Observable<MattermostEmoji[]> {
+    const url = `${this.baseUrl}/emoji?page=${page}&per_page=${per_page}&sort=${sort}`;
+    return this.http.get<MattermostEmoji[]>(url);
+  }
+
+  mattermostSearchEmoji(term: string): Observable<MattermostEmoji[]> {
+    const url = `${this.baseUrl}/emoji/search`;
+    return this.http.post<MattermostEmoji[]>(url, { term }, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
   }
 
   /** 設定一覧 */
@@ -546,6 +566,7 @@ export interface MattermostFile {
   extension: string;
   size: number;
   mime_type: string;
+  mini_preview: string;
   width: number;
   height: number;
   has_preview_image: boolean;

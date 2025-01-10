@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, concat, concatMap, filter, from, map, merge, Observable, of, startWith, tap } from 'rxjs';
-import { BoxApiCollection, BoxApiCollectionItem, BoxApiCollectionList, BoxApiEventResponse, BoxApiFileItemEntry, BoxApiFolder, BoxApiFolderItemEntry, BoxApiFolderItemListResponse, BoxApiSearchResults } from '../pages/box/box-interface';
-import e from 'express';
+import { catchError, concat, concatMap, filter, from, map, merge, Observable, of, startWith, switchMap, tap, throwError, toArray } from 'rxjs';
+import { BoxApiCollection, BoxApiCollectionItem, BoxApiCollectionList, BoxApiEventResponse, BoxApiFileItemEntry, BoxApiFolder, BoxApiFolderItemEntry, BoxApiFolderItemListResponse, BoxApiItemEntry, BoxApiPathCollection, BoxApiSearchResults, BoxMkdirErrorResponse } from '../pages/box/box-interface';
+import { FullPathFile } from './file-manager.service';
 
-const ITEM_QUERY = `fields=name,modified_at,modified_by,created_at,content_modified_at,shared_link,size,extension,lock,classification,permissions`;
+const ITEM_QUERY = `fields=name,modified_at,modified_by,created_at,content_modified_at,shared_link,size,extension,lock,classification,permissions,version_number`; //,file_version,sequence_id,etag,representations //,files_count,filesCount,inviteRestrictionCode,invite_restriction_code
 
 @Injectable({ providedIn: 'root' })
 export class ApiBoxService {
@@ -14,6 +14,7 @@ export class ApiBoxService {
 
   storageKey = 'box-v1.0';
   store: { [itemId: string]: BoxApiFolder } = localStorage.getItem(this.storageKey) ? JSON.parse(localStorage.getItem(this.storageKey) as string) : {};
+  collectionStore: { [itemId: string]: BoxApiCollectionItem } = localStorage.getItem(this.storageKey) ? JSON.parse(localStorage.getItem(this.storageKey) as string) : {};
 
   private readonly http: HttpClient = inject(HttpClient);
 
@@ -22,7 +23,7 @@ export class ApiBoxService {
     return this.http.get<any[]>(url);
   }
 
-  boxFolders(id: string = '0'): Observable<BoxApiFolderItemListResponse> {
+  private boxFolders(id: string = '0'): Observable<BoxApiFolderItemListResponse> {
     const url = `${this.proxyBasePath}/2.0/folders/${id}/items?${ITEM_QUERY}`;
     return this.http.get<BoxApiFolderItemListResponse>(url);
   }
@@ -31,25 +32,69 @@ export class ApiBoxService {
     return this.http.get<BoxApiSearchResults>(`${this.proxyBasePath}/2.0/search?query=${keyword}`);
   }
 
-  boxCollection(id: string): Observable<BoxApiCollection> {
-    id = id === '0' ? '' : `/${id}`;
-    const url = `${this.proxyBasePath}/2.0/collections${id}`;
-    return this.http.get<BoxApiCollection>(url);
+  // boxCollectionItem(id: string): Observable<BoxApiCollectionItem> {
+  //   const url = `${this.proxyBasePath}/2.0/collections/${id}/items`;
+  //   return this.http.get<BoxApiCollectionItem>(url);
+  // }
+
+  collectionItem(id: string): Observable<BoxApiCollectionItem> {
+    const cached = this.collectionStore[id];
+    const url = `${this.basePath}/2.0/collections/${id}/items`;
+
+    const request$ = this.http.get<BoxApiCollectionItem>(`${url}?fromcache=true`).pipe(
+      catchError(error => of(null)), // ここのエラーはキャッシュヒット有無でしかないのでエラーとして扱わずに握りつぶす。
+      concatMap(firstResponse => {
+        console.log('First API response:', firstResponse);
+        // 初回レスポンスと直接API呼び出しを連結して処理
+        return concat(
+          of(firstResponse),
+          // ここは普通のAPI呼出
+          this.http.get<BoxApiCollectionItem>(url).pipe(
+            tap(secondResponse => {
+              console.log('Fallback API response:', secondResponse);
+              // 最新結果が取れたらキャッシュを更新
+              this.collectionStore[id] = secondResponse;
+            }),
+          ),
+        );
+      }),
+      filter(response => response !== null), // null のレスポンスを除外
+    );
+    // キャッシュがあればストリームの先頭にキャッシュを流す
+    return cached ? request$.pipe(startWith(cached)) : request$;
   }
 
-  boxCollectionItem(id: string): Observable<BoxApiCollectionItem> {
-    const url = `${this.proxyBasePath}/2.0/collections/${id}/items`;
-    return this.http.get<BoxApiCollectionItem>(url);
-  }
 
   boxEvents(): Observable<BoxApiEventResponse> {
     const url = `${this.proxyBasePath}/2.0/events?stream_type=all`;
     return this.http.get<BoxApiEventResponse>(url);
   }
 
+  boxRemoveItem(entry: BoxApiItemEntry): Observable<BoxApiFolderItemListResponse> {
+    const url = `${this.proxyBasePath}/2.0/${entry.type}s/${entry.id}`;
+    return this.http.delete<BoxApiFolderItemListResponse>(url);
+  }
+
+  // この2つは何がしたくて分けたのかわからなくなってしまった。。。
+  boxCollection(id: string): Observable<BoxApiCollection> {
+    id = id === '0' ? '' : `/${id}`;
+    const url = `${this.proxyBasePath}/2.0/collections${id}`;
+    return this.http.get<BoxApiCollection>(url).pipe();
+  }
   getCollection(): Observable<BoxApiCollectionList> {
     const url = `${this.basePath}/2.0/collections`;
-    return this.http.get<BoxApiCollectionList>(url);
+    return this.http.get<BoxApiCollectionList>(url).pipe(
+      tap(collection => {
+        if (collection.entries) {
+          const set = new Set<string>();
+          collection.entries = collection.entries.filter(item => {
+            const flag = !set.has(item.id);
+            set.add(item.id);
+            return flag;
+          });
+        }
+      }),
+    );
   }
 
   registCollectionId(id: string): Observable<{ collection: BoxApiCollection, item: BoxApiCollectionItem }> {
@@ -67,7 +112,7 @@ export class ApiBoxService {
       catchError(error => {
         console.log('Initial API call failed, falling back to direct API:', url);
         // 初回失敗時に直接API呼び出しを試みる
-        return this.http.get<BoxApiFolder>(url);
+        return this.http.get<BoxApiFolder>(`${url}`);
       }),
       concatMap(firstResponse => {
         console.log('First API response:', firstResponse);
@@ -126,6 +171,70 @@ export class ApiBoxService {
     );
   }
 
+  uploadFiles(itemId: string, files: FullPathFile[]): Observable<BoxApiPathCollection> {
+    /**
+     * ディレクトリパスを1階層ずつ掘るためのリストを作成
+     * @param directories 一意のディレクトリパス一覧
+     * @returns 階層順に並べられたディレクトリリスト
+     */
+    function buildDirectoryHierarchy(directories: string[]): string[] {
+      const allPaths = new Set<string>();
+
+      directories.forEach(directory => {
+        const parts = directory.split(/\/|\\/); // '/'または'\'で分割
+        parts.pop(); // 末尾（ファイル）を削る
+        let currentPath = '';
+        parts.forEach(part => {
+          currentPath = currentPath ? `${currentPath}/${part}` : part; // 階層を構築
+          allPaths.add(currentPath);
+        });
+      });
+
+      // ソートして階層順に整列
+      return Array.from(allPaths).sort((a, b) => a.localeCompare(b));
+    }
+
+    // ディレクトリごと行けるようにするためにディレクトリ一覧に対してmkdirしてからファイルをアップロードする
+    const directoryList = buildDirectoryHierarchy(files.map(file => file.fullPath));
+
+    const direMap: { [pare: string]: string } = {};
+    return from(directoryList).pipe(
+      concatMap((dire, index) => {
+        console.log(dire);
+        const split = dire.split('/');
+        const name = split.pop() || '';
+        const id = direMap[split.join('/')] || itemId;
+        return this.createFolder(name, id).pipe(
+          tap(res => {
+            direMap[dire] = res.id;
+          }),
+          catchError(error => {
+            if (error.status === 409) {
+              // 409エラーは既にディレクトリあるってだけなので、idをストックして継続する
+              const data = error.error as BoxMkdirErrorResponse;
+              direMap[dire] = data.context_info.conflicts[0].id;
+              return of(data); // エラーを無視して空のObservableを返す
+            } else {
+              // 409以外のエラーはそのまま再スローする
+              return throwError(() => error);
+            }
+          }),
+        )
+      }),
+      toArray(),
+      switchMap(
+        res => from(files).pipe(
+          concatMap((file, index) => {
+            const split = file.fullPath.split('/');
+            const name = split.pop() || '';
+            const id = direMap[split.join('/')] || itemId;
+            return this.uploadFile(file.file, id).pipe();
+          }),
+        )
+      ),
+    );
+  }
+
 
 
   // フォルダを作成
@@ -140,18 +249,15 @@ export class ApiBoxService {
   }
 
   // ファイルをアップロード
-  uploadFilePreflight(file: File, folderId: string): Observable<{ upload_url: string, upload_token: string }> {
-    const url = `${this.basePath}/2.0/files/content/preflight`;
-    return this.http.post<{ upload_url: string, upload_token: string }>(url, { name: file.name, parent: { id: folderId }, });
-  }
-  // ファイルをアップロード
-  uploadFile(file: File, folderId: string, attributes: { upload_url: string, upload_token: string }): Observable<{ entries: (BoxApiFolderItemEntry | BoxApiFileItemEntry)[] }> {
+  uploadFile(file: File, folderId: string): Observable<BoxApiPathCollection> {
     const formData = new FormData();
-    formData.append('upload_url', attributes.upload_url);
-    formData.append('attributes', JSON.stringify({ name: file.name, parent: { id: folderId }, }));
+    formData.append('attributes', JSON.stringify({
+      name: file.name,
+      parent: { id: folderId },
+    }));
     formData.append('file', file, file.name);
     const url = `${this.basePath}/2.0/files/content`;
-    // const url = attributes.upload_url; # 直接アップロードする場合。※ただしTokenを取ってきてからじゃないとできない。
-    return this.http.post<{ entries: (BoxApiFolderItemEntry | BoxApiFileItemEntry)[] }>(url, formData);
+    return this.http.post<BoxApiPathCollection>(url, formData);
   }
 }
+

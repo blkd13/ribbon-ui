@@ -1,0 +1,17 @@
+<div class="emoji-picker">
+    <div class="search-box">
+        <input [(ngModel)]="searchText" placeholder="Search emojis" (input)="filterEmojis()">
+    </div>
+
+    <div class="category-list">
+        <button *ngFor="let category of categories" (click)="selectCategory(category)">
+            {{category.icon}}
+        </button>
+    </div>
+
+    <div class="emoji-grid">
+        <button *ngFor="let emoji of filteredEmojis" class="emoji-item" (click)="selectEmoji(emoji)">
+            <img [src]="emoji.name" [alt]="emoji.name">
+        </button>
+    </div>
+</div>

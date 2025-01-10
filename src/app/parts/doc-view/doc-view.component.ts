@@ -57,12 +57,12 @@ export class DocViewComponent {
 
   invalidMimeTypes = [
     'application/octet-stream',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/java-vm',
     'application/x-elf',
     'application/xml',
     'application/x-msdownload',
     'application/zip',
+    'application/x-7z-compressed',
     'image/x-icon',
   ];
 
@@ -335,6 +335,9 @@ export class DocViewComponent {
           || this.dataUrl.startsWith('data:application/vnd.openxmlformats-officedocument.wordprocessingml.document')
           || this.dataUrl.startsWith('data:application/vnd.ms-powerpoint')
           || this.dataUrl.startsWith('data:application/vnd.openxmlformats-officedocument.presentationml.presentation')
+          || this.dataUrl.startsWith('data:application/vnd.ms-excel')
+          || this.dataUrl.startsWith('data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          || this.dataUrl.startsWith('data:application/vnd.ms-excel.sheet.macroEnabled.12')
         ) {
           if (this.dataUrl.startsWith('data:application/pdf')) {
             this.type = 'pdf';
