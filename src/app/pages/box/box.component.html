@@ -48,8 +48,8 @@
                 <mat-label>コレクションID</mat-label>
                 <input matInput [(ngModel)]="collectionId" type="text" (input)="checkCollectionId($event)">
             </mat-form-field>
-            <button [disabled]="!enableCollectionId" mat-raised-button color="primary" (click)="registCollection()"> 登録
-            </button>
+            <button [disabled]="!enableCollectionId" mat-raised-button color="primary" (click)="registCollection()"
+                style="width: 80px;">登録</button>
         </div>
 
     </div>
@@ -76,24 +76,25 @@
                 @for(entry of boxSearchResult.entries;track $index){
 
                 @if(entry.type === 'folder'){
-                <a href="/#/box/folder/0" class="cursor-pointer unstyled-link" mat-menu-item
+                <a href="/#/box/folder/{{entry.id}}" class="cursor-pointer unstyled-link" mat-menu-item
                     (click)="searchKeyword='';boxSearchResult=undefined;move($event, entry.id)">
                     <div class="p-2">
-                        <div>{{entry.name}}</div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center"><mat-icon>{{entry.type}}</mat-icon>{{entry.name}}</div>
+                        <div class="flex items-center gap-2 ml-10">
                             <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
                             <div>{{entry.modified_by.name}}</div>
                             <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
                         </div>
                     </div>
                 </a>
-
                 } @else if(entry.type === 'file'){
 
                 <div class="cursor-pointer" mat-menu-item>
-                    <a class="p-2 block" href="{{boxOriginUri}}/file/{{entry.id}}" target="_blank">
-                        <div>{{entry.name}}</div>
-                        <div class="flex items-center gap-2 text-white no-underline">
+                    <a class="p-2 block unstyled-link" href="{{boxOriginUri}}/file/{{entry.id}}" target="_blank">
+                        <div class="flex items-center">
+                            <mat-icon>insert_drive_file</mat-icon>{{entry.name}}<mat-icon>open_in_new</mat-icon>
+                        </div>
+                        <div class="flex items-center gap-2 ml-10 unstyled-link">
                             <div>{{entry.modified_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
                             <div>{{entry.modified_by.name}}</div>
                             <div>{{entry.path_collection.entries.at(-1)?.name}}</div>
