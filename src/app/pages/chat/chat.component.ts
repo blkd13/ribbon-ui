@@ -22,6 +22,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 
 import { saveAs } from 'file-saver';
 
@@ -54,7 +55,7 @@ declare var _paq: any;
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatSelectModule,
     MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatProgressSpinnerModule,
-    MatTabsModule,
+    MatTabsModule, ScrollingModule,
     UserMarkComponent,
     ChatPanelMessageComponent, ChatPanelSystemComponent,
   ],
@@ -590,10 +591,13 @@ export class ChatComponent implements OnInit {
   }
 
   calcCost(): number {
-    const charCount = (this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video);
+    const charCount = (this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video) || this.tokenObj.totalBillableCharacters || 0;
     const isLarge = this.tokenObj.totalTokens > 128000 ? 2 : 0;
     // const cost = charCount / 1000 * this.chatService.modelMap[this.inDto.args.model || 'gemini-1.5-pro'].price[isLarge];
-    const cost = this.selectedThreadGroup.threadList.map(thread => thread.inDto.args).reduce((prev, curr) => prev + charCount / 1000 * this.chatService.modelMap[curr.model || 'gemini-1.5-pro'].price[isLarge], 0);
+    const cost = this.selectedThreadGroup.threadList.map(thread => thread.inDto.args).reduce((prev, curr) => {
+      // console.log(`prev=${prev} charCount=${charCount} curr=${this.chatService.modelMap[curr.model || 'gemini-1.5-pro'].price[isLarge]}`)
+      return prev + charCount / 1000 * this.chatService.modelMap[curr.model || 'gemini-1.5-pro'].price[isLarge];
+    }, 0);
     return cost;
   }
 

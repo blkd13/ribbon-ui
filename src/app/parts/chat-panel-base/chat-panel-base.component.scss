@@ -30,7 +30,7 @@
 .message {
     &.closed {
         position: sticky;
-        top: 52px;
+        // top: 52px;
         overflow: hidden;
     }
 
@@ -40,7 +40,7 @@
 }
 
 .expanded .message-header-message {
-    top: 52px;
+    // top: 52px;
 }
 
 

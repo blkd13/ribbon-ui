@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, concat, concatMap, filter, from, map, merge, Observable, of, startWith, switchMap, tap, throwError, toArray } from 'rxjs';
+import { catchError, concat, concatMap, EMPTY, filter, from, map, merge, Observable, of, startWith, switchMap, tap, throwError, toArray } from 'rxjs';
 import { BoxApiCollection, BoxApiCollectionItem, BoxApiCollectionList, BoxApiEventResponse, BoxApiFileItemEntry, BoxApiFolder, BoxApiFolderItemEntry, BoxApiFolderItemListResponse, BoxApiItemEntry, BoxApiPathCollection, BoxApiSearchResults, BoxMkdirErrorResponse } from '../pages/box/box-interface';
 import { FullPathFile } from './file-manager.service';
 
@@ -102,7 +102,7 @@ export class ApiBoxService {
     return this.http.post<{ collection: BoxApiCollection, item: BoxApiCollectionItem }>(url, { collectionId: id });
   }
 
-  folder(id: string = '0'): Observable<BoxApiFolder> {
+  folderOld(id: string = '0'): Observable<BoxApiFolder> {
     const cached = this.store[id];
     const url = `${this.basePath}/2.0/folders/${id}`;
 
@@ -111,7 +111,7 @@ export class ApiBoxService {
     const request$ = this.http.get<BoxApiFolder>(`${url}?fromcache=true`).pipe(
       catchError(error => {
         console.log('Initial API call failed, falling back to direct API:', url);
-        // 初回失敗時に直接API呼び出しを試みる
+        // 初回失敗時はエラーを握りつぶして直接API呼び出しを試みる
         return this.http.get<BoxApiFolder>(`${url}`);
       }),
       concatMap(firstResponse => {
@@ -168,6 +168,67 @@ export class ApiBoxService {
         }),
         filter(response => response !== null),
       )
+    );
+  }
+
+  folder(id: string = '0'): Observable<BoxApiFolder> {
+    const browserCache = this.store[id];
+
+    // APIから直接データを取得してキャッシュを更新するストリーム
+    const apiData$ = this.http.get<BoxApiFolder>(`${this.basePath}/2.0/folders/${id}`).pipe(
+      tap(response => {
+        this.store[id] = response;
+      })
+    );
+
+    // サーバーキャッシュ取得のストリーム
+    const serverCache$ = this.http.get<BoxApiFolder>(`${this.basePath}/2.0/folders/${id}?fromcache=true`).pipe(
+      catchError(() => EMPTY)
+    );
+
+    // 詳細情報取得のストリーム
+    const details$ = this.boxFolders(id).pipe(
+      map(response => {
+        if (this.store[id]) {
+          this.store[id].item_collection.entries = response.entries as any;
+          return this.store[id];
+        }
+        return null;
+      }),
+      filter(response => response !== null)
+    );
+
+    return concat(
+      // 1.キャッシュを返すところ。ブラウザキャッシュがあればそれを返す。無ければサーバーキャッシュを取得
+      browserCache ? of(browserCache) : serverCache$,
+      // 2. APIから最新データを取得してキャッシュ更新
+      apiData$,
+      // 3. 詳細データを取得
+      details$
+    );
+  }
+
+  // TODO preloadはフォルダ纏めてドンした方が良いかもしれない・・・？いや、そうでもない・・・？
+  preLoadFolder(id: string = '0'): Observable<BoxApiFolder> {
+    const browserCache = this.store[id];
+
+    // APIから直接データを取得してキャッシュを更新するストリーム
+    const apiData$ = this.http.get<BoxApiFolder>(`${this.basePath}/2.0/folders/${id}`).pipe(
+      tap(response => {
+        this.store[id] = response;
+      })
+    );
+
+    // サーバーキャッシュ取得のストリーム。サーバーキャッシュが無ければAPIで最新版を取得
+    const serverCache$ = this.http.get<BoxApiFolder>(`${this.basePath}/2.0/folders/${id}?fromcache=true`).pipe(
+      catchError(() => {
+        return apiData$;
+      })
+    );
+
+    return concat(
+      // 1.キャッシュを返すところ。ブラウザキャッシュがあればそれを返す。無ければサーバーキャッシュを取得
+      browserCache ? of(browserCache) : serverCache$,
     );
   }
 

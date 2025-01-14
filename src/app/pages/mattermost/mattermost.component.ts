@@ -367,6 +367,7 @@ export class MattermostComponent implements OnInit {
         }, this.messageCountMas);
       }),
       catchError(e => {
+        // TODO 握りつぶし。これが正しいかは未検証
         return e;
       }),
       switchMap(a => {

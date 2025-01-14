@@ -19,7 +19,7 @@ import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 import { OnInit, Component, inject, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BoxApiCollection, BoxApiCollectionList, BoxApiEntry, BoxApiFolder, BoxApiItemEntry, BoxApiSearchResults, BoxMkdirErrorResponse, BoxUploadErrorResponse } from './box-interface';
-import { concatMap, Observable, Subscription, tap, switchMap, from, toArray, catchError, throwError, of } from 'rxjs';
+import { concatMap, Observable, Subscription, tap, switchMap, from, toArray, catchError, throwError, of, concat } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { MatMenu, MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -33,6 +33,7 @@ import { FullPathFile } from '../../services/file-manager.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { fileIcons, folderIcons } from '../../ext/vscode-material-icon-theme/core';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-box',
@@ -40,7 +41,7 @@ import { DialogComponent } from '../../parts/dialog/dialog.component';
     CommonModule, FormsModule, RouterModule,
     MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
     MatMenuModule, MatFormFieldModule, MatInputModule, MatExpansionModule, MatAutocompleteModule,
-    MatTabsModule, MatRadioModule, MatProgressSpinnerModule,
+    MatTabsModule, MatRadioModule, MatProgressSpinnerModule, MatTooltipModule,
     FileSizePipe, FileDropDirective,
     UserMarkComponent,
   ],
@@ -70,6 +71,7 @@ export class BoxComponent implements OnInit {
   tabList: { id: string, name: string }[] = [];
 
   isLoading = false;
+  isFine = true;
 
   dateFormat = 'yyyy 年 MM 月 dd 日 hh 時 mm 分 ss 秒'; // SSS はどうせ000なので表示しないことにした
   thumbnailStatusMas: { [extension: string]: undefined | 'fine' | 'error' } = {};
@@ -167,8 +169,12 @@ export class BoxComponent implements OnInit {
       // 既存のサブスクリプションを破棄しないと追い越しが発生してしまうので
       this.currentSubscription.unsubscribe();
     } else { }
-    this.currentSubscription = this.apiBoxService.folder(itemId).subscribe({
-      next: next => {
+    let isFine = false;
+    let resCounter = 0;
+    this.currentSubscription = this.apiBoxService.folder(itemId).pipe(
+      tap(next => {
+        // console.log(`BOX-RES=${resCounter}`);
+        // resCounter++;
         // console.log(next);
         this.item = next;
         this.setTitle();
@@ -179,11 +185,34 @@ export class BoxComponent implements OnInit {
         // } else if (this.addTabId === itemId) {
         //   this.tabList.push(next);
         // }
-      },
-      error: error => {
+        isFine = true;
+      }),
+      catchError(error => {
+        isFine = false;
+        return of();
+      }), // エラーは面倒なので握りつぶす。
+    ).subscribe({
+      complete: () => {
         this.isLoading = false;
-        console.error(error);
-      },
+        this.isFine = isFine;
+        if (!isFine) {
+          this.item = undefined;
+        } else { }
+
+        if (this.item) {
+          // 配下のフォルダをプリロード
+          this.currentSubscription = concat(
+            ...[
+              ...this.item.item_collection.entries.filter(entry => entry.type === 'folder'), // サービス内でキャッシュ持ってればスキップされるので思い切って全打ちする
+              ...this.item.path_collection.entries.filter(entry => entry.type === 'folder'), // サービス内でキャッシュ持ってればスキップされるので思い切って全打ちする
+            ].map(entry => this.apiBoxService.preLoadFolder(entry.id))
+          ).subscribe({
+            next: next => {
+              // console.log(next.id);
+            }
+          });
+        } else { }
+      }
     });
   }
 

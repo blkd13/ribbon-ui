@@ -1,8 +1,8 @@
-import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection, isDevMode, inject, provideAppInitializer } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection, isDevMode, inject, provideAppInitializer, EnvironmentProviders, Provider } from '@angular/core';
 import { provideRouter, withHashLocation, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
-import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideAnimations, provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { HTTP_INTERCEPTORS, HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
@@ -14,6 +14,12 @@ import { ApiInterceptor } from './api.interceptor';
 import { provideServiceWorker } from '@angular/service-worker';
 import { MatIconRegistry } from '@angular/material/icon';
 import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
+import { STORAGE_KEY } from './services/animation.service';
+
+function getAnimationProvider(): (EnvironmentProviders | Provider[])[] {
+  const animationEnabled = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'true');
+  return animationEnabled ? [provideAnimations(), provideAnimationsAsync()] : [provideNoopAnimations()];
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -43,20 +49,22 @@ export const appConfig: ApplicationConfig = {
         }
       })
     ]),
-    provideAnimations(),
-    provideAnimationsAsync(),
+    // provideAnimations(),
+    // provideAnimationsAsync(),
+    // provideNoopAnimations(),
+    ...getAnimationProvider(),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000'
     }),
     provideAppInitializer(() => {
-        const initializerFn = (() => {
+      const initializerFn = (() => {
         const iconRegistry = inject(MatIconRegistry);
         return () => {
           iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
         };
       })();
-        return initializerFn();
-      })
+      return initializerFn();
+    })
   ]
 };

@@ -25,8 +25,9 @@
     <div class="flex w-full gap-2">
         @for (message of messageGroup().messages; track $index) {
         <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
+
             <!-- ファイル -->
-            @if(message.contents.length>1){
+            <!-- @if(message.contents.length>1){
             <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
                 @for(content of message.contents; track $index){
                 @if(content.type==='text'){
@@ -38,9 +39,11 @@
                 }
             </div>
             }
-
+            -->
+            
             <!-- メッセージ -->
             @for(content of message.contents; track $index){
+
             @if(content.type==='text'){
             <div class="chat-input" [hidden]="!message.editing">
                 <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
@@ -54,14 +57,26 @@
                     [data]="brackets.pre+content.text+brackets.post">
                 </markdown>
             </div>
-            }@else if(content.type==='error'){
+            } @else if(content.type==='error') {
             <div style="color: red;overflow: auto;">
                 <div>ERROR</div>
                 {{content.text}}
             </div>
-            }@else{
+            } @else if(content.type==='file'){
             <!-- text 以外はファイル -->
-            }
+            <!-- ファイル表示のグループ化 -->
+            @if($index === 0 || message.contents[$index - 1].type !== content.type){
+            <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
+                @for(fileContent of getConsecutiveFiles(message.contents, $index); track fileContent.id){
+                <app-doc-tag [removable]="false" [content]="fileContent"
+                    (remove)="message.cacheId||removeDoc(fileContent)">
+                </app-doc-tag>
+                }
+            </div>
+            } @else {<!-- 最初の1個からループを掛けるのでここに来ることはない -->}
+
+            } @else {<!-- text/error/file以外は無いのでここに来ることはない -->}
+
             }
 
             <!-- Loading -->

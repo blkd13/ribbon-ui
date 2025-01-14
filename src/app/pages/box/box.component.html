@@ -1,15 +1,16 @@
 <div class="flex w-full h-full" appFileDrop (filesDropped)="onFilesDropped($event)">
-    <div class="">
+    <div class="flex flex-col h-full pb-10">
         <div class="p-6">
-            <a href="/#/box/folder/0" class="unstyled-link" [routerLink]="['/home']" href="#/home"
-                (click)="stopImmediatePropagation($event)">
+            <a class="unstyled-link" [routerLink]="['/home']" href="./#/home"
+                (click)="$event.stopImmediatePropagation()">
                 <button mat-button>
                     <mat-icon>home</mat-icon>
                     ホームに戻る
                 </button>
             </a>
             <div class="min-h-5"></div>
-            <a href="/#/box/folder/0" class="unstyled-link" (click)="move($event,'0')">
+            <a class="unstyled-link" [routerLink]="['/box','folder','0']" href="./#/box/folder/0"
+                (click)="$event.stopImmediatePropagation()">
                 <button mat-button>
                     <mat-icon>folder</mat-icon>
                     すべてのファイル
@@ -27,44 +28,46 @@
         </form>
 
         <!-- コレクション一覧 -->
-        @for(entry of collectionList?.entries;track $index) {
+        <div class="custom-scroll custom-scroll--thin">
+            @for(entry of collectionList?.entries;track $index) {
+            <mat-expansion-panel (opened)="onOpenCollection(entry)">
+                <mat-expansion-panel-header>
+                    <mat-panel-title>
+                        <div class="cursor-pointer flex items-center p-2">
+                            <mat-icon
+                                class="mr-2">{{entry.collection_type==='favorites'?'bookmark_star':'bookmark'}}</mat-icon>
+                            <div class="truncate flex-grow">{{entry.name}}</div>
+                        </div>
+                    </mat-panel-title>
+                </mat-expansion-panel-header>
+                <div class="p-2">
+                    @if(entry.items) {
 
-        <mat-expansion-panel (opened)="onOpenCollection(entry)">
-            <mat-expansion-panel-header>
-                <mat-panel-title>
-                    <div class="cursor-pointer flex items-center p-2">
-                        <mat-icon
-                            class="mr-2">{{entry.collection_type==='favorites'?'bookmark_star':'bookmark'}}</mat-icon>
-                        <div class="truncate flex-grow">{{entry.name}}</div>
-                    </div>
-                </mat-panel-title>
-            </mat-expansion-panel-header>
-            <div class="p-2">
-                @if(entry.items) {
-
-                @if(entry.items.entries.length>0){
-                @for(item of entry.items.entries;track $index) {
-                <a href="/#/box/folder/0" (click)="move($event, item.id)" style="width: 280px;"
-                    class="unstyled-link flex items-center p-2 pr-0" [title]="item.name">
-                    @if(item.type==='folder'){
-                    <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:item}"></ng-container>
-                    } @else {
-                    <ng-container *ngTemplateOutlet="fileIconTmpl; context:{$implicit:item}"></ng-container>
+                    @if(entry.items.entries.length>0){
+                    @for(item of entry.items.entries;track $index) {
+                    <a [routerLink]="['/box','folder',item.id]" href="./#/box/folder/{{item.id}}"
+                        (click)="$event.stopImmediatePropagation()" style="width: 280px;"
+                        class="unstyled-link flex items-center p-2 pr-0" [title]="item.name">
+                        @if(item.type==='folder'){
+                        <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:item}"></ng-container>
+                        } @else {
+                        <ng-container *ngTemplateOutlet="fileIconTmpl; context:{$implicit:item}"></ng-container>
+                        }
+                        <span class="truncate flex-grow w-0 ml-2">{{item.name}}</span>
+                    </a>
                     }
-                    <span class="truncate flex-grow w-0 ml-2">{{item.name}}</span>
-                </a>
-                }
-                } @else {
-                <div>データがありません</div>
-                }
+                    } @else {
+                    <div>データがありません</div>
+                    }
 
-                } @else {
-                <!-- <mat-spinner></mat-spinner> -->
-                Loading...
-                }
-            </div>
-        </mat-expansion-panel>
-        }
+                    } @else {
+                    <!-- <mat-spinner></mat-spinner> -->
+                    Loading...
+                    }
+                </div>
+            </mat-expansion-panel>
+            }
+        </div>
 
         <!-- コレクション登録フォーム -->
         <div class="flex items-center gap-2 p-2">
@@ -111,7 +114,8 @@
                         @for(entry of boxSearchResult.entries;track $index){
 
                         @if(entry.type === 'folder'){
-                        <a class="unstyled-link" href="/#/box/folder/{{entry.id}}" mat-menu-item
+                        <a class="unstyled-link" mat-menu-item [routerLink]="['/box','folder',entry.id]"
+                            href="./#/box/folder/{{entry.id}}" (click)="$event.stopImmediatePropagation()"
                             (click)="searchKeyword='';boxSearchResult=undefined;move($event, entry.id)">
                             <div class="p-2">
                                 <div class="flex items-center">
@@ -195,34 +199,43 @@
             </button>
             @for(index of [-2, -1];track $index){
             @if(item.path_collection.entries.at(index); as entry) {
-            <a href="/#/box/folder/{{entry.id}}" class="unstyled-link line" (click)="move($event, entry.id)"
-                [title]="entry.name">
+            <a class="unstyled-link line" [routerLink]="['/box','folder',entry.id]" href="./#/box/folder/{{entry.id}}"
+                (click)="$event.stopImmediatePropagation()" (click)="move($event, entry.id)" [title]="entry.name">
                 {{entry.name}}
             </a>
             /
             }
             }
             <span class="font-bold line" [title]="item.name">{{item.name}}</span>
+            <a [href]="[boxOriginUri, item.type, item.id].join('/')" target="_blank"
+                (click)="$event.stopImmediatePropagation()" matTooltip="BOXで開く">
+                <button mat-icon-button>
+                    <mat-icon color="primary">open_in_new</mat-icon>
+                </button>
+            </a>
+
         </div>
         }
         <mat-menu #onTreeList="matMenu">
             @for(entry of item.path_collection.entries;track $index){
-            <a href="/#/box/folder/{{entry.id}}" class="unstyled-link line" (click)="move($event, entry.id)"
+            <!-- click stopImmediatePropagation()しなくてもよいか？ -->
+            <a [routerLink]="['/box','folder',entry.id]" href="./#/box/folder/{{entry.id}}" class="unstyled-link line"
                 mat-menu-item>
                 {{entry.name}}
             </a>
             }
         </mat-menu>
 
-        <!-- コレクション一覧 -->
+        <!-- アイテム一覧 -->
         <div class="p-5 h-0 flex-grow custom-scroll">
             @if(item.item_collection && item.item_collection.entries && item.item_collection.entries.length>0){
 
             @for(entry of item.item_collection.entries;track $index) {
 
             @if(entry.type === 'folder'){
-            <a href="/#/box/folder/{{entry.id}}" class="unstyled-link flex justify-between items-center p-2"
-                [title]="entry.name" (click)="move($event, entry.id)">
+            <a [routerLink]="['/box','folder',entry.id]" href="./#/box/folder/{{entry.id}}"
+                (click)="$event.stopImmediatePropagation()" class="unstyled-link flex justify-between items-center p-2"
+                [title]="entry.name">
                 <div class="flex items-center gap-2 p-2">
                     <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:entry}"></ng-container>
                     <div>{{entry.name}}</div>
@@ -238,13 +251,13 @@
                     @if(entry.version_number>1){
                     <span class="px-3 py-0 bg-[#333] rounded-sm border border-gray-800">v{{entry.version_number}}</span>
                     }
-                    <mat-icon>open_in_new</mat-icon>
+                    <mat-icon color="primary">open_in_new</mat-icon>
                 </div>
                 <ng-container *ngTemplateOutlet="itemInfoTempl; context:{$implicit:entry}"></ng-container>
             </a>
             } @else if(entry.type === 'web_link'){
-            <a [href]="entry.url" class="unstyled-link flex justify-between items-center p-2" [title]="entry.name"
-                target="_blank">
+            <a [href]="entry.url" [routerLink]="['/box','folder',entry.id]"
+                class="unstyled-link flex justify-between items-center p-2" [title]="entry.name" target="_blank">
                 <div class="flex items-center gap-2 p-2">
                     <mat-icon>link</mat-icon>
                     <div>{{entry.name}}</div>
@@ -259,10 +272,13 @@
             }
 
             } @else {
-            何もありません。
+            最初のファイルを追加して開始しましょう<br />
+            ドラッグ&ドロップでファイルやフォルダを追加できます。
             }
         </div>
 
+        } @else if(!isFine){
+        お探しのページが見つかりません。
         }
 
     </div>
@@ -291,8 +307,14 @@
             <div>...</div>
             }
         </div>
-        <div>
-            <button mat-icon-button (click)="stopImmediatePropagation($event)" [matMenuTriggerFor]="itemMenu">
+        <div (click)="stopImmediatePropagation($event)">
+            <a [href]="[boxOriginUri,entry.type,entry.id].join('/')" target="_blank"
+                (click)="$event.stopImmediatePropagation()" matTooltip="BOXで開く">
+                <button mat-icon-button>
+                    <mat-icon color="primary">open_in_new</mat-icon>
+                </button>
+            </a>
+            <button mat-icon-button [matMenuTriggerFor]="itemMenu">
                 <mat-icon>more_vert</mat-icon>
             </button>
         </div>
@@ -300,9 +322,6 @@
     <mat-menu #itemMenu="matMenu">
         <a mat-menu-item class="unstyled-link" (click)="remove(entry)" mat-menu-item>
             <mat-icon>delete</mat-icon>ゴミ箱へ
-        </a>
-        <a mat-menu-item class="unstyled-link" [href]="entry.url" target="_blank">
-            <mat-icon>open_in_new</mat-icon>BOXで開く
         </a>
     </mat-menu>
 </ng-template>

@@ -44,10 +44,25 @@
                 <mat-radio-button [value]="1">時刻順</mat-radio-button>
                 <mat-radio-button [value]="2">名前順</mat-radio-button>
             </mat-radio-group>
+            <!-- @for (threadGroup of threadGroupList; track threadGroup.id) {
             <div class="custom-scroll custom-scroll--thin h-full relative">
-                @for (threadGroup of threadGroupList; track threadGroup.id) {
                 <div class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
                     [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
+                    実体の場合はこんな囲い方してた。
+                </div>
+            </div>
+            } -->
+            <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full relative"
+                style="height:calc( 100% - 182px);">
+                @if (isThreadGroupLoading){
+                <div class="loading-cover" style="position: absolute;top: 0;width: 100%;height: 100%;z-index: 1;">
+                    <mat-spinner></mat-spinner>
+                </div>
+                }
+                <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index"
+                    class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
+                    [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
+
                     @if (threadGroup.id === editNameThreadId) {
                     <input [(ngModel)]="threadGroup.title" name="thread-title-{{$index}}" id="thread-title-{{$index}}"
                         class="h-7 m-1 pl-2 text-[#303030]"
@@ -83,15 +98,15 @@
                         </button>
                         }
                         <!-- 
-                        <button mat-menu-item (click)="duplicate($event, thread)">
-                            <mat-icon>file_copy</mat-icon>
-                            <span>複製</span>
-                        </button>
-                        <button mat-menu-item (click)="export($index)">
-                            <mat-icon>download</mat-icon>
-                            <span>エクスポート</span>
-                        </button>
-                        -->
+                                    <button mat-menu-item (click)="duplicate($event, thread)">
+                                        <mat-icon>file_copy</mat-icon>
+                                        <span>複製</span>
+                                    </button>
+                                    <button mat-menu-item (click)="export($index)">
+                                        <mat-icon>download</mat-icon>
+                                        <span>エクスポート</span>
+                                    </button>
+                                    -->
                         <button mat-menu-item (click)="contentsDownload($event,$index, threadGroup)">
                             <mat-icon>folder_zip</mat-icon>
                             <span>コードブロックダウンロード</span>
@@ -113,14 +128,7 @@
                     </mat-menu>
 
                 </div>
-                }
-
-                @if (isThreadGroupLoading){
-                <div class="loading-cover" style="position: absolute;width: 100%;height: 100%;">
-                    <mat-spinner></mat-spinner>
-                </div>
-                }
-            </div>
+            </cdk-virtual-scroll-viewport>
             <!-- <button (click)="export(-1)">export all</button> -->
         </div>
     </div>
@@ -138,7 +146,7 @@
                     <div class="grid-item">
                         @if(tokenObj.totalTokens ==-1){ wait.. } @else {
                         {{(this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio +
-                        this.tokenObj.video)|number:'1.0-0'}}
+                        this.tokenObj.video) || this.tokenObj.totalBillableCharacters |number:'1.0-0'}}
                         }
                     </div> |
                     <div class="grid-label">Cost :</div>
@@ -236,77 +244,41 @@
             (selectedIndexChange)="restoreScrollPosition($event)">
             @for(thread of selectedThreadGroup.threadList;track $index) {
             <mat-tab label="[Tab{{$index+1}}] {{thread.inDto.args.model}}">
-                <div #textBodyElem style="height: calc(100vh - 100px);" (scroll)="saveScrollPosition($index)"
-                    class="custom-scroll w-full px-2 pt-2 pb-52 relative flex flex-col gap-1">
-                    @for(messageGroupId of messageGroupIdListMas[thread.id];track $index){
-                    @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
-
-                    <!-- {{messageGroup.id}} -->
-                    @if(messageGroup.role==='system') {
-                    <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
-                    <app-chat-panel-system class="sticky top-0 z-10" [messageGroup]="messageGroup"
-                        [bitCounter]="bitCounter" [thread]="thread"
-                        [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
-                        (edit)="editChat($event)" (removeThread)="removeThread($event)"
-                        (modelChange)="modelCheck([$event])">
-                    </app-chat-panel-system>
-                    } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-                    <div #anchor> <!-- スクロール用のただのアンカー -->
-                        <app-chat-panel-message #chatPanelList [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-                            [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
-                            (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-                            (remove)="removeMessageGroup($event)">
-                        </app-chat-panel-message>
-                    </div>
-                    }
-
-                    }
-
-                    <!-- メッセージの後ろのグループの選択肢 -->
-                    @if(messageService.nextMessageGroupId[messageGroupId]
-                    &&(
-                    (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
-                    ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
-                    ) {
-                    <ng-container
-                        *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
-                    </ng-container>
-                    }
-
-                    }
-                </div>
-            </mat-tab>
-            }
-        </mat-tab-group>
-        } @else {
-        <!-- リスト表示 -->
-        <div #textBodyElem class="custom-scroll w-full flex-1 h-0 px-2 py-0">
-
-            <div class="flex flex-col w-full gap-1 relative">
-                @for(index of indexList; track $index) {
-                <div #chatPanelGroupElem class="flex gap-1 w-full min-w-full max-w-full"
-                    [ngStyle]="index===0?{position:'sticky',top:0,zIndex:2}:{}">
-                    @for(thread of selectedThreadGroup.threadList;track $index){
-
-                    <div class="w-0 flex-1">
-                        @if(messageGroupIdListMas[thread.id]){
-                        @if(messageGroupIdListMas[thread.id][index]; as messageGroupId){
-                        @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
-
-                        <!-- {{messageGroup.id}} -->
-                        @if(messageGroup.role==='system') {
+                <div style="height: calc(100vh - 100px);" class="flex flex-col gap-1 w-full">
+                    @if(messageGroupIdListMas[thread.id]; as messageGroupIdList){
+                    @if(messageGroupIdList[0]; as messageGroupId){
+                    <div style="width: calc(100% - 17px);" class="pt-2 px-2">
+                        @if(messageService.messageGroupMas[messageGroupIdList[0]]; as messageGroup) {
                         <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
-                        <app-chat-panel-system [messageGroup]="messageGroup" [bitCounter]="bitCounter" [thread]="thread"
+                        <app-chat-panel-system class="top-0 z-10"
+                            [messageGroup]="messageService.messageGroupMas[messageGroupIdListMas[thread.id][0]]"
+                            [bitCounter]="bitCounter" [thread]="thread"
                             [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
                             (edit)="editChat($event)" (removeThread)="removeThread($event)"
                             (modelChange)="modelCheck([$event])">
                         </app-chat-panel-system>
+                        }
+                    </div>
+                    }
+                    }
+
+                    <div #textBodyElem (scroll)="saveScrollPosition($index)"
+                        class="custom-scroll w-full px-2 pb-52 relative flex flex-col gap-1"
+                        style="overflow-y: scroll;">
+
+                        @for(messageGroupId of messageGroupIdListMas[thread.id];track $index){
+                        @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
+
+                        <!-- {{messageGroup.id}} -->
+                        @if(messageGroup.role==='system') {
                         } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-                        <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-                            [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
-                            (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-                            (remove)="removeMessageGroup($event)">
-                        </app-chat-panel-message>
+                        <div #anchor> <!-- スクロール用のただのアンカー -->
+                            <app-chat-panel-message #chatPanelList [messageGroup]="messageGroup"
+                                [bitCounter]="bitCounter" [layout]="userService.chatLayout" (edit)="editChat($event)"
+                                [index]="$index" (removeContent)="removeContent($event)"
+                                (removeMessage)="removeMessage($event)" (remove)="removeMessageGroup($event)">
+                            </app-chat-panel-message>
+                        </div>
                         }
 
                         }
@@ -323,12 +295,74 @@
                         }
 
                         }
-                        }
                     </div>
+                </div>
+            </mat-tab>
+            }
+        </mat-tab-group>
+        } @else {
+        <!-- リスト表示 -->
+
+        <div class="flex gap-1 px-2" style="z-index: 2;width: calc(100% - 17px);">
+            @for(thread of selectedThreadGroup.threadList;track $index){
+            <div class="w-0 flex-1">
+                @if(messageGroupIdListMas[thread.id]; as messageGroupIdList){
+                @if(messageGroupIdList[0]; as messageGroupId){
+                @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
+                <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
+                <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup" [bitCounter]="bitCounter"
+                    [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1"
+                    [layout]="userService.chatLayout" (edit)="editChat($event)" (removeThread)="removeThread($event)"
+                    (modelChange)="modelCheck([$event])">
+                </app-chat-panel-system>
+                }
+
+                }
+                }
+            </div>
+            }
+        </div>
+
+        <div #textBodyElem class="custom-scroll w-full flex-1 h-0 px-2 py-0 flex flex-col gap-1 relative"
+            style="overflow-y: scroll;">
+            @for(index of indexList; track $index) {
+            <div #chatPanelGroupElem class="flex gap-1 w-full min-w-full max-w-full">
+                @for(thread of selectedThreadGroup.threadList;track $index){
+
+                <div class="w-0 flex-1">
+                    @if(messageGroupIdListMas[thread.id]){
+                    @if(messageGroupIdListMas[thread.id][index]; as messageGroupId){
+                    @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
+
+                    <!-- {{messageGroup.id}} -->
+                    @if(messageGroup.role==='system') {
+                    } @else if(['assistant', 'user'].includes(messageGroup.role)) {
+                    <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
+                        [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
+                        (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
+                        (remove)="removeMessageGroup($event)">
+                    </app-chat-panel-message>
+                    }
+
+                    }
+
+                    <!-- メッセージの後ろのグループの選択肢 -->
+                    @if(messageService.nextMessageGroupId[messageGroupId]
+                    &&(
+                    (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
+                    ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
+                    ) {
+                    <ng-container
+                        *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
+                    </ng-container>
+                    }
+
+                    }
                     }
                 </div>
                 }
             </div>
+            }
             <div class="spacer" style="min-height: 200px;"></div>
         </div>
         }
@@ -377,26 +411,26 @@
                 }@else{
                 <!-- 送信ボタン -->
                 <!-- <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
-                    [disabled]="messageClusterList.length===0 || (!content.text && messageGroupMap[messageClusterList[messageClusterList.length-1][0].messageGroupId].role!=='user') || isLock"
-                    (click)="send()">
-                    <mat-icon>send</mat-icon>
-                </button> -->
+                        [disabled]="messageClusterList.length===0 || (!content.text && messageGroupMap[messageClusterList[messageClusterList.length-1][0].messageGroupId].role!=='user') || isLock"
+                        (click)="send()">
+                        <mat-icon>send</mat-icon>
+                    </button> -->
                 <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter" (click)="send().subscribe()"
                     [disabled]="isLock||(!content.text&&tailRole!=='user')"
                     class="btn btn-primary"><mat-icon>send</mat-icon></button>
                 }
 
                 <!-- <button mat-fab color="primary" aria-label="Send"
-                    [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
-                    (click)="openFileDialog(fileInput)">
-                    <mat-icon>folder_open</mat-icon>
-                </button>
-                <button mat-fab color="primary" aria-label="Send"
-                    [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
-                    (click)="createCache()">
-                    <mat-icon>memory</mat-icon>
-                </button>
-                 -->
+                        [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
+                        (click)="openFileDialog(fileInput)">
+                        <mat-icon>folder_open</mat-icon>
+                    </button>
+                    <button mat-fab color="primary" aria-label="Send"
+                        [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
+                        (click)="createCache()">
+                        <mat-icon>memory</mat-icon>
+                    </button>
+                     -->
                 <button mat-icon-button color="primary" [matMenuTriggerFor]="menu" [disabled]="isLock">
                     <mat-icon>more_vert</mat-icon>
                 </button>
@@ -424,12 +458,12 @@
                 }
                 }
             </div>
-            <!-- 
+
             <div style="position: absolute;bottom: -25px;left: 32px;color: #a9a9a9;">
                 AIの回答は必ずしも正しいとは限りません。重要な情報は人の確認必須。機密情報・個人情報は入力禁止。
                 <a class="" href=" ./static/release-note.html" target="_blank">ガイドライン</a>
             </div>
-            -->
+
         </div>
     </div>
     <app-user-mark></app-user-mark>

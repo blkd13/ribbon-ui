@@ -44,19 +44,20 @@ import { ApiGiteaService } from '../../services/api-gitea.service';
 import { MarkdownModule } from 'ngx-markdown';
 import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
 
+declare var _paq: any;
 @Component({
-    selector: 'app-home',
-    imports: [
-        CommonModule, FormsModule, RouterModule, ChatPanelMessageComponent, FileDropDirective, DocTagComponent,
-        MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
-        MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
-        MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,
-        MarkdownModule,
-        DialogComponent, NewlineToBrPipe, RelativeTimePipe,
-        UserMarkComponent,
-    ],
-    templateUrl: './home.component.html',
-    styleUrl: './home.component.scss'
+  selector: 'app-home',
+  imports: [
+    CommonModule, FormsModule, RouterModule, ChatPanelMessageComponent, FileDropDirective, DocTagComponent,
+    MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
+    MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
+    MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,
+    MarkdownModule,
+    DialogComponent, NewlineToBrPipe, RelativeTimePipe,
+    UserMarkComponent,
+  ],
+  templateUrl: './home.component.html',
+  styleUrl: './home.component.scss'
 })
 export class HomeComponent implements OnInit {
 
@@ -298,11 +299,13 @@ export class HomeComponent implements OnInit {
   submit(): void {
     this.g.share['home->chat'] = { static: this.staticMessageList[0], userPrompt: this.inputText, model: this.model };
     this.router.navigate(['chat', this.defaultProject.id]);
+    _paq.push(['trackEvent', 'home', 'メッセージ送信', this.model]);
   }
 
   setStatic(staticMessage: { label: string, systemPrompt: string, placeholder: string }): void {
     this.g.share['home->chat'] = { static: staticMessage, model: this.model };
     this.router.navigate(['chat', this.defaultProject.id]);
+    _paq.push(['trackEvent', 'home', 'setStatic', staticMessage.label]);
   }
 
   // ドラッグアンドドロップの部。

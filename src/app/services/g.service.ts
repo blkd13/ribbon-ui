@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { User } from '../models/models';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 
 export type Lang = 'ja' | 'en';
 export type MultilingualPrompt = Record<Lang, string>;
@@ -10,7 +10,7 @@ export type MultilingualPrompt = Record<Lang, string>;
 })
 export class GService {
 
-  version = 'v20250110';
+  version = 'v20250114';
 
   // ローディング中のHTTP通信数
   httpConnectCount: Subject<number> = new Subject<number>();
@@ -37,8 +37,4 @@ export class GService {
     // 言語設定
     this.lang = this.queries['lang'] === 'en' ? 'en' : 'ja';
   }
-}
-
-export class Info {
-
 }

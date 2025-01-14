@@ -338,6 +338,18 @@ export class ChatPanelBaseComponent implements OnInit {
     messageGroup.messages.forEach(message => message.editing = message.editing ? 0 : 1);
   }
 
+  getConsecutiveFiles(contents: ContentPart[], startIndex: number): ContentPart[] {
+    const result = [];
+    for (let i = startIndex; i < contents.length; i++) {
+      if (contents[i].type !== 'text' && contents[i].type !== 'error') {
+        result.push(contents[i]);
+      } else {
+        break;
+      }
+    }
+    return result;
+  }
+
   loadContent(): Observable<ContentPart[]> {
     const messageGroup = this.messageGroup();
     if (messageGroup.messages[0].id.startsWith('dummy-')) {

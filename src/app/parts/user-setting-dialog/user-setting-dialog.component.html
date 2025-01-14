@@ -1,0 +1,24 @@
+<h2 mat-dialog-title>アプリケーション設定</h2>
+
+<mat-dialog-content>
+    <div class="settings-section">
+        <h3>アニメーション設定</h3>
+        <mat-divider></mat-divider>
+        <div class="setting-item">
+            <mat-slide-toggle [checked]="current" (change)="toggleAnimation($event)">
+                アニメーションを有効にする
+            </mat-slide-toggle>
+            <p class="setting-description">
+                UIアニメーションの有効/無効を切り替えます。
+                変更を適用するにはページの再読み込みが必要です。
+            </p>
+        </div>
+    </div>
+</mat-dialog-content>
+
+<mat-dialog-actions>
+    <button mat-button mat-dialog-close>キャンセル</button>
+    <button mat-raised-button color="primary" (click)="saveAndClose()">
+        保存して閉じる
+    </button>
+</mat-dialog-actions>
