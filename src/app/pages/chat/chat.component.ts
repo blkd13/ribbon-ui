@@ -45,6 +45,7 @@ import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-d
 import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
 import { ChatPanelBaseComponent } from '../../parts/chat-panel-base/chat-panel-base.component';
 import { UserService } from '../../services/user.service';
+import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
 
 declare var _paq: any;
 
@@ -57,7 +58,7 @@ declare var _paq: any;
     MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatProgressSpinnerModule,
     MatTabsModule, ScrollingModule,
     UserMarkComponent,
-    ChatPanelMessageComponent, ChatPanelSystemComponent,
+    ChatPanelMessageComponent, ChatPanelSystemComponent, AppMenuComponent,
   ],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss'
@@ -460,7 +461,7 @@ export class ChatComponent implements OnInit {
       // 名前順（Aが上に来る）
       threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
     }
-    return threadGroupList;
+    return [...threadGroupList];
   }
 
   loadThreadGroups(project: Project): Observable<ThreadGroup[]> {
@@ -480,6 +481,7 @@ export class ChatComponent implements OnInit {
           Object.assign(oldObj, newObj);
         } else {
           this.threadGroupList.push(newObj);
+          this.threadGroupList = [...this.threadGroupList];
         }
       });
     }));
@@ -521,6 +523,7 @@ export class ChatComponent implements OnInit {
       this.selectedThreadGroup = threadGroup;
       // this.inDto = this.selectedThreadGroup.inDto;
       this.threadGroupList.unshift(threadGroup);
+      this.threadGroupList = [...this.threadGroupList];
       this.sortThreadGroup(this.threadGroupList);
     }));
   }
@@ -530,6 +533,7 @@ export class ChatComponent implements OnInit {
     this.threadService.cloneThreadGroup(threadGroupId).subscribe({
       next: threadGroup => {
         this.threadGroupList.unshift(threadGroup);
+        this.threadGroupList = [...this.threadGroupList];
         this.sortThreadGroup(this.threadGroupList);
         this.isThreadGroupLoading = false;
       },
@@ -546,6 +550,7 @@ export class ChatComponent implements OnInit {
     return this.threadService.upsertThreadGroup(this.selectedProject.id, _orgThreadGroup).pipe(tap(threadGroup => {
       if (orgThreadGroup.id.startsWith('dummy-')) {
         this.threadGroupList.unshift(threadGroup);
+        this.threadGroupList = [...this.threadGroupList];
       } else { }
       // TODO 本当はここの反映はserviceでやりたいけど、サービスが割れてるからやりにくい。。
       threadGroup.threadList.forEach((thread, index) => {
@@ -1383,6 +1388,7 @@ export class ChatComponent implements OnInit {
           this.threadService.deleteThreadGroup(threadGroup.id).subscribe({
             next: next => {
               this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
+              this.threadGroupList = [...this.threadGroupList];
               if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
               } else {
@@ -1404,6 +1410,7 @@ export class ChatComponent implements OnInit {
           this.loadThreadGroups(this.selectedProject).subscribe({
             next: next => {
               this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
+              this.threadGroupList = [...this.threadGroupList];
               if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
               } // 選択中のスレッドを移動した場合は選択解除

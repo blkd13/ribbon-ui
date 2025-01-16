@@ -14,8 +14,6 @@ import { saveAs } from 'file-saver'; // Blobファイルのダウンロードの
 import { ChatCompletionContentPart, ChatCompletionContentPartText } from '../../models/models';
 import { ChatService } from '../../services/chat.service';
 import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
-import { MarkdownComponent } from 'ngx-markdown';
-import { DocTagComponent } from '../doc-tag/doc-tag.component';
 import { ContentPart, ContentPartType, MessageForView, MessageGroupForView } from '../../models/project-models';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Observable, of, tap } from 'rxjs';
@@ -26,8 +24,8 @@ import { animate, style, transition, trigger } from '@angular/animations';
 @Component({
   selector: 'app-chat-panel-base',
   imports: [
-    CommonModule, FormsModule, DocTagComponent,
-    MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
+    CommonModule, FormsModule,
+    MatTooltipModule, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
   ],
   templateUrl: './chat-panel-base.component.html',
   styleUrl: './chat-panel-base.component.scss',

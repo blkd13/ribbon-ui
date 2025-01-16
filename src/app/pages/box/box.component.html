@@ -1,22 +1,14 @@
 <div class="flex w-full h-full" appFileDrop (filesDropped)="onFilesDropped($event)">
     <div class="flex flex-col h-full pb-10">
-        <div class="p-6">
-            <a class="unstyled-link" [routerLink]="['/home']" href="./#/home"
-                (click)="$event.stopImmediatePropagation()">
-                <button mat-button>
-                    <mat-icon>home</mat-icon>
-                    ホームに戻る
-                </button>
-            </a>
-            <div class="min-h-5"></div>
-            <a class="unstyled-link" [routerLink]="['/box','folder','0']" href="./#/box/folder/0"
-                (click)="$event.stopImmediatePropagation()">
-                <button mat-button>
-                    <mat-icon>folder</mat-icon>
-                    すべてのファイル
-                </button>
-            </a>
+        <div class="p-4">
+            <app-app-menu></app-app-menu>
         </div>
+        <a class="unstyled-link p-4" [routerLink]="['/box','folder','0']">
+            <button mat-button>
+                <mat-icon>folder</mat-icon>
+                すべてのファイル
+            </button>
+        </a>
 
         <!-- BoxのURLリンク解釈 -->
         <form class="flex items-center gap-2 p-2" (submit)="boxUrlMove()">
@@ -45,8 +37,7 @@
 
                     @if(entry.items.entries.length>0){
                     @for(item of entry.items.entries;track $index) {
-                    <a [routerLink]="['/box','folder',item.id]" href="./#/box/folder/{{item.id}}"
-                        (click)="$event.stopImmediatePropagation()" style="width: 280px;"
+                    <a [routerLink]="['/box','folder',item.id]" style="width: 280px;"
                         class="unstyled-link flex items-center p-2 pr-0" [title]="item.name">
                         @if(item.type==='folder'){
                         <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:item}"></ng-container>
@@ -115,7 +106,6 @@
 
                         @if(entry.type === 'folder'){
                         <a class="unstyled-link" mat-menu-item [routerLink]="['/box','folder',entry.id]"
-                            href="./#/box/folder/{{entry.id}}" (click)="$event.stopImmediatePropagation()"
                             (click)="searchKeyword='';boxSearchResult=undefined;move($event, entry.id)">
                             <div class="p-2">
                                 <div class="flex items-center">
@@ -140,7 +130,7 @@
                                         *ngTemplateOutlet="fileIconTmpl; context:{$implicit:entry}"></ng-container>
                                     {{entry.name}}
                                     @if(entry.version_number>1){
-                                    <span class="border: 1px solid gray;">v{{entry.version_number}}</span>
+                                    <span class="version-tag">v{{entry.version_number}}</span>
                                     }
                                     <mat-icon>open_in_new</mat-icon>
                                 </div>
@@ -193,14 +183,13 @@
         <!-- パスツリー -->
         @if(item.item_collection && item.item_collection.entries){
         <div class=" flex items-center gap-2 p-2">
-            <!-- @if(item.path_collection.entries.length>2){} -->
-            <button class="channel-menu flex items-center" mat-icon-button [matMenuTriggerFor]="onTreeList">
+            <button class="channel-menu flex items-center" mat-icon-button [matMenuTriggerFor]="onTreeList"
+                [disabled]="1>item.path_collection.entries.length">
                 <mat-icon class="cursor-pointer mr-2">account_tree</mat-icon>
             </button>
             @for(index of [-2, -1];track $index){
             @if(item.path_collection.entries.at(index); as entry) {
-            <a class="unstyled-link line" [routerLink]="['/box','folder',entry.id]" href="./#/box/folder/{{entry.id}}"
-                (click)="$event.stopImmediatePropagation()" (click)="move($event, entry.id)" [title]="entry.name">
+            <a class="unstyled-link line" [routerLink]="['/box','folder',entry.id]" [title]="entry.name">
                 {{entry.name}}
             </a>
             /
@@ -219,8 +208,7 @@
         <mat-menu #onTreeList="matMenu">
             @for(entry of item.path_collection.entries;track $index){
             <!-- click stopImmediatePropagation()しなくてもよいか？ -->
-            <a [routerLink]="['/box','folder',entry.id]" href="./#/box/folder/{{entry.id}}" class="unstyled-link line"
-                mat-menu-item>
+            <a [routerLink]="['/box','folder',entry.id]" class="unstyled-link line" mat-menu-item>
                 {{entry.name}}
             </a>
             }
@@ -233,8 +221,7 @@
             @for(entry of item.item_collection.entries;track $index) {
 
             @if(entry.type === 'folder'){
-            <a [routerLink]="['/box','folder',entry.id]" href="./#/box/folder/{{entry.id}}"
-                (click)="$event.stopImmediatePropagation()" class="unstyled-link flex justify-between items-center p-2"
+            <a [routerLink]="['/box','folder',entry.id]" class="unstyled-link flex justify-between items-center p-2"
                 [title]="entry.name">
                 <div class="flex items-center gap-2 p-2">
                     <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:entry}"></ng-container>
@@ -249,14 +236,14 @@
                     <ng-container *ngTemplateOutlet="fileIconTmpl; context:{$implicit:entry}"></ng-container>
                     <div>{{entry.name}}</div>
                     @if(entry.version_number>1){
-                    <span class="px-3 py-0 bg-[#333] rounded-sm border border-gray-800">v{{entry.version_number}}</span>
+                    <span class="version-tag">v{{entry.version_number}}</span>
                     }
                     <mat-icon color="primary">open_in_new</mat-icon>
                 </div>
                 <ng-container *ngTemplateOutlet="itemInfoTempl; context:{$implicit:entry}"></ng-container>
             </a>
             } @else if(entry.type === 'web_link'){
-            <a [href]="entry.url" [routerLink]="['/box','folder',entry.id]"
+            <a [routerLink]="['/box','folder',entry.id]" [href]="entry.url"
                 class="unstyled-link flex justify-between items-center p-2" [title]="entry.name" target="_blank">
                 <div class="flex items-center gap-2 p-2">
                     <mat-icon>link</mat-icon>

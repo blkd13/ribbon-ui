@@ -164,7 +164,6 @@
 }
 
 .left-pane {
-    padding-top: 28px;
     overflow-x: hidden;
     transition: all 0.3s 0s ease;
 }
@@ -176,6 +175,7 @@
     width: 100%;
     white-space: pre;
     padding: 14px;
+    padding-top: 0;
     font-size: 20px;
     font-weight: bold;
 }

@@ -43,6 +43,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSelectModule } from '@angular/material/select';
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
 import { MmEmojiPickerComponent } from '../../parts/mm-emoji-picker/mm-emoji-picker.component';
+import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
 
 type InType = 'main' | 'thread';
 type InDtoSub = { message: string, fileList: FullPathFile[] };
@@ -54,8 +55,9 @@ type InDto = Record<InType, InDtoSub>;
     CommonModule, FormsModule, RouterModule, MarkdownModule, MatAutocompleteModule, MatSelectModule,
     MatButtonModule, MatProgressSpinnerModule,
     MatExpansionModule, MatIconModule, MatCheckboxModule, MatBadgeModule, MatMenuModule, MatDividerModule, MatTooltipModule, MatRadioModule,
-    MmEmojiPickerComponent, MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
-  ],
+    MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
+    AppMenuComponent
+],
   templateUrl: './mattermost.component.html',
   styleUrl: './mattermost.component.scss'
 })

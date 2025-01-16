@@ -3,7 +3,6 @@ import { FullPathFile, FileUploadContent, FileManagerService } from './../../ser
 import { MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 import { forkJoin, from, map, mergeMap, of, switchMap } from 'rxjs';
 import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
-import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
@@ -22,13 +21,10 @@ import { MatGridListModule } from '@angular/material/grid-list';
 import { MatCardModule } from '@angular/material/card';
 import { MatBadgeModule } from '@angular/material/badge';
 
-import { ChatInputArea, ChatService, CountTokensResponse } from '../../services/chat.service';
+import { ChatService, } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
-import { Observable, tap, toArray } from 'rxjs';
-import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
-import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
-import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.component';
+import { Observable, tap } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupVisibility, UUID } from '../../models/project-models';
@@ -48,12 +44,12 @@ declare var _paq: any;
 @Component({
   selector: 'app-home',
   imports: [
-    CommonModule, FormsModule, RouterModule, ChatPanelMessageComponent, FileDropDirective, DocTagComponent,
+    CommonModule, FormsModule, RouterModule, FileDropDirective,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
     MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,
     MarkdownModule,
-    DialogComponent, NewlineToBrPipe, RelativeTimePipe,
+    NewlineToBrPipe, RelativeTimePipe,
     UserMarkComponent,
   ],
   templateUrl: './home.component.html',

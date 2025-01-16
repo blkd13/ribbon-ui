@@ -2,22 +2,25 @@
     <div class="h-0 flex-grow w-full flex">
         <div
             class="flex flex-col gap-1 p-2 team-sidebar custom-scroll custom-scroll--thin h-full w-[77px] items-center">
-            <a class="home" [routerLink]="['/home']" href="#/home" (click)="stopPropagation($event)">
+            <!-- <a class="home" [routerLink]="['/home']">
                 <mat-icon>home</mat-icon>
-            </a>
+            </a> -->
+            <app-app-menu></app-app-menu>
             @for(mmTeam of mmTeamList; track $index){
             <!-- ダイレクト用のチームは必要かと思ったけど使ってみたら要らなかったので消す。でもデータごと消すと影響が大きいのでフィルター掛ける。-->
             @if(mmTeam&&mmTeam.display_name&&mmTeam.id!=='direct'){
             <!-- TODO 本来は mmTeam が null になってるのはおかしいので後で調べるべき -->
-            <app-mm-team-logo [mmTeam]="mmTeam" [routerLink]="['/mattermost', mmTeam.id, 'default']"
-                [ngClass]="{'selected': selectedTeam===mmTeam}" [title]="mmTeam?.display_name">
-            </app-mm-team-logo>
+            <a [routerLink]="['/mattermost', mmTeam.id, 'default']" class="unstyled-link" style="display: inherit;">
+                <app-mm-team-logo [mmTeam]="mmTeam" [ngClass]="{'selected': selectedTeam===mmTeam}"
+                    [title]="mmTeam?.display_name">
+                </app-mm-team-logo>
+            </a>
             }
             }
             <div class="min-h-24"></div>
         </div>
 
-        <div #channelListElem class="custom-scroll custom-scroll--thin h-full relative" style="width: 250px">
+        <div #channelListElem class="custom-scroll custom-scroll--thin h-full relative" style="width: 250px;">
             @if(selectedTeam){
             @if(mmCategoriesList){
 
@@ -300,7 +303,7 @@
 </ng-template>
 
 <ng-template #channelTemplate let-channelId="channelId" let-teamId="teamId">
-    <div class="flex items-center relative h-9 pl-3 text-gray-300 channel-container cursor-pointer"
+    <a class="flex items-center relative h-9 pl-3 text-gray-300 channel-container cursor-pointer unstyled-link"
         [ngClass]="{unread: messageCountMas[channelId] && messageCountMas[channelId].unread_count && messageCountMas[channelId].unread_count>0, selected: radioSelectedId===channelId}"
         [title]="mmChannelMas[channelId].display_name||mmChannelMas[channelId].name"
         [routerLink]="['/mattermost', teamId, channelId]">
@@ -355,7 +358,7 @@
                 <mat-icon>add</mat-icon>新規タイムライン
             </button>
         </mat-menu>
-    </div>
+    </a>
 </ng-template>
 
 <ng-template #postTemplate let-postGroup="postGroup" let-isThread="isThread">

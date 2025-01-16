@@ -13,7 +13,7 @@ export class DragDeltaDirective {
   readonly dragging = output<{
     x: number;
     y: number;
-}>();
+  }>();
   startX = 0;
   startY = 0;
   startW = 0;

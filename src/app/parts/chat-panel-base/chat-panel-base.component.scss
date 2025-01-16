@@ -1,3 +1,4 @@
+@use 'sass:color';
 // :host {
 //     position: relative;
 // }
@@ -78,7 +79,7 @@
     background-color: rgb(42, 50, 53);
 
     .message-notediting {
-        border: 1px solid lighten(rgb(42, 50, 53), 7%);
+        border: 1px solid color.mix(white, rgb(42, 50, 53), 7%);
     }
 }
 
@@ -98,7 +99,7 @@
     background-color: rgb(56, 53, 49);
 
     .message-notediting {
-        border: 1px solid lighten(rgb(56, 53, 49), 7%);
+        border: 1px solid color.mix(white, rgb(56, 53, 49), 7%);
     }
 }
 

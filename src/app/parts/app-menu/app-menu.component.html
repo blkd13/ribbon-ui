@@ -1,0 +1,26 @@
+<button mat-icon-button [matMenuTriggerFor]="appMenu" class="trigger-icon">
+    <mat-icon class="gradient-text">apps</mat-icon>
+</button>
+
+<mat-menu #appMenu="matMenu">
+    <a mat-menu-item [routerLink]="['/home']">
+        <mat-icon>home</mat-icon>
+        <span>ホーム</span>
+    </a>
+    <a mat-menu-item [routerLink]="['/chat']">
+        <mat-icon>chat</mat-icon>
+        <span>AIチャット</span>
+    </a>
+    <a mat-menu-item [routerLink]="['/mattermost']">
+        <mat-icon>
+            <img src="./image/mattermost-logo-white.svg">
+        </mat-icon>
+        <span>疑似 Mattermost</span>
+    </a>
+    <a mat-menu-item [routerLink]="['/box']">
+        <mat-icon>
+            <img src="./image/box-logo-white.svg">
+        </mat-icon>
+        <span>疑似 box</span>
+    </a>
+</mat-menu>

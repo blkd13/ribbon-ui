@@ -1,6 +1,6 @@
 @if(showInfo&&false){
 <div class="flex justify-center item-center" style="background-color: rgb(30, 109, 131);padding: 5px 10px;">
-    現在、メッセージがリアルタイムで反映されない障害が発生しています。メッセージ自体は処理されているので、回答の済んだ頃合いを見てリロードしてみてください。
+    最新モデル Gemini-2.0-flash-exp がリリースされています。速くて丁寧な回答が特徴的なモデルです。是非一度お試しください。
     <mat-icon class="cursor-pointer absolute right-3" (click)="showInfo=false">close</mat-icon>
 </div>
 }
@@ -14,13 +14,18 @@
     <!-- スレッドリスト -->
     <div class="h-full w-52 pt-0 overflow-hidden left-pane relative" [ngStyle]="{width: showThreadList?'208px':'8px'}">
         <div class="h-full w-52 overflow-hidden relative">
+            <div class="p-4">
+                <app-app-menu></app-app-menu>
+            </div>
+            <!-- 
             <a class="add-thread" [routerLink]="['/home']" style="padding-left: 7px;">
                 <button mat-icon-button matTooltip="Back to home" style="width: 32px;">
                     <mat-icon>arrow_back_ios</mat-icon>
                 </button>
                 <div>ホームへ</div>
             </a>
-            <div class="project-title gradient-texxt" [title]="selectedProject.label"
+             -->
+            <div class="project-title gradient-text" [title]="selectedProject.label"
                 [ngClass]="{'team-project':selectedTeam.teamType!=='Alone'}">{{selectedProject.label}}</div>
             @if(selectedTeam.teamType!=='Alone'){
             <div class="share-tag">Share:{{selectedTeam.label}}</div>
@@ -40,7 +45,7 @@
             </a>
             }
             <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
-                (change)="sortThreadGroup(threadGroupList)">
+                (change)="threadGroupList=sortThreadGroup(threadGroupList)">
                 <mat-radio-button [value]="1">時刻順</mat-radio-button>
                 <mat-radio-button [value]="2">名前順</mat-radio-button>
             </mat-radio-group>
@@ -55,11 +60,11 @@
             <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full relative"
                 style="height:calc( 100% - 182px);">
                 @if (isThreadGroupLoading){
-                <div class="loading-cover" style="position: absolute;top: 0;width: 100%;height: 100%;z-index: 1;">
+                <div class="loading-cover absolute top-0 w-full h-full" style="z-index: 1;">
                     <mat-spinner></mat-spinner>
                 </div>
                 }
-                <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index"
+                <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index;"
                     class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
                     [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
 
@@ -67,7 +72,6 @@
                     <input [(ngModel)]="threadGroup.title" name="thread-title-{{$index}}" id="thread-title-{{$index}}"
                         class="h-7 m-1 pl-2 text-[#303030]"
                         (change)="renameThreadGroup($event, threadGroup, false, $index)" (blur)="editNameThreadId=''" />
-                    <!-- (blur)="renameThread($event, thread, false, $index)"  -->
                     } @else {
                     <div class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis"
                         style="padding:5px 10px;height: 35px;min-width: 0;width: 1px;flex-grow: 1;"
@@ -98,15 +102,15 @@
                         </button>
                         }
                         <!-- 
-                                    <button mat-menu-item (click)="duplicate($event, thread)">
-                                        <mat-icon>file_copy</mat-icon>
-                                        <span>複製</span>
-                                    </button>
-                                    <button mat-menu-item (click)="export($index)">
-                                        <mat-icon>download</mat-icon>
-                                        <span>エクスポート</span>
-                                    </button>
-                                    -->
+                        <button mat-menu-item (click)="duplicate($event, thread)">
+                            <mat-icon>file_copy</mat-icon>
+                            <span>複製</span>
+                        </button>
+                        <button mat-menu-item (click)="export($index)">
+                            <mat-icon>download</mat-icon>
+                            <span>エクスポート</span>
+                        </button>
+                        -->
                         <button mat-menu-item (click)="contentsDownload($event,$index, threadGroup)">
                             <mat-icon>folder_zip</mat-icon>
                             <span>コードブロックダウンロード</span>

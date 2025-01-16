@@ -228,8 +228,6 @@ html>body {
         }
     }
 
-
-
     --mdc-fab-container-color: rgba(105, 184, 205, 20%);
 
     .mat-primary.mat-mdc-button-base {
@@ -452,7 +450,7 @@ markdown {
 
 // グラデーション文字のお試し
 h1,
-.gradient-texxt {
+.gradient-text {
     background-image: linear-gradient(135deg,
             rgb(175, 210, 219) 0%,
             rgb(236, 255, 255) 8%,

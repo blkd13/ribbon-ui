@@ -1,3 +1,5 @@
+@use 'sass:color';
+
 .login-container {
     position: relative;
     width: 550px;
@@ -62,7 +64,7 @@
 }
 
 .login-button {
-    background-color: darken(rgb(105 184 205), 10%);
+    background-color: color.mix(black, rgb(105 184 205), 10%);
     color: white;
     padding: 10px 20px;
     border: none;
@@ -73,7 +75,7 @@
 }
 
 .login-button:hover {
-    background-color: darken(rgb(105 184 205), 5%);
+    background-color: color.mix(black, rgb(105 184 205), 10%);
 }
 
 .login-button:disabled {
@@ -102,6 +104,7 @@
     gap: 10px;
     text-decoration: none;
     margin-top: 20px;
+
     img {
         height: 24px;
         width: auto;

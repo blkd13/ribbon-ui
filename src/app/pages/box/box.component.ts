@@ -34,6 +34,7 @@ import { FileDropDirective } from '../../parts/file-drop.directive';
 import { fileIcons, folderIcons } from '../../ext/vscode-material-icon-theme/core';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
 
 @Component({
   selector: 'app-box',
@@ -43,7 +44,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatMenuModule, MatFormFieldModule, MatInputModule, MatExpansionModule, MatAutocompleteModule,
     MatTabsModule, MatRadioModule, MatProgressSpinnerModule, MatTooltipModule,
     FileSizePipe, FileDropDirective,
-    UserMarkComponent,
+    UserMarkComponent, AppMenuComponent,
   ],
   templateUrl: './box.component.html',
   styleUrl: './box.component.scss'
