@@ -1,5 +1,3 @@
-<p>gitlab works!</p>
-
 <style>
     table {
         width: 100%;
@@ -20,31 +18,46 @@
             <th>name</th>
             <th>path_with_namespace</th>
             <th>default_branch</th>
-            <!-- 
-            <th>name_with_namespace</th>
+            <th>action</th>
             <th>description</th>
-            <th>created_at</th>
             <th>updated_at</th>
+            <!-- <th>name_with_namespace</th>
+            <th>created_at</th>
             <th>path</th>
-            <th>namespace</th>
-            -->
+            <th>namespace</th> -->
         </tr>
     </thead>
     <tbody>
         @for (project of projects; track $index) {
-        <tr (click)="onSelect(project.id)">
+        <tr>
             <td>{{project.id}}</td>
             <td>{{project.name}}</td>
             <td>{{project.path_with_namespace}}</td>
-            <td>{{project.default_branch}}</td>
-            <!-- 
-            <td>{{project.name_with_namespace}}</td>
+            <td (click)="stopImmediatePropagation($event)">
+                {{project.default_branch}}
+                <!-- <select (click)="projectMap[project.id].branches.length > 0? null: onBranches(project.id)"
+                    [(ngModel)]="projectMap[project.id].selectedBranchId">
+                    @if(projectMap[project.id].branches.length > 0) {
+                    @for (branch of projectMap[project.id].branches; track $index) {
+                    <option [value]="branch.name">
+                        {{branch.name === project.default_branch?'*':' '}}
+                        {{branch.name}}
+                    </option>
+                    }
+                    } @else {
+                    <option [value]="project.default_branch"> * {{project.default_branch}}</option>
+                    }
+                </select> -->
+            </td>
+            <td>
+                <button (click)="onSelect(project.id)">Select</button>
+            </td>
             <td>{{project.description}}</td>
-            <td>{{project.created_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
             <td>{{project.updated_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
+            <!-- <td>{{project.name_with_namespace}}</td>
+            <td>{{project.created_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
             <td>{{project.path}}</td>
-            <td>{{project.namespace|json}}</td>
-            -->
+            <td>{{project.namespace|json}}</td> -->
         </tr>
         }
     </tbody>

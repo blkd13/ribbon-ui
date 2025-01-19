@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { from, Observable, of } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
-import { AuthService } from './auth.service';
+import { CountTokensResponse } from './chat.service';
 
 export interface FileUploadContent {
     filePath: string;
@@ -56,6 +56,7 @@ export interface FileEntityForView extends FileEntity {
     fileSize: number,
     fileType: string;
     metaJson: any;
+    tokenCount?: { [modelId: string]: CountTokensResponse }; // JSON型を保存
 }
 
 

@@ -1329,7 +1329,7 @@ export class MattermostComponent implements OnInit {
             case 'timespan':
             case 'count':
               // this.router.navigate(['/chat', next.thread.projectId, next.thread.id]);
-              window.open(`./#/chat/${next.threadGroup.projectId}/${next.threadGroup.id}`, 'chat');
+              window.open(`./#/chat/${next.threadGroup.projectId}/${next.threadGroup.id}`, '_blank');
               break;
             case 'batch':
               break;
