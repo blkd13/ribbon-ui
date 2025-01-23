@@ -51,7 +51,7 @@ export class MmMessageSelectorDialogComponent {
   readonly fb: FormBuilder = inject(FormBuilder);
 
   isLoading = false;
-  systemPrompt: string = `チャットを要約してください。`;
+  systemPrompt: string = `チャットを要約してわかりやすく報告してください。`;
   projectList: Project[] = [];
   projectId: string = '';
 

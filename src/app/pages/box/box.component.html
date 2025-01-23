@@ -215,7 +215,7 @@
         </mat-menu>
 
         <!-- アイテム一覧 -->
-        <div class="p-5 h-0 flex-grow custom-scroll">
+        <div class="p-5 h-0 flex-grow custom-scroll" (scroll)="onScroll($event)">
             @if(item.item_collection && item.item_collection.entries && item.item_collection.entries.length>0){
 
             @for(entry of item.item_collection.entries;track $index) {
@@ -262,6 +262,13 @@
             最初のファイルを追加して開始しましょう<br />
             ドラッグ&ドロップでファイルやフォルダを追加できます。
             }
+
+            @if (loading) {
+            <div class="flex justify-center">
+                <mat-spinner diameter="50"></mat-spinner>
+            </div>
+            }
+
         </div>
 
         } @else if(!isFine){

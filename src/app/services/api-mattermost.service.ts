@@ -73,8 +73,13 @@ export class ApiMattermostService {
   }
 
   mattermostCreateDraft(post: { channel_id: string; message: string; root_id?: string; file_ids?: string[]; }): Observable<MattermostPost> {
-    const url = `${this.baseUrl}/drafts`;
-    return this.http.post<MattermostPost>(url, post, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    if (post.message || (post.file_ids && post.file_ids.length > 0)) {
+      const url = `${this.baseUrl}/drafts`;
+      return this.http.post<MattermostPost>(url, post, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    } else {
+      const url = `${this.baseUrl}/users/me/channels/${post.channel_id}/drafts`;
+      return this.http.delete<MattermostPost>(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    }
   }
   mattermostGetDrafts(teamId: string): Observable<MattermostPost[]> {
     const url = `${this.baseUrl}/users/me/teams/${teamId}/drafts`;

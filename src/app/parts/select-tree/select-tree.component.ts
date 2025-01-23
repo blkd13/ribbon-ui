@@ -3,6 +3,7 @@ import { Component, inject, input, OnInit, output } from '@angular/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { FileEntity, FileEntityForView, FileGroupEntity, FileGroupEntityForView, FileManagerService } from '../../services/file-manager.service';
+import { GService } from '../../services/g.service';
 
 interface OrgStruct {
   pare: OrgNode | undefined;
@@ -222,6 +223,7 @@ export class SelectTreeComponent implements OnInit {
 
   readonly fileGroup = input.required<FileGroupEntityForView>();
   readonly selectedFile = input<FileEntityForView>();
+  readonly g: GService = inject(GService);
 
   readonly selectFile$ = output<FileEntityForView>();
   selectFile(file: OrgNode): void {
@@ -235,16 +237,6 @@ export class SelectTreeComponent implements OnInit {
   // readonly placeholder = input<string>();
   // readonly exPanel = viewChild.required<MatExpansionPanel>('exPanel');
   // readonly layout = input.required<'flex' | 'grid'>();
-  invalidMimeTypes = [
-    'application/octet-stream',
-    'application/java-vm',
-    'application/x-elf',
-    'application/xml',
-    'application/x-msdownload',
-    'application/zip',
-    'application/x-7z-compressed',
-    'image/x-icon',
-  ];
   invalidDirNames = [
     '.git',
     '.svn',
@@ -286,7 +278,7 @@ export class SelectTreeComponent implements OnInit {
 
     this.fileInfos.sort((a, b) => a.path.localeCompare(b.path));
     this.fileInfos.forEach(file => {
-      if (this.invalidMimeTypes.includes(file.fileType)) {
+      if (this.g.invalidMimeTypes.includes(file.fileType)) {
         file.isActive = false;
         file.disabled = true;
       } else { }

@@ -13,7 +13,7 @@
     </div>
     <!-- スレッドリスト -->
     <div class="h-full w-52 pt-0 overflow-hidden left-pane relative" [ngStyle]="{width: showThreadList?'208px':'8px'}">
-        <div class="h-full w-52 overflow-hidden relative">
+        <div class="h-full w-52 overflow-hidden relative flex flex-col">
             <div class="p-4">
                 <app-app-menu></app-app-menu>
             </div>
@@ -57,51 +57,48 @@
                 </div>
             </div>
             } -->
-            <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full relative"
-                style="height:calc( 100% - 182px);">
-                @if (isThreadGroupLoading){
-                <div class="loading-cover absolute top-0 w-full h-full" style="z-index: 1;">
-                    <mat-spinner></mat-spinner>
-                </div>
-                }
-                <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index;"
-                    class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
-                    [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
+            <div class="relative h-0 w-full grow">
+                <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full"
+                    style="height:calc(100% - 182px);">
+                    <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index;"
+                        class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
+                        [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
 
-                    @if (threadGroup.id === editNameThreadId) {
-                    <input [(ngModel)]="threadGroup.title" name="thread-title-{{$index}}" id="thread-title-{{$index}}"
-                        class="h-7 m-1 pl-2 text-[#303030]"
-                        (change)="renameThreadGroup($event, threadGroup, false, $index)" (blur)="editNameThreadId=''" />
-                    } @else {
-                    <div class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis"
-                        style="padding:5px 10px;height: 35px;min-width: 0;width: 1px;flex-grow: 1;"
-                        [routerLink]="['/chat', selectedProject.id, threadGroup.id]" [title]="threadGroup.title">
-                        {{threadGroup.title}}
-                    </div>
-                    }
-                    <div>
-                        @if(isCacheLive(threadGroup)){
-                        <mat-icon
-                            matTooltip="コンテキストキャッシュ有効 expire:{{threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'YYYY-MM-dd HH:mm:ss'}}">cached</mat-icon>
+                        @if (threadGroup.id === editNameThreadId) {
+                        <input [(ngModel)]="threadGroup.title" name="thread-title-{{$index}}"
+                            id="thread-title-{{$index}}" class="h-7 m-1 pl-2 text-[#303030]"
+                            (change)="renameThreadGroup($event, threadGroup, false, $index)"
+                            (blur)="editNameThreadId=''" />
+                        } @else {
+                        <div class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis"
+                            style="padding:5px 10px;height: 35px;min-width: 0;width: 1px;flex-grow: 1;"
+                            [routerLink]="['/chat', selectedProject.id, threadGroup.id]" [title]="threadGroup.title">
+                            {{threadGroup.title}}
+                        </div>
                         }
-                        <button mat-icon-button [matMenuTriggerFor]="threadMenu">
-                            <mat-icon>more_vert</mat-icon>
-                        </button>
-                    </div>
-                    <mat-menu #threadMenu="matMenu">
-                        <button mat-menu-item (click)="renameThreadGroup($event, threadGroup, true, $index)">
-                            <mat-icon>edit</mat-icon>
-                            <span>名前変更</span>
-                        </button>
-                        <button mat-menu-item (click)="cloneThreadGroup(threadGroup.id)">
-                            <mat-icon>file_copy</mat-icon>コピー
-                        </button>
-                        @if(projectList.length>1){
-                        <button mat-menu-item [matMenuTriggerFor]="sendToProjesTemplate">
-                            <mat-icon>move_item</mat-icon>送る
-                        </button>
-                        }
-                        <!-- 
+                        <div>
+                            @if(isCacheLive(threadGroup)){
+                            <mat-icon
+                                matTooltip="コンテキストキャッシュ有効 expire:{{threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'YYYY-MM-dd HH:mm:ss'}}">cached</mat-icon>
+                            }
+                            <button mat-icon-button [matMenuTriggerFor]="threadMenu">
+                                <mat-icon>more_vert</mat-icon>
+                            </button>
+                        </div>
+                        <mat-menu #threadMenu="matMenu">
+                            <button mat-menu-item (click)="renameThreadGroup($event, threadGroup, true, $index)">
+                                <mat-icon>edit</mat-icon>
+                                <span>名前変更</span>
+                            </button>
+                            <button mat-menu-item (click)="cloneThreadGroup(threadGroup.id)">
+                                <mat-icon>file_copy</mat-icon>コピー
+                            </button>
+                            @if(projectList.length>1){
+                            <button mat-menu-item [matMenuTriggerFor]="sendToProjesTemplate">
+                                <mat-icon>move_item</mat-icon>送る
+                            </button>
+                            }
+                            <!-- 
                         <button mat-menu-item (click)="duplicate($event, thread)">
                             <mat-icon>file_copy</mat-icon>
                             <span>複製</span>
@@ -111,28 +108,35 @@
                             <span>エクスポート</span>
                         </button>
                         -->
-                        <button mat-menu-item (click)="contentsDownload($event,$index, threadGroup)">
-                            <mat-icon>folder_zip</mat-icon>
-                            <span>コードブロックダウンロード</span>
-                        </button>
-                        <mat-divider></mat-divider>
-                        <mat-divider></mat-divider>
-                        <button mat-menu-item (click)="removeThreadGroup($event,$index, threadGroup)">
-                            <mat-icon style="color: #FF6666">close</mat-icon>
-                            <span style="color: #FF6666">削除</span>
-                        </button>
-                    </mat-menu>
-                    <mat-menu #sendToProjesTemplate="matMenu">
-                        @for(project of projectList;track project.id){
-                        @if(project!==selectedProject){
-                        <button mat-menu-item
-                            (click)="sendThreadToProject(project, threadGroup)">{{project.label}}</button>
-                        }
-                        }
-                    </mat-menu>
+                            <button mat-menu-item (click)="contentsDownload($event,$index, threadGroup)">
+                                <mat-icon>folder_zip</mat-icon>
+                                <span>コードブロックダウンロード</span>
+                            </button>
+                            <mat-divider></mat-divider>
+                            <mat-divider></mat-divider>
+                            <button mat-menu-item (click)="removeThreadGroup($event,$index, threadGroup)">
+                                <mat-icon style="color: #FF6666">close</mat-icon>
+                                <span style="color: #FF6666">削除</span>
+                            </button>
+                        </mat-menu>
+                        <mat-menu #sendToProjesTemplate="matMenu">
+                            @for(project of projectList;track project.id){
+                            @if(project!==selectedProject){
+                            <button mat-menu-item
+                                (click)="sendThreadToProject(project, threadGroup)">{{project.label}}</button>
+                            }
+                            }
+                        </mat-menu>
 
+                    </div>
+                </cdk-virtual-scroll-viewport>
+
+                @if (isThreadGroupLoading){
+                <div class="loading-cover loading-cover--sub" style="z-index: 1;">
+                    <mat-spinner></mat-spinner>
                 </div>
-            </cdk-virtual-scroll-viewport>
+                }
+            </div>
             <!-- <button (click)="export(-1)">export all</button> -->
         </div>
     </div>

@@ -10,7 +10,7 @@ export type MultilingualPrompt = Record<Lang, string>;
 })
 export class GService {
 
-  version = 'v20250116';
+  version = 'v20250121-2';
 
   // ローディング中のHTTP通信数
   httpConnectCount: Subject<number> = new Subject<number>();
@@ -18,6 +18,36 @@ export class GService {
   autoRedirectToLoginPageIfAuthError: boolean = true;
 
   globalEventHandlers: Subject<Event> = new Subject<Event>();
+
+  invalidMimeTypes = [
+    'application/octet-stream',
+    'application/java-vm',
+    'application/x-elf',
+    'application/x-msdownload',
+    'application/gzip',
+    'application/zip',
+    "application/zstd",
+    "application/x-gzip",
+    "application/x-tar",
+    "application/x-bzip2",
+    "application/x-xz",
+    "application/x-rar-compressed",
+    'application/x-7z-compressed',
+    "application/x-compress",
+    'application/font-woff',
+    'application/vnd.ms-fontobject',
+    'font/woff',
+    'font/woff2',
+    'font/ttf',
+    'font/otf',
+    'font/eot',
+    'font/collection',
+    'application/x-font-ttf',
+    'application/x-font-otf',
+    'application/x-font-woff',
+    'font/sfnt',
+    'image/x-icon',
+  ];
 
   lang: Lang;
 

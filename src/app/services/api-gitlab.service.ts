@@ -8,14 +8,150 @@ export class ApiGitlabService {
 
   private readonly http: HttpClient = inject(HttpClient);
 
-  projects(gitlabProvider: string): Observable<GitLabProjectListResponse> {
-    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/projects`;
-    return this.http.get<GitLabProjectListResponse>(url);
+  groups(gitlabProvider: string): Observable<GitLabGroupListResponse> {
+    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/groups`;
+    return this.http.get<GitLabGroupListResponse>(url);
   }
-  projectClone(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
-    const url = `/user/oauth/api/gitlab/${gitlabProvider}/clone/${projectId}`;
-    return this.http.get<GitLabProjectListResponse>(url);
+  projects(gitlabProvider: string, groupId?: number, params: { page?: number; per_page?: number } = {}): Observable<GitLabProjectListResponse> {
+    const group = groupId === undefined ? '' : `/groups/${groupId}`;
+    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4${group}/projects`;
+    return this.http.get<GitLabProjectListResponse>(url, { params });
   }
+  branches(gitlabProvider: string, projectId: number): Observable<GitlabBranch[]> {
+    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/projects/${projectId}/repository/branches`;
+    return this.http.get<GitlabBranch[]>(url);
+  }
+  tags(gitlabProvider: string, projectId: number): Observable<GitlabTag[]> {
+    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/projects/${projectId}/repository/tags`;
+    return this.http.get<GitlabTag[]>(url);
+  }
+  commits(gitlabProvider: string, projectId: number): Observable<GitlabCommit[]> {
+    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/projects/${projectId}/repository/commits`;
+    return this.http.get<GitlabCommit[]>(url);
+  }
+  // projectClone(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
+  //   const url = `/user/oauth/api/gitlab/${gitlabProvider}/clone/${projectId}`;
+  //   return this.http.get<GitLabProjectListResponse>(url);
+  // }
+  // projectDownload(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
+  //   const url = `/user/oauth/api/gitlab/${gitlabProvider}/download/${projectId}`;
+  //   return this.http.get<GitLabProjectListResponse>(url);
+  // }
+  projectFileDownload(gitlabProvider: string, gitlabProjectId: number, projectInDto: { projectId: string, }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
+    let params = '';
+    if ((type === undefined) !== (id === undefined)) {
+      throw new Error('Both type and id must be specified');
+    } else if (type === undefined && id === undefined) {
+    } else {
+      params = `/${type}/${id}`;
+    }
+    const url = `/user/oauth/api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
+    return this.http.post<RootObject>(url, projectInDto);
+  }
+}
+
+
+// Base interface for a GitLab Group
+export interface GitLabGroup {
+  id: number; // Group ID
+  name: string; // Group name
+  path: string; // Group URL path
+  description?: string; // Optional group description
+  visibility: 'private' | 'internal' | 'public'; // Group visibility level
+  web_url: string; // Web URL for the group
+  avatar_url?: string; // Optional URL for the group's avatar
+  full_name: string; // Full name of the group
+  full_path: string; // Full URL path of the group
+  parent_id?: number; // Parent group ID, if any
+  projects?: GitLabProject[]; // Optional list of projects within the group
+}
+
+// Parameters for fetching groups (GET /groups)
+export interface GitLabGroupQueryParams {
+  skip_groups?: number[]; // List of group IDs to exclude from results
+  all_available?: boolean; // Include all groups current user has access to
+  search?: string; // Filter groups by name or path
+  order_by?: 'name' | 'path'; // Order results by name or path
+  sort?: 'asc' | 'desc'; // Sort order, ascending or descending
+  statistics?: boolean; // Include group statistics in results
+  owned?: boolean; // Limit to groups owned by the authenticated user
+  min_access_level?: number; // Minimum access level filter
+}
+
+// Response for a list of groups (GET /groups)
+export type GitLabGroupListResponse = GitLabGroup[];
+
+// Example: Interface for creating or updating a group (POST/PUT /groups)
+export interface GitLabGroupPayload {
+  name: string; // Group name
+  path: string; // Group URL path
+  description?: string; // Optional group description
+  visibility?: 'private' | 'internal' | 'public'; // Group visibility level
+  lfs_enabled?: boolean; // Enable/disable LFS for the group
+  request_access_enabled?: boolean; // Allow users to request access
+  parent_id?: number; // Parent group ID, if any
+}
+
+// Interface for the full GitLab Group API
+export interface GitLabGroupsAPI {
+  getGroups(params?: GitLabGroupQueryParams): Promise<GitLabGroupListResponse>; // Fetch groups
+  getGroup(groupId: number): Promise<GitLabGroup>; // Fetch a single group by ID
+  createGroup(payload: GitLabGroupPayload): Promise<GitLabGroup>; // Create a new group
+  updateGroup(groupId: number, payload: GitLabGroupPayload): Promise<GitLabGroup>; // Update a group
+  deleteGroup(groupId: number): Promise<void>; // Delete a group
+}
+export interface GitlabBranch {
+  name: string;
+  commit: {
+    id: string;
+    short_id: string;
+    created_at: string;
+    title: string;
+    message: string;
+    author_name: string;
+    author_email: string;
+  };
+  merged: boolean;
+  protected: boolean;
+  developers_can_push: boolean;
+  developers_can_merge: boolean;
+}
+
+export interface GitlabTag {
+  name: string;
+  message: string;
+  target: string;
+  commit: {
+    id: string;
+    short_id: string;
+    title: string;
+    created_at: string;
+    parent_ids: string[];
+  };
+  release?: {
+    tag_name: string;
+    description: string;
+  };
+}
+
+export interface GitlabCommit {
+  id: string;
+  short_id: string;
+  created_at: string;
+  title: string;
+  message: string;
+  author_name: string;
+  author_email: string;
+  committer_name: string;
+  committer_email: string;
+  parent_ids: string[];
+}
+
+// 
+export interface GitLabData {
+  branches: GitlabBranch[];
+  tags: GitlabTag[];
+  commits: GitlabCommit[];
 }
 
 export interface GitLabProject {
@@ -185,3 +321,38 @@ interface Owner {
 }
 
 type GitLabProjectListResponse = GitLabProject[];
+
+interface GitProjectCommit {
+  id: string;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+  createdIp: string;
+  updatedIp: string;
+  provider: string;
+  gitProjectId: number;
+  commitId: string;
+  fileGroupId: string;
+}
+
+interface FileGroup {
+  createdBy: string;
+  updatedBy: string;
+  createdIp: string;
+  updatedIp: string;
+  projectId: string;
+  type: string;
+  label: string;
+  description: string; // JSON
+  uploadedBy: string;
+  isActive: boolean;
+  id: string;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+}
+
+interface RootObject {
+  gitProjectCommit: GitProjectCommit;
+  fileGroup: FileGroup;
+}

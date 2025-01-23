@@ -17,9 +17,9 @@ export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateF
             console.log(res);
           },
           error: (err) => {
+            console.error(err);
             // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
             location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
-            console.error(err);
           },
         });
         return true;

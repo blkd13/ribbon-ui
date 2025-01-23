@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { GitlabComponent } from './gitlab.component';
+import { GitComponent } from './git.component';
 
-describe('GitlabComponent', () => {
-  let component: GitlabComponent;
-  let fixture: ComponentFixture<GitlabComponent>;
+describe('GitComponent', () => {
+  let component: GitComponent;
+  let fixture: ComponentFixture<GitComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GitlabComponent]
+      imports: [GitComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(GitlabComponent);
+    fixture = TestBed.createComponent(GitComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

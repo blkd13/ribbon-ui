@@ -5,6 +5,9 @@
         } @else {
         <div>doc</div>
         } -->
+        @if(image){
+        <img [src]="image" class="p-1" />
+        }
     </div>
     <div class="label">{{content().text || 'オブジェクト'}}</div>
     @if(removable()){

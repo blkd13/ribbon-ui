@@ -1,0 +1,46 @@
+<div class="frame">
+    <h1>{{data.provider}}</h1>
+    <h3>{{data.gitProject.name}}</h3>
+    <select [(ngModel)]="ref" class="p-2 mb-5 cursor-pointer">
+        <optgroup label="Branch">
+            @for (branch of branches; track $index) {
+            <option [value]="'branches:'+branch.name">
+                {{branch.name === data.gitProject.default_branch ? '*' : ' '}}
+                {{branch.name}}
+            </option>
+            }
+        </optgroup>
+        @if(tags.length > 0) {
+        <optgroup label="Tag">
+            @for (tag of tags; track $index) {
+            <option [value]="'tags:'+tag.name">{{tag.name}}</option>
+            }
+        </optgroup>
+        }
+    </select>
+    <div class="flex flex-col justify-start gap-5">
+        <mat-form-field>
+            <mat-label>指示</mat-label>
+            <textarea matInput [(ngModel)]="userPrompt"></textarea>
+        </mat-form-field>
+
+        <mat-form-field>
+            <mat-label>登録先プロジェクト</mat-label>
+            <mat-select [(ngModel)]="projectId">
+                @for(project of projectList;track $index){
+                <mat-option [value]="project.id">{{project.label}}</mat-option>
+                }
+            </mat-select>
+        </mat-form-field>
+    </div>
+    <div class="grow"></div>
+    <div class="flex justify-between gap-5">
+        <button mat-raised-button color="tertiary" (click)="onCancel()">キャンセル</button>
+        <button mat-raised-button color="primary" (click)="onSelect()">OK</button>
+    </div>
+</div>
+@if (isLoading){
+<div class="loading-cover">
+    <mat-spinner></mat-spinner>
+</div>
+}

@@ -13,6 +13,7 @@ import { CommonModule } from '@angular/common';
 import { MatDividerModule } from '@angular/material/divider';
 import { SelectTreeComponent } from '../select-tree/select-tree.component';
 import { DragDeltaDirective } from '../drag-delta.directive';
+import { GService } from '../../services/g.service';
 
 
 
@@ -55,17 +56,6 @@ export class DocViewComponent {
 
   encode: 'UTF-8' | 'SHIFT_JIS' | 'EUC-JP' | 'Windows-31J' = 'UTF-8';
 
-  invalidMimeTypes = [
-    'application/octet-stream',
-    'application/java-vm',
-    'application/x-elf',
-    'application/xml',
-    'application/x-msdownload',
-    'application/zip',
-    'application/x-7z-compressed',
-    'image/x-icon',
-  ];
-
   treeData: FileNode[] = []; // ツリー構造化したデータを保持する配列
 
   fileTypeList: string[] = [];
@@ -73,6 +63,7 @@ export class DocViewComponent {
 
   readonly dialogRef: MatDialogRef<DocViewComponent> = inject(MatDialogRef<DocViewComponent>);
   readonly sanitizer: DomSanitizer = inject(DomSanitizer);
+  readonly g: GService = inject(GService);
   readonly data: { content: ContentPart } = inject(MAT_DIALOG_DATA);
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
 
@@ -86,7 +77,7 @@ export class DocViewComponent {
           this.fileTypeList = [...new Set(this.fileGroup.files.map(file => file.fileType))];
 
           next.files.forEach(file => {
-            file.isActive = this.invalidMimeTypes.includes(file.fileType) ? false : file.isActive;
+            file.isActive = this.g.invalidMimeTypes.includes(file.fileType) ? false : file.isActive;
           });
           // this.fileGroup.files.sort((a, b) => a.fileName.localeCompare(b.fileName));
 
@@ -109,7 +100,7 @@ export class DocViewComponent {
     const root: FileNode[] = [];
     files.forEach(file => {
       const pathParts = file.fileName.split('/'); // ファイル名に含まれるディレクトリ区切り文字を想定
-      this.insertFileNode(root, pathParts, file, this.invalidMimeTypes);
+      this.insertFileNode(root, pathParts, file, this.g.invalidMimeTypes);
     });
 
     return root;
@@ -250,7 +241,7 @@ export class DocViewComponent {
     // ファイル種別ごとにチェックボックスの状態を設定する。面倒なのは indeterminate の判定。
     // TODO 毎回全量洗い替えしてるので後で直した方がよい。
     this.fileTypeMap = this.fileGroup.files.reduce((mas, file) => {
-      if (this.invalidMimeTypes.includes(file.fileType)) {
+      if (this.g.invalidMimeTypes.includes(file.fileType)) {
         mas[file.fileType] = { isActive: false, indeterminate: false, disabled: true };
       } else {
         if (mas[file.fileType]) {
@@ -286,14 +277,54 @@ export class DocViewComponent {
           this.type = 'image';
         } else if (false
           || this.dataUrl.startsWith('data:text/')
-          || this.dataUrl.startsWith('data:application/octet-stream')
+          // || this.dataUrl.startsWith('data:application/octet-stream')
           || this.dataUrl.startsWith('data:application/json')
-          || this.dataUrl.startsWith('data:application/x-csh')
-          || this.dataUrl.startsWith('data:application/x-sh')
-          || this.dataUrl.startsWith('data:application/x-sql')
-          || this.dataUrl.startsWith('data:application/x-typescript')
           || this.dataUrl.startsWith('data:application/xml')
+          || this.dataUrl.startsWith('data:application/x-yaml')
+          || this.dataUrl.startsWith('data:application/x-toml')
+          || this.dataUrl.startsWith('data:application/csv')
+          || this.dataUrl.startsWith('data:application/x-ndjson')
+          || this.dataUrl.startsWith('data:application/javascript')
+          || this.dataUrl.startsWith('data:application/x-typescript')
+          || this.dataUrl.startsWith('data:application/sql')
+          || this.dataUrl.startsWith('data:application/graphql')
+          || this.dataUrl.startsWith('data:application/x-sh')
+          || this.dataUrl.startsWith('data:application/x-python')
+          || this.dataUrl.startsWith('data:application/x-ipynb+json')
+          || this.dataUrl.startsWith('data:application/x-ruby')
+          || this.dataUrl.startsWith('data:application/x-php')
+          || this.dataUrl.startsWith('data:application/x-latex')
+          || this.dataUrl.startsWith('data:application/x-troff')
+          || this.dataUrl.startsWith('data:application/x-tex')
+          || this.dataUrl.startsWith('data:application/x-www-form-urlencoded')
+          || this.dataUrl.startsWith('data:application/ld+json')
+          || this.dataUrl.startsWith('data:application/vnd.api+json')
+          || this.dataUrl.startsWith('data:application/problem+json')
+          || this.dataUrl.startsWith('data:application/rtf')
+          || this.dataUrl.startsWith('data:application/x-sql')
+          || this.dataUrl.startsWith('data:application/xhtml+xml')
+          || this.dataUrl.startsWith('data:application/rss+xml')
+          || this.dataUrl.startsWith('data:application/atom+xml')
+          || this.dataUrl.startsWith('data:application/x-tcl')
+          || this.dataUrl.startsWith('data:application/x-lisp')
+          || this.dataUrl.startsWith('data:application/x-r')
+          || this.dataUrl.startsWith('data:application/postscript')
+          || this.dataUrl.startsWith('data:application/vnd.google-earth.kml+xml')
+          || this.dataUrl.startsWith('data:application/x-bash')
+          || this.dataUrl.startsWith('data:application/x-csh')
+          || this.dataUrl.startsWith('data:application/x-scala')
+          || this.dataUrl.startsWith('data:application/x-kotlin')
+          || this.dataUrl.startsWith('data:application/x-swift')
+          || this.dataUrl.startsWith('data:application/x-plist')
+          || this.dataUrl.startsWith('data:application/vnd.apple.mpegurl')
+          || this.dataUrl.startsWith('data:application/x-apple-diskimage')
+          || this.dataUrl.startsWith('data:application/x-objc')
+          || this.dataUrl.startsWith('data:application/vnd.apple.pkpass')
+          || this.dataUrl.startsWith('data:application/x-darwin-app')
+          || this.dataUrl.startsWith('data:application/pem-certificate-chain')
+          || this.dataUrl.startsWith('data:application/x-x509-ca-cert')
           || this.dataUrl.startsWith('data:application/x-ns-proxy-autoconfig')
+          // 'image/svg',
         ) {
           this.type = 'text';
           try {

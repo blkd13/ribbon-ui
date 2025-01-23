@@ -16,7 +16,7 @@ import { ApiBoxService } from '../../services/api-box.service';
 
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 
-import { OnInit, Component, inject, viewChild } from '@angular/core';
+import { OnInit, Component, inject, viewChild, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BoxApiCollection, BoxApiCollectionList, BoxApiEntry, BoxApiFolder, BoxApiItemEntry, BoxApiSearchResults, BoxMkdirErrorResponse, BoxUploadErrorResponse } from './box-interface';
 import { concatMap, Observable, Subscription, tap, switchMap, from, toArray, catchError, throwError, of, concat } from 'rxjs';
@@ -172,6 +172,7 @@ export class BoxComponent implements OnInit {
     } else { }
     let isFine = false;
     let resCounter = 0;
+    this.offset = 0;
     this.currentSubscription = this.apiBoxService.folder(itemId).pipe(
       tap(next => {
         // console.log(`BOX-RES=${resCounter}`);
@@ -201,17 +202,17 @@ export class BoxComponent implements OnInit {
         } else { }
 
         if (this.item) {
-          // 配下のフォルダをプリロード
-          this.currentSubscription = concat(
-            ...[
-              ...this.item.item_collection.entries.filter(entry => entry.type === 'folder'), // サービス内でキャッシュ持ってればスキップされるので思い切って全打ちする
-              ...this.item.path_collection.entries.filter(entry => entry.type === 'folder'), // サービス内でキャッシュ持ってればスキップされるので思い切って全打ちする
-            ].map(entry => this.apiBoxService.preLoadFolder(entry.id))
-          ).subscribe({
-            next: next => {
-              // console.log(next.id);
-            }
-          });
+          // // 配下のフォルダをプリロード
+          // this.currentSubscription = concat(
+          //   ...[
+          //     ...this.item.item_collection.entries.filter(entry => entry.type === 'folder'), // サービス内でキャッシュ持ってればスキップされるので思い切って全打ちする
+          //     ...this.item.path_collection.entries.filter(entry => entry.type === 'folder'), // サービス内でキャッシュ持ってればスキップされるので思い切って全打ちする
+          //   ].map(entry => this.apiBoxService.preLoadFolder(entry.id))
+          // ).subscribe({
+          //   next: next => {
+          //     // console.log(next.id);
+          //   }
+          // });
         } else { }
       }
     });
@@ -411,5 +412,46 @@ export class BoxComponent implements OnInit {
   stopImmediatePropagation($event: Event): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
+  }
+
+
+  // 無限スクロールの実装
+  offset: number = 0;
+  loading: boolean = false;
+  @HostListener('window:scroll', ['$event'])
+  onScroll(event: Event): void {
+    if (this.loading || !this.item || !this.item.item_collection) {
+      return;
+    }
+    const element = event.target as HTMLElement;
+    if (element) {
+      // スクロール位置が一番下に近いかどうかを判定
+      const isBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 200;
+      if (isBottom) {
+        this.loadMore();
+      }
+    }
+  }
+  loadMore(): void {
+    if (!this.item || !this.item.item_collection) {
+      return;
+    }
+    // 未実装
+    // this.loading = true;
+    // this.offset += 100;
+    // const offset = this.offset;
+    // this.apiBoxService.folder(this.item.id, this.offset).subscribe({
+    //   next: (response) => {
+    //     if (this.item && response.item_collection) {
+    //       this.item.item_collection.entries = [...this.item.item_collection.entries, ...response.item_collection.entries];
+    //       this.loading = false;
+    //     }
+    //   },
+    //   error: (error) => {
+    //     console.error('追加データの取得に失敗しました:', error);
+    //     this.snackBar.open('追加データの取得に失敗しました', '閉じる', { duration: 3000 });
+    //     this.loading = false;
+    //   },
+    // });
   }
 }

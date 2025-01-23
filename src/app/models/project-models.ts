@@ -1,5 +1,6 @@
 import { Observable } from "rxjs";
 import { ChatCompletionCreateParamsBase, ChatCompletionRole, ChatCompletionStreamInDto, UserStatus } from "./models";
+import { CountTokensResponse } from "../services/chat.service";
 
 // 共通の型定義
 export type UUID = string;
@@ -337,4 +338,5 @@ export interface ContentPart extends BaseEntity {
     seq: number;
     text?: string;
     fileGroupId?: string;
+    tokenCount?: { [modelId: string]: CountTokensResponse }; // JSON型を保存
 }

@@ -376,9 +376,9 @@ export class ChatComponent implements OnInit {
         if (threadGroup) {
           // ココがスレッド選択時の初回処理になるので、ここで初期化処理を行う。復帰とか。
           this.selectedThreadGroup = threadGroup;
-          this.cdr.detectChanges();
           this.isThreadGroupLoading = true;
 
+          this.cdr.detectChanges();
           // ちょっとご茶ついてるから直さないとダメかも。。cloneThreadDryの後に ).flat().flat().filter(message => message.contents.length === 0).map(message => this.messageService.getMessageContentParts(message)) はなんか違和感がある。
           this.messageService.initThreadGroup(threadGroup.id).pipe(
             switchMap(() => safeForkJoin(
@@ -439,6 +439,9 @@ export class ChatComponent implements OnInit {
               document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
             }),
           ).subscribe({
+            next: next => {
+              this.cdr.detectChanges();
+            },
             error: error => {
               this.isThreadGroupLoading = false;
               console.error(error);
@@ -930,6 +933,7 @@ export class ChatComponent implements OnInit {
     return {
       next: text => {
         message.contents[0].text += text;
+        this.cdr.detectChanges();
         message.status = MessageStatusType.Editing;
         this.bitCounter++;
         if (this.autoscroll) {
@@ -1239,6 +1243,7 @@ export class ChatComponent implements OnInit {
         chat.exPanel().close();
       }
     });
+    this.cdr.detectChanges();
   }
 
   removeContent(content: ContentPart): void {
