@@ -436,4 +436,21 @@ export class BoxComponent implements OnInit {
     //   },
     // });
   }
+
+  registCollectionId(collectionId: string): void {
+    // this.snackBar.open('コレクションが取得されました', '閉じる', { duration: 3000 });
+    // 必要に応じて、取得後の処理（例：リストの更新）を追加
+    this.apiBoxService.registCollectionId(this.collectionId).subscribe({
+      next: (response) => {
+        // console.log('コレクション登録成功:', response);
+        this.snackBar.open('コレクションが登録されました', '閉じる', { duration: 3000 });
+        // 必要に応じて、登録後の処理（例：リストの更新）を追加
+        this.collectionId = ''; // 入力フォームをクリア
+      },
+      error: (error) => {
+        console.error('コレクション登録失敗:', error);
+        this.snackBar.open('コレクション登録に失敗しました', '閉じる', { duration: 3000 });
+      },
+    });
+  }
 }

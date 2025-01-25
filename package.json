@@ -34,7 +34,7 @@
     "katex": "^0.16.10",
     "mermaid": "^10.9.1",
     "ngx-indexed-db": "^18.0.0",
-    "ngx-markdown": "^18.0.0",
+    "ngx-markdown": "^19.0.0",
     "prismjs": "^1.29.0",
     "ribbon-ui": "file:",
     "rxjs": "~7.8.0",

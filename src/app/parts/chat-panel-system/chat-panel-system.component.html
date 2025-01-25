@@ -4,6 +4,7 @@
     <mat-expansion-panel-header class="message-header">
         <mat-panel-title class="message-title" style="font-weight: normal;">
             <!-- モデル選択 -->
+
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
                 [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
                 @for(option of chatService.modelList;track $index) {

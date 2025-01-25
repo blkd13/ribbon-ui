@@ -24,8 +24,8 @@ export const routes: Routes = [
             ],
         }, { path: '**', redirectTo: 'folder' }]
     },
-    { path: 'gitlab', canActivate: [oAuthGuardGenerator('gitlab')], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) },
-    { path: 'gitea', canActivate: [oAuthGuardGenerator('gitea')], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) },
+    { path: 'gitlab/:provider', canActivate: [oAuthGuardGenerator('gitlab')], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) },
+    { path: 'gitea/:provider', canActivate: [oAuthGuardGenerator('gitea')], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) },
     { path: 'department', canActivate: [departmentGuard], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
     {
         path: 'chat', children: [{

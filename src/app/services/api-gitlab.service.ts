@@ -40,6 +40,25 @@ export class ApiGitlabService {
     const url = `/user/oauth/api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
     return this.http.post<RootObject>(url, projectInDto);
   }
+  // projectClone(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
+  //   const url = `/user/oauth/api/gitlab/${gitlabProvider}/clone/${projectId}`;
+  //   return this.http.get<GitLabProjectListResponse>(url);
+  // }
+  // projectDownload(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
+  //   const url = `/user/oauth/api/gitlab/${gitlabProvider}/download/${projectId}`;
+  //   return this.http.get<GitLabProjectListResponse>(url);
+  // }
+  projectFileDownload(gitlabProvider: string, gitlabProjectId: number, projectInDto: { projectId: string, systemPrompt: string }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
+    let params = '';
+    if ((type === undefined) !== (id === undefined)) {
+      throw new Error('Both type and id must be specified');
+    } else if (type === undefined && id === undefined) {
+    } else {
+      params = `/${type}/${id}`;
+    }
+    const url = `/user/oauth/api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
+    return this.http.post<RootObject>(url, projectInDto);
+  }
 }
 
 
@@ -139,7 +158,7 @@ export interface GitlabCommit {
   parent_ids: string[];
 }
 
-// 
+// 全体を取得するデータ型
 export interface GitLabData {
   branches: GitlabBranch[];
   tags: GitlabTag[];

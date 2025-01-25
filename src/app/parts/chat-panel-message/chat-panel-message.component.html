@@ -94,6 +94,41 @@
 } @else {
 {{messageGroup().messages.length}}
 }
+<ng-template #controller let-exPanel="exPanel" let-position="position">
+    <div class="right-0 top-0 flex gap-2 p-2"
+        [ngClass]="{'controller-bottom': position==='bottom', 'controller-bottom--hide': (!exPanel.expanded && position==='bottom')}">
+        <!-- style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"  -->
+        @if(messageGroup().type) {
+        <!-- 並列実行（バッチを想定） -->
+        }@else if(messageGroup().type==='Regenerated' && messageGroup().messages.length>1) {
+        <!-- 再ラン -->
+        @for(message of messageGroup().messages; track $index){
+        {{$index}},
+        }
+        }@else {
+        <!-- @if(messageGroup.type==='Single') { } -->
+        }
+
+        <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）"
+            [ngStyle]="{visibility: messageGroup().role==='assistant'?'visible':'hidden'}">
+            <mat-icon>folder_zip</mat-icon>
+        </button>
+        <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
+            <mat-icon>content_copy</mat-icon>
+        </button>
+        <button mat-icon-button (click)="setEdit($event)" [title]="messageGroup().messages[0].editing?'保存':'編集'"
+            [ngStyle]="{visibility: messageGroup().messages[0].cacheId?'hidden':'visible'}">
+            @if(messageGroup().messages[0].editing){
+            <mat-icon>check_circle</mat-icon>
+            }@else{
+            <mat-icon>edit</mat-icon>
+            }
+        </button>
+        <button mat-icon-button (click)="remove($event)" [title]="messageGroup().role==='assistant'?'リトライ':'削除'"
+            style="margin-right: 10px;"
+            [ngStyle]="{visibility: (messageGroup().messages[0].cacheId || messageGroup().role==='system')?'hidden':'visible'}">
+            <mat-icon>@if(messageGroup().role==='assistant'){ refresh }@else{ close }</mat-icon>
+        </button>
 
 <ng-template #controller let-exPanel="exPanel" let-position="position">
     <div class="right-0 top-0 flex gap-2 p-2"

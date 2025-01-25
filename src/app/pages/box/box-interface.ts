@@ -1,7 +1,7 @@
 export interface BoxApiUser {
     type: 'user';
     id: string;
-    name?: string;
+    name: string;
     login: string;
 }
 

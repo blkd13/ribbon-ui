@@ -57,7 +57,7 @@ type InDto = Record<InType, InDtoSub>;
     MatExpansionModule, MatIconModule, MatCheckboxModule, MatBadgeModule, MatMenuModule, MatDividerModule, MatTooltipModule, MatRadioModule,
     MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
     AppMenuComponent
-],
+  ],
   templateUrl: './mattermost.component.html',
   styleUrl: './mattermost.component.scss'
 })
@@ -1338,7 +1338,7 @@ export class MattermostComponent implements OnInit {
             case 'timespan':
             case 'count':
               // this.router.navigate(['/chat', next.thread.projectId, next.thread.id]);
-              window.open(`./#/chat/${next.threadGroup.projectId}/${next.threadGroup.id}`, 'chat');
+              window.open(`./#/chat/${next.threadGroup.projectId}/${next.threadGroup.id}`, '_blank');
               break;
             case 'batch':
               break;
@@ -1834,6 +1834,19 @@ export class MattermostComponent implements OnInit {
               { email: '', first_name: '', last_name: '', roles: 'special', id: 'all', username: 'all', nickname: 'Notifies everyone in this channel' },
             ] as MattermostUser[];
             special.filter(user => user.username.startsWith(mentionText)).forEach(user => this.mentionList.push(user));
+
+            // // スレッド内の最後の発言者を取得して先頭に移動
+            // if (type === 'thread' && this.mmThreadMas[root_id || '']) {
+            //   const threadList = this.mmThreadMas[root_id || ''];
+            //   const lastPostUserId = threadList.at(-1)![0].user_id;
+
+            //   // 最後の発言者をリストから探して先頭に移動
+            //   const lastPosterIndex = this.mentionList.findIndex(user => user.id === lastPostUserId);
+            //   if (lastPosterIndex !== -1) {
+            //     const lastPoster = this.mentionList.splice(lastPosterIndex, 1)[0];
+            //     this.mentionList.unshift(lastPoster);
+            //   }
+            // } else { }
 
           },
           error: error => {
