@@ -59,5 +59,13 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "typescript": "~5.5.2"
+  },
+  "overrides": {
+    "@mattermost/client": {
+      "@mattermost/types": "9.11.0"
+    },
+    "ngx-markdown": {
+      "zone.js": "0.15.0"
+    }
   }
 }
