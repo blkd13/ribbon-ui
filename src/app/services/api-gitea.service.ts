@@ -27,14 +27,7 @@ export class ApiGiteaService {
     return this.http.get<GiteaCommit[]>(url);
   }
 
-  projectFileDownload(
-    provider: string,
-    owner: string,
-    repo: string,
-    projectInDto: { projectId: string; },
-    type?: 'branches' | 'tags' | 'commits',
-    id?: string
-  ): Observable<RootObject> {
+  fetchCommit(provider: string, owner: string, repo: string, projectInDto: { projectId: string; }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
     let params = '';
     if ((type === undefined) !== (id === undefined)) {
       throw new Error('Both type and id must be specified');

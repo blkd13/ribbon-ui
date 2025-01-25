@@ -7,10 +7,13 @@ import { ChatContent } from '../../services/chat.service';
 import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FileGroupEntity } from '../../services/file-manager.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { getFileIcon, getFolderIcon } from '../../ext/vscode-material-icon-theme/core';
+
 
 @Component({
   selector: 'app-doc-tag',
-  imports: [MatIconModule, MatDialogModule, MatTooltipModule, CommonModule],
+  imports: [CommonModule, MatIconModule, MatDialogModule, MatTooltipModule, MatProgressSpinnerModule],
   templateUrl: './doc-tag.component.html',
   styleUrl: './doc-tag.component.scss'
 })
@@ -18,20 +21,30 @@ export class DocTagComponent implements OnInit {
 
   readonly removable = input(true);
 
-  readonly content = input.required<(ContentPart | ChatContent)>();
+  readonly content = input.required<(ContentPart | ChatContent) & { isLoading?: boolean }>();
 
   readonly remove = output<ContentPart | ChatContent>();
 
   readonly dialog: MatDialog = inject(MatDialog);
 
+  getVSCodeFileIcon = getFileIcon;
+  getVSCodeFolderIcon = getFolderIcon;
+
   image = '';
   ngOnInit(): void {
     if (this.content().type === 'file') {
       const fileGroup = (this.content() as any).fileGroup as FileGroupEntity;
-      if (fileGroup.type === 'upload') {
-        // this.image = 'assets/images/file-upload.svg';
+      // console.log(this.content());
+      if (fileGroup) {
+        if (fileGroup.type === 'gitlab') {
+          this.image = 'image/gitlab-logo.svg';
+        } else if (fileGroup.type === 'gitea') {
+          this.image = 'image/gitea-logo.svg';
+        } else {
+          // this.image = 'assets/images/file-upload.svg';
+        }
       } else {
-        this.image = 'image/gitlab-logo.svg';
+        // this.image = 'assets/images/file-upload.svg';
       }
     } else { }
   }

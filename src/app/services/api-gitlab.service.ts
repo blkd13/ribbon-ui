@@ -29,15 +29,7 @@ export class ApiGitlabService {
     const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/projects/${projectId}/repository/commits`;
     return this.http.get<GitlabCommit[]>(url);
   }
-  // projectClone(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
-  //   const url = `/user/oauth/api/gitlab/${gitlabProvider}/clone/${projectId}`;
-  //   return this.http.get<GitLabProjectListResponse>(url);
-  // }
-  // projectDownload(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
-  //   const url = `/user/oauth/api/gitlab/${gitlabProvider}/download/${projectId}`;
-  //   return this.http.get<GitLabProjectListResponse>(url);
-  // }
-  projectFileDownload(gitlabProvider: string, gitlabProjectId: number, projectInDto: { projectId: string, }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
+  fetchCommit(gitlabProvider: string, gitlabProjectId: number, projectInDto: { projectId: string, }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
     let params = '';
     if ((type === undefined) !== (id === undefined)) {
       throw new Error('Both type and id must be specified');

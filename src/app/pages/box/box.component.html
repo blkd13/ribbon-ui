@@ -321,7 +321,7 @@
 </ng-template>
 
 <ng-template #folderIconTmpl let-entry>
-    @if(getFolderIcon(entry.name); as folderIconType){
+    @if(getVSCodeFolderIcon(entry.name); as folderIconType){
     @if(folderIconType==='folder'){
     <mat-icon>{{entry.type}}</mat-icon>
     } @else {
@@ -331,7 +331,7 @@
 </ng-template>
 
 <ng-template #fileIconTmpl let-entry>
-    @if(getFileIcon(entry); as fileIconType){
+    @if(getVSCodeFileIcon(entry.name); as fileIconType){
     @if(fileIconType==='file'){
     <mat-icon>insert_drive_file</mat-icon>
     } @else {

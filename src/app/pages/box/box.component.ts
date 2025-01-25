@@ -31,7 +31,7 @@ import { FileSizePipe } from '../../pipe/file-size.pipe';
 import { MatRadioModule } from '@angular/material/radio';
 import { FullPathFile } from '../../services/file-manager.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
-import { fileIcons, folderIcons } from '../../ext/vscode-material-icon-theme/core';
+import { getFileIcon, getFolderIcon } from '../../ext/vscode-material-icon-theme/core';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
@@ -81,26 +81,8 @@ export class BoxComponent implements OnInit {
     this.refreshCollection();
   }
 
-  getFileIcon(entry: { name: string, extension?: string }): string {
-    const splitted = entry.name.split('\.');
-    const extension1 = (splitted.pop() || '').toLocaleLowerCase();
-    splitted.shift();
-    const extension2 = splitted.join('.').toLocaleLowerCase();
-    const icon = fileIcons.icons.find(icon => {
-      return icon.fileNames?.includes(entry.name) || icon.fileExtensions?.includes(extension2) || icon.fileExtensions?.includes(extension1);
-    })
-    return icon ? icon.name : fileIcons.defaultIcon.name;
-  }
-  getFolderIcon(name: string): string {
-    name = name.toLocaleLowerCase();
-    const icon = folderIcons.map(icon => {
-      return icon.icons?.find(icon => {
-        return icon.folderNames.includes(name);
-      })
-    }).find(icon => icon);
-    // console.log(icon ? icon.name : fileIcons.defaultIcon.name);
-    return icon ? icon.name : 'folder';
-  }
+  getVSCodeFileIcon = getFileIcon;
+  getVSCodeFolderIcon = getFolderIcon;
 
   refreshCollection(): void {
     this.apiBoxService.getCollection().subscribe({

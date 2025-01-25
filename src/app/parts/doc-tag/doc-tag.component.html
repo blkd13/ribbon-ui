@@ -1,4 +1,4 @@
-<div class="doc-tag" (click)="open()" [matTooltip]="content().text||''" matTooltipPosition="above">
+<div class="doc-tag relative" (click)="open()" [matTooltip]="content().text||''" matTooltipPosition="above">
     <div class="thumbnail">
         <!-- @if (content.image_url.url.startsWith('data:image/')) {
         <img [src]="content.image_url.url" />
@@ -7,9 +7,23 @@
         } -->
         @if(image){
         <img [src]="image" class="p-1" />
+        } @else if(content().text?.endsWith('/')) {
+        <img src="./vsc-material-icons/icons/{{getVSCodeFolderIcon((content().text||'folder').split('/')[0])}}.svg"
+            class="w-6 h-6">
+        <!-- <mat-icon style="width: 32px;height: 32px;font-size: 32px;padding: 3px;">folder</mat-icon> -->
+        } @else if(content().text?.endsWith(' files')) {
+        <mat-icon style="width: 32px;height: 32px;font-size: 32px;padding: 3px;">file_copy</mat-icon>
+        } @else {
+        <!-- <mat-icon style="width: 32px;height: 32px;font-size: 32px;padding: 3px;">insert_drive_file</mat-icon> -->
+        <img src="./vsc-material-icons/icons/{{getVSCodeFileIcon(content().text||'file')}}.svg" class="w-6 h-6">
         }
     </div>
     <div class="label">{{content().text || 'オブジェクト'}}</div>
+    @if(content().isLoading){
+    <div class="loading-cover--sub">
+        <mat-spinner class="spinner"></mat-spinner>
+    </div>
+    }
     @if(removable()){
     <mat-icon class="close" (click)="onRemove($event)">close</mat-icon>
     }

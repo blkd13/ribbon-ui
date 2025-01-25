@@ -120,44 +120,56 @@ export class GitSelectorDialogComponent {
     const [refType, refId] = this.ref.split(':') as [GitlabRefType, string];
 
     const service = this.data.provider.startsWith('gitlab')
-      ? this.apiGitlabService.projectFileDownload(this.data.provider, gitProject.id, { projectId: this.projectId, }, refType, refId)
-      : this.apiGiteaService.projectFileDownload(this.data.provider, '5', gitProject.name, { projectId: this.projectId, }, refType, refId);
-    service.subscribe(project => {
-      console.log(project);
+      ? this.apiGitlabService.fetchCommit(this.data.provider, gitProject.id, { projectId: this.projectId, }, refType, refId)
+      : this.apiGiteaService.fetchCommit(this.data.provider, (this.data.gitProject as any as GiteaRepository).owner.login, gitProject.name, { projectId: this.projectId, }, refType, refId);
+    service.subscribe({
+      next: project => {
+        console.log(project);
 
-      const threadGroup = this.threadService.genInitialThreadGroupEntity(this.projectId);
-      threadGroup.title = this.data.gitProject.name;
-      threadGroup.description = this.data.gitProject.description || '';
-      let newThreadGroup!: ThreadGroup;
-      this.threadService.upsertThreadGroup(this.projectId, threadGroup).pipe(
-        switchMap(_threadGroup => {
-          newThreadGroup = _threadGroup;
-          return safeForkJoin(newThreadGroup.threadList.map(thread => {
-            const contentPartPrompt = this.messageService.initContentPart(genDummyId(), this.systemPrompt);
-            const messageGroup = this.messageService.initMessageGroup(thread.id, undefined, 'system', [contentPartPrompt],);
-            return this.messageService.upsertSingleMessageGroup(messageGroup);
-          }));
-        }),
-        switchMap(systemPromptMessageGroup => {
-          return safeForkJoin(newThreadGroup.threadList.map((thread, index) => {
-            const contentPartPrompt = this.messageService.initContentPart(genDummyId(), this.userPrompt);
-            const contentPartFile = this.messageService.initContentPart(genDummyId(), project.fileGroup.label);
-            contentPartFile.type = ContentPartType.File;
-            contentPartFile.fileGroupId = project.fileGroup.id;
-            const messageGroup = this.messageService.initMessageGroup(thread.id, systemPromptMessageGroup[index].id, 'user', [contentPartPrompt, contentPartFile],);
-            return this.messageService.upsertSingleMessageGroup(messageGroup);
-          }));
-        }),
-      ).subscribe({
-        next: next => {
-          this.isLoading = false;
-          // console.log(next);
-          // console.log(newThreadGroup);
-          // this.snackBar.open('プロジェクトを取得しました。', 'OK', { duration: 3000 });
-          window.open(`./#/chat/${newThreadGroup.projectId}/${newThreadGroup.id}`, '_blank');
-          this.dialogRef.close();
-        }
-      });
+        const threadGroup = this.threadService.genInitialThreadGroupEntity(this.projectId);
+        threadGroup.title = this.data.gitProject.name;
+        threadGroup.description = this.data.gitProject.description || '';
+        let newThreadGroup!: ThreadGroup;
+        this.threadService.upsertThreadGroup(this.projectId, threadGroup).pipe(
+          switchMap(_threadGroup => {
+            newThreadGroup = _threadGroup;
+            return safeForkJoin(newThreadGroup.threadList.map(thread => {
+              const contentPartPrompt = this.messageService.initContentPart(genDummyId(), this.systemPrompt);
+              const messageGroup = this.messageService.initMessageGroup(thread.id, undefined, 'system', [contentPartPrompt],);
+              return this.messageService.upsertSingleMessageGroup(messageGroup);
+            }));
+          }),
+          switchMap(systemPromptMessageGroup => {
+            return safeForkJoin(newThreadGroup.threadList.map((thread, index) => {
+              const contentPartPrompt = this.messageService.initContentPart(genDummyId(), this.userPrompt);
+              const contentPartFile = this.messageService.initContentPart(genDummyId(), project.fileGroup.label);
+              contentPartFile.type = ContentPartType.File;
+              contentPartFile.fileGroupId = project.fileGroup.id;
+              const messageGroup = this.messageService.initMessageGroup(thread.id, systemPromptMessageGroup[index].id, 'user', [contentPartPrompt, contentPartFile],);
+              return this.messageService.upsertSingleMessageGroup(messageGroup);
+            }));
+          }),
+        ).subscribe({
+          next: next => {
+            this.isLoading = false;
+            // console.log(next);
+            // console.log(newThreadGroup);
+            // this.snackBar.open('プロジェクトを取得しました。', 'OK', { duration: 3000 });
+            window.open(`./#/chat/${newThreadGroup.projectId}/${newThreadGroup.id}`, '_blank');
+            this.dialogRef.close();
+          },
+          error: error => {
+            this.isLoading = false;
+            console.error(error);
+            this.snackBar.open('プロジェクトを取得できませんでした。', 'OK', { duration: 3000 });
+          }
+        });
+      },
+      error: error => {
+        this.isLoading = false;
+        console.error(error);
+        this.snackBar.open('プロジェクトを取得できませんでした。', 'OK', { duration: 3000 });
+      },
     });
   }
 

@@ -335,8 +335,8 @@
             style="overflow-y: scroll;">
             @for(index of indexList; track $index) {
             <div #chatPanelGroupElem class="flex gap-1 w-full min-w-full max-w-full">
-                @for(thread of selectedThreadGroup.threadList;track $index){
 
+                @for(thread of selectedThreadGroup.threadList;track $index){
                 <div class="w-0 flex-1">
                     @if(messageGroupIdListMas[thread.id]){
                     @if(messageGroupIdListMas[thread.id][index]; as messageGroupId){
@@ -369,6 +369,11 @@
                     }
                 </div>
                 }
+                <div>
+                    <button mat-icon-button color="primary">
+                        <mat-icon>arrow_up</mat-icon>
+                    </button>
+                </div>
             </div>
             }
             <div class="spacer" style="min-height: 200px;"></div>

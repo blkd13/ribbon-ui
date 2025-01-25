@@ -195,7 +195,7 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
 }
 
 @Component({
-  selector: 'app-file-tree',
+  selector: 'app-select-tree',
   imports: [CommonModule, MatCheckboxModule, MatIconModule],
   templateUrl: './select-tree.component.html',
   styleUrls: ['./select-tree.component.scss']
@@ -276,6 +276,9 @@ export class SelectTreeComponent implements OnInit {
     this.folderList = folderList;
     this.extTree = buildMimeTree(this.fileInfos);
 
+    // ↓ビルド後に一括で親のチェック状態を再計算
+    this.initializeCheckState();
+
     this.fileInfos.sort((a, b) => a.path.localeCompare(b.path));
     this.fileInfos.forEach(file => {
       if (this.g.invalidMimeTypes.includes(file.fileType)) {
@@ -295,6 +298,40 @@ export class SelectTreeComponent implements OnInit {
         folder.expanded = false;
       }
     });
+  }
+
+  initializeCheckState(): void {
+    // ファイルツリー(複数ルート)に対して実行
+    this.fileTree.forEach(root => this.updateCheckStateFromChildren(root));
+
+    // MIMEツリーにも同様
+    this.extTree.forEach(root => this.updateCheckStateFromChildren(root));
+  }
+  private updateCheckStateFromChildren(node: OrgStruct): void {
+    // フォルダ or mime であれば再帰的に子の状態を先に更新
+    if (node.type === 'folder' || node.type === 'mime') {
+      (node as OrgNode).children.forEach(child => {
+        // 子がさらにフォルダやmimeなら再帰
+        if (child.type === 'folder' || child.type === 'mime') {
+          this.updateCheckStateFromChildren(child);
+        }
+      });
+
+      // 子の状態が確定したあとで、親(node)の isActive と indeterminate をセット
+      const children = (node as OrgNode).children;
+      const activeCount = children.filter(c => c.isActive).length;
+
+      if (activeCount === children.length) {
+        node.isActive = true;
+        (node as OrgNode).indeterminate = false;
+      } else if (activeCount === 0) {
+        node.isActive = false;
+        (node as OrgNode).indeterminate = false;
+      } else {
+        node.isActive = false;
+        (node as OrgNode).indeterminate = true;
+      }
+    }
   }
 
   setActiveRecursiveDown(node: OrgStruct, isActive: boolean, changedList: OrgStruct[]): void {

@@ -30,9 +30,10 @@ textarea {
 }
 
 .button-group {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
 }
 
 .panel {

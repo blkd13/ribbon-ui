@@ -569,12 +569,29 @@ export class ChatComponent implements OnInit {
     // 複数ファイルを纏めて追加したときは全部読み込み終わってからカウントする。
     this.tokenObj.totalTokens = -1;
     this.isLock = true;
+
+    let label = '';
+    if (files.length === 1) {
+      label = files[0].fullPath;
+    } else {
+      const file = files.find(file => file.fullPath.includes('/'));
+      if (file) {
+        // フォルダが含まれる場合はフォルダ名を表示
+        label = `${file.fullPath.split('/')[0]}/`;
+      } else {
+        label = `${files.length} files`;
+      }
+    }
+    const file: { type: 'file', fileGroupId: string, text: string, isLoading: boolean } = { type: 'file', fileGroupId: '', text: label, isLoading: true };
+    this.inputArea.content.push(file);
     return this.fileManagerService
       .uploadFiles({ uploadType: 'Group', projectId: this.selectedProject.id, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
       .subscribe({
         next: next => {
           next.results.forEach(fileGroupEntity => {
-            this.inputArea.content.push({ type: 'file', fileGroupId: fileGroupEntity.id, text: fileGroupEntity.label });
+            file.fileGroupId = fileGroupEntity.id;
+            file.isLoading = false;
+            // this.inputArea.content.push({ type: 'file', fileGroupId: fileGroupEntity.id, text: fileGroupEntity.label });
           });
 
           this.onChange();

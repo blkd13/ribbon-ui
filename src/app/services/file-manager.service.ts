@@ -30,7 +30,7 @@ export interface FileAccessUpdate {
 export interface FileGroupEntity {
     id: string;
     projectId: string;
-    type: 'upload' | 'merged';
+    type: 'upload' | 'merged' | 'gitlab' | 'gitea' | 'box' | 'github';
     label: string;
     description: string;
     uploadedBy: string;

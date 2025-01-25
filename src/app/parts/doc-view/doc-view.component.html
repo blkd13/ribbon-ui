@@ -1,7 +1,7 @@
 <div class="flex justify-center w-full">
     @if(fileGroup){
     <div class="custom-scroll custom-scroll--thin content" #fileTree style="width: 250px">
-        <app-file-tree class="min-w-60" [fileGroup]="fileGroup" (selectFile$)="setFile($event)"></app-file-tree>
+        <app-select-tree class="min-w-60" [fileGroup]="fileGroup" (selectFile$)="setFile($event)"></app-select-tree>
     </div>
     <div class="flex items-center cursor-ew-resize" [appDragDelta]="fileTree" position="right">
         <mat-icon class="rotate-90 ">drag_handle</mat-icon>
