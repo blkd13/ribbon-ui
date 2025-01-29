@@ -322,19 +322,12 @@
 
 <ng-template #folderIconTmpl let-entry>
     @if(getVSCodeFolderIcon(entry.name); as folderIconType){
-    @if(folderIconType==='folder'){
-    <mat-icon>{{entry.type}}</mat-icon>
-    } @else {
     <img src="./vsc-material-icons/icons/{{folderIconType}}.svg" class="w-6 h-6">
-    }
     }
 </ng-template>
 
 <ng-template #fileIconTmpl let-entry>
     @if(getVSCodeFileIcon(entry.name); as fileIconType){
-    @if(fileIconType==='file'){
-    <mat-icon>insert_drive_file</mat-icon>
-    } @else {
     @if(fileIconType==='image') {
     <!-- imageの時はローディング中の時は両方表示、結果が出たらどっちか表示 -->
     @if(thumbnailStatusMas[entry.id]!=='error'){
@@ -347,7 +340,6 @@
     }
     } @else {
     <img src="./vsc-material-icons/icons/{{fileIconType}}.svg" class="w-6 h-6">
-    }
     }
     }
 </ng-template>

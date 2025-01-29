@@ -852,7 +852,8 @@ export class ChatComponent implements OnInit {
         this.snackBar.open(`claude はtempertureを0～1.0の範囲で使ってください。`, 'close', { duration: 3000 });
         thread.inDto.args.temperature = 1;
       } else { }
-      if ((this.messageGroupIdListMas[thread.id].length % 2) % 7 === 0 && this.tokenObj.totalTokens > 16384) {
+      const turnCount = Math.floor(this.messageGroupIdListMas[thread.id].length / 2);
+      if (turnCount / 7 > 1 && turnCount % 7 % 2 === 0 && this.tokenObj.totalTokens > 16384) {
         // 7問い合わせごとにアラート出す
         this.snackBar.open(`チャット内のやり取りが長引いてきました。話題が変わった際は左上の「新規チャット」から新規チャットを始めることをお勧めします。\n（チャットが長くなるとAIの回答精度が落ちていきます）`, 'close', { duration: 6000 });
       } else { }

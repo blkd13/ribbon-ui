@@ -81,6 +81,8 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly removeEmitter = output<MessageGroupForView>({ alias: 'remove' });
 
+  readonly fileSelectionUpdateEmitter = output<MessageGroupForView>({ alias: 'fileSelectionUpdate' });
+
   readonly removeMessageEmitter = output<MessageForView>({ alias: 'removeMessage' });
 
   readonly removeContentEmitter = output<ContentPart>({ alias: 'removeContent' });
@@ -302,6 +304,10 @@ export class ChatPanelBaseComponent implements OnInit {
         }
       });
     }
+  }
+
+  fileSelectionUpdate(): void {
+    this.fileSelectionUpdateEmitter.emit(this.messageGroup());
   }
 
   onChange(): void {

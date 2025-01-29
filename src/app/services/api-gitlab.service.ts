@@ -1,32 +1,88 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { EMPTY, expand, last, map, Observable, reduce, scan } from 'rxjs';
+import { safeForkJoin } from '../utils/dom-utils';
 
 
 @Injectable({ providedIn: 'root' })
 export class ApiGitlabService {
 
   private readonly http: HttpClient = inject(HttpClient);
+  private readonly proxyBase = `/user/oauth/api/proxy`;
 
-  groups(gitlabProvider: string): Observable<GitLabGroupListResponse> {
-    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/groups`;
-    return this.http.get<GitLabGroupListResponse>(url);
+  groups(gitlabProvider: string, id?: number, childType?: 'projects' | 'subgroups'): Observable<GitLabGroupListResponse> {
+    let tail = '';
+    const per_page = 100;
+    if (id) {
+      tail = `/${id}/subgroups?per_page=${per_page}`;
+    } else {
+      tail = `?top_level_only=true&per_page=${per_page}`;
+    }
+    return this.http.get<GitLabGroupListResponse>(`${this.proxyBase}/${gitlabProvider}/api/v4/groups${tail}`);
   }
+
+  groupChildren(gitlabProvider: string, groupId?: number): Observable<(GitLabGroup | GitLabProject)[]> {
+    const per_page = 100;
+    let tail = '';
+    if (groupId) {
+      return safeForkJoin<(GitLabGroup | GitLabProject)[]>([
+        this.fetchAllPages<GitLabGroup>(`${this.proxyBase}/${gitlabProvider}/api/v4/groups/${groupId}/subgroups?per_page=${per_page}`),
+        this.fetchAllPages<GitLabProject>(`${this.proxyBase}/${gitlabProvider}/api/v4/groups/${groupId}/projects?per_page=${per_page}`),
+      ]).pipe(map(responseSet => [
+        ...responseSet[0],
+        ...responseSet[1],
+      ]));
+    } else {
+      tail = `?top_level_only=true&per_page=${per_page}`;
+      return this.fetchAllPages<GitLabGroup>(`${this.proxyBase}/${gitlabProvider}/api/v4/groups${tail}`);
+    }
+  }
+  /**
+   * 汎用的に「ページ付きAPIを全部まとめて取る」関数
+   * @param url 最初にリクエストを投げる URL (例: ...?per_page=100&page=1)
+   */
+  fetchAllPages<T>(url: string): Observable<T[]> {
+    // 最初のリクエストを 'response' オプション付きで送る（ヘッダーを読むため）
+    return this.http.get<T[]>(url, { observe: 'response' }).pipe(
+      expand((response: HttpResponse<T[]>) => {
+        const nextPage = response.headers.get('X-Next-Page');
+        if (nextPage) {
+          return this.http.get<T[]>(`${url}&page=${nextPage}`, { observe: 'response' });
+        } else {
+          return EMPTY;
+        }
+      }),
+      map(response => response.body ?? []),
+      scan((acc, items) => [...acc, ...items], [] as T[]),
+      last(),
+    );
+  }
+
+  /**
+   * 例: 具体的な GitLab のブランチ取得エンドポイント
+   */
+  branchesAll(gitlabProvider: string, projectId: number): Observable<GitlabBranch[]> {
+    const initialUrl = `${this.proxyBase}/${gitlabProvider}/api/v4/projects/${projectId}/repository/branches?per_page=100&page=1`;
+    // 上の汎用関数を使う
+    return this.fetchAllPages<GitlabBranch>(initialUrl);
+  }
+
   projects(gitlabProvider: string, groupId?: number, params: { page?: number; per_page?: number } = {}): Observable<GitLabProjectListResponse> {
     const group = groupId === undefined ? '' : `/groups/${groupId}`;
-    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4${group}/projects`;
+    const url = `${this.proxyBase}/${gitlabProvider}/api/v4${group}/projects`;
     return this.http.get<GitLabProjectListResponse>(url, { params });
   }
+
   branches(gitlabProvider: string, projectId: number): Observable<GitlabBranch[]> {
-    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/projects/${projectId}/repository/branches`;
+    const url = `${this.proxyBase}/${gitlabProvider}/api/v4/projects/${projectId}/repository/branches`;
     return this.http.get<GitlabBranch[]>(url);
   }
   tags(gitlabProvider: string, projectId: number): Observable<GitlabTag[]> {
-    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/projects/${projectId}/repository/tags`;
+    const url = `${this.proxyBase}/${gitlabProvider}/api/v4/projects/${projectId}/repository/tags`;
     return this.http.get<GitlabTag[]>(url);
   }
   commits(gitlabProvider: string, projectId: number): Observable<GitlabCommit[]> {
-    const url = `/user/oauth/api/proxy/${gitlabProvider}/api/v4/projects/${projectId}/repository/commits`;
+    const url = `${this.proxyBase}/${gitlabProvider}/api/v4/projects/${projectId}/repository/commits`;
     return this.http.get<GitlabCommit[]>(url);
   }
   fetchCommit(gitlabProvider: string, gitlabProjectId: number, projectInDto: { projectId: string, }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
@@ -331,7 +387,7 @@ interface Owner {
   web_url: string;
 }
 
-type GitLabProjectListResponse = GitLabProject[];
+export type GitLabProjectListResponse = GitLabProject[];
 
 interface GitProjectCommit {
   id: string;

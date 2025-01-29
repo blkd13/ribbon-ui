@@ -72,7 +72,7 @@
             <div class="flex items-center" [title]="node.path">
                 <mat-checkbox color="primary" (change)="toggleFile(node)" [checked]="node.isActive"
                     [disabled]="node.disabled"></mat-checkbox>
-                <div class="truncate cursor-pointer w-40" (click)="selectFile(node)"
+                <div class="truncate cursor-pointer" (click)="selectFile(node)"
                     [title]="node.disabled?'このファイルは無効です':node.path">{{node.name}}</div>
             </div>
             }

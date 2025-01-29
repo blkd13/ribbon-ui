@@ -25,6 +25,8 @@ export class DocTagComponent implements OnInit {
 
   readonly remove = output<ContentPart | ChatContent>();
 
+  readonly updated = output<boolean>();
+
   readonly dialog: MatDialog = inject(MatDialog);
 
   getVSCodeFileIcon = getFileIcon;
@@ -38,8 +40,10 @@ export class DocTagComponent implements OnInit {
       if (fileGroup) {
         if (fileGroup.type === 'gitlab') {
           this.image = 'image/gitlab-logo.svg';
+          this.image = `vsc-material-icons/icons/folder-${fileGroup.type}.svg`;
         } else if (fileGroup.type === 'gitea') {
           this.image = 'image/gitea-logo.svg';
+          this.image = `vsc-material-icons/icons/folder-${fileGroup.type}.svg`;
         } else {
           // this.image = 'assets/images/file-upload.svg';
         }
@@ -49,8 +53,20 @@ export class DocTagComponent implements OnInit {
     } else { }
   }
 
+  format(name?: string): string | undefined {
+    if (name && name.endsWith('/')) {
+      return name.substring(0, name.length - 1);
+    } else {
+      return name;
+    }
+  }
+
   open(): void {
-    this.dialog.open<DocViewComponent>(DocViewComponent, { width: '80vw', data: { content: this.content() } });
+    this.dialog.open<DocViewComponent>(DocViewComponent, { width: '80vw', data: { content: this.content() } }).afterClosed().subscribe({
+      next: next => {
+        this.updated.emit(true);
+      }
+    });
   }
 
   onRemove($event: MouseEvent): void {

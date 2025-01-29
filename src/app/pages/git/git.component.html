@@ -1,70 +1,125 @@
-<div class="custom-scroll relative overflow-y-auto w-full mt-16" (scroll)="onScroll($event)"
-    style="height: calc(100vh - 80px);">
-
-    <table>
-        <thead>
-            <tr class="sticky top-0 bg-black z-10">
-                <th>id</th>
-                <th>name</th>
-                <th>path_with_namespace</th>
-                <!-- <th>default_branch</th> -->
-                <th>description</th>
-                <th class="w-28">updated_at</th>
-                <th class="w-28">action</th>
-                <!-- <th>name_with_namespace</th>
-            <th>created_at</th>
-            <th>path</th>
-            <th>namespace</th> -->
-            </tr>
-        </thead>
-        <tbody>
-            @for (project of projects; track $index) {
-            <tr>
-                <td>{{project.id}}</td>
-                <td>{{project.name}}</td>
-                <td>
-                    <a [href]="project.url" target="_blank">
-                        {{project.path_with_namespace}}
-                    </a>
-                </td>
-                <!-- <td (click)="stopImmediatePropagation($event)">
-                    {{project.default_branch}}
-                </td> -->
-
-                <!-- <select (click)="projectMap[project.id].branches.length > 0? null: onBranches(project.id)"
-                    [(ngModel)]="projectMap[project.id].selectedBranchId">
-                    @if(projectMap[project.id].branches.length > 0) {
-                    @for (branch of projectMap[project.id].branches; track $index) {
-                    <option [value]="branch.name">
-                        {{branch.name === project.default_branch?'*':' '}}
-                        {{branch.name}}
-                    </option>
-                    }
-                    } @else {
-                    <option [value]="project.default_branch"> * {{project.default_branch}}</option>
-                    }
-                </select> -->
-
-                <td>
-                    <div [innerHTML]="project.description"></div>
-                </td>
-                <td>{{project.updated_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
-                <td>
-                    <button mat-raised-button (click)="onSelect(project.id)">AI要約</button>
-                </td>
-                <!-- <td>{{project.name_with_namespace}}</td>
-            <td>{{project.created_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
-            <td>{{project.path}}</td>
-            <td>{{project.namespace|json}}</td> -->
-            </tr>
-            }
-        </tbody>
-    </table>
-    @if(loading) {
-    <div class="loading">Loading...</div>
-    }
+<!-- 検索ボックス -->
+<!-- 
+<div class="search-box">
+    <input type="text" style="background-color: #666;" matInput placeholder="検索キーワード" [(ngModel)]="searchKeyword">
+    <button (click)="onSearch()">検索</button>
 </div>
-<div class="fixed top-0 left-0 flex w-full justify-between">
+-->
+<mat-tab-group style="height: 100vh;overflow: hidden;">
+    <mat-tab label="ツリー表示">
+        <mat-tree #tree [dataSource]="treeData" [childrenAccessor]="childrenAccessor">
+            <!-- This is the tree node template for leaf nodes -->
+            <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+                <!-- use a disabled button to provide padding for tree leaf -->
+                <button mat-icon-button disabled></button>
+                <div class="flex justify-between items-center w-full cursor-pointer">
+                    <a [href]="node.web_url || node.project_url" target="_blank">
+                        <div>{{node.id}}: {{node.name}}</div>
+                    </a>
+
+                    <div class="flex items-center gap-2">
+                        <div [innerHTML]="node.description"></div>
+                        <div> {{node.updated_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                        <a [href]="node.web_url || node.project_url" target="_blank">
+                            <button mat-icon-button color="primary">
+                                <mat-icon>open_in_new</mat-icon>
+                            </button>
+                        </a>
+                        <button mat-raised-button (click)="onSelectProject(node)">AI要約</button>
+                    </div>
+                </div>
+            </mat-tree-node>
+            <!-- This is the tree node template for expandable nodes -->
+            <mat-tree-node *matTreeNodeDef="let node;when: hasChild" matTreeNodePadding matTreeNodeToggle
+                [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
+                class="cursor-pointer">
+                <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.name">
+                    <mat-icon class="mat-icon-rtl-mirror">
+                        {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                    </mat-icon>
+                </button>
+                <div>
+                    {{node.id}}: {{node.name}}
+                </div>
+            </mat-tree-node>
+        </mat-tree>
+        <!-- <div class="custom-scroll relative overflow-y-auto w-full m-2 h-full">
+        </div> -->
+    </mat-tab>
+    <mat-tab label="リスト表示" style="height: 100%;overflow: hidden;">
+        <div class="custom-scroll relative overflow-y-auto w-full h-full" (scroll)="onScroll($event)">
+
+            <table>
+                <thead>
+                    <tr class="sticky top-0 bg-black z-10">
+                        <th>id</th>
+                        <th>name</th>
+                        <th>path_with_namespace</th>
+                        <!-- <th>default_branch</th> -->
+                        <th>description</th>
+                        <th class="w-28">updated_at</th>
+                        <th class="w-28">action</th>
+                        <!-- <th>name_with_namespace</th>
+                <th>created_at</th>
+                <th>path</th>
+                <th>namespace</th> -->
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (project of projects; track $index) {
+                    <tr>
+                        <td>{{project.id}}</td>
+                        <td>{{project.name}}</td>
+                        <td>
+                            <a [href]="project.url" target="_blank">
+                                {{project.path_with_namespace}}
+                            </a>
+                        </td>
+                        <!-- <td (click)="stopImmediatePropagation($event)">
+                        {{project.default_branch}}
+                    </td> -->
+
+                        <!-- <select (click)="projectMap[project.id].branches.length > 0? null: onBranches(project.id)"
+                        [(ngModel)]="projectMap[project.id].selectedBranchId">
+                        @if(projectMap[project.id].branches.length > 0) {
+                        @for (branch of projectMap[project.id].branches; track $index) {
+                        <option [value]="branch.name">
+                            {{branch.name === project.default_branch?'*':' '}}
+                            {{branch.name}}
+                        </option>
+                        }
+                        } @else {
+                        <option [value]="project.default_branch"> * {{project.default_branch}}</option>
+                        }
+                    </select> -->
+
+                        <td>
+                            <div [innerHTML]="project.description"></div>
+                        </td>
+                        <td>{{project.updated_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
+                        <td>
+                            <button mat-raised-button (click)="onSelectProject(project)">AI要約</button>
+                        </td>
+                        <!-- <td>{{project.name_with_namespace}}</td>
+                <td>{{project.created_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
+                <td>{{project.path}}</td>
+                <td>{{project.namespace|json}}</td> -->
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </mat-tab>
+</mat-tab-group>
+@if(loading) {
+<div class="loading">Loading...</div>
+}
+
+<!-- <button (click)="onTop()">トップへ移動</button> -->
+<!-- git.component.html の一例 -->
+<div class="fixed top-0 left-0 z-10">
     <app-app-menu></app-app-menu>
+</div>
+<div class="fixed top-0 right-0 z-10">
     <app-user-mark></app-user-mark>
 </div>

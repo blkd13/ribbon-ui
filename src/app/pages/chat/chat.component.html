@@ -59,7 +59,7 @@
             } -->
             <div class="relative h-0 w-full grow">
                 <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full"
-                    style="height:calc(100% - 182px);">
+                    style="height:calc(100% - 70px);">
                     <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index;"
                         class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
                         [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
@@ -322,7 +322,7 @@
                 <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup" [bitCounter]="bitCounter"
                     [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1"
                     [layout]="userService.chatLayout" (edit)="editChat($event)" (removeThread)="removeThread($event)"
-                    (modelChange)="modelCheck([$event])">
+                    (modelChange)="modelCheck([$event])" (fileSelectionUpdateEmitter)="onChange()">
                 </app-chat-panel-system>
                 }
 
@@ -349,7 +349,7 @@
                     <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
                         [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
                         (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-                        (remove)="removeMessageGroup($event)">
+                        (remove)="removeMessageGroup($event)" (fileSelectionUpdateEmitter)="onChange()">
                     </app-chat-panel-message>
                     }
 
@@ -370,11 +370,13 @@
                     }
                 </div>
                 }
+                <!--                 
                 <div>
                     <button mat-icon-button color="primary">
                         <mat-icon>arrow_up</mat-icon>
                     </button>
                 </div>
+                -->
             </div>
             }
             <div class="spacer" style="min-height: 200px;"></div>
@@ -404,7 +406,7 @@
             <div class="flex justify-start gap-3 w-full p-5 overflow-x-auto">
                 @for(content of inputArea.content; track $index){
                 @if(content.type==='file'){
-                <app-doc-tag [content]="content"
+                <app-doc-tag [content]="content" (updated)="onChange()"
                     (remove)="inputArea.content.splice(inputArea.content.indexOf(content), 1)"></app-doc-tag>
                 }
                 }

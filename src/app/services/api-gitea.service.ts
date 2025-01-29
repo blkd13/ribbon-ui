@@ -1,10 +1,47 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { forkJoin, map, Observable } from 'rxjs';
+// Gitea 側のレスポンス型の例 (実際の API に合わせて定義を調整してください)
+interface GiteaOrganization {
+  id: number;
+  username: string;
+  full_name: string;
+  avatar_url: string;
+  // ...必要に応じて拡張
+}
 
 @Injectable({ providedIn: 'root' })
 export class ApiGiteaService {
   private readonly http: HttpClient = inject(HttpClient);
+  private readonly proxyBase = '/user/oauth/api/proxy';
+
+  /**
+   * orgName が指定されていなければ、ユーザーが所属する Organization の一覧を返し、
+   * orgName が指定されていれば、その Organization 内の Team と Repository を取得して
+   * 一つの配列に合体して返す。
+   */
+  groupChildren(giteaProvider: string, key?: string): Observable<(GiteaUser | GiteaRepository | GiteaOrganization)[]> {
+    const limit = 100;
+    if (key) {
+      return this.http.get<GiteaRepository[]>(`${this.proxyBase}/${giteaProvider}/api/v1/${key}/repos?limit=${limit}`);
+    } else {
+      return forkJoin([
+        this.http.get<GiteaOrganization[]>(`${this.proxyBase}/${giteaProvider}/api/v1/user/orgs?limit=${limit}`),
+        this.http.get<GiteaUser>(`${this.proxyBase}/${giteaProvider}/api/v1/user`)
+      ]).pipe(
+        map(([orgs, user]) => {
+          orgs.forEach(org => {
+            (org as any).name = org.username;
+            (org as any).key = `orgs/${org.username}`;
+          });
+          (user as any).name = user.username;
+          (user as any).key = `users/${user.username}`;
+          return [...orgs, user];
+        })
+      );
+
+    }
+  }
 
   projects(provider: string, owner?: string, params: { page?: number; limit?: number } = {}): Observable<GiteaRepositoryResponse> {
     const ownerPath = owner ? `/orgs/${owner}` : '/user';
@@ -200,4 +237,30 @@ export interface FileGroup {
 export interface RootObject {
   gitProjectCommit: GitProjectCommit;
   fileGroup: FileGroup;
+}
+
+export interface GiteaUser {
+  id: number;
+  login: string;
+  login_name: string;
+  source_id: number;
+  full_name: string;
+  email: string;
+  avatar_url: string;
+  html_url: string;
+  language: string;
+  is_admin: boolean;
+  last_login: string;
+  created: string;
+  restricted: boolean;
+  active: boolean;
+  prohibit_login: boolean;
+  location: string;
+  website: string;
+  description: string;
+  visibility: string;
+  followers_count: number;
+  following_count: number;
+  starred_repos_count: number;
+  username: string;
 }

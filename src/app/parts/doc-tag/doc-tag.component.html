@@ -18,7 +18,7 @@
         <img src="./vsc-material-icons/icons/{{getVSCodeFileIcon(content().text||'file')}}.svg" class="w-6 h-6">
         }
     </div>
-    <div class="label">{{content().text || 'オブジェクト'}}</div>
+    <div class="label">{{format(content().text)|| 'オブジェクト'}}</div>
     @if(content().isLoading){
     <div class="loading-cover--sub">
         <mat-spinner class="spinner"></mat-spinner>

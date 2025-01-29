@@ -135,15 +135,34 @@ function buildFileTreeFromFileInfo(files: FileInfo[]): { root: TreeNode[], folde
 }
 
 function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
-  // const extList = Array.from(new Set(_files.map(file => file.name.split('.').pop() || ''))).sort();
   const extList: MimeTreeNode[] = [];
   const extMap = {} as { [ext: string]: MimeTreeNode };
   const extMimeMap = {} as { [ext: string]: { [fileType: string]: MimeTreeNode } };
+
+  // パターンを抽出する関数
+  function extractPattern(filename: string): string {
+    // .から始まるものは拡張子ではないので削除
+    const trimedName = filename.replaceAll(/^\.*/g, '');
+    const parts = trimedName.split('.');
+
+    if (parts.length >= 2) {
+      // 特殊パターンの検出（例: .spec.ts, .component.ts など）
+      const lastTwo = parts.slice(-2).join('.');
+      // 既知の特殊パターンのリスト
+      const specialPatterns = ['.spec.ts'];
+      if (specialPatterns.includes(`.${lastTwo}`)) {
+        return lastTwo;
+      }
+    }
+
+    // 通常の拡張子
+    return parts.length > 1 ? parts[parts.length - 1] : '';
+  }
+
   _files.forEach(file => {
-    // .から始まるものは拡張子ではないので削ってからsplitする
-    const trimedName = file.name.replaceAll(/^\.*/g, '');
-    const ext = trimedName.includes('.') ? (trimedName.split('.').pop() || '') : '';
+    const ext = extractPattern(file.name);
     file.ext = ext;
+
     if (!extMap[ext]) {
       extMap[ext] = {
         depth: 0,
@@ -158,10 +177,11 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
         children: [],
       };
       extList.push(extMap[ext]);
-    } else { }
+    }
+
     if (!extMimeMap[ext]) {
       extMimeMap[ext] = {};
-    } else { }
+    }
     if (!extMimeMap[ext][file.fileType]) {
       extMimeMap[ext][file.fileType] = {
         depth: 1,
@@ -176,9 +196,11 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
         children: [],
       };
       extMap[ext].children.push(extMimeMap[ext][file.fileType]);
-    } else { }
-    extMimeMap[ext][file.fileType].children.push(file as any); // 無理矢理file入れておく
+    }
+    extMimeMap[ext][file.fileType].children.push(file as any);
   });
+
+  // ソートと後処理は同じ
   extList.sort((a, b) => a.name.localeCompare(b.name));
   extList.forEach(extNode => {
     const mimes = Object.values(extMimeMap[extNode.name]);
@@ -186,11 +208,11 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
     extNode.children = mimes;
   });
 
-  if (extList[0].name === '') {
-    // 拡張子がないものを最後に持っていく
+  if (extList[0]?.name === '') {
     const noExt = extList.shift();
     extList.push(noExt as any);
-  } else { }
+  }
+
   return extList;
 }
 
@@ -451,3 +473,4 @@ export class SelectTreeComponent implements OnInit {
     $event.preventDefault();
   }
 }
+

@@ -10,7 +10,7 @@ export type MultilingualPrompt = Record<Lang, string>;
 })
 export class GService {
 
-  version = 'v20250121-2';
+  version = 'v20250129';
 
   // ローディング中のHTTP通信数
   httpConnectCount: Subject<number> = new Subject<number>();
@@ -47,6 +47,9 @@ export class GService {
     'application/x-font-woff',
     'font/sfnt',
     'image/x-icon',
+    'application/x-ms-application',
+    'application/x-pkcs12',
+    'application/pkix-cert',
   ];
 
   lang: Lang;
