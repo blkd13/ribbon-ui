@@ -1,6 +1,6 @@
 @if(showInfo&&false){
 <div class="flex justify-center item-center" style="background-color: rgb(30, 109, 131);padding: 5px 10px;">
-    最新モデル Gemini-2.0-flash-exp がリリースされています。速くて丁寧な回答が特徴的なモデルです。是非一度お試しください。
+    現在Googleの障害でgemini、claude系が使えません。gpt-4oかo1をご利用ください。
     <mat-icon class="cursor-pointer absolute right-3" (click)="showInfo=false">close</mat-icon>
 </div>
 }
@@ -180,50 +180,6 @@
 
             </div>
         </div>
-        <style>
-            .course-panel {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                flex-direction: column;
-                width: 150px;
-                height: 150px;
-                background: linear-gradient(to bottom, #444444, #222222);
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                border-radius: 8px;
-                font-size: 32px;
-                cursor: pointer;
-                /* グラデーションの変化をスムーズにするために必要な設定 */
-                position: relative;
-                z-index: 1;
-                transition: all 0.3s ease;
-            }
-
-            /* 疑似要素を使ってグラデーションの切り替えを実現 */
-            .course-panel::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: linear-gradient(to bottom, rgb(30, 109, 131), #19393b);
-                border-radius: 8px;
-                opacity: 0;
-                transition: opacity 0.3s ease;
-                z-index: -1;
-            }
-
-            /* ホバー時の中間的な色 */
-            .course-panel:hover::before {
-                opacity: 0.5;
-            }
-
-            /* 選択時の色 */
-            .course-panel.selected::before {
-                opacity: 1;
-            }
-        </style>
         @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length===1){
         <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col z-10"
             style="transform: scale(0.5);">
@@ -313,19 +269,19 @@
         <!-- リスト表示 -->
 
         <div class="flex gap-1 px-2" style="z-index: 2;width: calc(100% - 17px);">
-            @for(thread of selectedThreadGroup.threadList;track $index){
+            @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
             <div class="w-0 flex-1">
-                @if(messageGroupIdListMas[thread.id]; as messageGroupIdList){
-                @if(messageGroupIdList[0]; as messageGroupId){
+                @if(messageGroupIdListMas[thread.id]; as messageGroupIdList) {
+                @if(messageGroupIdList[0]; as messageGroupId) {
                 @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
                 <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
                 <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup" [bitCounter]="bitCounter"
                     [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1"
                     [layout]="userService.chatLayout" (edit)="editChat($event)" (removeThread)="removeThread($event)"
-                    (modelChange)="modelCheck([$event])" (fileSelectionUpdateEmitter)="onChange()">
+                    (modelChange)="modelCheck([$event])" (fileSelectionUpdateEmitter)="onChange()"
+                    (expanded)="expanded($event, 0, tIndex, messageGroup)">
                 </app-chat-panel-system>
                 }
-
                 }
                 }
             </div>
@@ -334,13 +290,13 @@
 
         <div #textBodyElem class="custom-scroll w-full flex-1 h-0 px-2 py-0 flex flex-col gap-1 relative"
             style="overflow-y: scroll;">
-            @for(index of indexList; track $index) {
+            @for(index of indexList; track $index;let pIndex=$index) {
             <div #chatPanelGroupElem class="flex gap-1 w-full min-w-full max-w-full">
 
-                @for(thread of selectedThreadGroup.threadList;track $index){
+                @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
                 <div class="w-0 flex-1">
-                    @if(messageGroupIdListMas[thread.id]){
-                    @if(messageGroupIdListMas[thread.id][index]; as messageGroupId){
+                    @if(messageGroupIdListMas[thread.id]) {
+                    @if(messageGroupIdListMas[thread.id][index]; as messageGroupId) {
                     @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
 
                     <!-- {{messageGroup.id}} -->
@@ -349,7 +305,8 @@
                     <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
                         [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
                         (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-                        (remove)="removeMessageGroup($event)" (fileSelectionUpdateEmitter)="onChange()">
+                        (remove)="removeMessageGroup($event)" (fileSelectionUpdateEmitter)="onChange()"
+                        (expanded)="expanded($event, pIndex, tIndex, messageGroup)">
                     </app-chat-panel-message>
                     }
 

@@ -21,6 +21,16 @@ export class ApiGitlabService {
     return this.http.get<GitLabGroupListResponse>(`${this.proxyBase}/${gitlabProvider}/api/v4/groups${tail}`);
   }
 
+  usersChildren(gitlabProvider: string, id?: number, query?: string): Observable<(GitLabUser | GitLabProject)[]> {
+    // /users/:user_id/projects
+    if (id) {
+      return this.http.get<GitLabProject[]>(`${this.proxyBase}/${gitlabProvider}/api/v4/users/${id}/projects`);
+    } else {
+      query = query ? `?search=${query}` : '';
+      return this.http.get<GitLabUser[]>(`${this.proxyBase}/${gitlabProvider}/api/v4/users${query}`);
+    }
+  }
+
   groupChildren(gitlabProvider: string, groupId?: number): Observable<(GitLabGroup | GitLabProject)[]> {
     const per_page = 100;
     let tail = '';
@@ -67,9 +77,12 @@ export class ApiGitlabService {
     return this.fetchAllPages<GitlabBranch>(initialUrl);
   }
 
-  projects(gitlabProvider: string, groupId?: number, params: { page?: number; per_page?: number } = {}): Observable<GitLabProjectListResponse> {
+  projects(gitlabProvider: string, groupId?: number, params: { page?: number; per_page?: number, search?: string } = {}): Observable<GitLabProjectListResponse> {
     const group = groupId === undefined ? '' : `/groups/${groupId}`;
     const url = `${this.proxyBase}/${gitlabProvider}/api/v4${group}/projects`;
+    if (params.search === undefined) {
+      delete params.search;
+    }
     return this.http.get<GitLabProjectListResponse>(url, { params });
   }
 
@@ -422,4 +435,14 @@ interface FileGroup {
 interface RootObject {
   gitProjectCommit: GitProjectCommit;
   fileGroup: FileGroup;
+}
+
+export interface GitLabUser {
+  id: number,
+  username: string,
+  name: string,
+  state: string,
+  locked: false,
+  avatar_url?: string,
+  web_url: string,
 }

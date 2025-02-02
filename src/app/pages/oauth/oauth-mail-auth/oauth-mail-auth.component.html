@@ -12,10 +12,11 @@
 </style>
 
 <div class="p-5">
-    <div class="container">
+    <div class="container" (submit)="submit()">
         <p>6桁のメール認証コードを入力してください。</p>
         <form>
             <input name="pincode" [(ngModel)]="pincode" />
+            <input type="submit" value="送信" />
         </form>
     </div>
 </div>

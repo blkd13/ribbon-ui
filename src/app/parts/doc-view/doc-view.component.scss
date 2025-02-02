@@ -5,6 +5,13 @@
     height: calc(100vh - 100px);
 }
 
+h3 {
+    text-wrap: unset;
+    white-space: nowrap;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+}
+
 .content {
     height: calc(100vh - 300px);
     max-height: calc(100vh - 200px);

@@ -303,6 +303,7 @@ export interface MessageGroupForView extends MessageGroup {
     // status: number;
     messages: MessageForView[];
     selectedIndex: number; // messagesではなくnextMessageGroupIdのindex
+    isExpanded?: boolean;
 }
 
 export interface Message extends BaseEntity {

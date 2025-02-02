@@ -1,5 +1,6 @@
 @if(messageGroup() && messageGroup().messages && messageGroup().messages.length>0 && thread().inDto.args.model){
-<mat-expansion-panel class="message" [expanded]="false" #exPanel (opened)="loadContent().subscribe()">
+<mat-expansion-panel class="message" #exPanel [expanded]="messageGroup().isExpanded"
+    (opened)="loadContent().subscribe()" (expandedChange)="expandedEmitter.emit($event)">
     <!-- [expanded]="messageGroup.messages[0].contents.length>0" -->
     <mat-expansion-panel-header class="message-header">
         <mat-panel-title class="message-title" style="font-weight: normal;">

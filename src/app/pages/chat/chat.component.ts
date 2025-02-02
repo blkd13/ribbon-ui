@@ -33,7 +33,6 @@ import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Observable, tap, toArray } from 'rxjs';
 import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
-import { ThreadDetailComponent } from '../../parts/thread-detail/thread-detail.component';
 import { AuthService } from '../../services/auth.service';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { BaseEntity, ContentPart, ContentPartType, Message, MessageClusterType, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectVisibility, Team, TeamType, Thread, ThreadGroup, ThreadGroupType, ThreadGroupVisibility, UUID } from '../../models/project-models';
@@ -43,7 +42,6 @@ import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-ru
 import { Utils } from '../../utils';
 import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-dialog/parameter-setting-dialog.component';
 import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
-import { ChatPanelBaseComponent } from '../../parts/chat-panel-base/chat-panel-base.component';
 import { UserService } from '../../services/user.service';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
 
@@ -396,14 +394,21 @@ export class ChatComponent implements OnInit {
               // this.allExpandCollapseFlag = this.messageList.length < 5;
               this.allExpandCollapseFlag = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id].length < 5;
 
+              this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]
+                .slice().reverse().filter((messageGroupId, index) => index < 2)
+                .forEach((messageGroupId, index) => this.messageService.messageGroupMas[messageGroupId].isExpanded = true)
+              );
               // スレッドオブジェクトとメッセージグループオブジェクトの不整合（複数スレッドのはずなのにメッセージグループが無いとか）が起きていても大丈夫なようにする。
             }),
-            switchMap(resDto => safeForkJoin(
-              this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]
-                .slice().reverse().filter((messageGroupId, index) => index < 5)
-                .map((messageGroupId, index) => this.messageService.messageGroupMas[messageGroupId].messages)
-              ).flat().flat().filter(message => message.contents.length === 0).map(message => this.messageService.getMessageContentParts(message))
-            )),
+            // switchMap(resDto => safeForkJoin(
+            //   this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]
+            //     .slice().reverse().filter((messageGroupId, index) => index < 2)
+            //     .map((messageGroupId, index) => {
+            //       this.messageService.messageGroupMas[messageGroupId].isExpanded = true;
+            //       return this.messageService.messageGroupMas[messageGroupId].messages;
+            //     })
+            //   ).flat().flat().filter(message => message.contents.length === 0).map(message => this.messageService.getMessageContentParts(message))
+            // )),
             tap(tapRes => {
 
               let isExist = false;
@@ -545,6 +550,16 @@ export class ChatComponent implements OnInit {
         this.isThreadGroupLoading = false;
       },
     });
+  }
+
+  expanded(isExtended: boolean, pIndex: number, tIndex: number, messageGroup: MessageGroupForView): void {
+    this.selectedThreadGroup.threadList.forEach((thread, index) => {
+      if (tIndex === index) {
+      } else {
+        this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][this.indexList[pIndex]]].isExpanded = isExtended;
+      }
+    });
+    this.cdr.detectChanges();
   }
 
   saveThreadGroup(_orgThreadGroup: ThreadGroup): Observable<ThreadGroup> {
@@ -728,6 +743,7 @@ export class ChatComponent implements OnInit {
                 DomUtils.textAreaHeighAdjust(this.textAreaElem().nativeElement); // 高さ調整
                 this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
               }, 0);
+              upsertResponseList.forEach(messageGroup => messageGroup.isExpanded = true);
               return upsertResponseList.map(messageGroup => messageGroup.id);
             }),
           );
@@ -911,6 +927,7 @@ export class ChatComponent implements OnInit {
               resDto.messageGroupList.forEach(messageGroup => {
                 this.messageService.applyMessageGroup(messageGroup);
                 this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
+                messageGroup.isExpanded = true;
                 messageGroup.messages.map(message => {
                   if (message.observer) {
                     this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
@@ -1163,6 +1180,18 @@ export class ChatComponent implements OnInit {
     } else {
       // スレッドナシの場合は継続
     }
+
+    const disabledModels = [];
+    for (const thread of threadGroup.threadList) {
+      // threadGroup.threadList
+      if (thread.inDto.args.model) {
+        if (this.chatService.modelMap[thread.inDto.args.model].isEnable) {
+        } else {
+          disabledModels.push(thread.inDto.args.model);
+        }
+      }
+    }
+    // this.dialog.open(DialogComponent, { data: { title: 'alert', message: `現在 ${disabledModels.join('、')}は使えません。他のモデルを使ってください。`, options: ['Close'] } });
 
     this.isLock = true;
     safeForkJoin(threadGroup.threadList.map(thread => {

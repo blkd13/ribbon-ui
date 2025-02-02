@@ -212,3 +212,46 @@
         display: none !important;
     }
 }
+
+.course-panel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 150px;
+    height: 150px;
+    background: linear-gradient(to bottom, #444444, #222222);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    font-size: 32px;
+    cursor: pointer;
+    /* グラデーションの変化をスムーズにするために必要な設定 */
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+/* 疑似要素を使ってグラデーションの切り替えを実現 */
+.course-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, rgb(30, 109, 131), #19393b);
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+/* ホバー時の中間的な色 */
+.course-panel:hover::before {
+    opacity: 0.5;
+}
+
+/* 選択時の色 */
+.course-panel.selected::before {
+    opacity: 1;
+}

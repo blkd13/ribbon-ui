@@ -5,9 +5,16 @@
     <button (click)="onSearch()">検索</button>
 </div>
 -->
-<mat-tab-group style="height: 100vh;overflow: hidden;">
-    <mat-tab label="ツリー表示">
-        <mat-tree #tree [dataSource]="treeData" [childrenAccessor]="childrenAccessor">
+<mat-tab-group class="h-screen overflow-hidden" [selectedIndex]="selectedTabIndex"
+    (selectedIndexChange)="selectedTabIndex = $event">
+    <mat-tab label="グループ">
+        <!-- <div class="search-box">
+            <input type="text" style="background-color: #666;" matInput placeholder="検索キーワード"
+                [(ngModel)]="searchKeyword[selectedTabIndex]">
+            <button (click)="onSearch()">検索</button>
+        </div> -->
+        @if(treeData.groups&&treeData.groups.length > 0){
+        <mat-tree #tree [dataSource]="treeData.groups" [childrenAccessor]="childrenAccessor">
             <!-- This is the tree node template for leaf nodes -->
             <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
                 <!-- use a disabled button to provide padding for tree leaf -->
@@ -43,11 +50,67 @@
                 </div>
             </mat-tree-node>
         </mat-tree>
+        } @else {
+        明細無し
+        }
+    </mat-tab>
+    <mat-tab label="ユーザー">
+        <div class="search-box">
+            <input type="text" style="background-color: #666;" matInput placeholder="検索キーワード"
+                [(ngModel)]="searchKeyword[selectedTabIndex]">
+            <button (click)="onSearch()">検索</button>
+        </div>
+        @if(treeData.users&&treeData.users.length > 0){
+        <mat-tree #tree [dataSource]="treeData.users" [childrenAccessor]="childrenAccessor">
+            <!-- This is the tree node template for leaf nodes -->
+            <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+                <!-- use a disabled button to provide padding for tree leaf -->
+                <button mat-icon-button disabled></button>
+                <div class="flex justify-between items-center w-full cursor-pointer">
+                    <a [href]="node.web_url || node.project_url" target="_blank">
+                        <div>{{node.id}}: {{node.name}}</div>
+                    </a>
+
+                    <div class="flex items-center gap-2">
+                        <div [innerHTML]="node.description"></div>
+                        <div> {{node.updated_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
+                        <a [href]="node.web_url || node.project_url" target="_blank">
+                            <button mat-icon-button color="primary">
+                                <mat-icon>open_in_new</mat-icon>
+                            </button>
+                        </a>
+                        <button mat-raised-button (click)="onSelectProject(node)">AI要約</button>
+                    </div>
+                </div>
+            </mat-tree-node>
+            <!-- This is the tree node template for expandable nodes -->
+            <mat-tree-node *matTreeNodeDef="let node;when: hasChild" matTreeNodePadding matTreeNodeToggle
+                [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
+                class="cursor-pointer">
+                <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.name">
+                    <mat-icon class="mat-icon-rtl-mirror">
+                        {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                    </mat-icon>
+                </button>
+                <div>
+                    {{node.id}}: {{node.name}}
+                </div>
+            </mat-tree-node>
+        </mat-tree>
+        } @else {
+        明細無し
+        }
         <!-- <div class="custom-scroll relative overflow-y-auto w-full m-2 h-full">
         </div> -->
     </mat-tab>
-    <mat-tab label="リスト表示" style="height: 100%;overflow: hidden;">
-        <div class="custom-scroll relative overflow-y-auto w-full h-full" (scroll)="onScroll($event)">
+    <mat-tab label="リポジトリ" style="height: 100%;overflow: hidden;">
+        <div class="search-box">
+            <input type="text" style="background-color: #666;" matInput placeholder="検索キーワード"
+                [(ngModel)]="searchKeyword[selectedTabIndex]">
+            <button (click)="onSearch()">検索</button>
+        </div>
+        <div class="custom-scroll relative overflow-y-auto w-full" (scroll)="onScroll($event)"
+            style="height: calc(100% - 24px);">
 
             <table>
                 <thead>
@@ -111,10 +174,13 @@
         </div>
     </mat-tab>
 </mat-tab-group>
-@if(loading) {
-<div class="loading">Loading...</div>
+<!-- 
+@if(isLoading){
+<div class="fixed top-0 left-0 flex items-center justify-center w-full h-full bg-black bg-opacity-50">
+    <mat-spinner></mat-spinner>
+</div>
 }
-
+ -->
 <!-- <button (click)="onTop()">トップへ移動</button> -->
 <!-- git.component.html の一例 -->
 <div class="fixed top-0 left-0 z-10">

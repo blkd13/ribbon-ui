@@ -1,4 +1,3 @@
-import { MessageService } from './../../services/project.service';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, Output, ViewChild, ViewEncapsulation, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -8,18 +7,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-import JSZip from 'jszip'; // JSZipのインポート
-import { saveAs } from 'file-saver'; // Blobファイルのダウンロードのためのライブラリ
-
-import { ChatCompletionContentPart, ChatCompletionContentPartText } from '../../models/models';
-import { ChatService } from '../../services/chat.service';
-import { DomUtils } from '../../utils/dom-utils';
 import { MarkdownComponent } from 'ngx-markdown';
 import { DocTagComponent } from '../doc-tag/doc-tag.component';
-import { ContentPart, ContentPartType, MessageForView, MessageGroupForView } from '../../models/project-models';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Observable, of, tap } from 'rxjs';
-import { Utils } from '../../utils';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 

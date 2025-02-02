@@ -21,32 +21,56 @@ export class ApiGiteaService {
    * 一つの配列に合体して返す。
    */
   groupChildren(giteaProvider: string, key?: string): Observable<(GiteaUser | GiteaRepository | GiteaOrganization)[]> {
-    const limit = 100;
+    const limit = 1000;
     if (key) {
       return this.http.get<GiteaRepository[]>(`${this.proxyBase}/${giteaProvider}/api/v1/${key}/repos?limit=${limit}`);
     } else {
-      return forkJoin([
-        this.http.get<GiteaOrganization[]>(`${this.proxyBase}/${giteaProvider}/api/v1/user/orgs?limit=${limit}`),
-        this.http.get<GiteaUser>(`${this.proxyBase}/${giteaProvider}/api/v1/user`)
-      ]).pipe(
-        map(([orgs, user]) => {
+      return this.http.get<GiteaOrganization[]>(`${this.proxyBase}/${giteaProvider}/api/v1/user/orgs?limit=${limit}`).pipe(
+        map(orgs => {
           orgs.forEach(org => {
             (org as any).name = org.username;
             (org as any).key = `orgs/${org.username}`;
           });
-          (user as any).name = user.username;
-          (user as any).key = `users/${user.username}`;
-          return [...orgs, user];
+          return orgs;
         })
       );
-
     }
   }
 
-  projects(provider: string, owner?: string, params: { page?: number; limit?: number } = {}): Observable<GiteaRepositoryResponse> {
-    const ownerPath = owner ? `/orgs/${owner}` : '/user';
-    const url = `/user/oauth/api/proxy/${provider}/api/v1${ownerPath}/repos`;
-    return this.http.get<GiteaRepositoryResponse>(url, { params });
+  /**
+   * orgName が指定されていなければ、ユーザーが所属する Organization の一覧を返し、
+   * orgName が指定されていれば、その Organization 内の Team と Repository を取得して
+   * 一つの配列に合体して返す。
+   */
+  userChildren(giteaProvider: string, key?: string): Observable<(GiteaUser | GiteaRepository | GiteaOrganization)[]> {
+    const limit = 1000;
+    if (key) {
+      return this.http.get<GiteaRepository[]>(`${this.proxyBase}/${giteaProvider}/api/v1/${key}/repos?limit=${limit}`);
+    } else {
+      return this.http.get<{ ok: boolean, data: GiteaUser[] }>(`${this.proxyBase}/${giteaProvider}/api/v1/users/search?q&tab`).pipe(
+        map(res => {
+          if (res.ok) {
+            res.data.forEach(user => {
+              (user as any).name = user.username;
+              (user as any).key = `users/${user.username}`;
+            });
+          } else { }
+          return res.data;
+        })
+      );
+    }
+  }
+
+  projects(provider: string, owner?: string, params: { page?: number; limit?: number, q?: string } = {}): Observable<GiteaRepositoryResponse> {
+    if (params.q) {
+      const url = `/user/oauth/api/proxy/${provider}/api/v1/repos/search`;
+      return this.http.get<{ data: GiteaRepositoryResponse, ok: boolean }>(url, { params }).pipe(map(res => res.data));
+    } else {
+      delete params.q;
+      const ownerPath = owner ? `/orgs/${owner}` : '/user';
+      const url = `/user/oauth/api/proxy/${provider}/api/v1${ownerPath}/repos`;
+      return this.http.get<GiteaRepositoryResponse>(url, { params });
+    }
   }
 
   branches(provider: string, owner: string, repo: string): Observable<GiteaBranch[]> {

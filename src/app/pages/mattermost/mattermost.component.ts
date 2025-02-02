@@ -565,20 +565,20 @@ export class MattermostComponent implements OnInit {
 
               // 改行正規化
               post.messageForView = post.message;
-              post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
-                if (index % 2 == 0) {
-                  return block.split('\n').map(line => {
-                    const trimed = line.trim();
-                    if (trimed[0] === '|' && trimed[trimed.length - 1] === '|') {
-                      return line;
-                    } else {
-                      return line + '\n';
-                    }
-                  }).join('\n');
-                } else {
-                  return '```\n' + block.trim() + '\n```\n';
-                }
-              }).join('') + '\n';
+              // post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
+              //   if (index % 2 == 0) {
+              //     return block.split('\n').map(line => {
+              //       const trimed = line.trim();
+              //       if (trimed[0] === '|' && trimed[trimed.length - 1] === '|') {
+              //         return line;
+              //       } else {
+              //         return line + '\n';
+              //       }
+              //     }).join('\n');
+              //   } else {
+              //     return '```\n' + block.trim() + '\n```\n';
+              //   }
+              // }).join('') + '\n';
 
               // ---
               // 本来全部再作成はおかしいけどユーザー名置換がこの後にあるから仕方ない。
@@ -745,20 +745,20 @@ export class MattermostComponent implements OnInit {
 
           // 改行正規化
           post.messageForView = post.message;
-          post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
-            if (index % 2 == 0) {
-              return block.split('\n').map(line => {
-                const trimed = line.trim();
-                if (trimed[0] === '|' && trimed[trimed.length - 1] === '|') {
-                  return line;
-                } else {
-                  return line + '\n';
-                }
-              }).join('\n');
-            } else {
-              return '```\n' + block.trim() + '\n```\n';
-            }
-          }).join('') + '\n';
+          // post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
+          //   if (index % 2 == 0) {
+          //     return block.split('\n').map(line => {
+          //       const trimed = line.trim();
+          //       if (trimed[0] === '|' && trimed[trimed.length - 1] === '|') {
+          //         return line;
+          //       } else {
+          //         return line + '\n';
+          //       }
+          //     }).join('\n');
+          //   } else {
+          //     return '```\n' + block.trim() + '\n```\n';
+          //   }
+          // }).join('') + '\n';
 
           // ユーザー処理
           const userIdSet = new Set<string>();
@@ -1522,19 +1522,19 @@ export class MattermostComponent implements OnInit {
                   post.messageForView = post.message;
                   post.messageForView = post.messageForView.replace('<a href="', '<a target="_blank" href="');
                   post.messageForView = replaceMentionsWithMaster(post.messageForView);
-                  post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
-                    if (index % 2 == 0) {
-                      return block.split('\n').map(line => {
-                        if (line.trim()[0] === '|' && line.trim()[line.trim().length - 1] === '|') {
-                          return line;
-                        } else {
-                          return line + '\n';
-                        }
-                      }).join('\n');
-                    } else {
-                      return '```\n' + block.trim() + '\n```\n';
-                    }
-                  }).join('') + '\n';
+                  // post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
+                  //   if (index % 2 == 0) {
+                  //     return block.split('\n').map(line => {
+                  //       if (line.trim()[0] === '|' && line.trim()[line.trim().length - 1] === '|') {
+                  //         return line;
+                  //       } else {
+                  //         return line + '\n';
+                  //       }
+                  //     }).join('\n');
+                  //   } else {
+                  //     return '```\n' + block.trim() + '\n```\n';
+                  //   }
+                  // }).join('') + '\n';
                 });
               });
 

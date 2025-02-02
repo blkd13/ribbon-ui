@@ -87,6 +87,8 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly removeContentEmitter = output<ContentPart>({ alias: 'removeContent' });
 
+  readonly expandedEmitter = output<boolean>({ alias: 'expanded' });
+
   // Jsonの場合は```jsonで囲むための文字列
   brackets = { pre: '', post: '' };
 
@@ -138,7 +140,7 @@ export class ChatPanelBaseComponent implements OnInit {
     // } else { }
   }
 
-  languageExtensions = {
+  languageExtensions: Record<string, string> = {
     "typescript": "ts",
     "typescriptx": "tsx", // TypeScript with JSX
     "javascript": "js",
@@ -190,7 +192,7 @@ export class ChatPanelBaseComponent implements OnInit {
               const header = codeLineList.shift() || ''; // 先頭行を破壊的に抽出
               if (header.trim()) {
                 const headers = header.trim().split(' ');
-                const ext = (this.languageExtensions as any)[headers[0]] || headers[0];
+                const ext = this.languageExtensions[headers[0]] || headers[0];
                 filename = headers[1] || `content-${counter}.${ext}`;
               } else {
                 // plain block
@@ -367,10 +369,12 @@ export class ChatPanelBaseComponent implements OnInit {
         tap(contents => {
           this.messageGroup().messages[0].contents = contents;
           this.isLoading = false;
+          this.exPanel().open();
         }),
       );
     } else {
       // load済みのものを返す
+      this.exPanel().open();
       return of(messageGroup.messages[0].contents);
     }
   }
