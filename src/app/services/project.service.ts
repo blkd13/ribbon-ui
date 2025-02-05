@@ -784,7 +784,7 @@ export class MessageService {
                                     // plain block
                                 }
                                 // ZIPにファイルを追加
-                                zip.file(`${directory}${filename}`, codeLineList.join('\n'));
+                                zip.file(`${directory}${filename}`.replaceAll(/^\/*/g, ''), codeLineList.join('\n'));
                                 counter++;
                             });
                         } else {

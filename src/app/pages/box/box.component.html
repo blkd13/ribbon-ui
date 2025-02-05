@@ -243,8 +243,8 @@
                 <ng-container *ngTemplateOutlet="itemInfoTempl; context:{$implicit:entry}"></ng-container>
             </a>
             } @else if(entry.type === 'web_link'){
-            <a [routerLink]="['/box','folder',entry.id]" [href]="entry.url"
-                class="unstyled-link flex justify-between items-center p-2" [title]="entry.name" target="_blank">
+            <a [href]="entry.url" class="unstyled-link flex justify-between items-center p-2" [title]="entry.name"
+                target="_blank">
                 <div class="flex items-center gap-2 p-2">
                     <mat-icon>link</mat-icon>
                     <div>{{entry.name}}</div>

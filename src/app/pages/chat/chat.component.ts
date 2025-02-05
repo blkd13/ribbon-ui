@@ -307,7 +307,7 @@ export class ChatComponent implements OnInit {
       // 新規スレッド作成
       this.selectedThreadGroup = this.threadService.genInitialThreadGroupEntity(this.selectedProject.id);
       this.selectedThreadGroup.threadList.forEach(thread => {
-        const contentPart = this.messageService.initContentPart(genDummyId(), 'アシスタントAI');
+        const contentPart = this.messageService.initContentPart(genDummyId(), this.chatService.defaultSystemPrompt);
         this.messageService.addSingleMessageGroupDry(thread.id, undefined, 'system', [contentPart]);
       });
 

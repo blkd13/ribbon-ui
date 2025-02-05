@@ -90,7 +90,7 @@ export class HomeComponent implements OnInit {
   systemPrompt: string = '';
   staticMessageList = [{
     label: '普通のAIチャット',
-    systemPrompt: 'アシスタントAI',
+    systemPrompt: this.chatService.defaultSystemPrompt,
     // placeholder: 'メッセージを入力...。\nShift+Enterで改行。\nCtrl+Enterで送信。\nDrag＆Drop、ファイル貼り付け。',
     placeholder: 'メッセージを入力...。\nShift+Enterで改行。\nCtrl+Enterで送信。\nDrag＆Drop、ファイル貼り付け。',
   }, {

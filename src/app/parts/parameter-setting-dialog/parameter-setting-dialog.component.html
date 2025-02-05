@@ -42,7 +42,7 @@
           <mat-label>モデル選択</mat-label>
           <mat-select [(ngModel)]="args.model">
             @for(option of chatService.modelList;track $index){
-            <mat-option [value]="option.id">{{option.tag}}：{{option.id}}</mat-option>
+            <mat-option [value]="option.id" [disabled]="!option.isEnable">{{option.tag}}：{{option.id}}</mat-option>
             }
           </mat-select>
         </mat-form-field>

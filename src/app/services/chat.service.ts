@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
+import { Utils } from '../utils';
 
 export interface ChatInputArea {
   role: ChatCompletionRole;
@@ -59,6 +60,7 @@ export class ChatService {
     { tag: '実験', class: 'exp', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00012500, 0.000375, 0.0001250, 0.000375], id: 'gemini-exp-1206', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 4096, maxInputTokens: 128000, isGSearch: false, isDomestic: true, isPdf: false, price: [0.00500000, 0.015000, 0.0050000, 0.015000], id: 'gpt-4o', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 100000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: false, price: [0.01650000, 0.066000, 0.0165000, 0.066000], id: 'o1', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 100000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00110000, 0.004400, 0.0011000, 0.004400], id: 'o3-mini', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: false, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-v2@20241022', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 32767, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-thinking-exp-1219', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 32768, maxInputTokens: 128000, isGSearch: false, isDomestic: false, isPdf: false, price: [0.01650000, 0.066000, 0.0165000, 0.066000], id: 'o1-preview', },
@@ -73,6 +75,19 @@ export class ChatService {
     // { tag: '独特', maxTokens: 4096, maxInputTokens: 8000, isDomestic:true,isGSearch:true,isPdf:true, price: [0.00100000, 0.015000, 0.0010000, 0.015000], id: 'meta/llama3-405b-instruct-maas', },
   ];
   modelMap: { [modelId: string]: LlmModel } = Object.fromEntries(this.modelList.map(model => [model.id, model]));
+
+  defaultSystemPrompt = 'AI アシスタント';
+  // defaultSystemPrompt = Utils.trimLines(`
+  //   AI アシスタント
+
+  //   ## 標準的な出力フォーマット
+    
+  //   この後、特に指示がない限り以下のフォーマットで出力してください。
+
+  //   - markdown形式
+  //   - ファイル出力する際はブロックの先頭にファイル名をフルパスで埋め込んでください（例：\`\`\`typescript src/app/filename.ts\n...\n\`\`\` ）
+  //   - 数式を書く際はkatexが反応する形式で書いてください（例：$...$）。
+  // `);
 
   protected connectionId!: string;
 

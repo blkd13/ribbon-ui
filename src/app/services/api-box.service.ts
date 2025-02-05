@@ -4,7 +4,7 @@ import { catchError, concat, concatMap, EMPTY, filter, from, map, merge, Observa
 import { BoxApiCollection, BoxApiCollectionItem, BoxApiCollectionList, BoxApiEventResponse, BoxApiFileItemEntry, BoxApiFolder, BoxApiFolderItemEntry, BoxApiFolderItemListResponse, BoxApiItemEntry, BoxApiPathCollection, BoxApiSearchResults, BoxMkdirErrorResponse } from '../pages/box/box-interface';
 import { FullPathFile } from './file-manager.service';
 
-const ITEM_QUERY = `fields=name,modified_at,modified_by,created_at,content_modified_at,shared_link,size,extension,lock,classification,permissions,version_number`; //,file_version,sequence_id,etag,representations //,files_count,filesCount,inviteRestrictionCode,invite_restriction_code
+const ITEM_QUERY = `fields=name,modified_at,modified_by,created_at,content_modified_at,shared_link,size,extension,lock,classification,permissions,version_number,url`; //,file_version,sequence_id,etag,representations //,files_count,filesCount,inviteRestrictionCode,invite_restriction_code
 
 @Injectable({ providedIn: 'root' })
 export class ApiBoxService {
