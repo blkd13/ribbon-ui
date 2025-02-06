@@ -1,0 +1,26 @@
+.container {
+  padding: 20px;
+}
+
+.actions {
+  margin-bottom: 20px;
+}
+
+table {
+  width: 100%;
+}
+
+.mat-column-actions {
+  width: 80px;
+  text-align: center;
+}
+
+.mat-column-isActive {
+  width: 100px;
+  text-align: center;
+}
+
+.mat-column-startDate,
+.mat-column-endDate {
+  width: 120px;
+}

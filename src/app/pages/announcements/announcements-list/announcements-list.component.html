@@ -1,0 +1,65 @@
+<div class="container">
+  <h1>お知らせ管理</h1>
+
+  <div class="actions">
+    <button mat-raised-button color="primary" (click)="openCreateDialog()">
+      <mat-icon>add</mat-icon>
+      新規作成
+    </button>
+  </div>
+
+  <table mat-table [dataSource]="announcements" class="mat-elevation-z8">
+    <!-- タイトル -->
+    <ng-container matColumnDef="title">
+      <th mat-header-cell *matHeaderCellDef>タイトル</th>
+      <td mat-cell *matCellDef="let element">{{element.title}}</td>
+    </ng-container>
+
+    <!-- 表示開始日 -->
+    <ng-container matColumnDef="startDate">
+      <th mat-header-cell *matHeaderCellDef>表示開始日</th>
+      <td mat-cell *matCellDef="let element">{{element.startDate | date:'yyyy/MM/dd'}}</td>
+    </ng-container>
+
+    <!-- 表示終了日 -->
+    <ng-container matColumnDef="endDate">
+      <th mat-header-cell *matHeaderCellDef>表示終了日</th>
+      <td mat-cell *matCellDef="let element">{{element.endDate | date:'yyyy/MM/dd'}}</td>
+    </ng-container>
+
+    <!-- 有効/無効 -->
+    <ng-container matColumnDef="isActive">
+      <th mat-header-cell *matHeaderCellDef>状態</th>
+      <td mat-cell *matCellDef="let element">
+        <mat-chip-set>
+          <mat-chip [color]="element.isActive ? 'primary' : undefined" [highlighted]="element.isActive">
+            {{element.isActive ? '有効' : '無効'}}
+          </mat-chip>
+        </mat-chip-set>
+      </td>
+    </ng-container>
+
+    <!-- 操作 -->
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef>操作</th>
+      <td mat-cell *matCellDef="let element">
+        <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="操作メニュー">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #menu="matMenu">
+          <button mat-menu-item (click)="openEditDialog(element)">
+            <mat-icon>edit</mat-icon>
+            <span>編集</span>
+          </button>
+          <button mat-menu-item (click)="deleteAnnouncement(element)">
+            <mat-icon>delete</mat-icon>
+            <span>削除</span>
+          </button>
+        </mat-menu>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+</div>

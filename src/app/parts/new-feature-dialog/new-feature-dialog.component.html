@@ -1,0 +1,18 @@
+<h2 mat-dialog-title>新機能のお知らせ</h2>
+
+<mat-dialog-content>
+  <div *ngFor="let announcement of announcements" class="announcement-item">
+    <h3>{{announcement.title}}</h3>
+    <p class="message">{{announcement.message}}</p>
+    <div class="date">公開日: {{announcement.startDate | date:'yyyy/MM/dd'}}</div>
+  </div>
+
+  <div *ngIf="announcements.length === 0" class="no-announcements">
+    新着のお知らせはありません
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onDontShowAgain()">今後は表示しない</button>
+  <button mat-raised-button color="primary" (click)="onClose()">閉じる</button>
+</mat-dialog-actions>

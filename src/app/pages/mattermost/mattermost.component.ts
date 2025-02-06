@@ -1891,7 +1891,7 @@ export class MattermostComponent implements OnInit {
     clearTimeout(this.timeoutId);
     this.timeoutId = setTimeout(() => {
       const targetInDto = { message: this.inDto[type].message, fileList: [...this.inDto[type].fileList] };
-      this.apiMattermostService.mattermostCreateDraft({ channel_id: channel_id, message: targetInDto.message, file_ids: targetInDto.fileList.map(file => file.id || '').filter(name => name), root_id }).subscribe();;
+      this.apiMattermostService.mattermostCreateDraft({ channel_id: channel_id, message: targetInDto.message, file_ids: targetInDto.fileList.map(file => file.id || '').filter(name => name), root_id }).subscribe();
       this.apiMattermostService.mattermostTyping(channel_id, root_id);
     }, 1000);
   }

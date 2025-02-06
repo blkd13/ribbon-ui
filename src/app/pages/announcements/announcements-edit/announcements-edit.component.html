@@ -1,0 +1,60 @@
+<h2 mat-dialog-title>{{data.mode === 'create' ? 'お知らせ新規作成' : 'お知らせ編集'}}</h2>
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <mat-dialog-content>
+    <div class="form-field">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>タイトル</mat-label>
+        <input matInput formControlName="title" required>
+        <mat-error *ngIf="form.get('title')?.hasError('required')">
+          タイトルは必須です
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="form-field">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>メッセージ</mat-label>
+        <textarea matInput formControlName="message" rows="4" required></textarea>
+        <mat-error *ngIf="form.get('message')?.hasError('required')">
+          メッセージは必須です
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>表示開始日</mat-label>
+        <input matInput [matDatepicker]="startPicker" formControlName="startDate" required>
+        <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
+        <mat-error *ngIf="form.get('startDate')?.hasError('required')">
+          表示開始日は必須です
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>表示終了日</mat-label>
+        <input matInput [matDatepicker]="endPicker" formControlName="endDate" required>
+        <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
+        <mat-error *ngIf="form.get('endDate')?.hasError('required')">
+          表示終了日は必須です
+        </mat-error>
+      </mat-form-field>
+    </div>
+
+    <div class="form-field">
+      <mat-slide-toggle formControlName="isActive" color="primary">
+        有効
+      </mat-slide-toggle>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close type="button">キャンセル</button>
+    <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
+      {{data.mode === 'create' ? '作成' : '更新'}}
+    </button>
+  </mat-dialog-actions>
+</form>

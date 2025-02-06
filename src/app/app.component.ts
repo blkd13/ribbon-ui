@@ -6,14 +6,23 @@ import { GService } from './services/g.service';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { filter } from 'rxjs/operators';
 import { UserService } from './services/user.service';
+import { AnnouncementsService } from './services/announcements.service';
+import { UserSettingService } from './services/user-setting.service';
+import { NewFeatureDialogComponent } from './parts/new-feature-dialog/new-feature-dialog.component';
 
 declare var _paq: any;
 
 @Component({
     selector: 'app-root',
-    imports: [RouterOutlet, MatIconModule],
+    standalone: true,
+    imports: [
+      RouterOutlet,
+      MatIconModule,
+      MatDialogModule
+    ],
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss'
 })
@@ -26,6 +35,9 @@ export class AppComponent implements OnInit {
   readonly translateService: TranslateService = inject(TranslateService);
   readonly g: GService = inject(GService);
   readonly router: Router = inject(Router);
+  readonly announcementsService: AnnouncementsService = inject(AnnouncementsService);
+  readonly userSettingService: UserSettingService = inject(UserSettingService);
+  readonly dialog: MatDialog = inject(MatDialog);
 
   private readonly swUpdate: SwUpdate = inject(SwUpdate);
   private readonly snackBar: MatSnackBar = inject(MatSnackBar);
@@ -50,7 +62,6 @@ export class AppComponent implements OnInit {
         _paq.push(['trackPageView']);
       }
     });
-
   }
 
   private initializeApp(): void {
@@ -65,6 +76,7 @@ export class AppComponent implements OnInit {
         this.userService.getUserSetting().subscribe({
           next: next => {
             this.isChecked = true;
+            this.checkForUnreadAnnouncements();
           },
           error: error => {
             this.isChecked = true;
@@ -81,6 +93,26 @@ export class AppComponent implements OnInit {
       complete: () => {
         // console.log('complete');
       }
+    });
+  }
+
+  private checkForUnreadAnnouncements(): void {
+    this.userSettingService.getUnreadAnnouncements().subscribe(
+      unreadIds => {
+        if (unreadIds.length > 0) {
+          this.showNewFeatureDialog();
+        }
+      },
+      error => {
+        console.error('Failed to check unread announcements:', error);
+      }
+    );
+  }
+
+  private showNewFeatureDialog(): void {
+    this.dialog.open(NewFeatureDialogComponent, {
+      width: '600px',
+      disableClose: true
     });
   }
 

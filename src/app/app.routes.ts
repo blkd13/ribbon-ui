@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { departmentGuard, loginGuard, oAuthGuardGenerator, projectGuard, teamGuard, threadGroupGuard } from './guard/chat.guard';
+import { adminGuard } from './guard/admin.guard';
 
 export const routes: Routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -26,7 +27,6 @@ export const routes: Routes = [
     },
     { path: 'gitlab/:provider', canActivate: [oAuthGuardGenerator('gitlab')], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) },
     { path: 'gitea/:provider', canActivate: [oAuthGuardGenerator('gitea')], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) },
-    { path: 'department', canActivate: [departmentGuard], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
     {
         path: 'chat', children: [{
             path: ':projectId', canActivate: [projectGuard], children: [{
@@ -37,4 +37,6 @@ export const routes: Routes = [
     { path: 'oauth/mail/message/:pincode', loadComponent: () => import('./pages/oauth/oauth-mail-message/oauth-mail-message.component').then(m => m.OAuthMailMessageComponent) },
     { path: 'oauth/mail/auth/:onetimeToken', loadComponent: () => import('./pages/oauth/oauth-mail-auth/oauth-mail-auth.component').then(m => m.OAuthMailAuthComponent) },
     { path: '**', redirectTo: 'login' } // 未定義のルートの場合はログインページにリダイレクトする
+  { path: 'admin/department', canActivate: [departmentGuard], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
+  { path: 'admin/announcements', canActivate: [adminGuard], loadComponent: () => import('./pages/announcements/announcements-list/announcements-list.component').then(m => m.AnnouncementsListComponent) },
 ];

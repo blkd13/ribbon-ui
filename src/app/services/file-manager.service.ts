@@ -91,7 +91,7 @@ export class FileManagerService {
         const files: FullPathFile[] = [];
         const promises = [];
         for (let i = 0; i < items.length; i++) {
-            // console.log(i + ":" + items.length);
+            console.log(i + ":" + items.length);
             const item = items[i].webkitGetAsEntry();
             if (item) {
                 promises.push(this.traverseFileTree(files, item));
@@ -108,23 +108,36 @@ export class FileManagerService {
         await Promise.all(files.map(file => this.readFile(file)));
         return files;
     }
+
     private async traverseFileTree(files: FullPathFile[], item: any, path = ''): Promise<void> {
         if (item.isFile) {
             const file = await new Promise<File>((resolve) => item.file(resolve));
-            // (file as any).fullPath = `${path}/${item.name}`;
             const fullPath = `${path}/${item.name}`.replaceAll(/^\//g, '');
             console.log(fullPath);
             // 先頭の/は外す。
             files.push({ fullPath, file, base64String: '' });
         } else if (item.isDirectory) {
             const dirReader = item.createReader();
-            const entries = await new Promise<any[]>((resolve) => {
-                dirReader.readEntries((entries: any[]) => resolve(entries));
-            });
-            for (let i = 0; i < entries.length; i++) {
-                await this.traverseFileTree(files, entries[i], `${path}/${item.name}`);
+            let entries = await this.readEntries(dirReader);
+            while (entries.length > 0) {
+                for (let i = 0; i < entries.length; i++) {
+                    // console.log(i + ":" + entries.length);
+                    await this.traverseFileTree(files, entries[i], `${path}/${item.name}`);
+                }
+                entries = await this.readEntries(dirReader);
             }
         }
+    }
+
+    // readEntriesをPromiseでラップし、複数回呼び出すための関数
+    private async readEntries(dirReader: any): Promise<any[]> {
+        return new Promise((resolve, reject) => {
+            dirReader.readEntries((entries: any[]) => {
+                resolve(entries);
+            }, (error: any) => {
+                reject(error);
+            });
+        });
     }
 
     /**
