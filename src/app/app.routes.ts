@@ -36,7 +36,7 @@ export const routes: Routes = [
     },
     { path: 'oauth/mail/message/:pincode', loadComponent: () => import('./pages/oauth/oauth-mail-message/oauth-mail-message.component').then(m => m.OAuthMailMessageComponent) },
     { path: 'oauth/mail/auth/:onetimeToken', loadComponent: () => import('./pages/oauth/oauth-mail-auth/oauth-mail-auth.component').then(m => m.OAuthMailAuthComponent) },
-    { path: '**', redirectTo: 'login' } // 未定義のルートの場合はログインページにリダイレクトする
-  { path: 'admin/department', canActivate: [departmentGuard], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
-  { path: 'admin/announcements', canActivate: [adminGuard], loadComponent: () => import('./pages/announcements/announcements-list/announcements-list.component').then(m => m.AnnouncementsListComponent) },
+    { path: 'admin/department', canActivate: [departmentGuard], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
+    { path: 'admin/announcements', canActivate: [adminGuard], loadComponent: () => import('./pages/announcements/announcements-list/announcements-list.component').then(m => m.AnnouncementsListComponent) },
+    { path: '**', redirectTo: 'login' }, // 未定義のルートの場合はログインページにリダイレクトする
 ];
