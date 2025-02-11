@@ -1,15 +1,16 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, Subject, Subscriber, defer, finalize, first, forkJoin, from, map, switchMap, tap } from 'rxjs';
-import { CachedContent, ChatCompletionCreateParamsBase, ChatCompletionCreateParamsWithoutMessages, ChatCompletionRole, ChatCompletionStreamInDto, ChatCompletionWithoutMessagesStreamInDto, GenerateContentRequestForCache } from '../models/models';
+import { OpenAI } from 'openai';
+
+import { CachedContent, ChatCompletionCreateParamsWithoutMessages, ChatCompletionStreamInDto, GenerateContentRequestForCache } from '../models/models';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
-import { Utils } from '../utils';
 
 export interface ChatInputArea {
-  role: ChatCompletionRole;
+  role: OpenAI.ChatCompletionRole;
   content: ChatContent[];
   // previousMessageGroupId?: string;
   messageGroupId?: string;
@@ -100,7 +101,7 @@ export class ChatService {
   protected messageIdStreamIdMap: { [messageId: string]: string[] } = {};
 
   // データストリーム監視用のマップ
-  protected subjectMap: { [streamId: string]: Subject<string> } = {};
+  protected subjectMap: { [streamId: string]: Subject<OpenAI.ChatCompletionChunk> } = {};
 
   // 作成したデータストリームのテキストを保持するマップ
   protected textMap: { [streamId: string]: string } = {};
@@ -165,7 +166,7 @@ export class ChatService {
   // 1回だけAPIキーを取得する（サーバー経由せずに直接OpenAIにアクセスするためのAPIキーを取得する） → 結局ダイレクトにアクセスが最速（50msとか）。サーバー経由だと遅い1秒とか。
   // this.getOpenAiApiKey().subscribe();
 
-  public getObserver(messageId: string): { text: string, observer: Subject<string> | null } {
+  public getObserver(messageId: string): { text: string, observer: Subject<OpenAI.ChatCompletionChunk> | null } {
     const streamIdList = this.messageIdStreamIdMap[messageId];
     if (streamIdList) {
       const streamId = `${streamIdList.at(-1)}|${messageId}`;
@@ -216,9 +217,9 @@ export class ChatService {
                   if (line.startsWith('{') && line.endsWith('}')) {
                     // json object 受信時
                     try {
-                      const data = JSON.parse(line) as { data: { streamId: string, content: string } };
-                      this.subjectMap[data.data.streamId].next(data.data.content);
-                      this.textMap[data.data.streamId] += data.data.content;
+                      const { data } = JSON.parse(line) as { data: { streamId: string, content: OpenAI.ChatCompletionChunk } };
+                      this.subjectMap[data.streamId].next(data.content);
+                      this.textMap[data.streamId] += data.content;
                     } catch (e) {
                       // json parse error. エラー吐いてとりあえず無視
                       console.log(line);
@@ -327,11 +328,11 @@ export class ChatService {
     connectionId: string,
     streamId: string,
     meta: { message?: Message, status: string },
-    observer: Observable<string>
+    observer: Observable<OpenAI.ChatCompletionChunk>
   }> {
     const streamId = uuidv4();
     // ストリーム受け取り用のSubjectを生成
-    const subject = new Subject<string>();
+    const subject = new Subject<OpenAI.ChatCompletionChunk>();
     this.subjectMap[streamId] = subject;
     this.textMap[streamId] = '';
     const streamObservable = subject.asObservable();
@@ -427,7 +428,7 @@ export class ChatService {
 
     // メッセージ用ストリームが来る前にタイトル用のストリームが閉じるとバグるので、ダミーとしてストリームを開いておく
     // つまり、ストリーム開いてるかの判定をするブロックの中でthis.subjectMapに登録しないと、つるっと抜ける可能性がある。
-    const subject = new Subject<string>();
+    const subject = new Subject<OpenAI.ChatCompletionChunk>();
     this.subjectMap[streamId] = subject;
     this.textMap[streamId] = '';
     return this.open(flag).pipe(
@@ -439,7 +440,7 @@ export class ChatService {
       map(messageGroupList => messageGroupList.map(messageGroup => {
         messageGroup.messages.forEach(message => {
           // ストリーム受け取り用のSubjectを生成
-          const subject = new Subject<string>();
+          const subject = new Subject<OpenAI.ChatCompletionChunk>();
           this.subjectMap[`${streamId}|${message.id}`] = subject;
           this.textMap[`${streamId}|${message.id}`] = '';
           // メッセージIdマップを作っておく

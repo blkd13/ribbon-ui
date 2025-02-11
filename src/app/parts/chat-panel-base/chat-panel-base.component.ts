@@ -1,4 +1,3 @@
-import { MessageService } from './../../services/project.service';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewEncapsulation, inject, input, output, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -7,18 +6,19 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { animate, style, transition, trigger } from '@angular/animations';
+import { Observable, of, tap } from 'rxjs';
+import OpenAI from 'openai';
 
 import JSZip from 'jszip'; // JSZipのインポート
 import { saveAs } from 'file-saver'; // Blobファイルのダウンロードのためのライブラリ
 
-import { ChatCompletionContentPart, ChatCompletionContentPartText } from '../../models/models';
+import { MessageService } from './../../services/project.service';
 import { ChatService } from '../../services/chat.service';
 import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { ContentPart, ContentPartType, MessageForView, MessageGroupForView } from '../../models/project-models';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Observable, of, tap } from 'rxjs';
 import { Utils } from '../../utils';
-import { animate, style, transition, trigger } from '@angular/animations';
 
 
 @Component({
@@ -67,7 +67,7 @@ export class ChatPanelBaseComponent implements OnInit {
   beforeText = '';
   @Input()
   set bitCounter(bitCounter: number) {
-    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as ChatCompletionContentPartText);
+    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as OpenAI.ChatCompletionContentPartText);
     if (this.beforeText === content?.text) {
       // 変更なければ何もしない
     } else {
@@ -114,7 +114,7 @@ export class ChatPanelBaseComponent implements OnInit {
   }
 
   scroll(): void {
-    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as ChatCompletionContentPartText);
+    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as OpenAI.ChatCompletionContentPartText);
     if (content && (content.text.startsWith('{') || content.text.startsWith('['))) {
       this.brackets.pre = '```json\n';
       this.brackets.post = '\n```';

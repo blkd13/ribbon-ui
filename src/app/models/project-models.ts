@@ -1,5 +1,6 @@
 import { Observable } from "rxjs";
-import { ChatCompletionCreateParamsBase, ChatCompletionRole, ChatCompletionStreamInDto, UserStatus } from "./models";
+import { OpenAI } from "openai";
+import { ChatCompletionStreamInDto, UserStatus } from "./models";
 import { CountTokensResponse } from "../services/chat.service";
 
 // 共通の型定義
@@ -57,6 +58,8 @@ export enum ContentPartType {
     Base64 = 'base64',
     Url = 'url',
     File = 'file',
+    Tool = 'tool', // function_call
+    Meta = 'meta', // メタ情報。groundingの結果など。
 }
 
 // Team DTOs
@@ -168,7 +171,7 @@ export interface ThreadUpsertDto {
 //     messageId?: UUID; // 更新の場合に使用
 //     messageClusterType: MessageClusterType;
 //     messageGroupType: MessageGroupType;
-//     role: ChatCompletionRole;
+//     role: OpenAI.ChatCompletionRole;
 //     label: string;
 //     previousMessageId?: UUID;
 //     contents: ContentPart[];
@@ -178,7 +181,7 @@ export interface ThreadUpsertDto {
 //     id: UUID;
 //     threadId: UUID;
 //     messageGroupType: MessageGroupType;
-//     role: ChatCompletionRole;
+//     role: OpenAI.ChatCompletionRole;
 //     label: string;
 //     seq: number;
 //     lastUpdate: Date;
@@ -292,7 +295,7 @@ export interface MessageGroup extends BaseEntity {
     type: MessageGroupType; // Single, Parallel, Regenerated
     seq: number;
     lastUpdate: Date;
-    role: ChatCompletionRole;
+    role: OpenAI.ChatCompletionRole;
     // label: string;
     previousMessageGroupId?: UUID;
     // editedRootMessageGroupId?: UUID;
@@ -330,7 +333,7 @@ export interface MessageForView extends Message {
     status: MessageStatusType;
     selected: boolean;
     contents: ContentPart[];
-    observer?: Observable<string>;
+    observer?: Observable<OpenAI.ChatCompletionChunk>;
 }
 
 export interface ContentPart extends BaseEntity {
@@ -338,6 +341,7 @@ export interface ContentPart extends BaseEntity {
     type: ContentPartType;
     seq: number;
     text?: string;
+    meta?: any;
     fileGroupId?: string;
     tokenCount?: { [modelId: string]: CountTokensResponse }; // JSON型を保存
 }

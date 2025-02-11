@@ -6,8 +6,11 @@ import { BaseEntity, ContentPart, ContentPartType, MessageClusterType, Message, 
 import JSZip from 'jszip'; // JSZipのインポート
 import { Utils } from '../utils';
 import { safeForkJoin } from '../utils/dom-utils';
-import { ChatCompletionCreateParamsBase, ChatCompletionCreateParamsWithoutMessages, ChatCompletionRole, ChatCompletionStreamInDto } from '../models/models';
+import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
 import e from 'express';
+import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions.mjs';
+import OpenAI from 'openai';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Injectable({ providedIn: 'root' })
 export class TeamService {
@@ -315,9 +318,22 @@ export class MessageService {
         });
     }
 
+    readonly sanitizer: DomSanitizer = inject(DomSanitizer);
     getMessageContentParts(message: MessageForView): Observable<ContentPart[]> {
         return this.http.get<ContentPart[]>(`/user/message/${message.id}/content-parts`).pipe(tap(list => {
             message.contents = list;
+            list.forEach(contentPart => {
+                if (contentPart.type === ContentPartType.Meta) {
+                    // Google検索結果のメタデータをセットする
+                    contentPart.meta = JSON.parse(contentPart.text as string);
+                    if (contentPart.meta && contentPart.meta.groundingMetadata && contentPart.meta.groundingMetadata.searchEntryPoint && contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent) {
+                        // リンクを新しいタブで開くようにする
+                        contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent = this.sanitizer.bypassSecurityTrustHtml(contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent.replace(/<a /g, '<a target="_blank" '));
+                    } else { }
+                } else { }
+                contentPart.createdAt = new Date(contentPart.createdAt);
+                contentPart.updatedAt = new Date(contentPart.updatedAt);
+            });
         }));
     }
 
@@ -329,7 +345,7 @@ export class MessageService {
         return this.http.delete<void>(`/user/content-part/${contentPartId}`);
     }
 
-    initMessageGroup(threadId: string, previousMessageGroupId?: string, role: ChatCompletionRole = 'system', contentParts: ContentPart[] = []): MessageGroupForView {
+    initMessageGroup(threadId: string, previousMessageGroupId?: string, role: OpenAI.ChatCompletionRole = 'system', contentParts: ContentPart[] = []): MessageGroupForView {
         const messageGroup: MessageGroupForView = {
             threadId,
             type: MessageGroupType.Single,
@@ -585,7 +601,7 @@ export class MessageService {
         );
     }
 
-    addSingleMessageGroupDry(threadId: string, previousMessageGroupId: string | undefined, role: ChatCompletionRole, contents: ContentPart[], vars: any = {}): MessageGroupForView {
+    addSingleMessageGroupDry(threadId: string, previousMessageGroupId: string | undefined, role: OpenAI.ChatCompletionRole, contents: ContentPart[], vars: any = {}): MessageGroupForView {
         const messageGroup = this.initMessageGroup(threadId, previousMessageGroupId, role, contents);
         messageGroup.previousMessageGroupId = previousMessageGroupId;
         return this.applyMessageGroup(messageGroup);

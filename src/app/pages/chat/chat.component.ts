@@ -44,6 +44,8 @@ import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-d
 import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
 import { UserService } from '../../services/user.service';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
+import OpenAI from 'openai';
+import { DomSanitizer } from '@angular/platform-browser';
 
 declare var _paq: any;
 
@@ -152,6 +154,7 @@ export class ChatComponent implements OnInit {
   readonly g: GService = inject(GService);
   readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   readonly ngZone: NgZone = inject(NgZone);
+  readonly sanitizer: DomSanitizer = inject(DomSanitizer);
 
   ngOnInit(): void {
     document.title = `AI`;
@@ -554,9 +557,10 @@ export class ChatComponent implements OnInit {
 
   expanded(isExtended: boolean, pIndex: number, tIndex: number, messageGroup: MessageGroupForView): void {
     this.selectedThreadGroup.threadList.forEach((thread, index) => {
+      const messageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][this.indexList[pIndex]]];
       if (tIndex === index) {
-      } else {
-        this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][this.indexList[pIndex]]].isExpanded = isExtended;
+      } else if (messageGroup) {
+        messageGroup.isExpanded = isExtended;
       }
     });
     this.cdr.detectChanges();
@@ -964,10 +968,24 @@ export class ChatComponent implements OnInit {
    * @param message 
    * @returns 
    */
-  chatStreamHander(message: MessageForView): Partial<Observer<string>> | ((value: string) => void) {
+  chatStreamHander(message: MessageForView): Partial<Observer<OpenAI.ChatCompletionChunk>> | ((value: OpenAI.ChatCompletionChunk) => void) {
     return {
-      next: text => {
-        message.contents[0].text += text;
+      next: next => {
+        message.contents[0].text += next.choices[0].delta.content || '';
+
+        // Google検索結果のメタデータをセットする
+        const groundingMetadata = (next.choices[0] as any).groundingMetadata;
+        if (groundingMetadata) {
+          const contentPart = this.messageService.initContentPart(message.id, JSON.stringify({ groundingMetadata }));
+          contentPart.type = ContentPartType.Meta;
+          contentPart.meta = { groundingMetadata };
+          if (contentPart.meta && contentPart.meta.groundingMetadata && contentPart.meta.groundingMetadata.searchEntryPoint && contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent) {
+            // リンクを新しいタブで開くようにする
+            contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent = this.sanitizer.bypassSecurityTrustHtml(contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent.replace(/<a /g, '<a target="_blank" '));
+          }
+          message.contents.push(contentPart);
+        } else { }
+
         this.cdr.detectChanges();
         message.status = MessageStatusType.Editing;
         this.bitCounter++;
