@@ -5,7 +5,6 @@
     <mat-expansion-panel-header class="message-header">
         <mat-panel-title class="message-title" style="font-weight: normal;">
             <!-- モデル選択 -->
-
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
                 [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
                 @for(option of chatService.modelList;track $index) {
@@ -26,7 +25,7 @@
             </select>
             -->
             @if(thread().inDto.args.model; as model){
-            @if(chatService.modelMap[model].isGSearch){
+            @if(chatService.modelMap[model] && chatService.modelMap[model].isGSearch){
             <div class="flex items-center" style="width: 150px;"
                 [matTooltip]="chatService.modelMap[model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini以外では使用できません。'">
                 <img src="./image/google-icon.svg" alt="Googleアイコン" class="w-8 h-8" style="min-width: 30px;"

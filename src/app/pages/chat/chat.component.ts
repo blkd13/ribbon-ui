@@ -854,7 +854,7 @@ export class ChatComponent implements OnInit {
         this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`, 'close', { duration: 3000 });
         throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`);
       } else if (args.isGoogleSearch && !this.chatService.modelMap[args.model].isGSearch) {
-        this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
+        // this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
       } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0) {
