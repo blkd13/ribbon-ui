@@ -20,7 +20,7 @@
     "module": "ES2022",
     "useDefineForClassFields": false,
     "lib": [
-      "ES2022",
+      "ES2023", // findLastを使いたいのでES023に変更
       "dom"
     ]
   },

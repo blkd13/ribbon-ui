@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewEncapsulation, inject, input, output, viewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewEncapsulation, effect, inject, input, output, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,13 +19,14 @@ import { ChatService } from '../../services/chat.service';
 import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { ContentPart, ContentPartType, MessageForView, MessageGroupForView } from '../../models/project-models';
 import { Utils } from '../../utils';
+import { MatMenuModule } from '@angular/material/menu';
 
 
 @Component({
   selector: 'app-chat-panel-base',
   imports: [
     CommonModule, FormsModule,
-    MatTooltipModule, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
+    MatTooltipModule, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule, MatMenuModule,
   ],
   templateUrl: './chat-panel-base.component.html',
   styleUrl: './chat-panel-base.component.scss',
@@ -49,6 +50,10 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly messageGroup = input.required<MessageGroupForView>();
 
+  // 履歴選択を変更したときのシグナル受信用。別に個々の値を見てどうこうはしていない
+  readonly selectedIndex = input<number>();
+
+  // マルチスレッドの番号。2番目以降は従属的にふるまうようにしていた時代の名残。
   readonly index = input<number>();
 
   // チャット入力欄
@@ -65,6 +70,7 @@ export class ChatPanelBaseComponent implements OnInit {
   beforeScrollTop = -1;
   autoscroll = false;
   beforeText = '';
+  isShowTool: boolean[] = [];
   @Input()
   set bitCounter(bitCounter: number) {
     const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as OpenAI.ChatCompletionContentPartText);
@@ -81,6 +87,8 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly removeEmitter = output<MessageGroupForView>({ alias: 'remove' });
 
+  readonly toolExecEmitter = output<ContentPart>({ alias: 'toolExec' });
+
   readonly fileSelectionUpdateEmitter = output<MessageGroupForView>({ alias: 'fileSelectionUpdate' });
 
   readonly removeMessageEmitter = output<MessageForView>({ alias: 'removeMessage' });
@@ -90,14 +98,37 @@ export class ChatPanelBaseComponent implements OnInit {
   readonly expandedEmitter = output<boolean>({ alias: 'expanded' });
 
   // Jsonの場合は```jsonで囲むための文字列
-  brackets = { pre: '', post: '' };
+  bracketsList: { pre: '' | '```json\n', post: '' | '\n```' }[][] = [];
+  blankBracket: { pre: '' | '```json\n', post: '' | '\n```' } = { pre: '', post: '' };
 
   isLoading = false;
+
+  isRequireComfirm(): boolean {
+    // TODO ここは遅くなる元なのであってはならない。
+    this.messageGroup().messages.find(message => {
+      return message.contents.find(content => {
+        // if (content.type === 'tool') {
+        //   console.log(content);
+        // }
+        return content.type === 'tool' && content.meta.info?.requireComfirm && !content.meta.result;
+      })
+    }) ? true : false;
+    return this.messageGroup().messages.find(message => message.contents.find(content => content.type === 'tool' && content.meta.info?.requireComfirm && !content.meta.result)) ? true : false;
+  }
 
   readonly chatService: ChatService = inject(ChatService);
   readonly messageService: MessageService = inject(MessageService);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
+
+  constructor() {
+    // TODO シグナル式のやり方をとりあえず実装してみた。汚い気がするので後で直したい。シグナル使う必要無いと思う？？
+    effect(() => {
+      if (this.messageGroup().isExpanded) {
+        this.loadContent().subscribe();
+      } else { }
+    })
+  }
 
   ngOnInit(): void {
     // // TODO スクローラを一番下に
@@ -111,14 +142,32 @@ export class ChatPanelBaseComponent implements OnInit {
     //     },
     //   });
     // }
+    this.setBrackets();
+  }
+  setBrackets(): void {
+    this.messageGroup().messages.forEach((message, mIndex) => {
+      this.bracketsList[mIndex] = [];
+      message.contents.forEach((content, cIndex) => {
+        if (content
+          && [ContentPartType.TEXT, ContentPartType.ERROR].includes(content.type)
+          && content.text
+          && (content.text.startsWith('{') || content.text.startsWith('['))
+        ) {
+          this.bracketsList[mIndex][cIndex] = { pre: '```json\n', post: '\n```' };
+          // エラーの時はJSONを整形しておく
+          if (content.type === ContentPartType.ERROR) {
+            // 整形失敗しても気にしない
+            try { content.text = JSON.stringify(JSON.parse(content.text), null, 2); } catch (err) { }
+          } else { }
+        } else {
+          this.bracketsList[mIndex][cIndex] = this.blankBracket;
+        }
+      });
+    });
   }
 
   scroll(): void {
-    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as OpenAI.ChatCompletionContentPartText);
-    if (content && (content.text.startsWith('{') || content.text.startsWith('['))) {
-      this.brackets.pre = '```json\n';
-      this.brackets.post = '\n```';
-    }
+    // this.setBrackets();
     // 冷静になるとこのパネル自体はスクロールしなくていいんじゃないかという気がする。
     // // 一番下にスクロール
     // const textBodyElem = this.textBodyElem();
@@ -250,7 +299,7 @@ export class ChatPanelBaseComponent implements OnInit {
     // if (this.messageGroup.role === 'system') {
     //   // systemは行消さずに中身消すだけにする。
     //   this.messageGroup.messages[0].contents = [this.messageGroup.messages[0].contents[0]];
-    //   this.messageGroup.messages[0].contents[0].type = ContentPartType.Text;
+    //   this.messageGroup.messages[0].contents[0].type = ContentPartType.TEXT;
     //   this.messageGroup.messages[0].contents[0].text = '';
     //   this.messageGroup.messages[0].contents[0].fileId = undefined;
     //   this.exPanel.close();
@@ -258,6 +307,14 @@ export class ChatPanelBaseComponent implements OnInit {
     //   this.removeEmitter.emit(this.messageGroup);
     // }
     this.removeEmitter.emit(this.messageGroup());
+  }
+
+  toolExec($event: MouseEvent, content?: ContentPart): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+    if (content) {
+      this.toolExecEmitter.emit(content);
+    } else { }
   }
 
   timeoutId: any;
@@ -368,13 +425,16 @@ export class ChatPanelBaseComponent implements OnInit {
       return this.messageService.getMessageContentParts(messageGroup.messages[0]).pipe(
         tap(contents => {
           this.messageGroup().messages[0].contents = contents;
+          this.setBrackets();
           this.isLoading = false;
           this.exPanel().open();
         }),
       );
     } else {
       // load済みのものを返す
-      this.exPanel().open();
+      this.setBrackets();
+      // TODO exPanelが表示されてないとき？はexceptionが起きるのでtry/catchしておく。原因特定して対処したい。
+      try { if (this.exPanel && this.exPanel()) this.exPanel().open(); } catch (err) { }
       return of(messageGroup.messages[0].contents);
     }
   }

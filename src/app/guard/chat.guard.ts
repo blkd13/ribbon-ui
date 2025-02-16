@@ -6,35 +6,77 @@ import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
 import { UserRole } from '../models/models';
 
+// export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateFn => {
+//   const guardFunc: CanActivateFn = (route, state) => {
+//     const authService: AuthService = inject(AuthService);
+//     // const router = inject(Router);
+//     console.log(route);
+//     return authService.getOAuthAccount(oAuthProvider).pipe(
+//       map(oAuthAccount => {
+//         console.log(route);
+//         authService.isOAuth2Connected(oAuthProvider, 'user-info', route.url.toString()).subscribe({
+//           next: (res) => {
+//             console.log(res);
+//           },
+//           error: (err) => {
+//             console.log(location.href);
+//             console.error(err);
+//             // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
+//             location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+//           },
+//         });
+//         return true;
+//       }),
+//       catchError(err => {
+//         console.log('OAuth2ログインが必要です');
+//         // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
+//         location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+//         console.error(err);
+//         return of(false);
+//       }),
+//     );
+//   };
+//   return guardFunc;
+// }
+
 export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateFn => {
   const guardFunc: CanActivateFn = (route, state) => {
     const authService: AuthService = inject(AuthService);
-    // const router = inject(Router);
+    console.log(route);
     return authService.getOAuthAccount(oAuthProvider).pipe(
-      map(oAuthAccount => {
-        authService.getOAuthUserInfo(oAuthProvider, 'user-info').subscribe({
-          next: (res) => {
+      // getOAuthAccount の結果が返ってきたら
+      // isOAuth2Connected を呼び出して結果を返すまで待つ
+      switchMap(oAuthAccount => {
+        console.log(route);
+        return authService.isOAuth2Connected(oAuthProvider, 'user-info', route.url.toString()).pipe(
+          map(res => {
             console.log(res);
-          },
-          error: (err) => {
+            // 成功時にはtrueを返す
+            return true;
+          }),
+          catchError(err => {
+            console.log(location.href);
             console.error(err);
-            // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
-            location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
-          },
-        });
-        return true;
+            // 飛ばす機能をinterceptorに実装したので飛ばさない。本当にこれでいいかは再考。
+            // // ログインされていなかったらOAuth2のログイン画面に飛ばす
+            // location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+            return of(false);
+          }),
+        );
       }),
       catchError(err => {
         console.log('OAuth2ログインが必要です');
-        // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
+        // getOAuthAccount 自体が失敗した場合もログイン画面へ飛ばす
         location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
         console.error(err);
         return of(false);
       }),
     );
   };
+
   return guardFunc;
 }
+
 
 export const loginGuard: CanActivateFn = (route, state) => {
   const authService: AuthService = inject(AuthService);

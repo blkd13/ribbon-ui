@@ -1,13 +1,9 @@
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
-import { genDummyId, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
-import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty } from 'rxjs';
 import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, TemplateRef, inject, viewChildren, viewChild } from '@angular/core';
-import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
 import { FormsModule, NgModel } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -24,8 +20,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 
+import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty, catchError } from 'rxjs';
+import { ChatCompletionChunk, ChatCompletionToolMessageParam } from 'openai/resources/index.mjs';
 import { saveAs } from 'file-saver';
 
+import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
+import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
+import { genDummyId, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 import { CachedContent, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
 import { ChatContent, ChatInputArea, ChatService, CountTokensResponse } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
@@ -137,6 +138,7 @@ export class ChatComponent implements OnInit {
   cost: number = 0;
   charCount: number = 0;
   tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
+  linkChainOff: boolean[] = [];
 
   readonly authService: AuthService = inject(AuthService);
   readonly chatService: ChatService = inject(ChatService);
@@ -367,7 +369,7 @@ export class ChatComponent implements OnInit {
         this.onChange();
       }
     } else {
-      // 
+      //
       if (this.selectedThreadGroup && this.selectedThreadGroup.id === threadGroupId) {
         // 既に選択中のスレッドが選択された場合は何もしない。
       } else {
@@ -464,10 +466,10 @@ export class ChatComponent implements OnInit {
   }
 
   sortThreadGroup(threadGroupList: ThreadGroup[]): ThreadGroup[] {
-    // 本来はlastUpdateでソートしたかったが、何故か時刻が更新されていないので。
+    // 本来はupdatedAtでソートしたかったが、何故か時刻が更新されていないので。
     if (this.sortType === 1) {
       // 時刻順（新しい方が上に来る）
-      threadGroupList.sort((a, b) => new Date(b.lastUpdate) < new Date(a.lastUpdate) ? -1 : 1);
+      threadGroupList.sort((a, b) => new Date(b.updatedAt) < new Date(a.updatedAt) ? -1 : 1);
     } else {
       // 名前順（Aが上に来る）
       threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
@@ -688,10 +690,11 @@ export class ChatComponent implements OnInit {
       tap(threadGroup => {
         // 二回目以降だろうとタイトルが何も書かれていなかったら埋める。
         // タイトル自動設定ブロック
-        if (threadGroup.title && threadGroup.title.trim() && threadGroup.title !== '　') {
+        if (threadGroup.title && threadGroup.title.trim() && threadGroup.title !== '　' && threadGroup.title !== 'No title') {
           // タイトルが設定済みだったら何もしない
         } else {
           // タイトルが無かったら入力分からタイトルを作る。この処理は待つ必要が無いので投げっ放し。
+          threadGroup.title = ''; // 一応内容を消しておく
           const presetText = this.messageService.messageGroupList.map(messageGroup => messageGroup.messages[0].contents.filter(content => content.type === 'text').map(content => content.text)).join('\n');
           const inputText = this.inputArea.content.filter(content => content.type === 'text').map(content => content.text).join('\n');
           const mergeText = `${presetText}\n${inputText}`.substring(0, 1024);
@@ -709,7 +712,7 @@ export class ChatComponent implements OnInit {
           }).subscribe({
             next: next => {
               next.observer.pipe(
-                tap(text => threadGroup.title += text),
+                tap(text => threadGroup.title += text.choices[0].delta.content || ''),
                 toArray(),
                 tap(text => document.title = `AI : ${threadGroup.title}`),
               ).subscribe({
@@ -769,8 +772,8 @@ export class ChatComponent implements OnInit {
     ).pipe(
       switchMap(_ => this.messageService.updateTimestamp('message-group', messageGroup.id)),
       map((res) => {
-        // lastUpdateを更新
-        messageGroup.lastUpdate = res.lastUpdate;
+        // updatedAtを更新
+        messageGroup.updatedAt = res.updatedAt;
         this.rebuildThreadGroup();
         // this.onChange();
         return messageGroup;
@@ -780,8 +783,8 @@ export class ChatComponent implements OnInit {
 
   /**
    * 履歴の選択変更
-   * @param group 
-   * @param delta 
+   * @param group
+   * @param delta
    */
   setSelect(group: MessageGroupForView, delta: number): void {
     group.selectedIndex += delta;
@@ -790,19 +793,14 @@ export class ChatComponent implements OnInit {
     const ids = this.messageService.getTailMessageGroupIds(messageGroup);
     const newMessageGroup = this.messageService.messageGroupMas[ids.at(-1)!];
     // contentのキャッシュを取得
-    newMessageGroup.messages.forEach(message => {
-      message.status = MessageStatusType.Loading;
-      this.messageService.getMessageContentParts(message).subscribe({
-        next: contentParts => message.status = MessageStatusType.Loaded,
-      })
-    });
+    newMessageGroup.isExpanded = true;
     this.touchMessageGroupAndRebuild(this.messageService.messageGroupMas[ids.at(-1)!]).subscribe();
   }
 
   /**
    * 推論開始トリガーを引く
    */
-  send(type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | undefined = undefined, idList: string[] = []): Observable<{
+  send(type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | 'contentPart' | undefined = undefined, idList: string[] = [], toolInput?: unknown): Observable<{
     connectionId: string,
     streamId: string,
     messageGroupList: MessageGroup[],
@@ -837,6 +835,13 @@ export class ChatComponent implements OnInit {
       threadList = this.selectedThreadGroup.threadList.filter(thread => idList.includes(thread.id));
     } else if (type === 'messageGroup') {
       threadList = idList.map(id => this.selectedThreadGroup.threadList.find(thread => thread.id === this.messageService.messageGroupMas[id].threadId)).filter(thread => thread) as Thread[];
+    } else if (type === 'message') {
+      // 未検証なのでまだ使わない
+      // threadList = idList.map(id => this.selectedThreadGroup.threadList.find(thread => thread.id === this.messageService.messageGroupMas[this.messageService.messageMas[id].messageGroupId].threadId)).filter(thread => thread) as Thread[];
+      throw new Error('Not implemented');
+    } else if (type === 'contentPart') {
+      // threadList = idList.map(id => this.selectedThreadGroup.threadList.find(thread => thread.id === this.messageService.messageGroupMas[this.messageService.messageMas[this.messageService.contentPartMas[id].messageId].messageGroupId].threadId)).filter(thread => thread) as Thread[];
+      throw new Error('Not implemented');
     } else {
       throw new Error('Not implemented');
     }
@@ -854,10 +859,10 @@ export class ChatComponent implements OnInit {
         this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`, 'close', { duration: 3000 });
         throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`);
       } else if (args.isGoogleSearch && !this.chatService.modelMap[args.model].isGSearch) {
-        // this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
+        this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
-      } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0) {
+      } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0 && toolInput === undefined) { // toolInputがある場合はツールからの入力とみなす
         if (this.inputArea.content.length > 1) {
           this.snackBar.open(`ファイルだけでは送信できません。何かメッセージを入力してください。`, 'close', { duration: 3000 });
           throw new Error('ファイルだけでは送信できません。何かメッセージを入力してください。');
@@ -918,17 +923,42 @@ export class ChatComponent implements OnInit {
             return idList.includes(this.messageService.messageGroupMas[messageGroupId].threadId);
           } else if (type === 'messageGroup') {
             return idList.includes(messageGroupId);
+            // } else if (type === 'message') {  // 未検証なのでまだ使わない
+            //   return idList.includes(this.messageService.messageMas[messageGroupId].messageGroupId);
+            // } else if (type === 'contentPart') {
+            //   const flag = idList.map(id => this.messageService.contentPartMas[id].messageId).map(messageId => this.messageService.messageMas[messageId].messageGroupId).includes(messageGroupId);
+            //   // console.log(`flag=${flag} idList=${idList} messageGroupId=${messageGroupId}`);
+            //   return flag;
           } else {
             throw new Error('Not implemented');
           }
         }).map((messageGroupId, index) =>
-          this.chatService.chatCompletionObservableStreamByProjectModel(this.selectedThreadGroup.threadList[index].inDto.args, 'messageGroup', messageGroupId)
+          // contentPartの切り分けが失敗しまくっている。。。
+          this.chatService.chatCompletionObservableStreamByProjectModel(this.selectedThreadGroup.threadList[index].inDto.args, 'messageGroup', messageGroupId, toolInput)
             .pipe(tap(resDto => {
               // console.log('response-------------------------');
               // console.log(resDto);
               // キャッシュを更新する
               // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
+
+              // TODO toolの場合のmeta編集をしておかないといけない。でもこの整形色々なところで書いていて冗長なのでどこかにまとめたい。
               resDto.messageGroupList.forEach(messageGroup => {
+                messageGroup.messages.forEach(message => {
+                  message.contents.forEach(contentPart => {
+                    if (contentPart.type === ContentPartType.TOOL) {
+                      // ツールの場合、ツールの内容をセットする
+                      contentPart.meta = JSON.parse(contentPart.text as string);
+                      if (contentPart.meta.call) {
+                        contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
+                      } else { }
+                      if (contentPart.meta.result) {
+                        contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
+                      } else { }
+                      // this.messageService.contentPartMas[contentPart.id] = contentPart;
+                    } else { }
+                  });
+                });
+
                 this.messageService.applyMessageGroup(messageGroup);
                 this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
                 messageGroup.isExpanded = true;
@@ -943,9 +973,8 @@ export class ChatComponent implements OnInit {
               this.autoscroll = true;
               this.beforeScrollTop = -1;
               console.log(this.messageGroupIdListMas);
-            }))
+            })),
         )).pipe(tap(text => {
-
           // console.log(`pipe---------------------${text}`);
           // メッセージID紐づけ。
           this.rebuildThreadGroup();
@@ -955,7 +984,7 @@ export class ChatComponent implements OnInit {
           // setTimeout(() => {
           //   this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
           // }, 100);
-        }))
+        })),
       )
     );
   }
@@ -965,26 +994,99 @@ export class ChatComponent implements OnInit {
   beforeScrollTop = -1;
   /**
    * チャットのレスポンスストリームを捌くハンドラ
-   * @param message 
-   * @returns 
+   * @param message
+   * @returns
    */
   chatStreamHander(message: MessageForView): Partial<Observer<OpenAI.ChatCompletionChunk>> | ((value: OpenAI.ChatCompletionChunk) => void) {
     return {
-      next: next => {
-        message.contents[0].text += next.choices[0].delta.content || '';
+      next: _next => {
+        // ここのChatStreamにはContentPartが付与されているはず
+        const next = _next as OpenAI.ChatCompletionChunk & { contentPart?: ContentPart };
+        // console.dir(next);
 
-        // Google検索結果のメタデータをセットする
-        const groundingMetadata = (next.choices[0] as any).groundingMetadata;
-        if (groundingMetadata) {
-          const contentPart = this.messageService.initContentPart(message.id, JSON.stringify({ groundingMetadata }));
-          contentPart.type = ContentPartType.Meta;
-          contentPart.meta = { groundingMetadata };
-          if (contentPart.meta && contentPart.meta.groundingMetadata && contentPart.meta.groundingMetadata.searchEntryPoint && contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent) {
-            // リンクを新しいタブで開くようにする
-            contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent = this.sanitizer.bypassSecurityTrustHtml(contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent.replace(/<a /g, '<a target="_blank" '));
+        let content: ContentPart;
+        next.choices.forEach(choice => {
+
+          content = message.contents[message.contents.length - 1];
+
+          // 通常の中身
+          if (choice.delta.content && !['tool', 'info', 'query', 'input'].includes(choice.delta.role || '')) {
+            const text = choice.delta.content;
+            content.text += text;
+            // console.log(`content=${choice.delta.content}`);
+          } else { }
+
+          if (choice.delta.role as any === 'info' && next.contentPart) {
+            // console.log('tool_call', tool_call);
+            // 最初の1行のみidが振られているので、それを使ってtoolCallを作る。
+            content.type = ContentPartType.TOOL;
+            const info = JSON.parse(choice.delta.content || '{}');
+            content.meta = { info, tool_call_id: (choice.delta as any).tool_call_id };
+            content.id = next.contentPart.id;
+            this.messageService.contentPartMas[content.id] = content;
+          } else { }
+
+          // tool_calls
+          if (choice.delta.tool_calls && choice.delta.tool_calls.length > 0) {
+            choice.delta.tool_calls.forEach(tool_call => {
+              // console.dir(choice.delta, { depth: null });
+              // 先頭行以外はtool_call.idがundefined
+              if (tool_call.id) {
+                const content = message.contents.find(content => content.type === ContentPartType.TOOL && content.meta.tool_call_id === tool_call.id);
+                content!.meta.call = tool_call;
+              } else {
+                // 2行目以降はidが無いのでcontentを使う
+                if (tool_call.function) {
+                  const content = message.contents.findLast(content => content.type === ContentPartType.TOOL);
+                  content!.meta.call.function.arguments += tool_call.function.arguments || '';
+                  // message.contents.find()
+                } else { /** functionが無いことはないはず */ }
+              }
+            });
+          } else { /** tool_callsが無ければ何もしない */ }
+
+          // tool_result
+          if (['tool', 'query', 'input'].includes(choice.delta.role || '')) {
+            const callContent = message.contents.find(content => content.type === ContentPartType.TOOL && content.meta.call.id === (choice.delta as any).tool_call_id);
+            if (callContent) {
+              // console.log('tool_result', choice.delta);
+              if ('tool' === choice.delta.role) {
+                callContent.meta.result = choice.delta;
+                callContent.meta.call.function.arguments = JSON.stringify(JSON.parse(callContent.meta.call.function.arguments), null, 2);
+                callContent.meta.result.content = JSON.stringify(JSON.parse(callContent.meta.result.content), null, 2);
+                callContent.text = JSON.stringify(callContent.meta);
+              } else {
+                // tool以外はmetaに格納
+                callContent.meta[choice.delta.role || ''] = JSON.parse(choice.delta.content || '{}');
+              }
+            } else { }
+          } else { }
+
+          // Google検索結果のメタデータをセットする
+          const groundingMetadata = (choice as any).groundingMetadata;
+          if (groundingMetadata) {
+            const contentPart = this.messageService.initContentPart(message.id, JSON.stringify({ groundingMetadata }));
+            contentPart.type = ContentPartType.META;
+            contentPart.meta = { groundingMetadata };
+            if (contentPart.meta && contentPart.meta.groundingMetadata && contentPart.meta.groundingMetadata.searchEntryPoint && contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent) {
+              // リンクを新しいタブで開くようにする
+              contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent = this.sanitizer.bypassSecurityTrustHtml(contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent.replace(/<a /g, '<a target="_blank" '));
+            } else { }
+            message.contents.push(contentPart);
+            this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
+          } else {
+            if (choice.finish_reason === 'stop') {
+              // 整形（ここでやるのもイマイチだが、、、）
+              if (content.type === ContentPartType.TOOL && content.meta && content.meta.call && content.meta.call.function) {
+                content.meta.call.function.arguments = JSON.stringify(JSON.parse(content.meta.call.function.arguments), null, 2);
+              } else { }
+              const contentPart = this.messageService.initContentPart(message.id, '');
+              contentPart.type = ContentPartType.TEXT;
+              message.contents.push(contentPart);
+              this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
+            }
           }
-          message.contents.push(contentPart);
-        } else { }
+        });
 
         this.cdr.detectChanges();
         message.status = MessageStatusType.Editing;
@@ -1017,10 +1119,13 @@ export class ChatComponent implements OnInit {
         } else { }
       },
       error: error => {
-        this.chatErrorHandler(error);
+        this.chatErrorHandler(message, error);
         this.chatAfterHandler(message); // observableはPromise.then/catch/finallyのfinallyとは違って、エラーになったらcompleteは呼ばれないので自分で呼ぶ。
       },
       complete: () => {
+        // textなのに中身がないものは削除する。
+        message.contents = message.contents.filter(content => !(content.type === ContentPartType.TEXT && !content.text));
+        // console.dir(message.contents);
         this.chatAfterHandler(message);
       },
     }
@@ -1028,8 +1133,8 @@ export class ChatComponent implements OnInit {
 
   /**
    * チャットのレスポンスストリームの終了を捌くハンドラ
-   * @param message 
-   * @returns 
+   * @param message
+   * @returns
    */
   chatAfterHandler(message: MessageForView): void {
     // console.log(`after----------------`);
@@ -1052,11 +1157,18 @@ export class ChatComponent implements OnInit {
   }
 
   // エラーハンドラー
-  chatErrorHandler(error: Error): void {
+  chatErrorHandler(message: MessageForView, error: Error): void {
     // ERROR
     // 原因不明のエラーです
     // "ClientError: [VertexAI.ClientError]: got status: 429 Too Many Requests. {\"error\":{\"code\":429,\"message\":\"Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/quotas#error-code-429 for more details.\",\"status\":\"RESOURCE_EXHAUSTED\"}}"
     // "ClientError: [VertexAI.ClientError]: got status: 400 Bad Request. {\"error\":{\"code\":400,\"message\":\"The document has no pages.\",\"status\":\"INVALID_ARGUMENT\"}}"
+    try {
+      const contentPart = this.messageService.initContentPart(message.id, JSON.stringify(error));
+      message.contents.push(contentPart);
+      this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
+      contentPart.type = ContentPartType.ERROR;
+      this.cdr.detectChanges();
+    } catch (err) { }
 
     if (typeof error === 'string') {
       // TODO エラーになったらオブジェクトを戻す。
@@ -1130,7 +1242,7 @@ export class ChatComponent implements OnInit {
       let tailMessageGroupId = '';
       this.messageGroupIdListMas[thread.id].map(messageGroupId => {
         const messageGroup = this.messageService.messageGroupMas[messageGroupId];
-        if (messageGroupId.startsWith('dummy-')) {
+        if (messageGroupId.startsWith('dummy-') && messageGroup && messageGroup.messages) {
           messageGroup.messages.map(message => {
             inDto.push({
               role: messageGroup.role,
@@ -1410,6 +1522,21 @@ export class ChatComponent implements OnInit {
             this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
           },
         });
+      },
+      error: error => {
+        this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+      },
+    });
+  }
+
+  toolExec(contentPart: ContentPart): void {
+    console.log(contentPart);
+    this.messageService.updateTimestamp('message-group', this.messageService.messageMas[contentPart.messageId].messageGroupId).subscribe({
+      next: next => {
+        this.rebuildThreadGroup();
+        this.onChange();
+        const messageGroupId = this.messageService.messageMas[contentPart.messageId].messageGroupId;
+        this.send('messageGroup', [messageGroupId], { command: 'execute' }).subscribe();
       },
       error: error => {
         this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });

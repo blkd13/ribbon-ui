@@ -128,14 +128,12 @@ export class ThreadService {
         const deafultThreadGroup = Object.keys(this.threadListMas).map(key => this.threadListMas[key].find(threadGroup => threadGroup.type === ThreadGroupType.Default)).filter(threadGroup => threadGroup)[0];
         if (deafultThreadGroup) {
             const threadGroup = Utils.clone(deafultThreadGroup);
-            threadGroup.lastUpdate = new Date(threadGroup.lastUpdate);
             threadGroup.createdAt = new Date(threadGroup.createdAt);
             threadGroup.updatedAt = new Date(threadGroup.updatedAt);
             // デフォルトスレッドグループがあればそれをひな型として返す
             // ひな型なので要らない項目は消しておかないといけない。
             Object.assign(threadGroup, genInitialBaseEntity('thread-group'));
             threadGroup.title = '';
-            (threadGroup.lastUpdate as any) = undefined;
             threadGroup.type = ThreadGroupType.Normal;
             threadGroup.description = '';
             threadGroup.visibility = ThreadGroupVisibility.Team;
@@ -148,7 +146,6 @@ export class ThreadService {
                 description: '',
                 title: '',
                 type: ThreadGroupType.Normal,
-                lastUpdate: new Date(),
                 visibility: ThreadGroupVisibility.Team,
                 threadList: [],
                 ...genInitialBaseEntity('thread-group'),
@@ -291,9 +288,12 @@ export class MessageService {
 
     messageGroupList: MessageGroupForView[] = [];
     messageList: MessageForView[] = [];
+    contentPartList: ContentPart[] = [];
 
     messageGroupMas: { [messageGroupId: string]: MessageGroupForView } = {};
     messageMas: { [messageId: string]: MessageForView } = {};
+
+    contentPartMas: { [contentPartId: string]: ContentPart } = {};
 
     prevMessageGroupId: { [messageGroupId: string]: string } = {};
     nextMessageGroupId: { [messageGroupId: string]: string[] } = {};
@@ -305,7 +305,10 @@ export class MessageService {
 
     /** メッセージのタイムスタンプを更新するだけ。 */
     updateTimestamp(type: 'message-group' | 'message', id: string): Observable<Message | MessageGroup> {
-        return this.http.patch<MessageForView>(`/user/thread/${type}/${id}`, id);
+        return this.http.patch<MessageForView>(`/user/thread/${type}/${id}`, id).pipe(tap(res => {
+            // アップデートした分を反映しないといけない。
+            (type === 'message-group' ? this.messageGroupMas : this.messageMas)[id].updatedAt = new Date(res.updatedAt);
+        }));
     }
 
     editMessageWithContents(message: MessageForView): Observable<MessageForView> {
@@ -323,7 +326,24 @@ export class MessageService {
         return this.http.get<ContentPart[]>(`/user/message/${message.id}/content-parts`).pipe(tap(list => {
             message.contents = list;
             list.forEach(contentPart => {
-                if (contentPart.type === ContentPartType.Meta) {
+                // キャッシュに保存
+                if (this.contentPartMas[contentPart.id]) {
+                } else {
+                    this.contentPartList.push(contentPart);
+                    this.contentPartMas[contentPart.id] = contentPart;
+                }
+
+                // タイプによって処理を分ける
+                if (contentPart.type === ContentPartType.TOOL) {
+                    // ツールの場合、ツールの内容をセットする
+                    contentPart.meta = JSON.parse(contentPart.text as string);
+                    if (contentPart.meta.call) {
+                        contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
+                    } else { }
+                    if (contentPart.meta.result) {
+                        contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
+                    } else { }
+                } else if (contentPart.type === ContentPartType.META) {
                     // Google検索結果のメタデータをセットする
                     contentPart.meta = JSON.parse(contentPart.text as string);
                     if (contentPart.meta && contentPart.meta.groundingMetadata && contentPart.meta.groundingMetadata.searchEntryPoint && contentPart.meta.groundingMetadata.searchEntryPoint.renderedContent) {
@@ -335,6 +355,15 @@ export class MessageService {
                 contentPart.updatedAt = new Date(contentPart.updatedAt);
             });
         }));
+    }
+
+    addMessageContentPartDry(messageId: string, contentPart: ContentPart): ContentPart {
+        if (this.contentPartMas[contentPart.id]) {
+        } else {
+            this.contentPartList.push(contentPart);
+            this.contentPartMas[contentPart.id] = contentPart;
+        }
+        return contentPart;
     }
 
     deleteMessageGroup(messageGroupId: string): Observable<{ message: string, target: MessageGroup }> {
@@ -352,7 +381,6 @@ export class MessageService {
             role,
             seq: 0,
             previousMessageGroupId,
-            lastUpdate: new Date(),
             selectedIndex: 0,
             messages: [],
             ...genInitialBaseEntity('message-group'),
@@ -367,7 +395,6 @@ export class MessageService {
             messageGroupId,
             subSeq: 0,
             label: (contentParts[0]?.text || '').substring(0, 250),
-            lastUpdate: new Date(),
             seq: 0,
             contents: [],
             editing: 0, selected: false, status: MessageStatusType.Initial,
@@ -386,7 +413,7 @@ export class MessageService {
 
     initContentPart(messageId: string, text: string = ''): ContentPart {
         const contentPart: ContentPart = {
-            type: ContentPartType.Text,
+            type: ContentPartType.TEXT,
             seq: 0,
             text,
             messageId,
@@ -455,9 +482,9 @@ export class MessageService {
     resetSelectedIndex(previousMessageGroupId: string): number {
         const nextMessageGroupId = this.nextMessageGroupId[previousMessageGroupId];
         const tail = nextMessageGroupId.sort((a, b) => {
-            // ソート条件：lastUpdate降順、seq降順
-            if (new Date(this.messageGroupMas[a].lastUpdate) > new Date(this.messageGroupMas[b].lastUpdate)) return -1;
-            if (new Date(this.messageGroupMas[a].lastUpdate) < new Date(this.messageGroupMas[b].lastUpdate)) return 1;
+            // ソート条件：updatedAt降順、seq降順
+            if (new Date(this.messageGroupMas[a].updatedAt) > new Date(this.messageGroupMas[b].updatedAt)) return -1;
+            if (new Date(this.messageGroupMas[a].updatedAt) < new Date(this.messageGroupMas[b].updatedAt)) return 1;
             return this.messageGroupMas[b].seq - this.messageGroupMas[a].seq; // seq降順
         })[0];
         // seqで昇順ソートしてselectedIndexを設定
@@ -476,10 +503,11 @@ export class MessageService {
         // build serial message structure
         if (targetMessageGroupId) {
         } else {
+            // タイムスタンプが一番新しいもののidを持ってくる。
             targetMessageGroupId = Object.values(messageGroupMas).filter(messageGroup => messageGroup.threadId === threadId).sort((a, b) => {
-                // ソート条件：lastUpdate降順、seq降順
-                if (new Date(a.lastUpdate) > new Date(b.lastUpdate)) return -1;
-                if (new Date(a.lastUpdate) < new Date(b.lastUpdate)) return 1;
+                // ソート条件：updatedAt降順、seq降順
+                if (new Date(a.updatedAt) > new Date(b.updatedAt)) return -1;
+                if (new Date(a.updatedAt) < new Date(b.updatedAt)) return 1;
                 return b.seq - a.seq; // seq降順
             })[0].id;
         }
@@ -510,13 +538,13 @@ export class MessageService {
         const showMessageGroupIdList = [targetMessageGroupId];
         while (this.nextMessageGroupId[targetMessageGroupId]) {
             targetMessageGroupId = this.nextMessageGroupId[targetMessageGroupId].slice().sort((a, b) => {
-                // ソート条件：lastUpdate降順、seq降順
-                if (new Date(this.messageGroupMas[a].lastUpdate) > new Date(this.messageGroupMas[b].lastUpdate)) return -1;
-                if (new Date(this.messageGroupMas[a].lastUpdate) < new Date(this.messageGroupMas[b].lastUpdate)) return 1;
+                // ソート条件：updatedAt降順、seq降順
+                if (new Date(this.messageGroupMas[a].updatedAt) > new Date(this.messageGroupMas[b].updatedAt)) return -1;
+                if (new Date(this.messageGroupMas[a].updatedAt) < new Date(this.messageGroupMas[b].updatedAt)) return 1;
                 return this.messageGroupMas[b].seq - this.messageGroupMas[a].seq; // seq降順
             })[0];
             // 新しいものじゃなければselectedIndexをoutboundsさせて抜ける
-            if (new Date(this.messageGroupMas[targetMessageGroupId].lastUpdate) < new Date(messageGroup.lastUpdate)) {
+            if (new Date(this.messageGroupMas[targetMessageGroupId].updatedAt) < new Date(messageGroup.updatedAt)) {
                 messageGroup.selectedIndex = this.nextMessageGroupId[messageGroup.id].length;
                 break;
             } else { }

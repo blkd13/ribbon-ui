@@ -12,12 +12,13 @@ import { DocTagComponent } from '../doc-tag/doc-tag.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
+import { MatMenuModule } from '@angular/material/menu';
 
 @Component({
     selector: 'app-chat-panel-message',
     imports: [
         CommonModule, FormsModule, DocTagComponent,
-        MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
+        MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule, MatMenuModule,
     ],
     templateUrl: './chat-panel-message.component.html',
     styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-message.component.scss',],
@@ -229,7 +230,7 @@ export class ChatPanelMessageComponent extends ChatPanelBaseComponent {
     //     if (this.messageGroup.role === 'system') {
     //       // systemは行消さずに中身消すだけにする。
     //       this.messageGroup.messages[0].contents = [this.messageGroup.messages[0].contents[0]];
-    //       this.messageGroup.messages[0].contents[0].type = ContentPartType.Text;
+    //       this.messageGroup.messages[0].contents[0].type = ContentPartType.TEXT;
     //       this.messageGroup.messages[0].contents[0].text = '';
     //       this.messageGroup.messages[0].contents[0].fileId = undefined;
     //       this.exPanel.close();

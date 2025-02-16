@@ -5,6 +5,7 @@
     <mat-expansion-panel-header class="message-header">
         <mat-panel-title class="message-title" style="font-weight: normal;">
             <!-- モデル選択 -->
+
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
                 [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
                 @for(option of chatService.modelList;track $index) {
@@ -12,7 +13,7 @@
                     {{option.tag}}：{{option.id}}</option>
                 }
             </select>
-            <!-- 
+            <!--
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
                 [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
                 @for(modelGroupId of modelGroupIdList;track $index){
@@ -25,7 +26,7 @@
             </select>
             -->
             @if(thread().inDto.args.model; as model){
-            @if(chatService.modelMap[model] && chatService.modelMap[model].isGSearch){
+            @if(chatService.modelMap[model].isGSearch){
             <div class="flex items-center" style="width: 150px;"
                 [matTooltip]="chatService.modelMap[model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini以外では使用できません。'">
                 <img src="./image/google-icon.svg" alt="Googleアイコン" class="w-8 h-8" style="min-width: 30px;"
@@ -38,9 +39,9 @@
         <mat-panel-description>
             <div class="truncate">{{messageGroup().messages[0].label}}</div>
         </mat-panel-description>
-        <div class="right-0 top-0 flex gap-2 p-2">
+        <div class="right-0 top-0 flex gap-2">
             <!-- <div style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"> -->
-            <!-- 
+            <!--
             <button mat-icon-button class="invisible">
                 <mat-icon>folder_zip</mat-icon>
             </button>
@@ -63,7 +64,7 @@
     </mat-expansion-panel-header>
 
     <div class="flex w-full">
-        @for (message of messageGroup().messages; track $index) {
+        @for (message of messageGroup().messages; track $index;let mIndex=$index) {
         <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
             <!-- ファイル -->
             @if(message.contents.length>1){
@@ -79,7 +80,8 @@
             }
 
             <!-- メッセージ -->
-            @for(content of message.contents; track $index){
+            @for(content of message.contents; track $index;let cIndex=$index){
+            @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket) : blankBracket;
             @if(content.type==='text'){
             <div class="chat-input" [hidden]="!message.editing">
                 <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
@@ -94,7 +96,7 @@
                 </markdown>
             </div>
             }@else if(content.type==='error'){
-            <div style="color: red;overflow: auto;">
+            <div class="text-red-500 overflow-auto">
                 <div>ERROR</div>
                 {{content.text}}
             </div>

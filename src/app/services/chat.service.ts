@@ -409,8 +409,9 @@ export class ChatService {
    */
   chatCompletionObservableStreamByProjectModel(
     args: ChatCompletionCreateParamsWithoutMessages,
-    idType: 'message' | 'messageGroup' | 'thread' | 'threadGroup',
+    idType: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | 'contentPart',
     id: string,
+    toolInput?: unknown,
   ): Observable<{
     connectionId: string,
     streamId: string,
@@ -435,7 +436,7 @@ export class ChatService {
     return this.open(flag).pipe(
       switchMap(connectionId => this.http.post<MessageGroupForView[]>(
         `/user/v2/chat-completion?connectionId=${connectionId}&streamId=${streamId}&type=${idType}&id=${id}`,
-        { args },
+        { args, toolInput },
         // { headers: this.authService.getHeaders() }
       )),
       map(messageGroupList => messageGroupList.map(messageGroup => {

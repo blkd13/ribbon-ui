@@ -192,6 +192,28 @@
         10px 10px 30px rgba(0, 0, 0, 0.8);
 }
 
+.link-chain {
+    width: 0;
+    padding: 0;
+    z-index: 2;
+    transform: translate(-16px, 16px);
+    transform: translate(-14px, 2px);
+    overflow: visible;
+    // color: rgb(105 184 205);
+    cursor: pointer;
+
+    >mat-icon {
+        font-weight: 100;
+        font-size: 32px;
+        font-size: 28px;
+        width: 28px;
+    }
+
+    &.off {
+        color: rgba(255, 255, 255, 0.2);
+    }
+}
+
 /* CSS Grid Layout */
 .grid-layout {
     display: flex;

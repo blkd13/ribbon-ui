@@ -2,6 +2,7 @@ import { Observable } from "rxjs";
 import { OpenAI } from "openai";
 import { ChatCompletionStreamInDto, UserStatus } from "./models";
 import { CountTokensResponse } from "../services/chat.service";
+import { ChatCompletionChunk } from "openai/resources/index.mjs";
 
 // 共通の型定義
 export type UUID = string;
@@ -53,13 +54,14 @@ export enum MessageGroupType {
 }
 
 export enum ContentPartType {
-    Text = 'text',
-    Error = 'error',
-    Base64 = 'base64',
-    Url = 'url',
-    File = 'file',
-    Tool = 'tool', // function_call
-    Meta = 'meta', // メタ情報。groundingの結果など。
+    TEXT = 'text',
+    ERROR = 'error',
+    BASE64 = 'base64', // 軽量コンテンツをロードするときに使う、メッセージオブジェクトの配下にくっつけてやるパターン。最初の一回はBase64で登録して、使うときはfileになっている感じ。
+    URL = 'url', // インターネットのリンク。基本使わないつもり。
+    STORE = 'store', // GCPのStorageに登録されているもの。gs://
+    FILE = 'file', // サーバー側にファイルとして保存済みのもの // fileになっているものは登録済みなので、登録処理の時は無視する。
+    TOOL = 'tool', // function_call
+    META = 'meta', // メタ情報。groundingの結果など。
 }
 
 // Team DTOs
@@ -151,7 +153,6 @@ export interface ThreadUpsertDto {
 //     projectId: UUID;
 //     title: string;
 //     description: string;
-//     lastUpdate: Date;
 //     seq: number;
 //     // inDtoJson: string;
 //     inDto: ChatCompletionStreamInDto;
@@ -184,7 +185,6 @@ export interface ThreadUpsertDto {
 //     role: OpenAI.ChatCompletionRole;
 //     label: string;
 //     seq: number;
-//     lastUpdate: Date;
 //     previousMessageGroupId?: UUID;
 //     // selectedIndex: number;
 //     createdAt: Date;
@@ -281,7 +281,6 @@ export interface ThreadGroup extends BaseEntity {
     title: string;
     description: string;
     visibility: ThreadGroupVisibility;
-    lastUpdate: Date;
     threadList: Thread[];
 }
 export interface Thread extends BaseEntity {
@@ -294,7 +293,6 @@ export interface MessageGroup extends BaseEntity {
     threadId: UUID;
     type: MessageGroupType; // Single, Parallel, Regenerated
     seq: number;
-    lastUpdate: Date;
     role: OpenAI.ChatCompletionRole;
     // label: string;
     previousMessageGroupId?: UUID;
@@ -313,7 +311,6 @@ export interface Message extends BaseEntity {
     messageGroupId: UUID;
     seq: number;
     subSeq: number; // 並列メッセージの場合のサブシーケンス
-    lastUpdate: Date;
     label: string;
     cacheId?: string;
     editedRootMessageId?: UUID;

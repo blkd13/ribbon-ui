@@ -1,34 +1,34 @@
 @if(messageGroup() && messageGroup().messages && messageGroup().messages.length>0){
 <mat-expansion-panel class="message"
-    [ngClass]="[messageGroup().messages[0].cacheId?'cached':'', messageGroup().role, exPanel.expanded?'expanded':'closed']"
-    #exPanel [expanded]="messageGroup().isExpanded" (opened)="loadContent().subscribe()"
-    (expandedChange)="expandedEmitter.emit($event)">
-    <mat-expansion-panel-header class="message-header message-header-message">
-        <mat-panel-title class="message-title" style="font-weight: normal;">
-            <!-- {{message.role}} -->
-            @if(messageGroup().role==='system'){
-            {{messageGroup().role}}
-            } @else if(messageGroup().messages[0].cacheId){
-            キャッシュ
-            } @else {
-            <select [(ngModel)]="messageGroup().role" (click)="stopPropagation($event)" [disabled]="index()===1">
-                <option value="user">user</option>
-                <option value="assistant">assistant</option>
-            </select>
-            }
-        </mat-panel-title>
-        <mat-panel-description>
-            <div class="truncate">{{messageGroup().messages[0].label}}</div>
-        </mat-panel-description>
-        <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'top'}"></ng-container>
-    </mat-expansion-panel-header>
+  [ngClass]="[messageGroup().messages[0].cacheId?'cached':'', messageGroup().role, exPanel.expanded?'expanded':'closed']"
+  #exPanel [expanded]="messageGroup().isExpanded" (opened)="loadContent().subscribe()"
+  (expandedChange)="expandedEmitter.emit($event)">
+  <mat-expansion-panel-header class="message-header message-header-message">
+    <mat-panel-title class="message-title" style="font-weight: normal;">
+      <!-- {{message.role}} -->
+      @if(messageGroup().role==='system'){
+      {{messageGroup().role}}
+      } @else if(messageGroup().messages[0].cacheId){
+      キャッシュ
+      } @else {
+      <select [(ngModel)]="messageGroup().role" (click)="stopPropagation($event)">
+        <option value="user">user</option>
+        <option value="assistant">assistant</option>
+      </select>
+      }
+    </mat-panel-title>
+    <mat-panel-description>
+      <div class="truncate">{{messageGroup().messages[0].label}}</div>
+    </mat-panel-description>
+    <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'top'}"></ng-container>
+  </mat-expansion-panel-header>
 
-    <div class="flex w-full gap-2">
-        @for (message of messageGroup().messages; track $index) {
-        <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
+  <div class="flex w-full gap-2">
+    @for (message of messageGroup().messages; track $index;let mIndex=$index) {
+    <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
 
-            <!-- ファイル -->
-            <!-- @if(message.contents.length>1){
+      <!-- ファイル -->
+      <!-- @if(message.contents.length>1){
             <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
                 @for(content of message.contents; track $index){
                 @if(content.type==='text'){
@@ -42,124 +42,169 @@
             }
             -->
 
-            <!-- メッセージ -->
-            @for(content of message.contents; track $index){
-
-            @if(content.type==='text'){
-            <div class="chat-input" [hidden]="!message.editing">
-                <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
-                    (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'"
-                    [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
-            </div>
-            <div class="custom-scroll block overflow-auto"
-                [ngClass]="[messageGroup().role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']"
-                #textBodyElem>
-                <markdown [hidden]="message.editing" katex mermaid clipboard
-                    [data]="brackets.pre+content.text+brackets.post">
-                </markdown>
-            </div>
-            } @else if(content.type==='error') {
-            <div style="color: red;overflow: auto;">
-                <div>ERROR</div>
-                {{content.text}}
-            </div>
-            } @else if(content.type==='file') {
-            <!-- text 以外はファイル -->
-            <!-- ファイル表示のグループ化 -->
-            @if($index === 0 || message.contents[$index - 1].type !== content.type){
-            <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
-                @for(fileContent of getConsecutiveFiles(message.contents, $index); track fileContent.id){
-                <app-doc-tag [removable]="false" [content]="fileContent" (updated)="fileSelectionUpdate()"
-                    (remove)="message.cacheId||removeDoc(fileContent)">
-                </app-doc-tag>
-                }
-            </div>
-            } @else {<!-- 最初の1個からループを掛けるのでここに来ることはない -->}
-            } @else if(content.type==='tool') {
-            <!-- text/error/file以外は無いのでここに来ることはない -->
-            } @else if(content.type==='meta') {
-
-            <div class="p-3 rounded-md" style="background-color: #333;">
-                参考リンク
-                @if(content.meta.groundingMetadata){
-                <ol class="list-decimal pl-10 py-2">
-                    @for(chunk of content.meta.groundingMetadata.groundingChunks||[];track $index){
-                    @if(chunk.web){
-                    <li>
-                        <a target="_blank" [href]="chunk.web.uri" class="flex">{{chunk.web.title}}
-                            <mat-icon class="text-lg">open_in_new</mat-icon>
-                        </a>
-                    </li>
-                    }
-                    }
-                </ol>
-                <div [innerHTML]="content.meta.groundingMetadata.searchEntryPoint?.renderedContent"></div>
-                }
-            </div>
-
-            } @else {<!-- text/error/file以外は無いのでここに来ることはない -->}
-
-            }
-
-            <!-- Loading -->
-            @if (message.status === 'Loading') {
-            <!-- アニメーションつけるかどうか [@fadeAnimation] -->
-            <div class="absolute inset-0 flex items-center justify-center bg-black/25">
-                <mat-spinner style="transform: scale(0.4);"></mat-spinner>
-            </div>
-            }
-        </div>
+      <!-- メッセージ -->
+      @for(content of message.contents; track $index ; let cIndex=$index){
+      @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket) : blankBracket;
+      @if(content.type==='text'){
+      <div class="chat-input" [hidden]="!message.editing">
+        <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)" (blur)="onBlur($event)"
+          (load)="onLoad()" [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text"
+          (change)="onSubmit()"></textarea>
+      </div>
+      <div class="custom-scroll block overflow-auto"
+        [ngClass]="[messageGroup().role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']" #textBodyElem>
+        <markdown [hidden]="message.editing" katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post">
+        </markdown>
+      </div>
+      } @else if(content.type==='error') {
+      <div class="text-red-500 overflow-auto">
+        <div>ERROR</div>
+        <markdown katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post"></markdown>
+      </div>
+      } @else if(content.type==='file') {
+      <!-- text 以外はファイル -->
+      <!-- ファイル表示のグループ化 -->
+      @if($index === 0 || message.contents[$index - 1].type !== content.type){
+      <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
+        @for(fileContent of getConsecutiveFiles(message.contents, $index); track fileContent.id){
+        <app-doc-tag [removable]="false" [content]="fileContent" (updated)="fileSelectionUpdate()"
+          (remove)="message.cacheId||removeDoc(fileContent)">
+        </app-doc-tag>
         }
+      </div>
+      } @else {<!-- 最初の1個からループを掛けるのでここに来ることはない -->}
+      } @else if(content.type==='tool') {
+
+      @if(content.meta){
+      <div class="inline-flex items-center">
+        @if(content.meta.info; as info){
+        <button class="inline-block command-tag cursor-pointer" (click)="isShowTool[cIndex]=true">
+          {{info.name}}
+        </button>
+        }
+        <!-- @if(content.meta.info; as info && info.requireComfirm){
+        <button mat-icon-button (click)="toolExec($event, content)" title="実行">
+          <mat-icon>{{content.meta.input?'refresh':'play_arrow'}}</mat-icon>
+        </button>
+        } -->
+      </div>
+      }
+
+      @if(isShowTool[cIndex]){
+      <div class="fixed z-10 w-full h-full inset-0 flex items-center justify-center"
+        style="background-color: rgba(0,0,0,.32)" (click)="isShowTool[cIndex]=false">
+        <div class="h-[80vh] overflow-auto p-5 rounded-md w-1/2" style="background-color: #333;"
+          (click)="$event.stopPropagation()">
+          @if(content.meta.call; as call){
+          <h1>{{call.function.name}}</h1>
+          <h3>arguments</h3>
+          <markdown clipboard [data]="'```json\n'+call.function.arguments+'\n```'"></markdown>
+          @if(content.meta.result; as result){
+          <h3>result</h3>
+          <markdown clipboard [data]="'```json\n'+result.content+'\n```'"></markdown>
+          }
+          <!-- {{content|json}} -->
+          }
+        </div>
+      </div>
+      }
+
+
+      } @else if(content.type==='meta') {
+
+      @if(content.meta.groundingMetadata && content.meta.groundingMetadata.searchEntryPoint?.renderedContent){
+      <div class="p-3 rounded-md" style="background-color: #333;">
+        参考リンク
+        <ol class="list-decimal pl-10 py-2">
+          @for(chunk of content.meta.groundingMetadata.groundingChunks||[];track $index){
+          @if(chunk.web){
+          <li>
+            <a target="_blank" [href]="chunk.web.uri" class="flex">{{chunk.web.title}}
+              <mat-icon class="text-lg">open_in_new</mat-icon>
+            </a>
+          </li>
+          }
+          }
+        </ol>
+        <div [innerHTML]="content.meta.groundingMetadata.searchEntryPoint?.renderedContent"></div>
+      </div>
+      }
+
+      } @else {<!-- text/error/file以外は無いのでここに来ることはない -->}
+
+      }
+
+      @if(isRequireComfirm()){
+      <div class="w-full h-full">
+        <div class="my-2">このコマンドを実行してもよろしいですか？</div>
+        <button class="my-2 w-full max-w-96" mat-raised-button
+          (click)="toolExec($event, messageGroup().messages.at(-1)?.contents?.at(-1))" title="実行"
+          style="margin-right: 10px;width: 100%;">
+          <mat-icon>play_arrow</mat-icon>
+          提案されたコマンドを実行する
+        </button>
+      </div>
+      }
+
+      <!-- Loading -->
+      @if (message.status === 'Loading') {
+      <!-- アニメーションつけるかどうか [@fadeAnimation] -->
+      <div class="absolute inset-0 flex items-center justify-center bg-black/25">
+        <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+      </div>
+      }
     </div>
-    @if (!messageGroup().messages[0].editing) {
-    <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'bottom'}"></ng-container>
     }
+  </div>
+  @if (!messageGroup().messages[0].editing) {
+  <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'bottom'}"></ng-container>
+  }
 </mat-expansion-panel>
 } @else {
 {{messageGroup().messages.length}}
 }
 <ng-template #controller let-exPanel="exPanel" let-position="position">
-    <div class="right-0 top-0 flex gap-2" style="padding-right: 0;"
-        [ngClass]="{'controller-bottom': position==='bottom', 'controller-bottom--hide': !exPanel.expanded && position==='bottom'}">
-        <!-- style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"  -->
-        @if(messageGroup().type) {
-        <!-- 並列実行（バッチを想定） -->
-        }@else if(messageGroup().type==='Regenerated' && messageGroup().messages.length>1) {
-        <!-- 再ラン -->
-        @for(message of messageGroup().messages; track $index){
-        {{$index}},
-        }
-        }@else {
-        <!-- @if(messageGroup.type==='Single') { } -->
-        }
+  <div class="right-0 top-0 flex gap-2" style="padding-right: 0;"
+    [ngClass]="{'controller-bottom': position==='bottom', 'controller-bottom--hide': !exPanel.expanded && position==='bottom'}">
+    <!-- style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"  -->
+    @if(messageGroup().type) {
+    <!-- 並列実行（バッチを想定） -->
+    }@else if(messageGroup().type==='Regenerated' && messageGroup().messages.length>1) {
+    <!-- 再ラン -->
+    @for(message of messageGroup().messages; track $index){
+    {{$index}},
+    }
+    }@else {
+    <!-- @if(messageGroup.type==='Single') { } -->
+    }
 
-        <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）"
-            [ngStyle]="{visibility: messageGroup().role==='assistant'?'visible':'hidden'}">
-            <mat-icon>folder_zip</mat-icon>
-        </button>
-        <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
-            <mat-icon>content_copy</mat-icon>
-        </button>
-        <button mat-icon-button (click)="setEdit($event)" [title]="messageGroup().messages[0].editing?'保存':'編集'"
-            [ngStyle]="{visibility: messageGroup().messages[0].cacheId?'hidden':'visible'}">
-            @if(messageGroup().messages[0].editing){
-            <mat-icon>check_circle</mat-icon>
-            }@else{
-            <mat-icon>edit</mat-icon>
-            }
-        </button>
-        <button mat-icon-button (click)="remove($event)" [title]="messageGroup().role==='assistant'?'リトライ':'削除'"
-            style="margin-right: 10px;"
-            [ngStyle]="{visibility: (messageGroup().messages[0].cacheId || messageGroup().role==='system')?'hidden':'visible'}">
-            <mat-icon>@if(messageGroup().role==='assistant'){ refresh }@else{ close }</mat-icon>
-        </button>
+    <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）"
+      [ngStyle]="{visibility: messageGroup().role==='assistant'?'visible':'hidden'}">
+      <mat-icon>folder_zip</mat-icon>
+    </button>
+    <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
+      <mat-icon>content_copy</mat-icon>
+    </button>
+    <button mat-icon-button (click)="setEdit($event)" [title]="messageGroup().messages[0].editing?'保存':'編集'"
+      [ngStyle]="{visibility: messageGroup().messages[0].cacheId?'hidden':'visible'}">
+      @if(messageGroup().messages[0].editing){
+      <mat-icon>check_circle</mat-icon>
+      }@else{
+      <mat-icon>edit</mat-icon>
+      }
+    </button>
+    <button mat-icon-button (click)="remove($event)" [title]="messageGroup().role==='assistant'?'リトライ':'削除'"
+      style="margin-right: 10px;"
+      [ngStyle]="{visibility: (messageGroup().messages[0].cacheId || messageGroup().role==='system')?'hidden':'visible'}">
+      <mat-icon>@if(messageGroup().role==='assistant'){ refresh }@else{ close }</mat-icon>
+    </button>
 
-        <!-- 'margin-right': position === 'bottom' ? '-6px' : '10px' -->
-        @if(position==='bottom'){
-        <button mat-icon-button (click)="exPanel.close()" title="閉じる" style="margin-left: -17px"
-            [ngStyle]="{visibility: messageGroup().role==='assistant'?'visible':'hidden'}">
-            <mat-icon>{{exPanel.opened ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}}</mat-icon>
-        </button>
-        }
-    </div>
+    <!-- 'margin-right': position === 'bottom' ? '-6px' : '10px' -->
+    @if(position==='bottom'){
+    <button mat-icon-button (click)="exPanel.close()" title="閉じる" style="margin-left: -17px"
+      [ngStyle]="{visibility: messageGroup().role==='assistant'?'visible':'hidden'}">
+      <mat-icon>{{exPanel.opened ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}}</mat-icon>
+    </button>
+    }
+  </div>
 </ng-template>

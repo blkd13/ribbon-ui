@@ -1,23 +1,23 @@
 @if(showInfo&&false){
 <div class="flex justify-center item-center" style="background-color: rgb(30, 109, 131);padding: 5px 10px;">
-    現在Googleの障害でgemini、claude系が使えません。gpt-4oかo1をご利用ください。
-    <mat-icon class="cursor-pointer absolute right-3" (click)="showInfo=false">close</mat-icon>
+  現在Googleの障害でgemini、claude系が使えません。gpt-4oかo1をご利用ください。
+  <mat-icon class="cursor-pointer absolute right-3" (click)="showInfo=false">close</mat-icon>
 </div>
 }
 
 @if(selectedThreadGroup){
 <div class="flex relative w-full h-0 flex-grow">
-    <div class="mimi" (click)="showThreadList=!showThreadList" [ngStyle]="{left: showThreadList?'202px':'6px'}">
-        <mat-icon
-            [ngStyle]="{transform: showThreadList?'translate(0, 0) rotate(0deg)':'translate(7px, 6px) rotate(-180deg)'}">first_page</mat-icon>
-    </div>
-    <!-- スレッドリスト -->
-    <div class="h-full w-52 pt-0 overflow-hidden left-pane relative" [ngStyle]="{width: showThreadList?'208px':'8px'}">
-        <div class="h-full w-52 overflow-hidden relative flex flex-col">
-            <div class="p-4">
-                <app-app-menu></app-app-menu>
-            </div>
-            <!-- 
+  <div class="mimi" (click)="showThreadList=!showThreadList" [ngStyle]="{left: showThreadList?'202px':'6px'}">
+    <mat-icon
+      [ngStyle]="{transform: showThreadList?'translate(0, 0) rotate(0deg)':'translate(7px, 6px) rotate(-180deg)'}">first_page</mat-icon>
+  </div>
+  <!-- スレッドリスト -->
+  <div class="h-full w-52 pt-0 overflow-hidden left-pane relative" [ngStyle]="{width: showThreadList?'208px':'8px'}">
+    <div class="h-full w-52 overflow-hidden relative flex flex-col">
+      <div class="p-4">
+        <app-app-menu></app-app-menu>
+      </div>
+      <!--
             <a class="add-thread" [routerLink]="['/home']" style="padding-left: 7px;">
                 <button mat-icon-button matTooltip="Back to home" style="width: 32px;">
                     <mat-icon>arrow_back_ios</mat-icon>
@@ -25,31 +25,30 @@
                 <div>ホームへ</div>
             </a>
              -->
-            <div class="project-title gradient-text" [title]="selectedProject.label"
-                [ngClass]="{'team-project':selectedTeam.teamType!=='Alone'}">{{selectedProject.label}}</div>
-            @if(selectedTeam.teamType!=='Alone'){
-            <div class="share-tag">Share:{{selectedTeam.label}}</div>
-            }
-            @if(selectedThreadGroup.id.startsWith('dummy-')) {
-            <a class="add-thread mb-5" [ngStyle]="{'background-color':!selectedThreadGroup?'#303030':'inherit'}"
-                matTooltip="Create new thread" (click)="clear()">
-                <mat-icon [ngStyle]="{'visibility': selectedThreadGroup?'visible':'hidden'}">add_circle</mat-icon>
-                <div>新規チャット</div>
-            </a>
-            } @else {
-            <a class="add-thread mb-5" [routerLink]="['/chat', selectedProject.id, 'new-thread']" (click)="clear()"
-                [ngStyle]="{'background-color':!selectedThreadGroup?'#303030':'inherit'}"
-                matTooltip="Create new thread">
-                <mat-icon [ngStyle]="{'visibility': selectedThreadGroup?'visible':'hidden'}">add_circle</mat-icon>
-                <div>新規チャット</div>
-            </a>
-            }
-            <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
-                (change)="threadGroupList=sortThreadGroup(threadGroupList)">
-                <mat-radio-button [value]="1">時刻順</mat-radio-button>
-                <mat-radio-button [value]="2">名前順</mat-radio-button>
-            </mat-radio-group>
-            <!-- @for (threadGroup of threadGroupList; track threadGroup.id) {
+      <div class="project-title gradient-text" [title]="selectedProject.label"
+        [ngClass]="{'team-project':selectedTeam.teamType!=='Alone'}">{{selectedProject.label}}</div>
+      @if(selectedTeam.teamType!=='Alone'){
+      <div class="share-tag">Share:{{selectedTeam.label}}</div>
+      }
+      @if(selectedThreadGroup.id.startsWith('dummy-')) {
+      <a class="add-thread mb-5" [ngStyle]="{'background-color':!selectedThreadGroup?'#303030':'inherit'}"
+        matTooltip="Create new thread" (click)="clear()">
+        <mat-icon [ngStyle]="{'visibility': selectedThreadGroup?'visible':'hidden'}">add_circle</mat-icon>
+        <div>新規チャット</div>
+      </a>
+      } @else {
+      <a class="add-thread mb-5" [routerLink]="['/chat', selectedProject.id, 'new-thread']" (click)="clear()"
+        [ngStyle]="{'background-color':!selectedThreadGroup?'#303030':'inherit'}" matTooltip="Create new thread">
+        <mat-icon [ngStyle]="{'visibility': selectedThreadGroup?'visible':'hidden'}">add_circle</mat-icon>
+        <div>新規チャット</div>
+      </a>
+      }
+      <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
+        (change)="threadGroupList=sortThreadGroup(threadGroupList)">
+        <mat-radio-button [value]="1">時刻順</mat-radio-button>
+        <mat-radio-button [value]="2">名前順</mat-radio-button>
+      </mat-radio-group>
+      <!-- @for (threadGroup of threadGroupList; track threadGroup.id) {
             <div class="custom-scroll custom-scroll--thin h-full relative">
                 <div class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
                     [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
@@ -57,48 +56,47 @@
                 </div>
             </div>
             } -->
-            <div class="relative h-0 w-full grow">
-                <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full"
-                    style="height:calc(100% - 70px);">
-                    <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index;"
-                        class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
-                        [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
+      <div class="relative h-0 w-full grow">
+        <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full"
+          style="height:calc(100% - 70px);">
+          <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index;"
+            class="relative flex items-center justify-between" style="border-bottom: 1px solid #a0a0a0;"
+            [ngStyle]="{'background-color':threadGroup.id===selectedThreadGroup.id?'#303031':'inherit'}">
 
-                        @if (threadGroup.id === editNameThreadId) {
-                        <input [(ngModel)]="threadGroup.title" name="thread-title-{{$index}}"
-                            id="thread-title-{{$index}}" class="h-7 m-1 pl-2 text-[#303030]"
-                            (change)="renameThreadGroup($event, threadGroup, false, $index)"
-                            (blur)="editNameThreadId=''" />
-                        } @else {
-                        <div class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis"
-                            style="padding:5px 10px;height: 35px;min-width: 0;width: 1px;flex-grow: 1;"
-                            [routerLink]="['/chat', selectedProject.id, threadGroup.id]" [title]="threadGroup.title">
-                            {{threadGroup.title}}
-                        </div>
-                        }
-                        <div>
-                            @if(isCacheLive(threadGroup)){
-                            <mat-icon
-                                matTooltip="コンテキストキャッシュ有効 expire:{{threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'YYYY-MM-dd HH:mm:ss'}}">cached</mat-icon>
-                            }
-                            <button mat-icon-button [matMenuTriggerFor]="threadMenu">
-                                <mat-icon>more_vert</mat-icon>
-                            </button>
-                        </div>
-                        <mat-menu #threadMenu="matMenu">
-                            <button mat-menu-item (click)="renameThreadGroup($event, threadGroup, true, $index)">
-                                <mat-icon>edit</mat-icon>
-                                <span>名前変更</span>
-                            </button>
-                            <button mat-menu-item (click)="cloneThreadGroup(threadGroup.id)">
-                                <mat-icon>file_copy</mat-icon>コピー
-                            </button>
-                            @if(projectList.length>1){
-                            <button mat-menu-item [matMenuTriggerFor]="sendToProjesTemplate">
-                                <mat-icon>move_item</mat-icon>送る
-                            </button>
-                            }
-                            <!-- 
+            @if (threadGroup.id === editNameThreadId) {
+            <input [(ngModel)]="threadGroup.title" name="thread-title-{{$index}}" id="thread-title-{{$index}}"
+              class="h-7 m-1 pl-2 text-[#303030]" (change)="renameThreadGroup($event, threadGroup, false, $index)"
+              (blur)="editNameThreadId=''" />
+            } @else {
+            <div class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis"
+              style="padding:5px 10px;height: 35px;min-width: 0;width: 1px;flex-grow: 1;"
+              [routerLink]="['/chat', selectedProject.id, threadGroup.id]" [title]="threadGroup.title">
+              {{threadGroup.title}}
+            </div>
+            }
+            <div>
+              @if(isCacheLive(threadGroup)){
+              <mat-icon
+                matTooltip="コンテキストキャッシュ有効 expire:{{threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'YYYY-MM-dd HH:mm:ss'}}">cached</mat-icon>
+              }
+              <button mat-icon-button [matMenuTriggerFor]="threadMenu">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+            </div>
+            <mat-menu #threadMenu="matMenu">
+              <button mat-menu-item (click)="renameThreadGroup($event, threadGroup, true, $index)">
+                <mat-icon>edit</mat-icon>
+                <span>名前変更</span>
+              </button>
+              <button mat-menu-item (click)="cloneThreadGroup(threadGroup.id)">
+                <mat-icon>file_copy</mat-icon>コピー
+              </button>
+              @if(projectList.length>1){
+              <button mat-menu-item [matMenuTriggerFor]="sendToProjesTemplate">
+                <mat-icon>move_item</mat-icon>送る
+              </button>
+              }
+              <!--
                         <button mat-menu-item (click)="duplicate($event, thread)">
                             <mat-icon>file_copy</mat-icon>
                             <span>複製</span>
@@ -108,292 +106,300 @@
                             <span>エクスポート</span>
                         </button>
                         -->
-                            <button mat-menu-item (click)="contentsDownload($event,$index, threadGroup)">
-                                <mat-icon>folder_zip</mat-icon>
-                                <span>コードブロックダウンロード</span>
-                            </button>
-                            <mat-divider></mat-divider>
-                            <mat-divider></mat-divider>
-                            <button mat-menu-item (click)="removeThreadGroup($event,$index, threadGroup)">
-                                <mat-icon style="color: #FF6666">close</mat-icon>
-                                <span style="color: #FF6666">削除</span>
-                            </button>
-                        </mat-menu>
-                        <mat-menu #sendToProjesTemplate="matMenu">
-                            @for(project of projectList;track project.id){
-                            @if(project!==selectedProject){
-                            <button mat-menu-item
-                                (click)="sendThreadToProject(project, threadGroup)">{{project.label}}</button>
-                            }
-                            }
-                        </mat-menu>
+              <button mat-menu-item (click)="contentsDownload($event,$index, threadGroup)">
+                <mat-icon>folder_zip</mat-icon>
+                <span>コードブロックダウンロード</span>
+              </button>
+              <mat-divider></mat-divider>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="removeThreadGroup($event,$index, threadGroup)">
+                <mat-icon style="color: #FF6666">close</mat-icon>
+                <span style="color: #FF6666">削除</span>
+              </button>
+            </mat-menu>
+            <mat-menu #sendToProjesTemplate="matMenu">
+              @for(project of projectList;track project.id){
+              @if(project!==selectedProject){
+              <button mat-menu-item (click)="sendThreadToProject(project, threadGroup)">{{project.label}}</button>
+              }
+              }
+            </mat-menu>
 
-                    </div>
-                </cdk-virtual-scroll-viewport>
+          </div>
+        </cdk-virtual-scroll-viewport>
 
-                @if (isThreadGroupLoading){
-                <div class="loading-cover loading-cover--sub" style="z-index: 1;">
-                    <mat-spinner></mat-spinner>
-                </div>
-                }
-            </div>
-            <!-- <button (click)="export(-1)">export all</button> -->
+        @if (isThreadGroupLoading){
+        <div class="loading-cover loading-cover--sub" style="z-index: 1;">
+          <mat-spinner></mat-spinner>
         </div>
+        }
+      </div>
+      <!-- <button (click)="export(-1)">export all</button> -->
+    </div>
+  </div>
+
+  <div class="drop-zone relative" appFileDrop (filesDropped)="onFilesDropped($event)">
+    <div class="w-full flex items-center justify-between gap-5">
+      <div style="min-width: 0;flex-grow: 1;"></div>
+      <div class="command-dock" style="line-height: 0;">
+        <div class="grid-layout mr-2">
+          <div class="grid-label">Tokens : </div>
+          <div class="grid-item">
+            @if(tokenObj.totalTokens ==-1){ wait.. } @else { {{tokenObj.totalTokens||0|number}} }
+          </div> |
+          <div class="grid-label">Chars :</div>
+          <div class="grid-item">
+            @if(tokenObj.totalTokens ==-1){ wait.. } @else {
+            {{(this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio +
+            this.tokenObj.video) || this.tokenObj.totalBillableCharacters |number:'1.0-0'}}
+            }
+          </div> |
+          <div class="grid-label">Cost :</div>
+          <div class="grid-item">
+            @if(tokenObj.totalTokens ==-1){ wait.. } @else { $ {{cost|number:'1.2-2'}} }
+          </div> |
+        </div>
+        <button mat-icon-button color="primary" (click)="userService.toggleChatTabLayout().subscribe()"
+          [disabled]="selectedThreadGroup.threadList.length===1" title="チャットパネルをタブ化">
+          <mat-icon>@if(userService.chatTabLayout==='tabs') { view_column } @else { tab }</mat-icon>
+        </button>
+        <button mat-icon-button color="primary" (click)="userService.toggleChatLayout().subscribe()"
+          title="チャットパネルのレイアウト">
+          <mat-icon>@if(userService.chatLayout==='grid') { dashboard } @else { grid_view }</mat-icon>
+        </button>
+        <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse()" title="チャットパネルの開閉">
+          <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
+        </button>
+        <button mat-icon-button color="primary" (click)="openModelSetting()" title="設定">
+          <mat-icon>settings</mat-icon>
+        </button>
+        <div class="mr-10"></div>
+
+      </div>
+    </div>
+    @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length===1){
+    <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col z-10"
+      style="transform: scale(0.5);">
+      <h1>スレッド数</h1>
+      <div class="w-full flex justify-center items-center gap-10">
+        @for(index of [1, 2, 3, 4];track $index){
+        <div class="course-panel" (click)="loadPreset(index)"
+          [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
+        }
+      </div>
+      <h1 style="margin-top: 80px;">定型文</h1>
+      <div class="w-full flex justify-center items-center gap-10">
+        @for(preset of presetInputList;track $index){
+        <div class="course-panel text-center" (click)="selectPreset(preset)" [innerHTML]="preset.label"
+          [ngClass]="{selected:inputArea.content[0].text===preset.text}" style="line-height: 1.5;"></div>
+        }
+      </div>
+      <div class="text-xl mt-10 text-[#999]">スレッド数／定型文はオプションなので選ばなくてもよい。</div>
+    </div>
+    }
+    <!-- チャットエリア -->
+
+    @if(userService.chatTabLayout==='tabs') {
+    <!-- タブ表示 -->
+    <mat-tab-group [ngClass]="{isSingleThread: selectedThreadGroup.threadList.length===1}"
+      (selectedIndexChange)="restoreScrollPosition($event)">
+      @for(thread of selectedThreadGroup.threadList;track $index) {
+      <mat-tab label="[Tab{{$index+1}}] {{thread.inDto.args.model}}">
+        <div style="height: calc(100vh - 100px);" class="flex flex-col gap-1 w-full">
+          @if(messageGroupIdListMas[thread.id]; as messageGroupIdList){
+          @if(messageGroupIdList[0]; as messageGroupId){
+          <div style="width: calc(100% - 17px);" class="pt-2 px-2">
+            @if(messageService.messageGroupMas[messageGroupIdList[0]]; as messageGroup) {
+            <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
+            <app-chat-panel-system class="top-0 z-10" [messageGroup]="messageGroup"
+              [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="bitCounter" [thread]="thread"
+              [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
+              (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])">
+            </app-chat-panel-system>
+            }
+          </div>
+          }
+
+          }
+
+          <div #textBodyElem (scroll)="saveScrollPosition($index)"
+            class="custom-scroll w-full px-2 pb-52 relative flex flex-col gap-1" style="overflow-y: scroll;">
+
+            @for(messageGroupId of messageGroupIdListMas[thread.id];track $index){
+            @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
+
+            <!-- {{messageGroup.id}} -->
+            @if(messageGroup.role==='system') {
+            } @else if(['assistant', 'user'].includes(messageGroup.role)) {
+            <div #anchor> <!-- スクロール用のただのアンカー -->
+              <app-chat-panel-message #chatPanelList [messageGroup]="messageGroup"
+                [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="bitCounter" [layout]="userService.chatLayout"
+                (edit)="editChat($event)" [index]="$index" (removeContent)="removeContent($event)"
+                (removeMessage)="removeMessage($event)" (remove)="removeMessageGroup($event)">
+              </app-chat-panel-message>
+            </div>
+            }
+
+            }
+
+            <!-- メッセージの後ろのグループの選択肢 -->
+            @if(messageService.nextMessageGroupId[messageGroupId]
+            &&(
+            (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
+            ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
+            ) {
+            <ng-container
+              *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
+            </ng-container>
+            }
+
+            }
+          </div>
+        </div>
+      </mat-tab>
+      }
+    </mat-tab-group>
+    } @else {
+    <!-- リスト表示 -->
+
+    <div class="flex gap-1 px-2" style="z-index: 2;width: calc(100% - 17px);">
+      @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
+      <div class="w-0 flex-1">
+        @if(messageGroupIdListMas[thread.id]; as messageGroupIdList) {
+        @if(messageGroupIdList[0]; as messageGroupId) {
+        @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
+        <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
+        <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup" [bitCounter]="bitCounter"
+          [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
+          (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
+          (fileSelectionUpdateEmitter)="onChange()" (expanded)="expanded($event, 0, tIndex, messageGroup)">
+        </app-chat-panel-system>
+        }
+        }
+        }
+      </div>
+
+      <!-- 
+      @if(selectedThreadGroup.threadList.length-1>tIndex) {
+      <button mat-icon-button class="link-chain" [ngClass]="{'off': linkChainOff[0]}"
+        (click)="linkChainOff[0]=!linkChainOff[0]">
+        <mat-icon>link</mat-icon>
+      </button>
+      }
+      -->
+
+      }
     </div>
 
-    <div class="drop-zone relative" appFileDrop (filesDropped)="onFilesDropped($event)">
-        <div class="w-full flex items-center justify-between gap-5">
-            <div style="min-width: 0;flex-grow: 1;"></div>
-            <div class="command-dock" style="line-height: 0;">
-                <div class="grid-layout mr-2">
-                    <div class="grid-label">Tokens : </div>
-                    <div class="grid-item">
-                        @if(tokenObj.totalTokens ==-1){ wait.. } @else { {{tokenObj.totalTokens||0|number}} }
-                    </div> |
-                    <div class="grid-label">Chars :</div>
-                    <div class="grid-item">
-                        @if(tokenObj.totalTokens ==-1){ wait.. } @else {
-                        {{(this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio +
-                        this.tokenObj.video) || this.tokenObj.totalBillableCharacters |number:'1.0-0'}}
-                        }
-                    </div> |
-                    <div class="grid-label">Cost :</div>
-                    <div class="grid-item">
-                        @if(tokenObj.totalTokens ==-1){ wait.. } @else { $ {{cost|number:'1.2-2'}} }
-                    </div> |
-                </div>
-                <button mat-icon-button color="primary" (click)="userService.toggleChatTabLayout().subscribe()"
-                    [disabled]="selectedThreadGroup.threadList.length===1" title="チャットパネルをタブ化">
-                    <mat-icon>@if(userService.chatTabLayout==='tabs') { view_column } @else { tab }</mat-icon>
-                </button>
-                <button mat-icon-button color="primary" (click)="userService.toggleChatLayout().subscribe()"
-                    title="チャットパネルのレイアウト">
-                    <mat-icon>@if(userService.chatLayout==='grid') { dashboard } @else { grid_view }</mat-icon>
-                </button>
-                <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse()" title="チャットパネルの開閉">
-                    <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
-                </button>
-                <button mat-icon-button color="primary" (click)="openModelSetting()" title="設定">
-                    <mat-icon>settings</mat-icon>
-                </button>
-                <div class="mr-10"></div>
+    <div #textBodyElem class="custom-scroll w-full flex-1 h-0 px-2 py-0 flex flex-col gap-1 relative"
+      style="overflow-y: scroll;">
+      @for(index of indexList; track $index;let pIndex=$index) {
+      <div #chatPanelGroupElem class="flex gap-1 w-full min-w-full max-w-full">
 
-            </div>
+        @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
+        <div class="w-0 flex-1 relative">
+          @if(messageGroupIdListMas[thread.id]) {
+          @if(messageGroupIdListMas[thread.id][index]; as messageGroupId) {
+          @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
+
+          <!-- {{messageGroup.id}} -->
+          @if(messageGroup.role==='system') {
+          } @else if(['assistant', 'user'].includes(messageGroup.role)) {
+          <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
+            [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
+            (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
+            (remove)="removeMessageGroup($event)" (toolExec)="toolExec($event)"
+            (fileSelectionUpdateEmitter)="onChange()" (expanded)="expanded($event, pIndex, tIndex, messageGroup)">
+          </app-chat-panel-message>
+          }
+
+          }
+
+          <!-- メッセージの後ろのグループの選択肢 -->
+          @if(messageService.nextMessageGroupId[messageGroupId]
+          &&(
+          (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
+          ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
+          ) {
+          <ng-container
+            *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
+          </ng-container>
+          }
+
+          }
+          }
         </div>
-        @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length===1){
-        <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col z-10"
-            style="transform: scale(0.5);">
-            <h1>スレッド数</h1>
-            <div class="w-full flex justify-center items-center gap-10">
-                @for(index of [1, 2, 3, 4];track $index){
-                <div class="course-panel" (click)="loadPreset(index)"
-                    [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
-                }
-            </div>
-            <h1 style="margin-top: 80px;">定型文</h1>
-            <div class="w-full flex justify-center items-center gap-10">
-                @for(preset of presetInputList;track $index){
-                <div class="course-panel text-center" (click)="selectPreset(preset)" [innerHTML]="preset.label"
-                    [ngClass]="{selected:inputArea.content[0].text===preset.text}" style="line-height: 1.5;"></div>
-                }
-            </div>
-            <div class="text-xl mt-10 text-[#999]">スレッド数／定型文はオプションなので選ばなくてもよい。</div>
-        </div>
+
+        <!-- 
+        @if(selectedThreadGroup.threadList.length-1>tIndex && pIndex>0) {
+        <button mat-icon-button class="link-chain" [ngClass]="{'off': linkChainOff[pIndex]}"
+          (click)="linkChainOff[pIndex]=!linkChainOff[pIndex]">
+          <mat-icon>link</mat-icon>
+        </button>
         }
-        <!-- チャットエリア -->
+        -->
 
-        @if(userService.chatTabLayout==='tabs') {
-        <!-- タブ表示 -->
-        <mat-tab-group [ngClass]="{isSingleThread: selectedThreadGroup.threadList.length===1}"
-            (selectedIndexChange)="restoreScrollPosition($event)">
-            @for(thread of selectedThreadGroup.threadList;track $index) {
-            <mat-tab label="[Tab{{$index+1}}] {{thread.inDto.args.model}}">
-                <div style="height: calc(100vh - 100px);" class="flex flex-col gap-1 w-full">
-                    @if(messageGroupIdListMas[thread.id]; as messageGroupIdList){
-                    @if(messageGroupIdList[0]; as messageGroupId){
-                    <div style="width: calc(100% - 17px);" class="pt-2 px-2">
-                        @if(messageService.messageGroupMas[messageGroupIdList[0]]; as messageGroup) {
-                        <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
-                        <app-chat-panel-system class="top-0 z-10"
-                            [messageGroup]="messageService.messageGroupMas[messageGroupIdListMas[thread.id][0]]"
-                            [bitCounter]="bitCounter" [thread]="thread"
-                            [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
-                            (edit)="editChat($event)" (removeThread)="removeThread($event)"
-                            (modelChange)="modelCheck([$event])">
-                        </app-chat-panel-system>
-                        }
-                    </div>
-                    }
-
-                    }
-
-                    <div #textBodyElem (scroll)="saveScrollPosition($index)"
-                        class="custom-scroll w-full px-2 pb-52 relative flex flex-col gap-1"
-                        style="overflow-y: scroll;">
-
-                        @for(messageGroupId of messageGroupIdListMas[thread.id];track $index){
-                        @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
-
-                        <!-- {{messageGroup.id}} -->
-                        @if(messageGroup.role==='system') {
-                        } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-                        <div #anchor> <!-- スクロール用のただのアンカー -->
-                            <app-chat-panel-message #chatPanelList [messageGroup]="messageGroup"
-                                [bitCounter]="bitCounter" [layout]="userService.chatLayout" (edit)="editChat($event)"
-                                [index]="$index" (removeContent)="removeContent($event)"
-                                (removeMessage)="removeMessage($event)" (remove)="removeMessageGroup($event)">
-                            </app-chat-panel-message>
-                        </div>
-                        }
-
-                        }
-
-                        <!-- メッセージの後ろのグループの選択肢 -->
-                        @if(messageService.nextMessageGroupId[messageGroupId]
-                        &&(
-                        (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
-                        ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
-                        ) {
-                        <ng-container
-                            *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
-                        </ng-container>
-                        }
-
-                        }
-                    </div>
-                </div>
-            </mat-tab>
-            }
-        </mat-tab-group>
-        } @else {
-        <!-- リスト表示 -->
-
-        <div class="flex gap-1 px-2" style="z-index: 2;width: calc(100% - 17px);">
-            @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
-            <div class="w-0 flex-1">
-                @if(messageGroupIdListMas[thread.id]; as messageGroupIdList) {
-                @if(messageGroupIdList[0]; as messageGroupId) {
-                @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
-                <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
-                <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-                    [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1"
-                    [layout]="userService.chatLayout" (edit)="editChat($event)" (removeThread)="removeThread($event)"
-                    (modelChange)="modelCheck([$event])" (fileSelectionUpdateEmitter)="onChange()"
-                    (expanded)="expanded($event, 0, tIndex, messageGroup)">
-                </app-chat-panel-system>
-                }
-                }
-                }
-            </div>
-            }
-        </div>
-
-        <div #textBodyElem class="custom-scroll w-full flex-1 h-0 px-2 py-0 flex flex-col gap-1 relative"
-            style="overflow-y: scroll;">
-            @for(index of indexList; track $index;let pIndex=$index) {
-            <div #chatPanelGroupElem class="flex gap-1 w-full min-w-full max-w-full">
-
-                @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
-                <div class="w-0 flex-1">
-                    @if(messageGroupIdListMas[thread.id]) {
-                    @if(messageGroupIdListMas[thread.id][index]; as messageGroupId) {
-                    @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
-
-                    <!-- {{messageGroup.id}} -->
-                    @if(messageGroup.role==='system') {
-                    } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-                    <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-                        [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
-                        (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-                        (remove)="removeMessageGroup($event)" (fileSelectionUpdateEmitter)="onChange()"
-                        (expanded)="expanded($event, pIndex, tIndex, messageGroup)">
-                    </app-chat-panel-message>
-                    }
-
-                    }
-
-                    <!-- メッセージの後ろのグループの選択肢 -->
-                    @if(messageService.nextMessageGroupId[messageGroupId]
-                    &&(
-                    (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
-                    ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
-                    ) {
-                    <ng-container
-                        *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
-                    </ng-container>
-                    }
-
-                    }
-                    }
-                </div>
-                }
-                <!--                 
-                <div>
-                    <button mat-icon-button color="primary">
-                        <mat-icon>arrow_up</mat-icon>
-                    </button>
-                </div>
-                -->
-            </div>
-            }
-            <div class="spacer" style="min-height: 200px;"></div>
-        </div>
         }
-        <!-- 履歴選択 -->
-        <ng-template #messageSelectorTemplate let-messageGroup>
-            <div class="flex justify-end mt-3">
-                <mat-icon class="cursor-pointer" (click)="setSelect(messageGroup, -1)"
-                    [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
-                <div class="text-center w-[60px]">
-                    @if (messageService.nextMessageGroupId[messageGroup.id].length === messageGroup.selectedIndex) {
-                    prev
-                    } @else {
-                    {{messageGroup.selectedIndex + 1}} /
-                    {{messageService.nextMessageGroupId[messageGroup.id].length}}
-                    }
-                </div>
-                <mat-icon class="cursor-pointer" (click)="setSelect(messageGroup, 1)"
-                    [ngStyle]="{'visibility': messageService.nextMessageGroupId[messageGroup.id].length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
-            </div>
-        </ng-template>
+      </div>
+      }
+      <div class="spacer" style="min-height: 200px;"></div>
+    </div>
+    }
+    <!-- 履歴選択 -->
+    <ng-template #messageSelectorTemplate let-messageGroup>
+      <div class="flex justify-end mt-3">
+        <mat-icon class="cursor-pointer" (click)="setSelect(messageGroup, -1)"
+          [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
+        <div class="text-center w-[60px]">
+          @if (messageService.nextMessageGroupId[messageGroup.id].length === messageGroup.selectedIndex) {
+          prev
+          } @else {
+          {{messageGroup.selectedIndex + 1}} /
+          {{messageService.nextMessageGroupId[messageGroup.id].length}}
+          }
+        </div>
+        <mat-icon class="cursor-pointer" (click)="setSelect(messageGroup, 1)"
+          [ngStyle]="{'visibility': messageService.nextMessageGroupId[messageGroup.id].length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
+      </div>
+    </ng-template>
 
-        <!-- 入力エリア -->
-        <div class="bottom">
-            <!-- ファイル一覧 -->
-            <div class="flex justify-start gap-3 w-full p-5 overflow-x-auto">
-                @for(content of inputArea.content; track $index){
-                @if(content.type==='file'){
-                <app-doc-tag [content]="content" (updated)="onChange()"
-                    (remove)="inputArea.content.splice(inputArea.content.indexOf(content), 1)"></app-doc-tag>
-                }
-                }
-            </div>
-            <!-- メッセージ入力 -->
-            <div class="chat-input">
-                @for(content of inputArea.content; track $index){
-                @if(content.type==='text'){
-                <textarea (keydown)="onKeyDown($event)" #textAreaElem
-                    [placeholder]="appFileDrop()?.isHovered?'ファイルドロップ':(placeholder||'メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
-                    [(ngModel)]="content.text" (change)="onChange()"></textarea>
+    <!-- 入力エリア -->
+    <div class="bottom">
+      <!-- ファイル一覧 -->
+      <div class="flex justify-start gap-3 w-full p-5 overflow-x-auto">
+        @for(content of inputArea.content; track $index){
+        @if(content.type==='file'){
+        <app-doc-tag [content]="content" (updated)="onChange()"
+          (remove)="inputArea.content.splice(inputArea.content.indexOf(content), 1)"></app-doc-tag>
+        }
+        }
+      </div>
+      <!-- メッセージ入力 -->
+      <div class="chat-input">
+        @for(content of inputArea.content; track $index){
+        @if(content.type==='text'){
+        <textarea (keydown)="onKeyDown($event)" #textAreaElem
+          [placeholder]="appFileDrop()?.isHovered?'ファイルドロップ':(placeholder||'メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
+          [(ngModel)]="content.text" (change)="onChange()"></textarea>
 
-                @if(chatStreamSubscriptionList[selectedThreadGroup.id]){
-                <!-- 中断ボタン -->
-                <button mat-fab color="primary" aria-label="Cancel" matTooltip="回答を中断する" (click)="chatCancel()">
-                    <mat-icon>cancel</mat-icon>
-                </button>
-                }@else{
-                <!-- 送信ボタン -->
-                <!-- <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
+        @if(chatStreamSubscriptionList[selectedThreadGroup.id]){
+        <!-- 中断ボタン -->
+        <button mat-fab color="primary" aria-label="Cancel" matTooltip="回答を中断する" (click)="chatCancel()">
+          <mat-icon>cancel</mat-icon>
+        </button>
+        }@else{
+        <!-- 送信ボタン -->
+        <!-- <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
                         [disabled]="messageClusterList.length===0 || (!content.text && messageGroupMap[messageClusterList[messageClusterList.length-1][0].messageGroupId].role!=='user') || isLock"
                         (click)="send()">
                         <mat-icon>send</mat-icon>
                     </button> -->
-                <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter" (click)="send().subscribe()"
-                    [disabled]="isLock||(!content.text&&tailRole!=='user')"
-                    class="btn btn-primary"><mat-icon>send</mat-icon></button>
-                }
+        <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter" (click)="send().subscribe()"
+          [disabled]="isLock||(!content.text&&tailRole!=='user')"
+          class="btn btn-primary"><mat-icon>send</mat-icon></button>
+        }
 
-                <!-- <button mat-fab color="primary" aria-label="Send"
+        <!-- <button mat-fab color="primary" aria-label="Send"
                         [disabled]="(!content.text&&inDto.args.messages[inDto.args.messages.length-1].role!=='user') || isLock"
                         (click)="openFileDialog(fileInput)">
                         <mat-icon>folder_open</mat-icon>
@@ -404,41 +410,41 @@
                         <mat-icon>memory</mat-icon>
                     </button>
                      -->
-                <button mat-icon-button color="primary" [matMenuTriggerFor]="menu" [disabled]="isLock">
-                    <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #menu="matMenu" #name>
-                    <input type="file" #fileInput (change)="onFileSelected($event)" style="display: none;" multiple
-                        webkitdirectory directory>
-                    <button mat-menu-item (click)="openFileDialog(fileInput)">
-                        <mat-icon>attach_file</mat-icon>
-                        <span>ファイル添付</span>
-                    </button>
-                    <button mat-menu-item (click)="contextCacheControl(selectedThreadGroup)">
-                        <mat-icon>upload</mat-icon>
-                        <span>コンテキストキャッシュ{{isCacheLive(selectedThreadGroup)?'削除':'作成'}}</span>
-                    </button>
-                    <a mat-menu-item target="_blank" href="/ai/gemini-cost-calculator/">
-                        <mat-icon>question_mark</mat-icon>
-                        <span>コンテキストキャッシュとは？</span>
-                    </a>
-                    <button mat-menu-item (click)="openBulk()">
-                        <mat-icon>fast_forward</mat-icon>
-                        <span>一括実行</span>
-                    </button>
-                </mat-menu>
-                } @else {
-                }
-                }
-            </div>
+        <button mat-icon-button color="primary" [matMenuTriggerFor]="menu" [disabled]="isLock">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #menu="matMenu" #name>
+          <input type="file" #fileInput (change)="onFileSelected($event)" style="display: none;" multiple
+            webkitdirectory directory>
+          <button mat-menu-item (click)="openFileDialog(fileInput)">
+            <mat-icon>attach_file</mat-icon>
+            <span>ファイル添付</span>
+          </button>
+          <button mat-menu-item (click)="contextCacheControl(selectedThreadGroup)">
+            <mat-icon>upload</mat-icon>
+            <span>コンテキストキャッシュ{{isCacheLive(selectedThreadGroup)?'削除':'作成'}}</span>
+          </button>
+          <a mat-menu-item target="_blank" href="/ai/gemini-cost-calculator/">
+            <mat-icon>question_mark</mat-icon>
+            <span>コンテキストキャッシュとは？</span>
+          </a>
+          <button mat-menu-item (click)="openBulk()">
+            <mat-icon>fast_forward</mat-icon>
+            <span>一括実行</span>
+          </button>
+        </mat-menu>
+        } @else {
+        }
+        }
+      </div>
 
-            <div style="position: absolute;bottom: -25px;left: 32px;color: #a9a9a9;">
-                AIの回答は必ずしも正しいとは限りません。重要な情報は人の確認必須。機密情報・個人情報は入力禁止。
-                <a class="" href=" ./static/release-note.html" target="_blank">ガイドライン</a>
-            </div>
+      <div style="position: absolute;bottom: -25px;left: 32px;color: #a9a9a9;">
+        AIの回答は必ずしも正しいとは限りません。重要な情報は人の確認必須。機密情報・個人情報は入力禁止。
+        <a class="" href=" ./static/release-note.html" target="_blank">ガイドライン</a>
+      </div>
 
-        </div>
     </div>
-    <app-user-mark></app-user-mark>
+  </div>
+  <app-user-mark></app-user-mark>
 </div>
 }

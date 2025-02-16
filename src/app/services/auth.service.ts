@@ -234,6 +234,12 @@ export class AuthService {
     return this.http.get<any>(url);
   }
 
+  isOAuth2Connected(provider: OAuth2Provider, api: 'user-info', targetUrl: string = ''): Observable<any> {
+    targetUrl = targetUrl ? `?oAuth2ConnectedCheckTargetUrl=${targetUrl}` : '';
+    const url = `/user/oauth/api/basic-api/${provider}/${api}${targetUrl}`;
+    return this.http.get<any>(url);
+  }
+
   postPincode(pincode?: string): Observable<User> {
     const url = `/invite/oauth-emailauth`;
     return this.http.post<User>(url,
