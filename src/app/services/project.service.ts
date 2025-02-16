@@ -476,8 +476,8 @@ export class MessageService {
     /**
      * 履歴のどれを選択するかを決める。
      * previousMessageGroupId で束ねられたmessageGroupの中で、最も新しいものを選択するということ。
-     * @param previousMessageGroupId 
-     * @returns 
+     * @param previousMessageGroupId
+     * @returns
      */
     resetSelectedIndex(previousMessageGroupId: string): number {
         const nextMessageGroupId = this.nextMessageGroupId[previousMessageGroupId];
@@ -494,10 +494,10 @@ export class MessageService {
 
     /**
      * コンテンツダウンロードの時にも使いたいので、this以外でも使えるようにしておく。
-     * @param messageGroupMas 
-     * @param threadId 
-     * @param targetMessageGroupId 
-     * @returns 
+     * @param messageGroupMas
+     * @param threadId
+     * @param targetMessageGroupId
+     * @returns
      */
     static rebuildMessageGroup(messageGroupMas: { [messageGroupId: string]: MessageGroup }, threadId: string, targetMessageGroupId?: string): string[] {
         // build serial message structure
@@ -529,9 +529,9 @@ export class MessageService {
 
     /**
      * 指定されたmessageGroupの後ろに来るmessageGroupのIDリストを取得する。
-     * lastUpdateが古いものは取得しない。
-     * @param messageGroup 
-     * @returns 
+     * updatedAtが古いものは取得しない。
+     * @param messageGroup
+     * @returns
      */
     getTailMessageGroupIds(messageGroup: MessageGroupForView): string[] {
         let targetMessageGroupId = messageGroup.id;
@@ -579,7 +579,7 @@ export class MessageService {
             if (this.idRemapTable[messageGroup.previousMessageGroupId]) {
                 messageGroup.previousMessageGroupId = this.idRemapTable[messageGroup.previousMessageGroupId];
             } else {
-                // 
+                //
             }
         } else { }
         messageGroup.messages.map((message, index) => {
@@ -638,8 +638,8 @@ export class MessageService {
     /**
      * ThreadEntityをコピーして新しいThreadEntityを生成する。
      * Message系のマスタに反映するのでMessageServiceで実装してしまった。
-     * @param thread 
-     * @returns 
+     * @param thread
+     * @returns
      */
     cloneThreadDry(thread: Thread, newThreadId?: string): Observable<Thread> {
         const newThread = Utils.clone(thread);
