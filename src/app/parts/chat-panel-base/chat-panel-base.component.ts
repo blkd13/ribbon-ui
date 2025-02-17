@@ -333,36 +333,7 @@ export class ChatPanelBaseComponent implements OnInit {
   }
 
   onSubmit(): void {
-    // TODO 本当は次の送信までメッセージ保存したくないけどどうしようもないので一旦保存しておく。
-    // 内容を変更した場合は別メッセージとして扱う。
-    const messageGroup = this.messageGroup();
-    if (messageGroup.role === 'system') {
-      if (messageGroup.messages[0].id.startsWith('dummy-')) {
-      } else {
-        // system：システムプロンプトはツリーを変えたくないので単純にedit
-        safeForkJoin(messageGroup.messages.map(message => this.messageService.editMessageWithContents(message))).subscribe({
-          next: next => {
-            // 戻ってきたもので元オブジェクトに更新を掛ける。
-            next.forEach((message, index) => this.messageGroup().messages[index] = message);
-            this.editEmitter.emit(this.messageGroup());
-          },
-          error: error => {
-            this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
-            // TODO メッセージ戻す処理が必要。
-          }
-        });
-      }
-    } else {
-      this.messageService.upsertSingleMessageGroup(messageGroup).subscribe({
-        next: next => {
-          this.editEmitter.emit(next);
-        },
-        error: error => {
-          this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
-          // TODO メッセージ戻す処理が必要。
-        }
-      });
-    }
+    this.editEmitter.emit(this.messageGroup());
   }
 
   fileSelectionUpdate(): void {

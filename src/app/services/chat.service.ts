@@ -40,7 +40,7 @@ export type LlmModel = {
  * チャットサービス
  * ブラウザの同時コネクション数制限が6とかなので
  * イベントソースを毎回張るのではなくて1本にまとめる。
- * 
+ *
  * 認証情報はヘッダーに入れるため、new EventSource()ではなくXMLHttpRequestを使っている。
  */
 @Injectable({ providedIn: 'root' })
@@ -163,7 +163,7 @@ export class ChatService {
 
   // 100回連続でAPIキーを取得する (APIの性能を測る目的)
   // [...Utils.range(100)].forEach((index) => { this.getOpenAiApiKey().subscribe(); });
-  // 
+  //
   // 1回だけAPIキーを取得する（サーバー経由せずに直接OpenAIにアクセスするためのAPIキーを取得する） → 結局ダイレクトにアクセスが最速（50msとか）。サーバー経由だと遅い1秒とか。
   // this.getOpenAiApiKey().subscribe();
 
@@ -183,7 +183,7 @@ export class ChatService {
   /**
    * ChatGPTのSSEを参考に作った。
    * SSEを受け取ってスレッドID毎に選り分けて投げる
-   * @returns 
+   * @returns
    */
   private open(flag: boolean): Observable<string> {
     return new Observable<string>((observer) => {
@@ -276,12 +276,16 @@ export class ChatService {
 
                   // 監視オブジェクトを削除
                   delete this.subjectMap[streamId];
+                  if (streamId.split('|').length > 1) {
+                    delete this.subjectMap[streamId.split('|')[0]];
+                  } else { }
 
                   // ストリームが存在しなくなったら、XHRを中断する
                   if (Object.keys(this.subjectMap).length === 0) {
-                    xhr.abort();
+                    this.flag = false;
                     // チャットスレッド用にUUIDを生成
                     this.connectionId = uuidv4();
+                    xhr.abort();
                   } else {
                     // 何もしない
                   }
@@ -321,9 +325,9 @@ export class ChatService {
   /**
    * リクエストを投げる。戻りはEventSourceから来る。
    * タイトル設定用のメソッドなのでメッセージの実体を持つ。
-   * @param inDto 
-   * @param taskId 
-   * @returns 
+   * @param inDto
+   * @param taskId
+   * @returns
    */
   chatCompletionObservableStreamNew(inDto: ChatCompletionStreamInDto): Observable<{
     connectionId: string,
@@ -461,9 +465,9 @@ export class ChatService {
 
   /**
    * 翻訳タスク用の固定リクエストフォーム
-   * @param text 
-   * @param targetLanguage 
-   * @returns 
+   * @param text
+   * @param targetLanguage
+   * @returns
    */
   // chatTranslateObservableStream(text: string, targetLanguage: 'English' | 'Japanese' = 'English'): Observable<string> {
   //   const reqDto: ChatCompletionStreamInDto = {

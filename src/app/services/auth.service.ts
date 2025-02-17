@@ -24,9 +24,9 @@ export class AuthService {
 
   /**
    * ログイン処理。
-   * @param email 
-   * @param password 
-   * @returns 
+   * @param email
+   * @param password
+   * @returns
    */
   login(email: string, password: string): Observable<User> {
     const url = `/login`;
@@ -40,7 +40,7 @@ export class AuthService {
 
   /**
    * ゲストログイン
-   * @returns 
+   * @returns
    */
   guestLogin(): Observable<User> {
     const url = `/guest`;
@@ -97,8 +97,8 @@ export class AuthService {
   /**
    * ユーザー登録相当の処理。
    * メールアドレスに確認メールを送信する。
-   * @param email 
-   * @returns 
+   * @param email
+   * @returns
    */
   requestForPasswordReset(email: string): Observable<{ message: any }> {
     const url = `/request-for-password-reset`;
@@ -114,9 +114,9 @@ export class AuthService {
   /**
    * 確認メールからのリンクをクリックしたときの処理。
    * パスワードリセット用のワンタイムトークンを発行する。
-   * @param type 
-   * @param token 
-   * @returns 
+   * @param type
+   * @param token
+   * @returns
    */
   onetimeLogin(type: string, token: string): Observable<string> {
     const url = `/onetime`;
@@ -129,9 +129,9 @@ export class AuthService {
 
   /**
    * パスワードリセット処理。
-   * @param password 
-   * @param passwordConfirm 
-   * @returns 
+   * @param password
+   * @param passwordConfirm
+   * @returns
    */
   passwordReset(password: string, passwordConfirm: string): Observable<{ token: string, message: string }> {
     if (password === passwordConfirm) {
@@ -152,7 +152,7 @@ export class AuthService {
 
   /**
    * AccessToken再生成（要は延長）
-   * @returns 
+   * @returns
    */
   genAccessToken(): Observable<{}> {
     const url = `/user/access-token`;
@@ -181,8 +181,8 @@ export class AuthService {
 
   /**
    * ユーザー情報を更新する。
-   * @param user 
-   * @returns 
+   * @param user
+   * @returns
    */
   updateUser(user: User): Observable<User> {
     const url = `/user/user`;
@@ -192,9 +192,9 @@ export class AuthService {
 
   /**
    * パスワードを変更する。
-   * @param oldPassword 
-   * @param newPassword 
-   * @returns 
+   * @param oldPassword
+   * @param newPassword
+   * @returns
    */
   changePassword(oldPassword: string, newPassword: string): Observable<User> {
     const url = `/user/change-password`;
@@ -204,7 +204,7 @@ export class AuthService {
 
   /**
    * ユーザーを削除する。
-   * @returns 
+   * @returns
    */
   deleteUser(): Observable<void> {
     const url = `/user/user`;
@@ -213,7 +213,7 @@ export class AuthService {
 
   /**
    * OAuth2連携済み一覧
-   * @returns 
+   * @returns
    */
   getOAuthAccountList(): Observable<{ oauthAccounts: OAuthAccount[] }> {
     const url = `/user/oauth/account`;
@@ -222,7 +222,7 @@ export class AuthService {
 
   /**
    * OAuth2連携済み一覧
-   * @returns 
+   * @returns
    */
   getOAuthAccount(provider: string): Observable<{ oauthAccount: OAuthAccount }> {
     const url = `/user/oauth/account/${provider}`;

@@ -20,7 +20,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 
-import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty, catchError } from 'rxjs';
+import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty, catchError, throwError } from 'rxjs';
 import { ChatCompletionChunk, ChatCompletionToolMessageParam } from 'openai/resources/index.mjs';
 import { saveAs } from 'file-saver';
 
@@ -133,12 +133,15 @@ export class ChatComponent implements OnInit {
   showInfo = true;
   sortType: number = 1;
   isLock = false;
+  // スレッドごとのロック状態を管理するオブジェクトを追加
+  threadLocks: { [threadId: string]: boolean } = {};
+
   isThreadGroupLoading = false;
   tailRole = 'system';
   cost: number = 0;
   charCount: number = 0;
   tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
-  linkChainOff: boolean[] = [];
+  linkChain: boolean[] = []; // デフォルトはfalse
 
   readonly authService: AuthService = inject(AuthService);
   readonly chatService: ChatService = inject(ChatService);
@@ -763,7 +766,7 @@ export class ChatComponent implements OnInit {
     );
   }
 
-  touchMessageGroupAndRebuild(messageGroup: MessageGroupForView): Observable<MessageGroup> {
+  touchMessageGroupAndRebuild(messageGroup: MessageGroupForView): Observable<MessageGroupForView> {
     return (
       // ダミーの場合は一旦保存してからじゃないとタイムスタンプの意味ない。
       (messageGroup.threadId.startsWith('dummy-') || messageGroup.id.startsWith('dummy-'))
@@ -781,20 +784,50 @@ export class ChatComponent implements OnInit {
     )
   }
 
+  // ロック状態を確認するヘルパーメソッド
+  isThreadLocked(threadId: string): boolean {
+    return this.threadLocks[threadId] || false;
+  }
+
+  // スレッドグループ全体のロック状態を確認するヘルパーメソッド
+  isThreadGroupLocked(threadGroup: ThreadGroup): boolean {
+    return threadGroup.threadList.some(thread => this.isThreadLocked(thread.id));
+  }
+
   /**
    * 履歴の選択変更
    * @param group
    * @param delta
    */
-  setSelect(group: MessageGroupForView, delta: number): void {
-    group.selectedIndex += delta;
-    const selectedMessageGroupId = this.messageService.nextMessageGroupId[group.id][group.selectedIndex];
-    const messageGroup = this.messageService.messageGroupMas[selectedMessageGroupId];
-    const ids = this.messageService.getTailMessageGroupIds(messageGroup);
-    const newMessageGroup = this.messageService.messageGroupMas[ids.at(-1)!];
-    // contentのキャッシュを取得
-    newMessageGroup.isExpanded = true;
-    this.touchMessageGroupAndRebuild(this.messageService.messageGroupMas[ids.at(-1)!]).subscribe();
+  setSelect($event: Event, group: MessageGroupForView, delta: number): void {
+    this.stopPropagation($event);
+    const selectedIndex = group.selectedIndex + delta;
+    // Chainされている場合はシンクロ
+    const chainedList = this.getChaindedMessageGroupList(group, 1);
+    chainedList.forEach(group => {
+      console.log(group.id, selectedIndex, group.selectedIndex);
+      group.selectedIndex = Math.min(Math.max(0, selectedIndex), this.messageService.nextMessageGroupId[group.id].length - 1);
+      const selectedMessageGroupId = this.messageService.nextMessageGroupId[group.id][group.selectedIndex];
+      const messageGroup = this.messageService.messageGroupMas[selectedMessageGroupId];
+      const ids = this.messageService.getTailMessageGroupIds(messageGroup);
+      const newMessageGroup = this.messageService.messageGroupMas[ids.at(-1)!];
+      // contentのキャッシュを取得
+      newMessageGroup.isExpanded = true;
+      this.touchMessageGroupAndRebuild(newMessageGroup).subscribe({
+        next: newMessageGroup => {
+          newMessageGroup.isExpanded = true;
+          this.messageService.getMessageContentParts(newMessageGroup.messages[0]).pipe(
+            tap(contents => {
+              newMessageGroup.messages[0].contents = contents;
+              // 本来はメッセージ処理をしないといけないはず、、、
+              // this.setBrackets();
+              // this.isLoading = false;
+              // this.exPanel().open();
+            }),
+          );
+        },
+      });
+    });
   }
 
   /**
@@ -884,7 +917,16 @@ export class ChatComponent implements OnInit {
       } else { }
     }
 
-    this.isLock = true;
+    // this.isLock = true;
+    // ロックチェックを修正
+    for (const thread of threadList) {
+      if (this.isThreadLocked(thread.id)) {
+        this.snackBar.open(`メッセージ受信中のスレッドがあります。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`, 'close', { duration: 3000 });
+        throw new Error(`メッセージ受信中のスレッドがあります。`);
+      }
+    }
+    // 対象スレッドをロック
+    threadList.forEach(thread => this.threadLocks[thread.id] = true);
 
     // 初回送信後はプレースホルダをデフォルトのものに戻す。
     this.placeholder = this.defaultPlaceholder;
@@ -935,45 +977,52 @@ export class ChatComponent implements OnInit {
         }).map((messageGroupId, index) =>
           // contentPartの切り分けが失敗しまくっている。。。
           this.chatService.chatCompletionObservableStreamByProjectModel(this.selectedThreadGroup.threadList[index].inDto.args, 'messageGroup', messageGroupId, toolInput)
-            .pipe(tap(resDto => {
-              // console.log('response-------------------------');
-              // console.log(resDto);
-              // キャッシュを更新する
-              // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
+            .pipe(
+              tap(resDto => {
+                // console.log('response-------------------------');
+                // console.log(resDto);
+                // キャッシュを更新する
+                // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
 
-              // TODO toolの場合のmeta編集をしておかないといけない。でもこの整形色々なところで書いていて冗長なのでどこかにまとめたい。
-              resDto.messageGroupList.forEach(messageGroup => {
-                messageGroup.messages.forEach(message => {
-                  message.contents.forEach(contentPart => {
-                    if (contentPart.type === ContentPartType.TOOL) {
-                      // ツールの場合、ツールの内容をセットする
-                      contentPart.meta = JSON.parse(contentPart.text as string);
-                      if (contentPart.meta.call) {
-                        contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
+                // TODO toolの場合のmeta編集をしておかないといけない。でもこの整形色々なところで書いていて冗長なのでどこかにまとめたい。
+                resDto.messageGroupList.forEach(messageGroup => {
+                  messageGroup.messages.forEach(message => {
+                    message.contents.forEach(contentPart => {
+                      if (contentPart.type === ContentPartType.TOOL) {
+                        // ツールの場合、ツールの内容をセットする
+                        contentPart.meta = JSON.parse(contentPart.text as string);
+                        if (contentPart.meta.call) {
+                          contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
+                        } else { }
+                        if (contentPart.meta.result) {
+                          contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
+                        } else { }
+                        // this.messageService.contentPartMas[contentPart.id] = contentPart;
                       } else { }
-                      if (contentPart.meta.result) {
-                        contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
-                      } else { }
-                      // this.messageService.contentPartMas[contentPart.id] = contentPart;
+                    });
+                  });
+
+                  this.messageService.applyMessageGroup(messageGroup);
+                  this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
+                  messageGroup.isExpanded = true;
+                  messageGroup.messages.map(message => {
+                    if (message.observer) {
+                      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
+                      console.log(`Message ID before chat completion: ${message.id}`);
                     } else { }
                   });
                 });
-
-                this.messageService.applyMessageGroup(messageGroup);
-                this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
-                messageGroup.isExpanded = true;
-                messageGroup.messages.map(message => {
-                  if (message.observer) {
-                    this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
-                    console.log(`Message ID before chat completion: ${message.id}`);
-                  } else { }
-                });
-              });
-              this.rebuildThreadGroup();
-              this.autoscroll = true;
-              this.beforeScrollTop = -1;
-              console.log(this.messageGroupIdListMas);
-            })),
+                this.rebuildThreadGroup();
+                this.autoscroll = true;
+                this.beforeScrollTop = -1;
+                console.log(this.messageGroupIdListMas);
+              }),
+              catchError(error => {
+                // エラー時も必ず各スレッドのロックを解除する
+                threadList.forEach(thread => this.threadLocks[this.selectedThreadGroup.threadList[index].id] = false);
+                return throwError(() => error);
+              })
+            ),
         )).pipe(tap(text => {
           // console.log(`pipe---------------------${text}`);
           // メッセージID紐づけ。
@@ -985,7 +1034,7 @@ export class ChatComponent implements OnInit {
           //   this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
           // }, 100);
         })),
-      )
+      ),
     );
   }
 
@@ -1143,6 +1192,7 @@ export class ChatComponent implements OnInit {
     const threadGroup = this.threadGroupList.find(threadGroup => threadGroup.threadList.find(thread => thread.id === threadId));
     if (threadGroup) {
       // TODO DANGER this.を使っているのでスレッドグループ行き来したときに混ざってないか心配。。。
+      this.threadLocks[threadId] = false;
       delete this.chatStreamSubscriptionList[threadGroup.id];
       if (this.selectedThreadGroup.id === threadGroup.id) {
         // new-threadだった時はチャットが完了したらURL動かしておく。
@@ -1207,12 +1257,13 @@ export class ChatComponent implements OnInit {
   /** チャット中断 */
   chatCancel(): void {
     _paq.push(['trackEvent', 'AIチャット', 'メッセージキャンセル', this.selectedThreadGroup.threadList.length]);
-    if (this.chatStreamSubscriptionList[this.selectedThreadGroup.id]) {
-      this.isLock = false;
-      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
-      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.unsubscribe());
-    } else {
-    }
+    this.selectedThreadGroup.threadList.forEach(thread => {
+      if (this.chatStreamSubscriptionList[this.selectedThreadGroup.id]) {
+        this.threadLocks[thread.id] = false;
+        setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+        this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.unsubscribe());
+      }
+    });
     delete this.chatStreamSubscriptionList[this.selectedThreadGroup.id];
   }
 
@@ -1492,6 +1543,10 @@ export class ChatComponent implements OnInit {
   }
 
   removeMessageGroup(messageGroup: MessageGroupForView): void {
+    if (this.isThreadLocked(messageGroup.threadId)) {
+      this.snackBar.open(`現在処理中のため削除できません。`, 'close', { duration: 3000 });
+      return;
+    } else { }
     (messageGroup.id.startsWith('dummy-') ? this.saveAndBuildThreadGroup() : of([])).subscribe({
       next: next => {
         if (messageGroup.role === 'system' || !messageGroup.previousMessageGroupId) {
@@ -1544,21 +1599,109 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  editChat(messageGroup: MessageGroupForView): void {
-    messageGroup.messages.forEach(message => {
-      if (this.messageService.messageMas[message.id]) {
-        // 既存メッセージそのままの場合。
-      } else if (this.messageService.messageGroupMas[messageGroup.id]) {
-        // 既存グループへの新メッセージ追加
-        // this.inputArea.messageGroupId = '';
-        this.textAreaElem().nativeElement.focus();
+  /**
+   * 指定されたメッセージグループのリンクチェインを取得する
+   * @param messageGroup 
+   * @returns 
+   */
+  getChaindedMessageGroupList(messageGroup: MessageGroupForView, offset: number = 0): MessageGroupForView[] {
+    const targetMessageGrouplist = [];
+    if (this.userService.chatTabLayout === 'tabs') {
+      // tabモードの時は単独
+      targetMessageGrouplist.push(messageGroup);
+    } else {
+      const index = this.messageGroupIdListMas[messageGroup.threadId].findIndex(messageGroupId => messageGroupId === messageGroup.id);
+      if (!this.linkChain[index + offset]) { // linkChainの位置をoffsetで無理矢理ずらす。selectIndexが1個下のやつのインデックスになっていて画面の見た目と合わないからこういった無理矢理なことをしている。
+        // linkChain=falseの場合は自分だけ
+        targetMessageGrouplist.push(messageGroup);
       } else {
-        // 新規グループで新規メッセージ
-        // ここはない？
+        // linkChain=trueの場合は全て
+        Object.keys(this.messageGroupIdListMas).forEach(threadId => {
+          const syncMessageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[threadId][index]];
+          if (syncMessageGroup) {
+            targetMessageGrouplist.push(syncMessageGroup);
+          } else {
+            // ない場合は何もしなくてよい
+          }
+        });
       }
-    });
-    this.rebuildThreadGroup();
-    this.onChange();
+    }
+    return targetMessageGrouplist;
+  }
+
+  editChat(messageGroup: MessageGroupForView): void {
+    const targetMessageGroupList = this.getChaindedMessageGroupList(messageGroup);
+    const syncTargetMessageGroupList = targetMessageGroupList.filter(messageGroup => messageGroup !== messageGroup);
+
+    // 複数ある場合はシンクロさせる
+    if (syncTargetMessageGroupList.length > 0) {
+      syncTargetMessageGroupList.forEach(syncMessageGroup => {
+        syncMessageGroup.messages.forEach((message, mIndex) => {
+          message.contents.forEach((content, cIndex) => {
+            if (cIndex < messageGroup.messages[mIndex].contents.length) {
+              content.type = messageGroup.messages[mIndex].contents[cIndex].type;
+              content.text = messageGroup.messages[mIndex].contents[cIndex].text;
+              content.meta = messageGroup.messages[mIndex].contents[cIndex].meta;
+              content.fileGroupId = messageGroup.messages[mIndex].contents[cIndex].fileGroupId;
+              content.tokenCount = messageGroup.messages[mIndex].contents[cIndex].tokenCount;
+            } else {
+              content.id = undefined as any; // 無理矢理消す
+            }
+          });
+          if (mIndex < messageGroup.messages.length) {
+            message.cacheId = messageGroup.messages[mIndex].cacheId;
+            message.label = messageGroup.messages[mIndex].label;
+          } else {
+            message.id = undefined as any; // 無理矢力消す
+          }
+        });
+        syncMessageGroup.role = messageGroup.role;
+        syncMessageGroup.type = messageGroup.type;
+        syncMessageGroup.selectedIndex = messageGroup.selectedIndex;
+      });
+    } else {
+      // 1つだけの場合はそのまま編集
+    }
+
+    // ここからは編集処理
+    let fineCounter = targetMessageGroupList.length;
+    const after = (messageGroup?: MessageGroupForView): void => {
+      fineCounter--;
+      if (fineCounter === 0) {
+        this.rebuildThreadGroup();
+        this.onChange();
+        setTimeout(() => this.textAreaElem().nativeElement.focus(), 0);
+      } else { }
+    }
+    const afterProc = {
+      next: next => {
+        after(next);
+      },
+      error: error => {
+        this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
+        after();
+        // TODO メッセージ戻す処理が必要。
+      }
+    } as Partial<Observer<MessageGroupForView>> | ((value: MessageGroupForView) => void) | undefined;
+    for (const messageGroup of targetMessageGroupList) {
+      // TODO 本当は次の送信までメッセージ保存したくないけどどうしようもないので一旦保存しておく。
+      // 内容を変更した場合は別メッセージとして扱う。
+      if (messageGroup.role === 'system') {
+        if (messageGroup.messages[0].id.startsWith('dummy-')) {
+        } else {
+          // system：システムプロンプトはツリーを変えたくないので単純にedit
+          safeForkJoin(messageGroup.messages.map(message => this.messageService.editMessageWithContents(message))).pipe(
+            map(next => {
+              // 戻ってきたもので元オブジェクトに更新を掛ける。
+              next.forEach((message, index) => messageGroup.messages[index] = message);
+              return messageGroup;
+            }),
+          ).subscribe(afterProc);
+        }
+      } else {
+        this.messageService.upsertSingleMessageGroup(messageGroup).subscribe(afterProc);
+      }
+    }
   }
 
   contentsDownload($event: MouseEvent, $index: number, threadGroup: ThreadGroup): void {
