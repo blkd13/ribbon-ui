@@ -20,8 +20,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 
-import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty, catchError, throwError } from 'rxjs';
-import { ChatCompletionChunk, ChatCompletionToolMessageParam } from 'openai/resources/index.mjs';
+import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty, catchError, throwError, EMPTY } from 'rxjs';
 import { saveAs } from 'file-saver';
 
 import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
@@ -444,7 +443,7 @@ export class ChatComponent implements OnInit {
               this.isThreadGroupLoading = false;
 
               // 一番下まで下げる
-              this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+              // this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
 
               // this.router.navigate(['chat', this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
               setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
@@ -751,7 +750,7 @@ export class ChatComponent implements OnInit {
               this.rebuildThreadGroup();
               setTimeout(() => {
                 DomUtils.textAreaHeighAdjust(this.textAreaElem().nativeElement); // 高さ調整
-                this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+                // this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
               }, 0);
               upsertResponseList.forEach(messageGroup => messageGroup.isExpanded = true);
               return upsertResponseList.map(messageGroup => messageGroup.id);
@@ -833,7 +832,12 @@ export class ChatComponent implements OnInit {
   /**
    * 推論開始トリガーを引く
    */
-  send(type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | 'contentPart' | undefined = undefined, idList: string[] = [], toolInput?: unknown): Observable<{
+  send(
+    // typeで色々指定できるようにしたかったが、現状messageGroup以外はバグってる。。
+    type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | 'contentPart' | undefined = undefined,
+    idList: string[] = [],
+    toolInput?: unknown,
+  ): Observable<{
     connectionId: string,
     streamId: string,
     messageGroupList: MessageGroup[],
@@ -932,7 +936,7 @@ export class ChatComponent implements OnInit {
     this.placeholder = this.defaultPlaceholder;
 
     // キャッシュ使う場合はキャッシュ期限をcacheTtlInSecondsまで伸ばす
-    const inDto = this.selectedThreadGroup.threadList[0].inDto;
+    const inDto = threadList[0].inDto;
     if (this.selectedThreadGroup && inDto.args.cachedContent) {
       const expireTime = new Date(inDto.args.cachedContent.expireTime);
       const currentTime = new Date();
@@ -953,7 +957,9 @@ export class ChatComponent implements OnInit {
       }
     } else { }
 
-    _paq.push(['trackEvent', 'AIチャット', 'メッセージ送信', this.selectedThreadGroup.threadList.length]);
+    _paq.push(['trackEvent', 'AIチャット', 'メッセージ送信', threadList.length]);
+
+    const indexMap = this.selectedThreadGroup.threadList.map(thread => threadList.indexOf(thread));
 
     return this.saveAndBuildThreadGroup().pipe(
       switchMap(messageGroupIds =>
@@ -976,53 +982,58 @@ export class ChatComponent implements OnInit {
           }
         }).map((messageGroupId, index) =>
           // contentPartの切り分けが失敗しまくっている。。。
-          this.chatService.chatCompletionObservableStreamByProjectModel(this.selectedThreadGroup.threadList[index].inDto.args, 'messageGroup', messageGroupId, toolInput)
-            .pipe(
-              tap(resDto => {
-                // console.log('response-------------------------');
-                // console.log(resDto);
-                // キャッシュを更新する
-                // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
+          indexMap[index] === -1
+            ? EMPTY
+            : this.chatService.chatCompletionObservableStreamByProjectModel(threadList[indexMap[index]].inDto.args, 'messageGroup', messageGroupId, toolInput)
+              .pipe(
+                tap(resDto => {
+                  // console.log('response-------------------------');
+                  // console.log(resDto);
+                  // キャッシュを更新する
+                  // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
 
-                // TODO toolの場合のmeta編集をしておかないといけない。でもこの整形色々なところで書いていて冗長なのでどこかにまとめたい。
-                resDto.messageGroupList.forEach(messageGroup => {
-                  messageGroup.messages.forEach(message => {
-                    message.contents.forEach(contentPart => {
-                      if (contentPart.type === ContentPartType.TOOL) {
-                        // ツールの場合、ツールの内容をセットする
-                        contentPart.meta = JSON.parse(contentPart.text as string);
-                        if (contentPart.meta.call) {
-                          contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
+                  // TODO toolの場合のmeta編集をしておかないといけない。でもこの整形色々なところで書いていて冗長なのでどこかにまとめたい。
+                  resDto.messageGroupList.forEach(messageGroup => {
+                    messageGroup.messages.forEach(message => {
+                      message.contents.forEach(contentPart => {
+                        if (contentPart.type === ContentPartType.TOOL) {
+                          // ツールの場合、ツールの内容をセットする
+                          contentPart.meta = JSON.parse(contentPart.text as string);
+                          if (contentPart.meta.call) {
+                            contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
+                          } else { }
+                          if (contentPart.meta.result) {
+                            contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
+                          } else { }
+                          // this.messageService.contentPartMas[contentPart.id] = contentPart;
                         } else { }
-                        if (contentPart.meta.result) {
-                          contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
-                        } else { }
-                        // this.messageService.contentPartMas[contentPart.id] = contentPart;
+                      });
+                    });
+
+                    // 新規メッセージを追加？
+                    this.messageService.applyMessageGroup(messageGroup);
+                    this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
+                    messageGroup.isExpanded = true;
+                    messageGroup.messages.map(message => {
+                      if (message.observer) {
+                        this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
+                        console.log(`Message ID before chat completion: ${message.id}`);
                       } else { }
                     });
                   });
-
-                  this.messageService.applyMessageGroup(messageGroup);
-                  this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
-                  messageGroup.isExpanded = true;
-                  messageGroup.messages.map(message => {
-                    if (message.observer) {
-                      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
-                      console.log(`Message ID before chat completion: ${message.id}`);
-                    } else { }
-                  });
-                });
-                this.rebuildThreadGroup();
-                this.autoscroll = true;
-                this.beforeScrollTop = -1;
-                console.log(this.messageGroupIdListMas);
-              }),
-              catchError(error => {
-                // エラー時も必ず各スレッドのロックを解除する
-                threadList.forEach(thread => this.threadLocks[this.selectedThreadGroup.threadList[index].id] = false);
-                return throwError(() => error);
-              })
-            ),
+                  // 一番下まで下げる
+                  this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+                  this.rebuildThreadGroup();
+                  this.autoscroll = true;
+                  this.beforeScrollTop = -1;
+                  console.log(this.messageGroupIdListMas);
+                }),
+                catchError(error => {
+                  // エラー時も必ず各スレッドのロックを解除する
+                  threadList.forEach(thread => this.threadLocks[thread.id] = false);
+                  return throwError(() => error);
+                })
+              ),
         )).pipe(tap(text => {
           // console.log(`pipe---------------------${text}`);
           // メッセージID紐づけ。
@@ -1543,44 +1554,46 @@ export class ChatComponent implements OnInit {
   }
 
   removeMessageGroup(messageGroup: MessageGroupForView): void {
-    if (this.isThreadLocked(messageGroup.threadId)) {
-      this.snackBar.open(`現在処理中のため削除できません。`, 'close', { duration: 3000 });
-      return;
-    } else { }
-    (messageGroup.id.startsWith('dummy-') ? this.saveAndBuildThreadGroup() : of([])).subscribe({
-      next: next => {
-        if (messageGroup.role === 'system' || !messageGroup.previousMessageGroupId) {
-          return;
-        } else { }
-        if (!this.messageService.messageGroupMas[messageGroup.previousMessageGroupId]) return;
+    this.getChaindedMessageGroupList(messageGroup).forEach(messageGroup => {
+      if (this.isThreadLocked(messageGroup.threadId)) {
+        this.snackBar.open(`現在処理中のため削除できません。`, 'close', { duration: 3000 });
+        return;
+      } else { }
+      (messageGroup.id.startsWith('dummy-') ? this.saveAndBuildThreadGroup() : of([])).subscribe({
+        next: next => {
+          if (messageGroup.role === 'system' || !messageGroup.previousMessageGroupId) {
+            return;
+          } else { }
+          if (!this.messageService.messageGroupMas[messageGroup.previousMessageGroupId]) return;
 
-        // あえてOutOfBoundsさせる
-        messageGroup.selectedIndex = messageGroup.messages.length;
+          // あえてOutOfBoundsさせる
+          messageGroup.selectedIndex = messageGroup.messages.length;
 
-        const previousMessageGroup: MessageGroupForView = this.messageService.messageGroupMas[messageGroup.previousMessageGroupId];
+          const previousMessageGroup: MessageGroupForView = this.messageService.messageGroupMas[messageGroup.previousMessageGroupId];
 
-        this.touchMessageGroupAndRebuild(previousMessageGroup).subscribe({
-          next: next => {
-            if (messageGroup.role === 'user') {
-              this.inputArea.messageGroupId = previousMessageGroup.id;
-            } else if (messageGroup.role === 'assistant') {
-              // assistantを削除するとはつまりリトライのこと
-              this.inputArea.content[0].text = '';
-              if (messageGroup.previousMessageGroupId) {
-                // リトライさせるのは一個前のメッセージグループ
-                this.send('messageGroup', [messageGroup.previousMessageGroupId]).subscribe({});
-              } else { }
-            } else if (messageGroup.role === 'system') {
-            }
-          },
-          error: error => {
-            this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
-          },
-        });
-      },
-      error: error => {
-        this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
-      },
+          this.touchMessageGroupAndRebuild(previousMessageGroup).subscribe({
+            next: next => {
+              if (messageGroup.role === 'user') {
+                this.inputArea.messageGroupId = previousMessageGroup.id;
+              } else if (messageGroup.role === 'assistant') {
+                // assistantを削除するとはつまりリトライのこと
+                this.inputArea.content[0].text = '';
+                if (messageGroup.previousMessageGroupId) {
+                  // リトライさせるのは一個前のメッセージグループ
+                  this.send('messageGroup', [messageGroup.previousMessageGroupId]).subscribe({});
+                } else { }
+              } else if (messageGroup.role === 'system') {
+              }
+            },
+            error: error => {
+              this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+            },
+          });
+        },
+        error: error => {
+          this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+        },
+      });
     });
   }
 
@@ -1631,7 +1644,7 @@ export class ChatComponent implements OnInit {
 
   editChat(messageGroup: MessageGroupForView): void {
     const targetMessageGroupList = this.getChaindedMessageGroupList(messageGroup);
-    const syncTargetMessageGroupList = targetMessageGroupList.filter(messageGroup => messageGroup !== messageGroup);
+    const syncTargetMessageGroupList = targetMessageGroupList.filter(_messageGroup => _messageGroup !== messageGroup);
 
     // 複数ある場合はシンクロさせる
     if (syncTargetMessageGroupList.length > 0) {

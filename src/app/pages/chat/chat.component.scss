@@ -193,16 +193,18 @@
 }
 
 .link-chain {
+    position: sticky;
+    top: 0;
     width: 0;
     padding: 0;
     z-index: 2;
-    transform: translate(-16px, 16px);
-    transform: translate(-14px, 2px);
+    transform: translate(0, 2px);
     overflow: visible;
     // color: rgb(105 184 205);
     cursor: pointer;
 
     >mat-icon {
+        margin-left: -14px;
         font-weight: 100;
         font-size: 32px;
         font-size: 28px;

@@ -263,7 +263,7 @@
     } @else {
     <!-- リスト表示 -->
 
-    <div class="flex gap-1 px-2" style="z-index: 2;width: calc(100% - 17px);">
+    <div class="flex gap-0.5 px-2" style="z-index: 2;width: calc(100% - 17px);">
       @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
       <div class="w-0 flex-1">
         @if(messageGroupIdListMas[thread.id]; as messageGroupIdList) {
@@ -280,14 +280,23 @@
         }
       </div>
 
-      <!-- 
-      @if(selectedThreadGroup.threadList.length-1>tIndex) {
-      <button mat-icon-button class="link-chain" [ngClass]="{'off': linkChainOff[0]}"
-        (click)="linkChainOff[0]=!linkChainOff[0]">
+      @let pIndex=0;
+      @if(true
+      && selectedThreadGroup
+      && selectedThreadGroup.threadList
+      && selectedThreadGroup.threadList.length>tIndex+1
+      && selectedThreadGroup.threadList[tIndex]
+      && selectedThreadGroup.threadList[tIndex+1]
+      && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex].id]
+      && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex].id][pIndex]
+      && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex+1].id]
+      && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex+1].id][pIndex]
+      ) {
+      <button mat-icon-button class="link-chain" [ngClass]="{'off': !linkChain[pIndex]}"
+        (click)="linkChain[pIndex]=!linkChain[pIndex]">
         <mat-icon>link</mat-icon>
       </button>
       }
-      -->
 
       }
     </div>
@@ -295,7 +304,7 @@
     <div #textBodyElem class="custom-scroll w-full flex-1 h-0 px-2 py-0 flex flex-col gap-1 relative"
       style="overflow-y: scroll;">
       @for(index of indexList; track $index;let pIndex=$index) {
-      <div #chatPanelGroupElem class="flex gap-0.5 w-full min-w-full max-w-full">
+      <div #chatPanelGroupElem class="flex gap-0.5 w-full min-w-full max-w-full relative">
 
         @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
         <div class="w-0 flex-grow flex flex-col justify-between relative">
@@ -338,9 +347,9 @@
         && selectedThreadGroup.threadList[tIndex]
         && selectedThreadGroup.threadList[tIndex+1]
         && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex].id]
-        && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex].id][index]
+        && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex].id][pIndex]
         && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex+1].id]
-        && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex+1].id][index]
+        && messageGroupIdListMas[selectedThreadGroup.threadList[tIndex+1].id][pIndex]
         ) {
         <button mat-icon-button class="link-chain" [ngClass]="{'off': !linkChain[pIndex]}"
           (click)="linkChain[pIndex]=!linkChain[pIndex]">
@@ -351,24 +360,48 @@
         }
       </div>
       }
-      <div class="spacer" style="min-height: 200px;"></div>
+      <!--
+      @if(selectedThreadGroup && selectedThreadGroup.threadList
+      &&selectedThreadGroup.threadList.length>0
+      &&messageGroupIdListMas[selectedThreadGroup.threadList[0].id]
+      &&messageService.messageGroupMas[messageGroupIdListMas[selectedThreadGroup.threadList[0].id].at(-1)||'']
+      ){
+      <div class="spacer" style="min-height: calc(100vh - 230px);"
+        [ngStyle]="{'min-height': messageService.messageGroupMas[messageGroupIdListMas[selectedThreadGroup.threadList[0].id].at(-1)||''].role==='user' ? 'calc(100vh - 230px)':'200px'}">
+      </div>
+      }
+      -->
+      <div class="spacer" style="min-height: calc(100vh - 230px);">
+      </div>
     </div>
     }
     <!-- 履歴選択 -->
     <ng-template #messageSelectorTemplate let-messageGroup>
-      <div class="flex justify-end mt-3">
-        <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, -1)"
-          [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
-        <div class="text-center w-[60px]">
-          @if (messageService.nextMessageGroupId[messageGroup.id].length === messageGroup.selectedIndex) {
-          prev
-          } @else {
-          {{messageGroup.selectedIndex + 1}} /
-          {{messageService.nextMessageGroupId[messageGroup.id].length}}
-          }
+      <div class="flex items-center justify-between mt-3">
+        @if(messageGroup.role==='user'&&messageGroupIdListMas[messageGroup.threadId].length===messageGroupIdListMas[messageGroup.threadId].indexOf(messageGroup.id)+1)
+        {
+        <!-- 何でか上手く動かない。。。 -->
+        <!--           
+        <button mat-icon-button class="pl-6 -mt-4 top-2" (click)="send('messageGroup', [messageGroup.id]).subscribe()">
+          <mat-icon color="primary">send</mat-icon>
+        </button>
+        -->
+        <div></div>
+        }@else{<div></div>}
+        <div class="flex items-center">
+          <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, -1)"
+            [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
+          <div class="text-center w-[60px]">
+            @if (messageService.nextMessageGroupId[messageGroup.id].length === messageGroup.selectedIndex) {
+            prev
+            } @else {
+            {{messageGroup.selectedIndex + 1}} /
+            {{messageService.nextMessageGroupId[messageGroup.id].length}}
+            }
+          </div>
+          <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, 1)"
+            [ngStyle]="{'visibility': messageService.nextMessageGroupId[messageGroup.id].length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
         </div>
-        <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, 1)"
-          [ngStyle]="{'visibility': messageService.nextMessageGroupId[messageGroup.id].length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
       </div>
     </ng-template>
 

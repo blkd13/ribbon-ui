@@ -103,17 +103,10 @@ export class ChatPanelBaseComponent implements OnInit {
 
   isLoading = false;
 
+  isExecuted = false;
   isRequireComfirm(): boolean {
     // TODO ここは遅くなる元なのであってはならない。
-    this.messageGroup().messages.find(message => {
-      return message.contents.find(content => {
-        // if (content.type === 'tool') {
-        //   console.log(content);
-        // }
-        return content.type === 'tool' && content.meta.info?.requireComfirm && !content.meta.result;
-      })
-    }) ? true : false;
-    return this.messageGroup().messages.find(message => message.contents.find(content => content.type === 'tool' && content.meta.info?.requireComfirm && !content.meta.result)) ? true : false;
+    return !this.isExecuted && this.messageGroup().messages.find(message => message.contents.find(content => content.type === 'tool' && content.meta.info?.requireComfirm && !content.meta.result)) ? true : false;
   }
 
   readonly chatService: ChatService = inject(ChatService);
@@ -313,6 +306,7 @@ export class ChatPanelBaseComponent implements OnInit {
     $event.stopImmediatePropagation();
     $event.preventDefault();
     if (content) {
+      this.isExecuted = true;
       this.toolExecEmitter.emit(content);
     } else { }
   }
