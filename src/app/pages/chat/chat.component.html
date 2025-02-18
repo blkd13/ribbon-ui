@@ -178,8 +178,8 @@
       </div>
     </div>
     @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length===1){
-    <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col z-10"
-      style="transform: scale(0.5);">
+    <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col "
+      style="transform: scale(0.5);z-index: 1;">
       <h1>スレッド数</h1>
       <div class="w-full flex justify-center items-center gap-10">
         @for(index of [1, 2, 3, 4];track $index){
@@ -211,7 +211,7 @@
           <div style="width: calc(100% - 17px);" class="pt-2 px-2">
             @if(messageService.messageGroupMas[messageGroupIdList[0]]; as messageGroup) {
             <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
-            <app-chat-panel-system class="top-0 z-10" [messageGroup]="messageGroup"
+            <app-chat-panel-system class="top-0" style="z-index:2;" [messageGroup]="messageGroup"
               [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="bitCounter" [thread]="thread"
               [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
               (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])">
@@ -244,11 +244,7 @@
             }
 
             <!-- メッセージの後ろのグループの選択肢 -->
-            @if(messageService.nextMessageGroupId[messageGroupId]
-            &&(
-            (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
-            ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
-            ) {
+            @if(messageService.nextMessageGroupId[messageGroupId]) {
             <ng-container
               *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
             </ng-container>
@@ -315,22 +311,34 @@
           <!-- {{messageGroup.id}} -->
           @if(messageGroup.role==='system') {
           } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-          <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-            [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
-            (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-            (remove)="removeMessageGroup($event)" (toolExec)="toolExec($event)"
-            (fileSelectionUpdateEmitter)="onChange()" (expanded)="expanded($event, pIndex, tIndex, messageGroup)">
-          </app-chat-panel-message>
+          <div>
+            <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
+              [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
+              (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
+              (remove)="removeMessageGroup($event)" (toolExec)="toolExec($event)"
+              (fileSelectionUpdateEmitter)="onChange()" (expanded)="expanded($event, pIndex, tIndex, messageGroup)">
+            </app-chat-panel-message>
+            <!-- 末尾だったら追加可能にする -->
+            @if(!messageService.nextMessageGroupId[messageGroupId]) {
+            @if(messageService.messageGroupMas[messageGroupId].role==='user'){
+            <button mat-icon-button class="pl-6" (click)="send('messageGroup', [messageGroupId]).subscribe()">
+              <mat-icon color="primary">send</mat-icon>
+            </button>
+            } @else {
+            <!-- 追加ボタンをそのうち付けようと思ている。そもそも単純な追加APIがまだ無い。
+            <button mat-icon-button class="pl-6" (click)="send('messageGroup', [messageGroupId]).subscribe()">
+              <mat-icon color="primary">add_circle</mat-icon>
+            </button>
+            -->
+            }
+            }
+          </div>
           }
 
           }
 
           <!-- メッセージの後ろのグループの選択肢 -->
-          @if(messageService.nextMessageGroupId[messageGroupId]
-          &&(
-          (messageService.nextMessageGroupId[messageGroupId].length>messageService.messageGroupMas[messageGroupId].selectedIndex&&messageService.nextMessageGroupId[messageGroupId].length>1)
-          ||messageService.nextMessageGroupId[messageGroupId].length===messageService.messageGroupMas[messageGroupId].selectedIndex)
-          ) {
+          @if(messageService.nextMessageGroupId[messageGroupId]) {
           <ng-container
             *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }">
           </ng-container>
@@ -371,37 +379,31 @@
       </div>
       }
       -->
-      <div class="spacer" style="min-height: calc(100vh - 230px);">
+      <div class="spacer" style="min-height: 200px;">
       </div>
     </div>
     }
     <!-- 履歴選択 -->
     <ng-template #messageSelectorTemplate let-messageGroup>
+      @let nextMessageGroupIdList=messageService.nextMessageGroupId[messageGroup.id];
       <div class="flex items-center justify-between mt-3">
-        @if(messageGroup.role==='user'&&messageGroupIdListMas[messageGroup.threadId].length===messageGroupIdListMas[messageGroup.threadId].indexOf(messageGroup.id)+1)
-        {
-        <!-- 何でか上手く動かない。。。 -->
-        <!--           
-        <button mat-icon-button class="pl-6 -mt-4 top-2" (click)="send('messageGroup', [messageGroup.id]).subscribe()">
-          <mat-icon color="primary">send</mat-icon>
-        </button>
-        -->
-        <div></div>
-        }@else{<div></div>}
+        @if(
+        (nextMessageGroupIdList.length>messageGroup.selectedIndex&&nextMessageGroupIdList.length>1)||nextMessageGroupIdList.length===messageGroup.selectedIndex
+        ){
         <div class="flex items-center">
           <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, -1)"
             [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
           <div class="text-center w-[60px]">
-            @if (messageService.nextMessageGroupId[messageGroup.id].length === messageGroup.selectedIndex) {
+            @if (nextMessageGroupIdList.length === messageGroup.selectedIndex) {
             prev
             } @else {
-            {{messageGroup.selectedIndex + 1}} /
-            {{messageService.nextMessageGroupId[messageGroup.id].length}}
+            {{messageGroup.selectedIndex + 1}} / {{nextMessageGroupIdList.length}}
             }
           </div>
           <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, 1)"
-            [ngStyle]="{'visibility': messageService.nextMessageGroupId[messageGroup.id].length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
+            [ngStyle]="{'visibility': nextMessageGroupIdList.length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
         </div>
+        }@else{<div></div>}
       </div>
     </ng-template>
 

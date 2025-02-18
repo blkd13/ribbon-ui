@@ -14,13 +14,17 @@ import { MessageGroupForView, Thread } from '../../models/project-models';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DialogComponent } from '../dialog/dialog.component';
 import { LlmModel } from '../../services/chat.service';
+import { MatRadioModule } from '@angular/material/radio';
+import { ChatCompletionToolChoiceOption } from 'openai/resources/index.mjs';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { ToolCallService } from '../../services/tool-call.service';
 
 @Component({
   selector: 'app-chat-panel-system',
   imports: [
     CommonModule, FormsModule, DocTagComponent,
     MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
-    MatDialogModule,
+    MatDialogModule, MatRadioModule, MatCheckboxModule,
   ],
   templateUrl: './chat-panel-system.component.html',
   styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss']
@@ -35,11 +39,17 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
   readonly modelChangeEmitter = output<string>({ alias: 'modelChange' });
 
   readonly dialog: MatDialog = inject(MatDialog);
+  readonly toolCall: ToolCallService = inject(ToolCallService);
 
+  modelIdMas: { [modelId: string]: LlmModel } = {};
   modelGroupMas: { [modelId: string]: LlmModel[] } = {};
   modelGroupIdList: string[] = [];
 
   override ngOnInit(): void {
+    this.modelIdMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel }, model) => {
+      acc[model.id] = model;
+      return acc;
+    }, {});
     this.modelGroupMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel[] }, model) => {
       const tag = model.tag;
       if (!acc[tag]) {

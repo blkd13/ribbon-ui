@@ -1,7 +1,42 @@
 :host {
     ::ng-deep {
         .mat-expansion-panel.message .mat-expansion-panel-header-title {
-            width: 353px;
+            width: 321px;
         }
     }
+}
+
+.tip {
+    position: absolute;
+    font-size: 11px;
+    top: 0px;
+    left: 26px;
+    padding: 1px 10px 0 10px;
+    border-radius: 31px;
+    line-height: 14px;
+
+    &.賢い {
+        color: #eee;
+        background-color: #69b8cd;
+        background: linear-gradient(-135deg, rgb(30, 109, 131), #19393b);
+        /* background: linear-gradient(135deg, rgb(105, 184, 205), rgb(125, 200, 215), rgb(143, 211, 223), rgb(162, 222, 230), rgb(183, 235, 240)); */
+    }
+
+    &.古い {
+        color: #eee;
+        background: linear-gradient(90deg, #333, #999);
+    }
+
+    &.速い {
+        color: #333;
+        background: linear-gradient(90deg, #d9d9d9, #b0b0b0);
+    }
+
+    &.実験,
+    &.独特 {
+        color: #333;
+        background: linear-gradient(90deg, #87ceeb, #4682b4);
+
+    }
+
 }

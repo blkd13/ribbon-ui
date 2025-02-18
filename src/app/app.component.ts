@@ -16,15 +16,15 @@ import { NewFeatureDialogComponent } from './parts/new-feature-dialog/new-featur
 declare var _paq: any;
 
 @Component({
-    selector: 'app-root',
-    standalone: true,
-    imports: [
-      RouterOutlet,
-      MatIconModule,
-      MatDialogModule
-    ],
-    templateUrl: './app.component.html',
-    styleUrl: './app.component.scss'
+  selector: 'app-root',
+  standalone: true,
+  imports: [
+    RouterOutlet,
+    MatIconModule,
+    MatDialogModule
+  ],
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss'
 })
 export class AppComponent implements OnInit {
   title = 'Ribbon UI';

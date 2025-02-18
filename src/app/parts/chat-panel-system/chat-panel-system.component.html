@@ -1,30 +1,35 @@
 @if(messageGroup() && messageGroup().messages && messageGroup().messages.length>0 && thread().inDto.args.model){
 <mat-expansion-panel class="message" #exPanel [expanded]="messageGroup().isExpanded"
     (opened)="loadContent().subscribe()" (expandedChange)="expandedEmitter.emit($event)">
-    <!-- [expanded]="messageGroup.messages[0].contents.length>0" -->
     <mat-expansion-panel-header class="message-header">
         <mat-panel-title class="message-title" style="font-weight: normal;">
             <!-- モデル選択 -->
-
+            <!--              
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
                 [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
-                @for(option of chatService.modelList;track $index) {
-                <option [ngClass]="[option.tag]" [value]="option.id" [disabled]="!option.isEnable">
-                    {{option.tag}}：{{option.id}}</option>
-                }
+                <optgroup label="モデル選択" [ngClass]="[chatService.modelList[0].tag]">
+                    @for(option of chatService.modelList;track $index) {
+                    <option [ngClass]="[option.tag]" [value]="option.id" [disabled]="!option.isEnable">
+                        {{option.tag}}：{{option.id}}</option>
+                    }
+                </optgroup>
             </select>
-            <!--
+            -->
+            <div class="tip" [ngClass]="[modelIdMas[thread().inDto.args.model].tag]">
+                {{modelIdMas[thread().inDto.args.model].tag}}
+            </div>
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
                 [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
                 @for(modelGroupId of modelGroupIdList;track $index){
                 <optgroup [ngClass]="[modelGroupId]" [label]="modelGroupId">
-                    @for(option of modelGroupList[modelGroupId];track $index) {
-                    <option [ngClass]="[modelGroupId]" [value]="option">{{option}}</option>
+                    @for(option of modelGroupMas[modelGroupId];track $index) {
+                    <option [ngClass]="modelGroupId==='古い'?'古い':'速い'" [value]="option.id" [disabled]="!option.isEnable">
+                        {{option.id}}
+                    </option>
                     }
                 </optgroup>
                 }
             </select>
-            -->
             @if(thread().inDto.args.model; as model){
             @if(chatService.modelMap[model].isGSearch){
             <div class="flex items-center" style="width: 150px;"
@@ -62,58 +67,87 @@
             </button>
         </div>
     </mat-expansion-panel-header>
+    <div class="flex flex-col gap-10">
+        <fieldset>
+            <legend>システムプロンプト</legend>
+            <div class="flex flex-col w-full">
+                @for (message of messageGroup().messages; track $index;let mIndex=$index) {
+                <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
+                    <!-- ファイル -->
+                    @if(message.contents.length>1){
+                    <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
+                        @for(content of message.contents; track $index) {
+                        @if(content.type==='text') {
+                        } @else if(content.type==='error') {
+                        } @else {
+                        <app-doc-tag [content]="content" (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
+                        }
+                        }
+                    </div>
+                    }
 
-    <div class="flex w-full">
-        @for (message of messageGroup().messages; track $index;let mIndex=$index) {
-        <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
-            <!-- ファイル -->
-            @if(message.contents.length>1){
-            <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
-                @for(content of message.contents; track $index) {
-                @if(content.type==='text') {
-                } @else if(content.type==='error') {
-                } @else {
-                <app-doc-tag [content]="content" (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
+                    <!-- メッセージ -->
+                    @for(content of message.contents; track $index;let cIndex=$index){
+                    @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket) :
+                    blankBracket;
+                    @if(content.type==='text'){
+                    <div class="chat-input" [hidden]="!message.editing">
+                        <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
+                            (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}"
+                            [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
+                    </div>
+                    <div class="custom-scroll" style="display: block;overflow: auto;"
+                        [ngClass]="[messageGroup().role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']"
+                        #textBodyElem>
+                        <markdown [hidden]="message.editing" katex mermaid clipboard
+                            [data]="brackets.pre+content.text+brackets.post">
+                        </markdown>
+                    </div>
+                    }@else if(content.type==='error'){
+                    <div class="text-red-500 overflow-auto">
+                        <div>ERROR</div>
+                        {{content.text}}
+                    </div>
+                    }@else{
+                    <!-- text 以外はファイル -->
+                    }
+                    }
+
+                    <!-- Loading -->
+                    @if (message.status === 'Loading') {
+                    <!-- アニメーションつけるかどうか [@fadeAnimation] -->
+                    <div class="absolute inset-0 flex items-center justify-center bg-black/25">
+                        <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+                    </div>
+                    }
+                </div>
                 }
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>ツール使用設定</legend>
+            <mat-radio-group [(ngModel)]="thread().inDto.args.tool_choice">
+                @for(tool_choice of ['none', 'auto', 'any'];track $index) {
+                <mat-radio-button [value]="" class="" color="primary">{{tool_choice}}</mat-radio-button>
+                }
+            </mat-radio-group>
+        </fieldset>
+        <fieldset>
+            <legend>ツール一覧（現在は変更不可）</legend>
+            <!-- <mat-checkbox [(ngModel)]="thread().inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
+            @for(groupDef of this.toolCall.tools;track $index) {
+            <div>
+                @for(tool of groupDef.tools;track $index) {
+                <div>
+                    [{{tool.info.name}}] {{tool.info.label}}
+                    <!-- <mat-checkbox [(ngModel)]="thread().inDto.args.isGoogleSearch">
+                        [{{tool.info.name}}] {{tool.info.label}}
+                    </mat-checkbox> -->
+                </div>
                 }
             </div>
             }
-
-            <!-- メッセージ -->
-            @for(content of message.contents; track $index;let cIndex=$index){
-            @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket) : blankBracket;
-            @if(content.type==='text'){
-            <div class="chat-input" [hidden]="!message.editing">
-                <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
-                    (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'"
-                    [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
-            </div>
-            <div class="custom-scroll" style="display: block;overflow: auto;"
-                [ngClass]="[messageGroup().role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']"
-                #textBodyElem>
-                <markdown [hidden]="message.editing" katex mermaid clipboard
-                    [data]="brackets.pre+content.text+brackets.post">
-                </markdown>
-            </div>
-            }@else if(content.type==='error'){
-            <div class="text-red-500 overflow-auto">
-                <div>ERROR</div>
-                {{content.text}}
-            </div>
-            }@else{
-            <!-- text 以外はファイル -->
-            }
-            }
-
-            <!-- Loading -->
-            @if (message.status === 'Loading') {
-            <!-- アニメーションつけるかどうか [@fadeAnimation] -->
-            <div class="absolute inset-0 flex items-center justify-center bg-black/25">
-                <mat-spinner style="transform: scale(0.4);"></mat-spinner>
-            </div>
-            }
-        </div>
-        }
+        </fieldset>
     </div>
 </mat-expansion-panel>
 } @else {
