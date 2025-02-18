@@ -214,7 +214,8 @@
             <app-chat-panel-system class="top-0" style="z-index:2;" [messageGroup]="messageGroup"
               [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="bitCounter" [thread]="thread"
               [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
-              (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])">
+              (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
+              (threadChange)="editSystem($event)">
             </app-chat-panel-system>
             }
           </div>
@@ -269,7 +270,8 @@
         <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup" [bitCounter]="bitCounter"
           [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
           (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
-          (fileSelectionUpdateEmitter)="onChange()" (expanded)="expanded($event, 0, tIndex, messageGroup)">
+          (threadChange)="editSystem($event)" (fileSelectionUpdateEmitter)="onChange()"
+          (expanded)="expanded($event, 0, tIndex, messageGroup)">
         </app-chat-panel-system>
         }
         }

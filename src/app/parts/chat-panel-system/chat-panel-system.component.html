@@ -126,9 +126,12 @@
         </fieldset>
         <fieldset>
             <legend>ツール使用設定</legend>
-            <mat-radio-group [(ngModel)]="thread().inDto.args.tool_choice">
-                @for(tool_choice of ['none', 'auto', 'any'];track $index) {
-                <mat-radio-button [value]="" class="" color="primary">{{tool_choice}}</mat-radio-button>
+            <mat-radio-group [(ngModel)]="thread().inDto.args.tool_choice" (change)="threadChange()">
+
+                @for(tool_choice of ['none', 'auto', 'required'];track $index) {
+                <mat-radio-button [value]="tool_choice" class="" color="primary">
+                    [{{tool_choice}}] {{toolChoiceMapper[tool_choice].label}}
+                </mat-radio-button>
                 }
             </mat-radio-group>
         </fieldset>
@@ -137,8 +140,9 @@
             <!-- <mat-checkbox [(ngModel)]="thread().inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
             @for(groupDef of this.toolCall.tools;track $index) {
             <div>
+                <div>{{groupDef.group}}</div>
                 @for(tool of groupDef.tools;track $index) {
-                <div>
+                <div style="padding-left: 40px;">
                     [{{tool.info.name}}] {{tool.info.label}}
                     <!-- <mat-checkbox [(ngModel)]="thread().inDto.args.isGoogleSearch">
                         [{{tool.info.name}}] {{tool.info.label}}

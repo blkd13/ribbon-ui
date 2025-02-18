@@ -38,12 +38,20 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   readonly modelChangeEmitter = output<string>({ alias: 'modelChange' });
 
+  readonly threadChangeEmitter = output<Thread>({ alias: 'threadChange' });
+
   readonly dialog: MatDialog = inject(MatDialog);
   readonly toolCall: ToolCallService = inject(ToolCallService);
 
   modelIdMas: { [modelId: string]: LlmModel } = {};
   modelGroupMas: { [modelId: string]: LlmModel[] } = {};
   modelGroupIdList: string[] = [];
+
+  toolChoiceMapper: { [tool_choice: string]: { name: string, label: string } } = {
+    'auto': { name: 'auto', label: '自動判定' },
+    'none': { name: 'none', label: '使わない' },
+    'required': { name: 'required', label: '必ず使う' }
+  };
 
   override ngOnInit(): void {
     this.modelIdMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel }, model) => {
@@ -72,6 +80,10 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     this.modelChangeEmitter.emit(thread.inDto.args.model || '');
     // console.log(`Change---------------${this.thread.inDto.args.model}`);
     this.modelCheck([thread.inDto.args.model || '']);
+  }
+
+  threadChange(): void {
+    this.threadChangeEmitter.emit(this.thread());
   }
 
   modelCheck(modelList: string[] = []): void {

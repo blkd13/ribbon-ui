@@ -397,6 +397,11 @@ export class ChatComponent implements OnInit {
               // console.log(resDto);
               this.rebuildThreadGroup();
 
+              // linkChainの設定
+              this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id].forEach((messageGroupId, index) => {
+                this.linkChain[index] = this.messageService.messageGroupMas[messageGroupId].role !== 'assistant';
+              });
+
               // 5件以上だったら末尾2件を開く。5件未満だったら全部開く。
               // this.allExpandCollapseFlag = this.messageList.length < 5;
               this.allExpandCollapseFlag = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id].length < 5;
@@ -748,6 +753,12 @@ export class ChatComponent implements OnInit {
               // 入力エリアをクリア
               this.inputArea = this.generateInitalInputArea();
               this.rebuildThreadGroup();
+              const messageGroupIdList = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id];
+              const tailMessageGroup = this.messageService.messageGroupMas[messageGroupIdList.at(-1)!];
+              if (messageGroupIdList.length >= this.linkChain.length) {
+                // TODO linkChainの方が短くてassistant以外はチェインしておく。でもこれだとメッセージグループ削除したときに設定が復活しちゃうことにはなる。まぁでもいいや。
+                this.linkChain[messageGroupIdList.length - 1] = tailMessageGroup.role !== 'assistant';
+              } else { }
               setTimeout(() => {
                 DomUtils.textAreaHeighAdjust(this.textAreaElem().nativeElement); // 高さ調整
                 // this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
@@ -959,8 +970,6 @@ export class ChatComponent implements OnInit {
 
     _paq.push(['trackEvent', 'AIチャット', 'メッセージ送信', threadList.length]);
 
-    const indexMap = this.selectedThreadGroup.threadList.map(thread => threadList.indexOf(thread));
-
     return this.saveAndBuildThreadGroup().pipe(
       switchMap(messageGroupIds =>
         safeForkJoin(messageGroupIds.filter(messageGroupId => {
@@ -970,7 +979,7 @@ export class ChatComponent implements OnInit {
             return true;
             return idList.includes(this.messageService.messageGroupMas[messageGroupId].threadId);
           } else if (type === 'messageGroup') {
-            return idList.includes(messageGroupId);
+            return idList.includes(messageGroupId); // 対象のやつだけに絞り込む
             // } else if (type === 'message') {  // 未検証なのでまだ使わない
             //   return idList.includes(this.messageService.messageMas[messageGroupId].messageGroupId);
             // } else if (type === 'contentPart') {
@@ -982,58 +991,56 @@ export class ChatComponent implements OnInit {
           }
         }).map((messageGroupId, index) =>
           // contentPartの切り分けが失敗しまくっている。。。
-          indexMap[index] === -1
-            ? EMPTY
-            : this.chatService.chatCompletionObservableStreamByProjectModel(threadList[indexMap[index]].inDto.args, 'messageGroup', messageGroupId, toolInput)
-              .pipe(
-                tap(resDto => {
-                  // console.log('response-------------------------');
-                  // console.log(resDto);
-                  // キャッシュを更新する
-                  // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
+          this.chatService.chatCompletionObservableStreamByProjectModel(threadList[index].inDto.args, 'messageGroup', messageGroupId, toolInput)
+            .pipe(
+              tap(resDto => {
+                // console.log('response-------------------------');
+                // console.log(resDto);
+                // キャッシュを更新する
+                // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
 
-                  // TODO toolの場合のmeta編集をしておかないといけない。でもこの整形色々なところで書いていて冗長なのでどこかにまとめたい。
-                  resDto.messageGroupList.forEach(messageGroup => {
-                    messageGroup.messages.forEach(message => {
-                      message.contents.forEach(contentPart => {
-                        if (contentPart.type === ContentPartType.TOOL) {
-                          // ツールの場合、ツールの内容をセットする
-                          contentPart.meta = JSON.parse(contentPart.text as string);
-                          if (contentPart.meta.call) {
-                            contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
-                          } else { }
-                          if (contentPart.meta.result) {
-                            contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
-                          } else { }
-                          // this.messageService.contentPartMas[contentPart.id] = contentPart;
+                // TODO toolの場合のmeta編集をしておかないといけない。でもこの整形色々なところで書いていて冗長なのでどこかにまとめたい。
+                resDto.messageGroupList.forEach(messageGroup => {
+                  messageGroup.messages.forEach(message => {
+                    message.contents.forEach(contentPart => {
+                      if (contentPart.type === ContentPartType.TOOL) {
+                        // ツールの場合、ツールの内容をセットする
+                        contentPart.meta = JSON.parse(contentPart.text as string);
+                        if (contentPart.meta.call) {
+                          contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
                         } else { }
-                      });
-                    });
-
-                    // 新規メッセージを追加？
-                    this.messageService.applyMessageGroup(messageGroup);
-                    this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
-                    messageGroup.isExpanded = true;
-                    messageGroup.messages.map(message => {
-                      if (message.observer) {
-                        this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
-                        console.log(`Message ID before chat completion: ${message.id}`);
+                        if (contentPart.meta.result) {
+                          contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
+                        } else { }
+                        // this.messageService.contentPartMas[contentPart.id] = contentPart;
                       } else { }
                     });
                   });
-                  // 一番下まで下げる
-                  this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
-                  this.rebuildThreadGroup();
-                  this.autoscroll = true;
-                  this.beforeScrollTop = -1;
-                  console.log(this.messageGroupIdListMas);
-                }),
-                catchError(error => {
-                  // エラー時も必ず各スレッドのロックを解除する
-                  threadList.forEach(thread => this.threadLocks[thread.id] = false);
-                  return throwError(() => error);
-                })
-              ),
+
+                  // 新規メッセージを追加？
+                  this.messageService.applyMessageGroup(messageGroup);
+                  this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
+                  messageGroup.isExpanded = true;
+                  messageGroup.messages.map(message => {
+                    if (message.observer) {
+                      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
+                      console.log(`Message ID before chat completion: ${message.id}`);
+                    } else { }
+                  });
+                });
+                // 一番下まで下げる
+                this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+                this.rebuildThreadGroup();
+                this.autoscroll = true;
+                this.beforeScrollTop = -1;
+                console.log(this.messageGroupIdListMas);
+              }),
+              catchError(error => {
+                // エラー時も必ず各スレッドのロックを解除する
+                threadList.forEach(thread => this.threadLocks[thread.id] = false);
+                return throwError(() => error);
+              })
+            ),
         )).pipe(tap(text => {
           // console.log(`pipe---------------------${text}`);
           // メッセージID紐づけ。
@@ -1168,7 +1175,7 @@ export class ChatComponent implements OnInit {
                     } else {
                       this.chatPanelGroupElem()?.at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
-                    // DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement);
+                    DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement);
                   } else {
                     this.autoscroll = false;
                   }
@@ -1642,6 +1649,21 @@ export class ChatComponent implements OnInit {
     return targetMessageGrouplist;
   }
 
+  editSystem(thread: Thread): void {
+    console.log(thread.inDto.args)
+    if (this.linkChain[0]) {
+      this.selectedThreadGroup.threadList.forEach(_thread => {
+        if (_thread.id === thread.id) {
+        } else {
+          // 他のスレッドにコピーする。
+          _thread.inDto.args.tool_choice = thread.inDto.args.tool_choice;
+          _thread.inDto.args.parallel_tool_calls = thread.inDto.args.parallel_tool_calls;
+        }
+      });
+    } else {
+      // リンクしていないときは無視
+    }
+  }
   editChat(messageGroup: MessageGroupForView): void {
     const targetMessageGroupList = this.getChaindedMessageGroupList(messageGroup);
     const syncTargetMessageGroupList = targetMessageGroupList.filter(_messageGroup => _messageGroup !== messageGroup);
