@@ -8,6 +8,8 @@ import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
+import { Utils } from '../utils';
+import { ToolCallCommand, ToolCallCommandBody } from './tool-call.service';
 
 export interface ChatInputArea {
   role: OpenAI.ChatCompletionRole;
@@ -52,20 +54,22 @@ export class ChatService {
    * 入力、出力、128kトークン以上時の入力、128kトークン以上時の出力
    */
   modelList: LlmModel[] = [
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro', },
+    { tag: '賢い', class: 'wiz', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-001', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro-002', },
 
-    { tag: '速い', class: 'min', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00003750, 0.000150, 0.0000750, 0.001500], id: 'gemini-2.0-flash-lite-preview-02-05', },
-    { tag: '賢い', class: 'wiz', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-001', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-20241022', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-v2@20241022', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 4096, maxInputTokens: 128000, isGSearch: false, isDomestic: true, isPdf: true, price: [0.00500000, 0.015000, 0.0050000, 0.015000], id: 'gpt-4o', },
+
+    { tag: '賢遅', class: 'wis', isEnable: true, maxTokens: 100000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.01650000, 0.066000, 0.0165000, 0.066000], id: 'o1', },
+    { tag: '賢遅', class: 'wis', isEnable: true, maxTokens: 100000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00110000, 0.004400, 0.0011000, 0.004400], id: 'o3-mini', },
+
     { tag: '実験', class: 'exp', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00012500, 0.000375, 0.0002500, 0.000750], id: 'gemini-2.0-pro-exp-02-05', },
     { tag: '実験', class: 'exp', isEnable: true, maxTokens: 8192, maxInputTokens: 32767, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-thinking-exp-01-21', },
 
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 4096, maxInputTokens: 128000, isGSearch: false, isDomestic: true, isPdf: true, price: [0.00500000, 0.015000, 0.0050000, 0.015000], id: 'gpt-4o', },
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 100000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.01650000, 0.066000, 0.0165000, 0.066000], id: 'o1', },
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 100000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00110000, 0.004400, 0.0011000, 0.004400], id: 'o3-mini', },
-    // { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-20241022', },
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: false, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-v2@20241022', },
+    { tag: '速い', class: 'min', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00003750, 0.000150, 0.0000750, 0.001500], id: 'gemini-2.0-flash-lite-preview-02-05', },
 
+    { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 32768, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash-002', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-exp', },
@@ -415,7 +419,7 @@ export class ChatService {
     args: ChatCompletionCreateParamsWithoutMessages,
     idType: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | 'contentPart',
     id: string,
-    toolInput?: unknown,
+    toolCallCommandList?: ToolCallCommand[],
   ): Observable<{
     connectionId: string,
     streamId: string,
@@ -440,7 +444,7 @@ export class ChatService {
     return this.open(flag).pipe(
       switchMap(connectionId => this.http.post<MessageGroupForView[]>(
         `/user/v2/chat-completion?connectionId=${connectionId}&streamId=${streamId}&type=${idType}&id=${id}`,
-        { args, toolInput },
+        { args, toolCallCommandList },
         // { headers: this.authService.getHeaders() }
       )),
       map(messageGroupList => messageGroupList.map(messageGroup => {
@@ -565,6 +569,76 @@ export class ChatService {
   //     );
   //   })).pipe(map(() => inDto));
   // }
+
+  presetDefs: PresetDef[] = [
+    { label: '通常' },
+    { label: 'エラー<br/>解説', userPrompt: `以下のエラーについて、日本語で内容を解説してください。\n\n` },
+    { label: '要約', userPrompt: '要約してください。\n\n' },
+    {
+      label: 'Matter<br/>most',
+      tool_choice: 'auto',
+      modelSelection: ['claude-3-5-sonnet-v2@20241022', 'gemini-2.0-pro-exp-02-05', 'gpt-4o', 'gemini-1.5-pro-002'],
+      systemLabel: `Mattermost`,
+      systemPrompt: Utils.trimLines(`
+        エージェントAI。
+        必要に応じてツールを使用する。
+        `),
+      // ✅ ** mattermost検索が必要になった場合の注意
+      // - 基本的にはメンションされた投稿をソースとする。
+      // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
+      // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
+    },
+    {
+      label: `通訳`,
+      placeholder: '翻訳の指示は要りません。英文／和文をそのまま貼ってください。',
+      systemLabel: `通訳AI`,
+      modelSelection: ['gemini-1.5-flash-002', 'gemini-2.0-flash-lite-preview-02-05', 'gemini-2.0-flash-001', 'gpt-4o'],
+      systemPrompt: Utils.trimLines(`
+        あなたは **通訳** としてふるまい、次のルールに従って翻訳を行います。
+
+        #### **1. 翻訳のルール**
+
+        利用者は翻訳指示を入れてきません。
+        入力された文章が日本語であれば日本語→英語に、英語であれば英語→日本語に翻訳してください。
+
+        ✅ **英語 → 日本語**
+        - **TOEIC 400点台の人が理解しやすい訳を作成する。**
+        - できるだけシンプルで自然な表現にする。
+        - 難しい単語や慣用表現について **解説を付ける**（単語の意味や文法のポイントを解説）。
+
+        ✅ **日本語 → 英語**
+        - **英語話者にとって自然な表現を意識する。**
+        - **文化の違いを考慮し、意訳も行う。**
+        - **意訳をした場合は、日本語への「逆翻訳」も提示する。**
+
+        #### **2. 出力フォーマット（英語 → 日本語）**
+
+        \`\`\`
+        【翻訳】
+        （訳文をここに記述）
+
+        【解説】
+        * **英単語/表現**: 日本語で意味を説明
+        * **英単語/表現**: 日本語で意味を説明
+        \`\`\`
+
+        #### **3. 出力フォーマット（日本語 → 英語）**
+
+        \`\`\`
+        【英訳】
+        （英訳をここに記述）
+
+        【逆翻訳】
+        （英訳が日本語に戻るとどうなるかを記述）
+
+        【補足】
+        （文化の違いに関する補足や、英語話者に伝わりやすくするための意訳のポイント）
+        \`\`\`
+        `
+      ),
+      userPrompt: Utils.trimLines(``),
+    },
+  ];
 }
 /**
  * Response returned from countTokens method.
@@ -584,4 +658,14 @@ export declare interface CountTokensResponse {
   audio: number;
   video: number;
   image: number;
+}
+
+export interface PresetDef {
+  label: string;
+  modelSelection?: string[];
+  tool_choice?: 'auto' | 'none' | 'required';
+  systemLabel?: string,
+  systemPrompt?: string;
+  placeholder?: string;
+  userPrompt?: string;
 }

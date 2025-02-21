@@ -20,6 +20,7 @@ import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { ContentPart, ContentPartType, MessageForView, MessageGroupForView } from '../../models/project-models';
 import { Utils } from '../../utils';
 import { MatMenuModule } from '@angular/material/menu';
+import { ToolCall, ToolCallBody, ToolCallCommand, ToolCallCommandBody, ToolCallInfo, ToolCallType } from '../../services/tool-call.service';
 
 
 @Component({
@@ -87,7 +88,7 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly removeEmitter = output<MessageGroupForView>({ alias: 'remove' });
 
-  readonly toolExecEmitter = output<ContentPart>({ alias: 'toolExec' });
+  readonly toolExecEmitter = output<{ contentPart: ContentPart, toolCallCommandList: ToolCallCommand[] }>({ alias: 'toolExec' });
 
   readonly fileSelectionUpdateEmitter = output<MessageGroupForView>({ alias: 'fileSelectionUpdate' });
 
@@ -104,9 +105,33 @@ export class ChatPanelBaseComponent implements OnInit {
   isLoading = false;
 
   isExecuted = false;
-  isRequireComfirm(): boolean {
+  isInteractive(): boolean {
     // TODO ここは遅くなる元なのであってはならない。
-    return !this.isExecuted && this.messageGroup().messages.find(message => message.contents.find(content => content.type === 'tool' && content.meta.info?.requireComfirm && !content.meta.result)) ? true : false;
+    let flag = false;
+    this.messageGroup().messages.map(message =>
+      message.contents.filter(content =>
+        content.type === 'tool' && content.toolCallGroup?.toolCallList.find(tc => tc.type === ToolCallType.INFO)
+      )
+    ).forEach(contents => {
+      if (contents.length === 0) return;
+      const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCall[];
+      if ((toolCallList[0] as ToolCallInfo).body.isInteractive) {
+        const infoSize = toolCallList.filter(tc => tc.type === ToolCallType.INFO).length;
+        const commandSize = toolCallList.filter(tc => tc.type === ToolCallType.COMMAND).length;
+        if (infoSize > commandSize) {
+          // console.log(`interactive: ${infoSize} > ${commandSize}`);
+          flag = true;
+        } else {
+        }
+      } else {
+      }
+    });
+    // console.log(flag);
+    return (!this.isExecuted && flag) ? true : false;
+  }
+  jsonParseToArray(text: string): any[] {
+    const obj = JSON.parse(text || '[]') as any[];
+    return Array.isArray(obj) ? obj : [];
   }
 
   readonly chatService: ChatService = inject(ChatService);
@@ -307,7 +332,10 @@ export class ChatPanelBaseComponent implements OnInit {
     $event.preventDefault();
     if (content) {
       this.isExecuted = true;
-      this.toolExecEmitter.emit(content);
+      const toolCallCommandList = (JSON.parse(content.text || '[]') as ToolCall[])
+        .filter(tc => tc.type === ToolCallType.INFO)
+        .map(tc => ({ type: ToolCallType.COMMAND, body: { command: 'execute' }, toolCallId: tc.toolCallId })) as ToolCallCommand[];
+      this.toolExecEmitter.emit({ contentPart: content, toolCallCommandList });
     } else { }
   }
 

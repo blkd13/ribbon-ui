@@ -75,20 +75,27 @@
       } @else {<!-- 最初の1個からループを掛けるのでここに来ることはない -->}
       } @else if(content.type==='tool') {
 
-      @if(content.meta){
-      <div class="inline-flex items-center">
-        @if(content.meta.info; as info){
-        <button class="inline-block command-tag cursor-pointer" (click)="isShowTool[cIndex]=true">
-          {{info.name}}
+      <div class="inline-flex items-center flex-wrap gap-2">
+
+        @for(toolCall of jsonParseToArray(content.text||'[]');track $index){
+        @if(toolCall.type==='info'&&toolCall.body){
+        <button class="flex items-center command-tag cursor-pointer" (click)="isShowTool[cIndex]=true">
+          <img [src]="'image/'+toolCall.body.group+'-logo.svg'" style="width: 32px;" />
+          <div class="flex flex-col items-start">
+            <div>[{{toolCall.body.name}}]</div>
+            <div>{{toolCall.body.label}}</div>
+          </div>
         </button>
+        } @else {
         }
-        <!-- @if(content.meta.info; as info && info.requireComfirm){
+        }
+
+        <!-- @if(content.text; as info && info.isInteractive){
         <button mat-icon-button (click)="toolExec($event, content)" title="実行">
           <mat-icon>{{content.meta.input?'refresh':'play_arrow'}}</mat-icon>
         </button>
         } -->
       </div>
-      }
 
       @if(isShowTool[cIndex]){
       <div class="fixed z-10 w-full h-full inset-0 flex items-center justify-center"
@@ -134,7 +141,7 @@
 
       }
 
-      @if(isRequireComfirm()){
+      @if(isInteractive()){
       <div class="w-full h-full">
         <div class="my-2">このコマンドを実行してもよろしいですか？</div>
         <button class="my-2 w-full max-w-96" mat-raised-button
@@ -144,7 +151,7 @@
           提案されたコマンドを実行する
         </button>
       </div>
-      }
+      } @else {}
 
       <!-- Loading -->
       @if (message.status === 'Loading') {

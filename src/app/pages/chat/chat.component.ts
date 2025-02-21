@@ -2,6 +2,8 @@ import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, Te
 import { FormsModule, NgModel } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
+import OpenAI from 'openai';
+import { DomSanitizer } from '@angular/platform-browser';
 
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
@@ -27,7 +29,7 @@ import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-p
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
 import { genDummyId, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 import { CachedContent, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
-import { ChatContent, ChatInputArea, ChatService, CountTokensResponse } from '../../services/chat.service';
+import { ChatContent, ChatInputArea, ChatService, CountTokensResponse, PresetDef } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Observable, tap, toArray } from 'rxjs';
@@ -44,8 +46,7 @@ import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-d
 import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
 import { UserService } from '../../services/user.service';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
-import OpenAI from 'openai';
-import { DomSanitizer } from '@angular/platform-browser';
+import { ToolCall, ToolCallBody, ToolCallInfoBody, ToolCallCallBody, ToolCallCommandBody, ToolCallResultBody, ToolCallType, ToolCallInfo, ToolCallCall, ToolCallCommand, ToolCallResult, } from '../../services/tool-call.service';
 
 declare var _paq: any;
 
@@ -268,18 +269,26 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  presetInputList = [
-    { label: "なし", text: "" },
-    { label: "エラー<br/>解説", text: "以下のエラーについて、日本語で内容を解説してください。\n\n" },
-    { label: "要約", text: "要約してください。\n\n" },
-    { label: "和訳", text: "和訳してください。\n\n" },
-    { label: "英訳", text: "英訳してください。\n\n" },
-  ]
-
-  selectPreset(preset: { label: string, text: string }): void {
-    // // システムプロンプトに設定したいか？
-    // this.selectedThreadGroup.threadList.forEach(thread => this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][0]].messages[0].contents[0].text = preset.text);
-    this.inputArea.content[0].text = preset.text;
+  presetLabel = '通常';
+  selectPreset(preset: PresetDef): void {
+    _paq.push(['trackEvent', 'AIチャット', 'モード選択', this.selectedThreadGroup.threadList.length]);
+    this.presetLabel = preset.label;
+    let isModelChange = false;
+    this.selectedThreadGroup.threadList.forEach((thread, tIndex) => {
+      if (preset.modelSelection && preset.modelSelection[tIndex]) {
+        thread.inDto.args.model = preset.modelSelection[tIndex];
+        isModelChange = true;
+      } else { }
+      const messageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][0]];
+      messageGroup.messages[0].contents[0].text = preset.systemPrompt || this.chatService.defaultSystemPrompt;
+      messageGroup.messages.forEach(message => message.label = preset.systemLabel || this.chatService.defaultSystemPrompt);
+      thread.inDto.args.tool_choice = preset.tool_choice;
+    });
+    this.inputArea.content[0].text = preset.userPrompt || '';
+    this.placeholder = preset.placeholder || this.placeholder;
+    if (isModelChange) {
+      this.modelCheck();
+    }
     setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
 
@@ -610,6 +619,7 @@ export class ChatComponent implements OnInit {
         label = `${files.length} files`;
       }
     }
+    // fileGroupIdなのかlinkIdなのかは迷ったが、fileGroupIdにしておく。結局fileIdとlinkIdと名前が混在して危険になってしまった。。。
     const file: { type: 'file', fileGroupId: string, text: string, isLoading: boolean } = { type: 'file', fileGroupId: '', text: label, isLoading: true };
     this.inputArea.content.push(file);
     return this.fileManagerService
@@ -704,7 +714,7 @@ export class ChatComponent implements OnInit {
           threadGroup.title = ''; // 一応内容を消しておく
           const presetText = this.messageService.messageGroupList.map(messageGroup => messageGroup.messages[0].contents.filter(content => content.type === 'text').map(content => content.text)).join('\n');
           const inputText = this.inputArea.content.filter(content => content.type === 'text').map(content => content.text).join('\n');
-          const mergeText = `${presetText}\n${inputText}`.substring(0, 1024);
+          const mergeText = `SystemPrompt:${presetText.substring(0, 512)}\nUserPrompt:${inputText}`.substring(0, 1024);
           this.chatService.chatCompletionObservableStreamNew({
             args: {
               max_tokens: 40,
@@ -737,7 +747,7 @@ export class ChatComponent implements OnInit {
               const contentPart = this.messageService.initContentPart(genDummyId(), content.text);
               contentPart.type = content.type as ContentPartType;
               contentPart.text = content.text;
-              contentPart.fileGroupId = contentPart.type === 'file' ? (content as { fileGroupId: string }).fileGroupId : undefined;
+              contentPart.linkId = contentPart.type === 'file' ? (content as { fileGroupId: string }).fileGroupId : undefined;
               return contentPart;
             });
             return this.messageService.upsertSingleMessageGroup(
@@ -847,7 +857,7 @@ export class ChatComponent implements OnInit {
     // typeで色々指定できるようにしたかったが、現状messageGroup以外はバグってる。。
     type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | 'contentPart' | undefined = undefined,
     idList: string[] = [],
-    toolInput?: unknown,
+    toolCallCommandList?: ToolCallCommand[],
   ): Observable<{
     connectionId: string,
     streamId: string,
@@ -910,7 +920,7 @@ export class ChatComponent implements OnInit {
         this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
-      } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0 && toolInput === undefined) { // toolInputがある場合はツールからの入力とみなす
+      } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0 && toolCallCommandList === undefined) { // toolCallCommandがある場合はツールからの入力とみなす
         if (this.inputArea.content.length > 1) {
           this.snackBar.open(`ファイルだけでは送信できません。何かメッセージを入力してください。`, 'close', { duration: 3000 });
           throw new Error('ファイルだけでは送信できません。何かメッセージを入力してください。');
@@ -991,7 +1001,7 @@ export class ChatComponent implements OnInit {
           }
         }).map((messageGroupId, index) =>
           // contentPartの切り分けが失敗しまくっている。。。
-          this.chatService.chatCompletionObservableStreamByProjectModel(threadList[index].inDto.args, 'messageGroup', messageGroupId, toolInput)
+          this.chatService.chatCompletionObservableStreamByProjectModel(threadList[index].inDto.args, 'messageGroup', messageGroupId, toolCallCommandList)
             .pipe(
               tap(resDto => {
                 // console.log('response-------------------------');
@@ -1005,13 +1015,8 @@ export class ChatComponent implements OnInit {
                     message.contents.forEach(contentPart => {
                       if (contentPart.type === ContentPartType.TOOL) {
                         // ツールの場合、ツールの内容をセットする
-                        contentPart.meta = JSON.parse(contentPart.text as string);
-                        if (contentPart.meta.call) {
-                          contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
-                        } else { }
-                        if (contentPart.meta.result) {
-                          contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
-                        } else { }
+                        // ツールの場合、ツールの内容をセットする
+                        contentPart.toolCallGroup = { toolCallList: JSON.parse(contentPart.text as string) };
                         // this.messageService.contentPartMas[contentPart.id] = contentPart;
                       } else { }
                     });
@@ -1076,58 +1081,117 @@ export class ChatComponent implements OnInit {
 
           content = message.contents[message.contents.length - 1];
 
-          // 通常の中身
-          if (choice.delta.content && !['tool', 'info', 'query', 'input'].includes(choice.delta.role || '')) {
-            const text = choice.delta.content;
-            content.text += text;
-            // console.log(`content=${choice.delta.content}`);
-          } else { }
-
-          if (choice.delta.role as any === 'info' && next.contentPart) {
-            // console.log('tool_call', tool_call);
-            // 最初の1行のみidが振られているので、それを使ってtoolCallを作る。
-            content.type = ContentPartType.TOOL;
-            const info = JSON.parse(choice.delta.content || '{}');
-            content.meta = { info, tool_call_id: (choice.delta as any).tool_call_id };
-            content.id = next.contentPart.id;
-            this.messageService.contentPartMas[content.id] = content;
-          } else { }
-
-          // tool_calls
-          if (choice.delta.tool_calls && choice.delta.tool_calls.length > 0) {
-            choice.delta.tool_calls.forEach(tool_call => {
-              // console.dir(choice.delta, { depth: null });
-              // 先頭行以外はtool_call.idがundefined
-              if (tool_call.id) {
-                const content = message.contents.find(content => content.type === ContentPartType.TOOL && content.meta.tool_call_id === tool_call.id);
-                content!.meta.call = tool_call;
-              } else {
-                // 2行目以降はidが無いのでcontentを使う
-                if (tool_call.function) {
-                  const content = message.contents.findLast(content => content.type === ContentPartType.TOOL);
-                  content!.meta.call.function.arguments += tool_call.function.arguments || '';
-                  // message.contents.find()
-                } else { /** functionが無いことはないはず */ }
-              }
-            });
-          } else { /** tool_callsが無ければ何もしない */ }
-
-          // tool_result
-          if (['tool', 'query', 'input'].includes(choice.delta.role || '')) {
-            const callContent = message.contents.find(content => content.type === ContentPartType.TOOL && content.meta.call.id === (choice.delta as any).tool_call_id);
-            if (callContent) {
-              // console.log('tool_result', choice.delta);
-              if ('tool' === choice.delta.role) {
-                callContent.meta.result = choice.delta;
-                callContent.meta.call.function.arguments = JSON.stringify(JSON.parse(callContent.meta.call.function.arguments), null, 2);
-                callContent.meta.result.content = JSON.stringify(JSON.parse(callContent.meta.result.content), null, 2);
-                callContent.text = JSON.stringify(callContent.meta);
-              } else {
-                // tool以外はmetaに格納
-                callContent.meta[choice.delta.role || ''] = JSON.parse(choice.delta.content || '{}');
-              }
+          if (choice.delta) {
+            // 通常の中身
+            if (choice.delta.content && !['tool', 'info', 'command', 'input'].includes(choice.delta.role || '')) {
+              const text = choice.delta.content;
+              content.text += text;
+              // console.log(`content=${choice.delta.content}`);
             } else { }
-          } else { }
+
+            // tool_info
+            if (choice.delta.role as any === 'info') {
+              if (content.type === ContentPartType.TOOL) {
+
+              } else {
+                if (content.text) {
+                  // textだったらブレイクする
+                  const contentPart = this.messageService.initContentPart(message.id, '');
+                  contentPart.type = ContentPartType.TOOL;
+                  message.contents.push(contentPart);
+                  this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
+                  content = contentPart;
+                } else {
+                  // 既存のcontentを使う
+                  content.type = ContentPartType.TOOL;
+                }
+              }
+
+              // console.log('tool_call', tool_call);
+              // 最初の1行のみidが振られているので、それを使ってtoolCallを作る。
+              const toolCallId = (choice.delta as { tool_call_id: string }).tool_call_id;
+              const infoBody = JSON.parse(choice.delta.content || '{}') as ToolCallInfoBody;
+              const info = { type: ToolCallType.INFO, body: infoBody, toolCallId } as ToolCallInfo;
+              if (content.toolCallGroup) {
+              } else {
+                // content.toolCallGroup = { id: next.contentPart.id, toolCallList: [] };
+                content.toolCallGroup = { toolCallList: [] };
+              }
+              const ary = JSON.parse(content.text || '[]');
+              ary.push(info);
+              content.text = JSON.stringify(ary);
+
+              // const toolCallGroupId = next.contentPart.linkId || '';
+              const toolCallGroupId = '';
+              content.toolCallGroup.toolCallList.push({ type: ToolCallType.INFO, body: infoBody, seq: content.toolCallGroup.toolCallList.length, toolCallGroupId, toolCallId });
+              // content.id = next.contentPart.id;
+            } else {/** infoじゃないのは無視 */ }
+
+            // tool_calls
+            if (choice.delta.tool_calls && choice.delta.tool_calls.length > 0) {
+              choice.delta.tool_calls.forEach(tool_call => {
+                // console.dir(choice.delta, { depth: null });
+                // 先頭行以外はtool_call.idがundefined
+                if (tool_call.id) {
+                  const content = message.contents.findLast(content => content.type === ContentPartType.TOOL);
+                  if (content && content.type === ContentPartType.TOOL) {
+                    if (content.toolCallGroup) {
+                      content.toolCallGroup.toolCallList.push({ type: ToolCallType.CALL, body: tool_call as ToolCallCallBody, seq: content.toolCallGroup.toolCallList.length, toolCallGroupId: '', toolCallId: tool_call.id });
+                    } else { throw new Error('toolCallGroup is not set'); } // ここに来るのはおかしいのでエラーにする
+                  } else { throw new Error('content is not tool'); } // ここに来るのはおかしいのでエラーにする
+                } else {
+                  // 2行目以降はidが無いのでcontentを使う
+                  if (tool_call.function) {
+                    const content = message.contents.findLast(content => content.type === ContentPartType.TOOL);
+                    if (content && content.toolCallGroup) {
+                      // tool_call_idは無いので、単純に最後のtoolCallを取得してargumentsを追加する
+                      const toolCall = content.toolCallGroup.toolCallList.findLast(toolCall => toolCall.type === ToolCallType.CALL) as ToolCallCall;
+                      if (toolCall) {
+                        toolCall.body.function.arguments += tool_call.function.arguments || '';
+                      } else { throw new Error('content is not tool'); } // ここに来るのはおかしいのでエラーにする
+                    } else { throw new Error('content is not tool'); } // ここに来るのはおかしいのでエラーにする
+                  } else { throw new Error('content is not tool'); } // ここに来るのはおかしいのでエラーにする
+                }
+              });
+            } else { /** tool_callsが無ければ何もしない */ }
+
+            // tool_result
+            if (['tool', 'command', 'input'].includes(choice.delta.role || '')) {
+              const tool_call_id = (choice.delta as { tool_call_id: string }).tool_call_id;
+              const content = message.contents.find(content => content.type === ContentPartType.TOOL);
+              if (content && content.toolCallGroup) {
+                // console.log('tool_result', choice.delta);
+                const toolCall = choice.delta as ToolCallBody;
+                if ('tool' === choice.delta.role) {
+                  const toolCall = choice.delta as ToolCallResultBody;
+                  // content.meta.result = choice.delta;
+                  // content.meta.call.function.arguments = JSON.stringify(JSON.parse(content.meta.call.function.arguments), null, 2);
+                  // content.meta.result.content = JSON.stringify(JSON.parse(content.meta.result.content), null, 2);
+                  // content.text = JSON.stringify(content.meta);
+                  content.toolCallGroup.toolCallList.push({
+                    type: ToolCallType.RESULT,
+                    body: choice.delta as ToolCallResultBody,
+                    seq: content.toolCallGroup.toolCallList.length,
+                    toolCallGroupId: 'content.toolCallGroup.id',//content.toolCallGroup.id,
+                    // toolCallGroupId: content.toolCallGroup.id,
+                    toolCallId: toolCall.tool_call_id,
+                  });
+                } else {
+                  // tool以外はmetaに格納
+                  content.toolCallGroup.toolCallList.push({
+                    type: choice.delta.role as ToolCallType,
+                    body: choice.delta as any,
+                    seq: content.toolCallGroup.toolCallList.length,
+                    toolCallGroupId: 'content.toolCallGroup.id',
+                    // toolCallGroupId: content.toolCallGroup.id,
+                    toolCallId: (toolCall as { tool_call_id: string }).tool_call_id,
+                  });
+                }
+              } else {
+                throw new Error('content is not tool');
+              } // ここに来るのはおかしいのでエラーにする
+            } else {/** infoじゃないのは無視 */ }
+          } else {/** deltaが無いものはないような気もするけど、、 */ }
 
           // Google検索結果のメタデータをセットする
           const groundingMetadata = (choice as any).groundingMetadata;
@@ -1142,11 +1206,11 @@ export class ChatComponent implements OnInit {
             message.contents.push(contentPart);
             this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
           } else {
-            if (choice.finish_reason === 'stop') {
-              // 整形（ここでやるのもイマイチだが、、、）
-              if (content.type === ContentPartType.TOOL && content.meta && content.meta.call && content.meta.call.function) {
-                content.meta.call.function.arguments = JSON.stringify(JSON.parse(content.meta.call.function.arguments), null, 2);
-              } else { }
+            if (choice.finish_reason) {
+              // // 整形（ここでやるのもイマイチだが、、、）
+              // if (content.type === ContentPartType.TOOL && content.meta && content.meta.call && content.meta.call.function) {
+              //   content.meta.call.function.arguments = JSON.stringify(JSON.parse(content.meta.call.function.arguments), null, 2);
+              // } else { }
               const contentPart = this.messageService.initContentPart(message.id, '');
               contentPart.type = ContentPartType.TEXT;
               message.contents.push(contentPart);
@@ -1320,7 +1384,7 @@ export class ChatComponent implements OnInit {
                 return {
                   type: content.type,
                   text: content.text,
-                  fileId: content.fileGroupId,
+                  fileId: content.linkId,
                 } as ChatContent;
               }),
             });
@@ -1604,14 +1668,14 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  toolExec(contentPart: ContentPart): void {
-    console.log(contentPart);
-    this.messageService.updateTimestamp('message-group', this.messageService.messageMas[contentPart.messageId].messageGroupId).subscribe({
+  toolExec(obj: { contentPart: ContentPart, toolCallCommandList: ToolCallCommand[] }): void {
+    console.log(obj);
+    this.messageService.updateTimestamp('message-group', this.messageService.messageMas[obj.contentPart.messageId].messageGroupId).subscribe({
       next: next => {
         this.rebuildThreadGroup();
         this.onChange();
-        const messageGroupId = this.messageService.messageMas[contentPart.messageId].messageGroupId;
-        this.send('messageGroup', [messageGroupId], { command: 'execute' }).subscribe();
+        const messageGroupId = this.messageService.messageMas[obj.contentPart.messageId].messageGroupId;
+        this.send('messageGroup', [messageGroupId], obj.toolCallCommandList).subscribe();
       },
       error: error => {
         this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
@@ -1621,8 +1685,8 @@ export class ChatComponent implements OnInit {
 
   /**
    * 指定されたメッセージグループのリンクチェインを取得する
-   * @param messageGroup 
-   * @returns 
+   * @param messageGroup
+   * @returns
    */
   getChaindedMessageGroupList(messageGroup: MessageGroupForView, offset: number = 0): MessageGroupForView[] {
     const targetMessageGrouplist = [];
@@ -1677,7 +1741,7 @@ export class ChatComponent implements OnInit {
               content.type = messageGroup.messages[mIndex].contents[cIndex].type;
               content.text = messageGroup.messages[mIndex].contents[cIndex].text;
               content.meta = messageGroup.messages[mIndex].contents[cIndex].meta;
-              content.fileGroupId = messageGroup.messages[mIndex].contents[cIndex].fileGroupId;
+              content.linkId = messageGroup.messages[mIndex].contents[cIndex].linkId;
               content.tokenCount = messageGroup.messages[mIndex].contents[cIndex].tokenCount;
             } else {
               content.id = undefined as any; // 無理矢理消す
@@ -1871,7 +1935,7 @@ export class ChatComponent implements OnInit {
                   } else if (content.type === 'file') {
                     const contentPartFile = this.messageService.initContentPart(message.id, content.text);
                     contentPartFile.type = content.type as ContentPartType;
-                    contentPartFile.fileGroupId = content.fileGroupId;
+                    contentPartFile.linkId = content.fileGroupId;
                     contents.push(contentPartFile);
                   }
                   message.contents = contents;

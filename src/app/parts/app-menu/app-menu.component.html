@@ -27,4 +27,26 @@
         </mat-icon>
         <span>疑似 box</span>
     </a>
+
+    <button mat-menu-item [matMenuTriggerFor]="gitMenu">
+        <mat-icon>
+            <img src="./vsc-material-icons/icons/git.svg">
+        </mat-icon>
+        <span>Gitリポジトリ</span>
+    </button>
+</mat-menu>
+
+<mat-menu #gitMenu="matMenu">
+    <a mat-menu-item [routerLink]="['/gitea']">
+        <mat-icon>
+            <img src="./image/gitea-logo.svg">
+        </mat-icon>
+        <span>gitea</span>
+    </a>
+    <a mat-menu-item [routerLink]="['/gitlab']">
+        <mat-icon>
+            <img src="./image/gitlab-logo.svg">
+        </mat-icon>
+        <span>gitlab</span>
+    </a>
 </mat-menu>

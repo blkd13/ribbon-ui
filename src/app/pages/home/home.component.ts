@@ -83,7 +83,7 @@ export class HomeComponent implements OnInit {
   projectList: Project[] = [];
   projectWithoutDefaultList: Project[] = [];
 
-  model: string = 'gemini-1.5-pro';
+  model: string = 'gemini-1.5-pro-002';
 
   placeholder: string = '';
   inputText: string = '';
@@ -184,7 +184,7 @@ export class HomeComponent implements OnInit {
   loadThreads(project: Project): Observable<ThreadGroup[]> {
     return this.threadService.getThreadGroupList(project.id).pipe(tap(threadGroupList => {
       this.sortThread(threadGroupList);
-      // 
+      //
       this.threadGroupList = threadGroupList;
       if (threadGroupList.length) {
         // 本来はupdatedAtでソートしたかったが、何故か時刻が更新されていないので。

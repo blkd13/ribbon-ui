@@ -187,11 +187,11 @@
           [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
         }
       </div>
-      <h1 style="margin-top: 80px;">定型文</h1>
+      <h1 style="margin-top: 80px;">モード</h1>
       <div class="w-full flex justify-center items-center gap-10">
-        @for(preset of presetInputList;track $index){
+        @for(preset of chatService.presetDefs;track $index){
         <div class="course-panel text-center" (click)="selectPreset(preset)" [innerHTML]="preset.label"
-          [ngClass]="{selected:inputArea.content[0].text===preset.text}" style="line-height: 1.5;"></div>
+          [ngClass]="{selected:presetLabel===preset.label}" style="line-height: 1.5;"></div>
         }
       </div>
       <div class="text-xl mt-10 text-[#999]">スレッド数／定型文はオプションなので選ばなくてもよい。</div>
@@ -388,7 +388,7 @@
     <!-- 履歴選択 -->
     <ng-template #messageSelectorTemplate let-messageGroup>
       @let nextMessageGroupIdList=messageService.nextMessageGroupId[messageGroup.id];
-      <div class="flex items-center justify-between mt-3">
+      <div class="flex items-center justify-end mt-3">
         @if(
         (nextMessageGroupIdList.length>messageGroup.selectedIndex&&nextMessageGroupIdList.length>1)||nextMessageGroupIdList.length===messageGroup.selectedIndex
         ){

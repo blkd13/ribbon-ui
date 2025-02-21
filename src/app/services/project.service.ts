@@ -7,7 +7,6 @@ import JSZip from 'jszip'; // JSZipのインポート
 import { Utils } from '../utils';
 import { safeForkJoin } from '../utils/dom-utils';
 import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
-import e from 'express';
 import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions.mjs';
 import OpenAI from 'openai';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -336,13 +335,7 @@ export class MessageService {
                 // タイプによって処理を分ける
                 if (contentPart.type === ContentPartType.TOOL) {
                     // ツールの場合、ツールの内容をセットする
-                    contentPart.meta = JSON.parse(contentPart.text as string);
-                    if (contentPart.meta.call) {
-                        contentPart.meta.call.function.arguments = JSON.stringify(JSON.parse(contentPart.meta.call.function.arguments), null, 2);
-                    } else { }
-                    if (contentPart.meta.result) {
-                        contentPart.meta.result.content = JSON.stringify(JSON.parse(contentPart.meta.result.content), null, 2);
-                    } else { }
+                    contentPart.toolCallGroup = { toolCallList: JSON.parse(contentPart.text as string) };
                 } else if (contentPart.type === ContentPartType.META) {
                     // Google検索結果のメタデータをセットする
                     contentPart.meta = JSON.parse(contentPart.text as string);

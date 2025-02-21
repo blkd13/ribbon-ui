@@ -2,7 +2,8 @@ import { Observable } from "rxjs";
 import { OpenAI } from "openai";
 import { ChatCompletionStreamInDto, UserStatus } from "./models";
 import { CountTokensResponse } from "../services/chat.service";
-import { ChatCompletionChunk } from "openai/resources/index.mjs";
+import { ChatCompletionChunk, ChatCompletionToolMessageParam } from "openai/resources/index.mjs";
+import { ToolCallGroup, ToolCallGroupStatus } from "../services/tool-call.service";
 
 // 共通の型定義
 export type UUID = string;
@@ -338,7 +339,8 @@ export interface ContentPart extends BaseEntity {
     type: ContentPartType;
     seq: number;
     text?: string;
+    toolCallGroup?: ToolCallGroup;
     meta?: any;
-    fileGroupId?: string;
+    linkId?: string;
     tokenCount?: { [modelId: string]: CountTokensResponse }; // JSON型を保存
 }

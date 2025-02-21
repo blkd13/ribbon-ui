@@ -144,7 +144,7 @@ export class GitSelectorDialogComponent {
               const contentPartPrompt = this.messageService.initContentPart(genDummyId(), this.userPrompt);
               const contentPartFile = this.messageService.initContentPart(genDummyId(), project.fileGroup.label);
               contentPartFile.type = ContentPartType.FILE;
-              contentPartFile.fileGroupId = project.fileGroup.id;
+              contentPartFile.linkId = project.fileGroup.id;
               const messageGroup = this.messageService.initMessageGroup(thread.id, systemPromptMessageGroup[index].id, 'user', [contentPartPrompt, contentPartFile],);
               return this.messageService.upsertSingleMessageGroup(messageGroup);
             }));

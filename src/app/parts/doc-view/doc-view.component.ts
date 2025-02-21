@@ -68,7 +68,7 @@ export class DocViewComponent {
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
 
   constructor() {
-    const fileGroupId = this.data.content.fileGroupId;
+    const fileGroupId = this.data.content.linkId || (this.data.content as any as { fileGroupId: string }).fileGroupId;
     if (fileGroupId) {
       this.fileManagerService.getFileGroup(fileGroupId).subscribe({
         next: next => {
@@ -347,7 +347,7 @@ export class DocViewComponent {
             }
             const decodedString = this.decode();
             let trg = this.label.replace(/.*\./g, '');
-            trg = { cob: 'cobol', cbl: 'cobol', pco: 'cobol' }[trg] || trg;
+            trg = { cob: 'cobol', cbl: 'cobol', pco: 'cobol', htm: 'html' }[trg] || trg;
             console.log(`${trg}:${this.label}`);
             this.text = `\`\`\`${trg}\n${decodedString}\n\`\`\``;
             // this.inDto.args.messages.push({ role: 'user', content: [{ type: 'text', text: covered }] });
