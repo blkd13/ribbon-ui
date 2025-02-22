@@ -13,12 +13,15 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 @Component({
     selector: 'app-chat-panel-message',
     imports: [
         CommonModule, FormsModule, DocTagComponent,
         MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule, MatMenuModule,
+        MatTabsModule, MatButtonToggleModule,
     ],
     templateUrl: './chat-panel-message.component.html',
     styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-message.component.scss',],

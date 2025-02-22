@@ -46,7 +46,8 @@ import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-d
 import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
 import { UserService } from '../../services/user.service';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
-import { ToolCall, ToolCallBody, ToolCallInfoBody, ToolCallCallBody, ToolCallCommandBody, ToolCallResultBody, ToolCallType, ToolCallInfo, ToolCallCall, ToolCallCommand, ToolCallResult, } from '../../services/tool-call.service';
+import { ToolCallPart, ToolCallPartBody, ToolCallPartInfoBody, ToolCallPartCallBody, ToolCallPartCommandBody, ToolCallPartResultBody, ToolCallPartType, ToolCallPartInfo, ToolCallPartCall, ToolCallPartCommand, ToolCallPartResult, ToolCallService, MyToolType, } from '../../services/tool-call.service';
+import { ChatCompletionTool } from 'openai/resources/index.mjs';
 
 declare var _paq: any;
 
@@ -269,6 +270,7 @@ export class ChatComponent implements OnInit {
     });
   }
 
+  readonly toolCallService: ToolCallService = inject(ToolCallService);
   presetLabel = '通常';
   selectPreset(preset: PresetDef): void {
     _paq.push(['trackEvent', 'AIチャット', 'モード選択', this.selectedThreadGroup.threadList.length]);
@@ -283,9 +285,17 @@ export class ChatComponent implements OnInit {
       messageGroup.messages[0].contents[0].text = preset.systemPrompt || this.chatService.defaultSystemPrompt;
       messageGroup.messages.forEach(message => message.label = preset.systemLabel || this.chatService.defaultSystemPrompt);
       thread.inDto.args.tool_choice = preset.tool_choice;
+
+      if (preset.tool_names) {
+        const funcMap = this.toolCallService.tools.map(tool => tool.tools).flat().reduce((acc, tool) => {
+          acc[`${tool.info.group}:${tool.info.name}`] = tool.definition;
+          return acc;
+        }, {} as { [key: string]: ChatCompletionTool })
+        thread.inDto.args.tools = preset.tool_names.map(toolName => funcMap[toolName]);
+      } else { }
     });
     this.inputArea.content[0].text = preset.userPrompt || '';
-    this.placeholder = preset.placeholder || this.placeholder;
+    this.placeholder = preset.placeholder || this.defaultPlaceholder;
     if (isModelChange) {
       this.modelCheck();
     }
@@ -857,7 +867,7 @@ export class ChatComponent implements OnInit {
     // typeで色々指定できるようにしたかったが、現状messageGroup以外はバグってる。。
     type: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | 'contentPart' | undefined = undefined,
     idList: string[] = [],
-    toolCallCommandList?: ToolCallCommand[],
+    toolCallPartCommandList?: ToolCallPartCommand[],
   ): Observable<{
     connectionId: string,
     streamId: string,
@@ -920,7 +930,7 @@ export class ChatComponent implements OnInit {
         this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
-      } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0 && toolCallCommandList === undefined) { // toolCallCommandがある場合はツールからの入力とみなす
+      } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0 && toolCallPartCommandList === undefined) { // toolCallCommandがある場合はツールからの入力とみなす
         if (this.inputArea.content.length > 1) {
           this.snackBar.open(`ファイルだけでは送信できません。何かメッセージを入力してください。`, 'close', { duration: 3000 });
           throw new Error('ファイルだけでは送信できません。何かメッセージを入力してください。');
@@ -1001,7 +1011,7 @@ export class ChatComponent implements OnInit {
           }
         }).map((messageGroupId, index) =>
           // contentPartの切り分けが失敗しまくっている。。。
-          this.chatService.chatCompletionObservableStreamByProjectModel(threadList[index].inDto.args, 'messageGroup', messageGroupId, toolCallCommandList)
+          this.chatService.chatCompletionObservableStreamByProjectModel(threadList[index].inDto.args, 'messageGroup', messageGroupId, toolCallPartCommandList)
             .pipe(
               tap(resDto => {
                 // console.log('response-------------------------');
@@ -1011,12 +1021,12 @@ export class ChatComponent implements OnInit {
 
                 // TODO toolの場合のmeta編集をしておかないといけない。でもこの整形色々なところで書いていて冗長なのでどこかにまとめたい。
                 resDto.messageGroupList.forEach(messageGroup => {
+                  //
                   messageGroup.messages.forEach(message => {
                     message.contents.forEach(contentPart => {
                       if (contentPart.type === ContentPartType.TOOL) {
                         // ツールの場合、ツールの内容をセットする
-                        // ツールの場合、ツールの内容をセットする
-                        contentPart.toolCallGroup = { toolCallList: JSON.parse(contentPart.text as string) };
+                        contentPart.toolCallGroup = { id: '', projectId: this.selectedProject.id, toolCallList: JSON.parse(contentPart.text as string) };
                         // this.messageService.contentPartMas[contentPart.id] = contentPart;
                       } else { }
                     });
@@ -1027,6 +1037,7 @@ export class ChatComponent implements OnInit {
                   this.chatStreamSubscriptionList[this.selectedThreadGroup.id] = this.chatStreamSubscriptionList[this.selectedThreadGroup.id] || [];
                   messageGroup.isExpanded = true;
                   messageGroup.messages.map(message => {
+                    message.status = MessageStatusType.Waiting;
                     if (message.observer) {
                       this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
                       console.log(`Message ID before chat completion: ${message.id}`);
@@ -1110,12 +1121,12 @@ export class ChatComponent implements OnInit {
               // console.log('tool_call', tool_call);
               // 最初の1行のみidが振られているので、それを使ってtoolCallを作る。
               const toolCallId = (choice.delta as { tool_call_id: string }).tool_call_id;
-              const infoBody = JSON.parse(choice.delta.content || '{}') as ToolCallInfoBody;
-              const info = { type: ToolCallType.INFO, body: infoBody, toolCallId } as ToolCallInfo;
+              const infoBody = JSON.parse(choice.delta.content || '{}') as ToolCallPartInfoBody;
+              const info = { type: ToolCallPartType.INFO, body: infoBody, toolCallId } as ToolCallPartInfo;
               if (content.toolCallGroup) {
               } else {
                 // content.toolCallGroup = { id: next.contentPart.id, toolCallList: [] };
-                content.toolCallGroup = { toolCallList: [] };
+                content.toolCallGroup = { id: '', projectId: this.selectedProject.id, toolCallList: [] };
               }
               const ary = JSON.parse(content.text || '[]');
               ary.push(info);
@@ -1123,7 +1134,7 @@ export class ChatComponent implements OnInit {
 
               // const toolCallGroupId = next.contentPart.linkId || '';
               const toolCallGroupId = '';
-              content.toolCallGroup.toolCallList.push({ type: ToolCallType.INFO, body: infoBody, seq: content.toolCallGroup.toolCallList.length, toolCallGroupId, toolCallId });
+              content.toolCallGroup.toolCallList.push({ type: ToolCallPartType.INFO, body: infoBody, seq: content.toolCallGroup.toolCallList.length, toolCallGroupId, toolCallId });
               // content.id = next.contentPart.id;
             } else {/** infoじゃないのは無視 */ }
 
@@ -1136,7 +1147,7 @@ export class ChatComponent implements OnInit {
                   const content = message.contents.findLast(content => content.type === ContentPartType.TOOL);
                   if (content && content.type === ContentPartType.TOOL) {
                     if (content.toolCallGroup) {
-                      content.toolCallGroup.toolCallList.push({ type: ToolCallType.CALL, body: tool_call as ToolCallCallBody, seq: content.toolCallGroup.toolCallList.length, toolCallGroupId: '', toolCallId: tool_call.id });
+                      content.toolCallGroup.toolCallList.push({ type: ToolCallPartType.CALL, body: tool_call as ToolCallPartCallBody, seq: content.toolCallGroup.toolCallList.length, toolCallGroupId: '', toolCallId: tool_call.id });
                     } else { throw new Error('toolCallGroup is not set'); } // ここに来るのはおかしいのでエラーにする
                   } else { throw new Error('content is not tool'); } // ここに来るのはおかしいのでエラーにする
                 } else {
@@ -1145,7 +1156,7 @@ export class ChatComponent implements OnInit {
                     const content = message.contents.findLast(content => content.type === ContentPartType.TOOL);
                     if (content && content.toolCallGroup) {
                       // tool_call_idは無いので、単純に最後のtoolCallを取得してargumentsを追加する
-                      const toolCall = content.toolCallGroup.toolCallList.findLast(toolCall => toolCall.type === ToolCallType.CALL) as ToolCallCall;
+                      const toolCall = content.toolCallGroup.toolCallList.findLast(toolCall => toolCall.type === ToolCallPartType.CALL) as ToolCallPartCall;
                       if (toolCall) {
                         toolCall.body.function.arguments += tool_call.function.arguments || '';
                       } else { throw new Error('content is not tool'); } // ここに来るのはおかしいのでエラーにする
@@ -1161,16 +1172,16 @@ export class ChatComponent implements OnInit {
               const content = message.contents.find(content => content.type === ContentPartType.TOOL);
               if (content && content.toolCallGroup) {
                 // console.log('tool_result', choice.delta);
-                const toolCall = choice.delta as ToolCallBody;
+                const toolCall = choice.delta as ToolCallPartBody;
                 if ('tool' === choice.delta.role) {
-                  const toolCall = choice.delta as ToolCallResultBody;
+                  const toolCall = choice.delta as ToolCallPartResultBody;
                   // content.meta.result = choice.delta;
                   // content.meta.call.function.arguments = JSON.stringify(JSON.parse(content.meta.call.function.arguments), null, 2);
                   // content.meta.result.content = JSON.stringify(JSON.parse(content.meta.result.content), null, 2);
                   // content.text = JSON.stringify(content.meta);
                   content.toolCallGroup.toolCallList.push({
-                    type: ToolCallType.RESULT,
-                    body: choice.delta as ToolCallResultBody,
+                    type: ToolCallPartType.RESULT,
+                    body: choice.delta as ToolCallPartResultBody,
                     seq: content.toolCallGroup.toolCallList.length,
                     toolCallGroupId: 'content.toolCallGroup.id',//content.toolCallGroup.id,
                     // toolCallGroupId: content.toolCallGroup.id,
@@ -1179,7 +1190,7 @@ export class ChatComponent implements OnInit {
                 } else {
                   // tool以外はmetaに格納
                   content.toolCallGroup.toolCallList.push({
-                    type: choice.delta.role as ToolCallType,
+                    type: choice.delta.role as ToolCallPartType,
                     body: choice.delta as any,
                     seq: content.toolCallGroup.toolCallList.length,
                     toolCallGroupId: 'content.toolCallGroup.id',
@@ -1220,7 +1231,7 @@ export class ChatComponent implements OnInit {
         });
 
         this.cdr.detectChanges();
-        message.status = MessageStatusType.Editing;
+        message.status = MessageStatusType.Loading;
         this.bitCounter++;
         if (this.autoscroll) {
           // 一回でも上スクロールしてたらオートスクロールをオフ。
@@ -1668,14 +1679,14 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  toolExec(obj: { contentPart: ContentPart, toolCallCommandList: ToolCallCommand[] }): void {
+  toolExec(obj: { contentPart: ContentPart, toolCallPartCommandList: ToolCallPartCommand[] }): void {
     console.log(obj);
     this.messageService.updateTimestamp('message-group', this.messageService.messageMas[obj.contentPart.messageId].messageGroupId).subscribe({
       next: next => {
         this.rebuildThreadGroup();
         this.onChange();
         const messageGroupId = this.messageService.messageMas[obj.contentPart.messageId].messageGroupId;
-        this.send('messageGroup', [messageGroupId], obj.toolCallCommandList).subscribe();
+        this.send('messageGroup', [messageGroupId], obj.toolCallPartCommandList).subscribe();
       },
       error: error => {
         this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
@@ -1720,6 +1731,7 @@ export class ChatComponent implements OnInit {
         if (_thread.id === thread.id) {
         } else {
           // 他のスレッドにコピーする。
+          _thread.inDto.args.tools = thread.inDto.args.tools;
           _thread.inDto.args.tool_choice = thread.inDto.args.tool_choice;
           _thread.inDto.args.parallel_tool_calls = thread.inDto.args.parallel_tool_calls;
         }

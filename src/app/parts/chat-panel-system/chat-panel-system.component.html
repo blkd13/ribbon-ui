@@ -138,7 +138,7 @@
         <fieldset>
             <legend>ツール一覧（現在は変更不可）</legend>
             <!-- <mat-checkbox [(ngModel)]="thread().inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
-            @for(groupDef of this.toolCall.tools;track $index) {
+            @for(groupDef of this.toolCallService.tools;track $index) {
             <div>
                 <div>{{groupDef.group}}</div>
                 @for(tool of groupDef.tools;track $index) {

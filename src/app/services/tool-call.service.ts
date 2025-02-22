@@ -4,17 +4,8 @@ import { ChatCompletionTool, ChatCompletionToolMessageParam } from 'openai/resou
 import OpenAI from 'openai';
 
 import { GService } from './g.service';
+import { Observable, tap } from 'rxjs';
 
-export interface MyToolInfo {
-  group: string;
-  label: string;
-  name: string; // 画面に来るときは絶対ある
-  isInteractive?: boolean; // ユーザーの入力を要するもの
-}
-export interface MyToolType {
-  info: MyToolInfo;
-  definition: ChatCompletionTool;
-}
 
 @Injectable({
   providedIn: 'root'
@@ -27,21 +18,89 @@ export class ToolCallService {
   tools: { group: string, tools: MyToolType[] }[] = [];
 
   constructor() {
-    this.http.get<MyToolType[]>('/function-definitions').subscribe(res => {
-      res.forEach(tool => {
-        const group = tool.info.group;
-        const groupIndex = this.tools.findIndex(t => t.group === group);
-        if (groupIndex === -1) {
-          this.tools.push({ group, tools: [tool] });
-        } else {
-          this.tools[groupIndex].tools.push(tool);
-        }
-      });
+    // 定義は起動時に取得しておく
+    this.getFunctionDefinitions().subscribe(() => { });
+  }
+
+  getFunctionDefinitions(): Observable<MyToolType[]> {
+    return this.http.get<MyToolType[]>('/function-definitions').pipe(
+      tap(res => {
+        res.forEach(tool => {
+          const group = tool.info.group;
+          const groupIndex = this.tools.findIndex(t => t.group === group);
+          if (groupIndex === -1) {
+            this.tools.push({ group, tools: [tool] });
+          } else {
+            this.tools[groupIndex].tools.push(tool);
+          }
+        });
+      })
+    );
+  }
+
+  toolCallListToToolCallSetList(toolCallList: ToolCallPart[]): ToolCallSet[] {
+    const toolCallSetList: ToolCallSet[] = [];
+    let toolCallSet: ToolCallSet;
+    toolCallList.forEach(toolCall => {
+      switch (toolCall.type) {
+        case ToolCallPartType.INFO:
+          toolCallSet = { info: toolCall.body, call: null, commandList: [], resultList: [] } as any;
+          toolCallSetList.push(toolCallSet);
+          break;
+        case ToolCallPartType.CALL:
+          toolCallSet.call = toolCall;
+          break;
+        case ToolCallPartType.COMMAND:
+          toolCallSet.commandList.push(toolCall);
+          break;
+        case ToolCallPartType.RESULT:
+          toolCallSet.resultList.push(toolCall);
+          break;
+      }
+    });
+    return toolCallSetList;
+  }
+
+  getToolCallGroup(id: string): Observable<ToolCallGroupForView> {
+    return this.http.get<ToolCallGroupForView>(`/user/tool-call-group/${id}`).pipe(tap(
+      res => {
+        this.fromatToolCallSetList(res.toolCallList);
+      }
+    ));
+  }
+  getToolCallGroupByToolCallId(id: string): Observable<ToolCallGroupForView> {
+    return this.http.get<ToolCallGroupForView>(`/user/tool-call-group-by-tool-call-id/${id}`).pipe(tap(
+      res => {
+        this.fromatToolCallSetList(res.toolCallList);
+      }
+    ));
+  }
+  fromatToolCallSetList(toolCallPartList: ToolCallPart[]): ToolCallPart[] {
+    return toolCallPartList.map(toolCall => {
+      if (toolCall.type === ToolCallPartType.CALL) {
+        toolCall.body.function.arguments = JSON.stringify(JSON.parse(toolCall.body.function.arguments), null, 2);
+      } else if (toolCall.type === ToolCallPartType.RESULT) {
+        toolCall.body.content = JSON.stringify(JSON.parse(toolCall.body.content), null, 2);
+      } else { }
+      return toolCall;
     });
   }
 }
 
-export enum ToolCallType {
+
+export interface ToolCallSet {
+  info: ToolCallPartInfo;
+  call: ToolCallPartCall;
+  commandList: ToolCallPartCommand[];
+  resultList: ToolCallPartResult[];
+}
+
+export interface MyToolType {
+  info: ToolCallPartInfoBody;
+  definition: ChatCompletionTool;
+}
+
+export enum ToolCallPartType {
   INFO = 'info',
   CALL = 'call',
   COMMAND = 'command',
@@ -53,13 +112,13 @@ export enum ToolCallGroupStatus {
   Deleted = 'Deleted',
 }
 
-export enum ToolCallStatus {
+export enum ToolCallPartStatus {
   Normal = 'Normal',
   Deleted = 'Deleted',
 }
 
 // 情報用のinterface
-export interface ToolCallInfoBody {
+export interface ToolCallPartInfoBody {
   isActive: boolean;
   group: string;
   name: string;
@@ -68,7 +127,7 @@ export interface ToolCallInfoBody {
 }
 
 // 呼び出し用のinterface
-export interface ToolCallCallBody {
+export interface ToolCallPartCallBody {
   index: number;
   id: string;
   function: {
@@ -79,55 +138,61 @@ export interface ToolCallCallBody {
 }
 
 // 入力用のinterface
-export interface ToolCallCommandBody {
+export interface ToolCallPartCommandBody {
   command: 'execute' | 'cancel'; // コマンド
   input?: unknown; // ユーザーの入力
   arguments?: unknown; // argumentsを強制的に上書きする場合
 }
 
 // 結果用のinterface
-export interface ToolCallResultBody {
+export interface ToolCallPartResultBody {
   tool_call_id: string;
   role: string;
   content: any;
 }
 
 // 合成型
-export type ToolCallBody =
-  | ToolCallInfoBody // original
-  | ToolCallCallBody | OpenAI.ChatCompletionChunk.Choice.Delta.ToolCall
-  | ToolCallCommandBody // original
-  | ToolCallResultBody | ChatCompletionToolMessageParam;
+export type ToolCallPartBody =
+  | ToolCallPartInfoBody // original
+  | ToolCallPartCallBody | OpenAI.ChatCompletionChunk.Choice.Delta.ToolCall
+  | ToolCallPartCommandBody // original
+  | ToolCallPartResultBody | ChatCompletionToolMessageParam;
 
 interface ToolCallBase {
   seq?: number;
   toolCallGroupId?: string;
   toolCallId: string;
 }
-export interface ToolCallInfo extends ToolCallBase {
-  type: ToolCallType.INFO;
-  body: ToolCallInfoBody;
+export interface ToolCallPartInfo extends ToolCallBase {
+  type: ToolCallPartType.INFO;
+  body: ToolCallPartInfoBody;
 }
 
-export interface ToolCallCall extends ToolCallBase {
-  type: ToolCallType.CALL;
-  body: ToolCallCallBody;
+export interface ToolCallPartCall extends ToolCallBase {
+  type: ToolCallPartType.CALL;
+  body: ToolCallPartCallBody;
 }
 
-export interface ToolCallCommand extends ToolCallBase {
-  type: ToolCallType.COMMAND;
-  body: ToolCallCommandBody;
+export interface ToolCallPartCommand extends ToolCallBase {
+  type: ToolCallPartType.COMMAND;
+  body: ToolCallPartCommandBody;
 }
 
-export interface ToolCallResult extends ToolCallBase {
-  type: ToolCallType.RESULT;
-  body: ToolCallResultBody;
+export interface ToolCallPartResult extends ToolCallBase {
+  type: ToolCallPartType.RESULT;
+  body: ToolCallPartResultBody;
 }
 
-export type ToolCall = (ToolCallInfo | ToolCallCall | ToolCallCommand | ToolCallResult);
+export type ToolCallPart = (ToolCallPartInfo | ToolCallPartCall | ToolCallPartCommand | ToolCallPartResult);
 
 export interface ToolCallGroup {
+  id: string;
+  projectId: string;
+  // status: ToolCallGroupStatus;
+}
+
+export interface ToolCallGroupForView extends ToolCallGroup {
   // id: string;
   // status: ToolCallGroupStatus;
-  toolCallList: ToolCall[];
+  toolCallList: ToolCallPart[];
 }

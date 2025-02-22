@@ -24,23 +24,40 @@
   </mat-expansion-panel-header>
 
   <div class="flex w-full gap-2">
-    @for (message of messageGroup().messages; track $index;let mIndex=$index) {
-    <div class="w-full relative" [ngClass]="{'message-notediting': !message.editing}">
+    <!-- <div class="flex flex-col gap-2">
+      @for(_ of messageGroup().messages.keys();track $index){
+      <button mat-raised-button (click)="setMessageIndex($index)">{{$index+1}}</button>
+      }
+    </div> -->
+
+    @if(messageGroup().messages.length>1){
+    <div>
+      <mat-button-toggle-group [value]="mIndex" (change)="setMessageIndex($event.value)" class="min-w-8"
+        style="border-radius: 4px;" vertical hideSingleSelectionIndicator>
+        @for(_ of messageGroup().messages.keys();track $index){
+        <mat-button-toggle [value]="$index" [ngClass]="{'selected': $index===mIndex}">{{$index+1}}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+    </div>
+    }
+
+    <div class="flex-grow w-0 relative" [ngClass]="{'message-notediting': !message.editing}">
 
       <!-- ファイル -->
-      <!-- @if(message.contents.length>1){
-            <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
-                @for(content of message.contents; track $index){
-                @if(content.type==='text'){
-                }@else if(content.type==='error'){
-                }@else{
-                <app-doc-tag [removable]="false" [content]="content"
-                    (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
-                }
-                }
-            </div>
-            }
-            -->
+      <!-- 
+      @if(message.contents.length>1){
+      <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
+          @for(content of message.contents; track $index){
+          @if(content.type==='text'){
+          }@else if(content.type==='error'){
+          }@else{
+          <app-doc-tag [removable]="false" [content]="content"
+              (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
+          }
+          }
+      </div>
+      }
+      -->
 
       <!-- メッセージ -->
       @for(content of message.contents; track $index ; let cIndex=$index){
@@ -79,7 +96,7 @@
 
         @for(toolCall of jsonParseToArray(content.text||'[]');track $index){
         @if(toolCall.type==='info'&&toolCall.body){
-        <button class="flex items-center command-tag cursor-pointer" (click)="isShowTool[cIndex]=true">
+        <button class="flex items-center command-tag cursor-pointer" (click)="openToolCallDialog($event, toolCall)">
           <img [src]="'image/'+toolCall.body.group+'-logo.svg'" style="width: 32px;" />
           <div class="flex flex-col items-start">
             <div>[{{toolCall.body.name}}]</div>
@@ -96,26 +113,6 @@
         </button>
         } -->
       </div>
-
-      @if(isShowTool[cIndex]){
-      <div class="fixed z-10 w-full h-full inset-0 flex items-center justify-center"
-        style="background-color: rgba(0,0,0,.32)" (click)="isShowTool[cIndex]=false">
-        <div class="h-[80vh] overflow-auto p-5 rounded-md w-1/2" style="background-color: #333;"
-          (click)="$event.stopPropagation()">
-          @if(content.meta.call; as call){
-          <h1>{{call.function.name}}</h1>
-          <h3>arguments</h3>
-          <markdown clipboard [data]="'```json\n'+call.function.arguments+'\n```'"></markdown>
-          @if(content.meta.result; as result){
-          <h3>result</h3>
-          <markdown clipboard [data]="'```json\n'+result.content+'\n```'"></markdown>
-          }
-          <!-- {{content|json}} -->
-          }
-        </div>
-      </div>
-      }
-
 
       } @else if(content.type==='meta') {
 
@@ -153,17 +150,17 @@
       </div>
       } @else {}
 
-      <!-- Loading -->
-      @if (message.status === 'Loading') {
-      <!-- アニメーションつけるかどうか [@fadeAnimation] -->
-      <div class="absolute inset-0 flex items-center justify-center bg-black/25">
-        <mat-spinner style="transform: scale(0.4);"></mat-spinner>
-      </div>
-      }
     </div>
-    }
   </div>
-  @if (!messageGroup().messages[0].editing) {
+
+  <!-- Loading -->
+  <!-- アニメーションつけるかどうか [@fadeAnimation] -->
+  @if (messageGroup().messages[mIndex].status === 'Waiting') {
+  <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10">
+    <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+  </div>
+  }
+  @if (!messageGroup().messages[mIndex].editing) {
   <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'bottom'}"></ng-container>
   }
 </mat-expansion-panel>

@@ -40,8 +40,7 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   readonly threadChangeEmitter = output<Thread>({ alias: 'threadChange' });
 
-  readonly dialog: MatDialog = inject(MatDialog);
-  readonly toolCall: ToolCallService = inject(ToolCallService);
+  readonly toolCallService: ToolCallService = inject(ToolCallService);
 
   modelIdMas: { [modelId: string]: LlmModel } = {};
   modelGroupMas: { [modelId: string]: LlmModel[] } = {};
@@ -54,6 +53,7 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
   };
 
   override ngOnInit(): void {
+    super.ngOnInit();
     this.modelIdMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel }, model) => {
       acc[model.id] = model;
       return acc;
@@ -67,6 +67,9 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
       acc[tag].push(model);
       return acc;
     }, {});
+
+    // // ツールの初期選択状態を設定
+    // this.initializeToolSelection();
   }
 
   removeThread($event: MouseEvent): void {
@@ -94,4 +97,80 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     //   // アラート不用
     // }
   }
+
+  // // ツールの選択状態を管理
+  // selectedTools: { [key: string]: boolean } = {};
+  // groupSelection: { [key: string]: boolean } = {};
+
+
+  // private initializeToolSelection(): void {
+  //   // スレッドの設定から初期状態を設定
+  //   const thread = this.thread();
+  //   if (!thread.inDto.args.tools) {
+  //     thread.inDto.args.tools = [];
+  //   }
+
+  //   // グループとツールの選択状態を初期化
+  //   this.toolCallService.tools.forEach(group => {
+  //     this.groupSelection[group.group] = false;
+  //     group.tools.forEach(tool => {
+  //       if (thread.inDto.args.tools && tool.info) {
+  //         this.selectedTools[tool.info.name] = thread.inDto.args.tools.map(tool => tool.function?.name)?.includes(tool.info.name);
+  //         if (this.selectedTools[tool.info.name]) {
+  //           this.groupSelection[group.group] = true;
+  //         }
+  //       } else {
+  //         // ツールが未設定の場合はすべて選択状態にする
+  //       }
+  //     });
+  //   });
+  // }
+
+  // toggleGroup(groupName: string): void {
+  //   this.groupSelection[groupName] = !this.groupSelection[groupName];
+
+  //   // グループ内のすべてのツールを更新
+  //   this.toolCallService.tools
+  //     .find(g => g.group === groupName)?.tools
+  //     .forEach(tool => {
+  //       this.selectedTools[tool.info.name] = this.groupSelection[groupName];
+  //     });
+
+  //   this.updateThreadTools();
+  // }
+
+  // toggleTool(toolName: string, groupName: string): void {
+  //   this.selectedTools[toolName] = !this.selectedTools[toolName];
+
+  //   // グループの状態を更新
+  //   const group = this.toolCallService.tools.find(g => g.group === groupName);
+  //   if (group) {
+  //     this.groupSelection[groupName] = group.tools
+  //       .every(tool => this.selectedTools[tool.info.name]);
+  //   }
+
+  //   this.updateThreadTools();
+  // }
+
+  // private updateThreadTools(): void {
+  //   const thread = this.thread();
+  //   thread.inDto.args.tools = Object.entries(this.selectedTools)
+  //     .filter(([_, selected]) => selected)
+  //     .map(([name, _]) => this.toolCallService.tools
+  //       .find(g => g.tools.some(tool => tool.info.name === name))
+  //       ?.tools.find(tool => tool.info.name === name)?.definition.function).filter(Boolean) as any;
+  //   console.dir(thread.inDto.args.tools);
+  //   this.threadChangeEmitter.emit(thread);
+  // }
+
+  // isAllToolsInGroupSelected(groupName: string): boolean {
+  //   const group = this.toolCallService.tools.find(g => g.group === groupName);
+  //   return group?.tools.every(tool => this.selectedTools[tool.info.name]) ?? false;
+  // }
+
+  // isAnyToolInGroupSelected(groupName: string): boolean {
+  //   const group = this.toolCallService.tools.find(g => g.group === groupName);
+  //   return group?.tools.some(tool => this.selectedTools[tool.info.name]) ?? false;
+  // }
+
 }

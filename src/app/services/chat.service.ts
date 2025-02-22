@@ -9,7 +9,7 @@ import { environment } from '../../environments/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
 import { Utils } from '../utils';
-import { ToolCallCommand, ToolCallCommandBody } from './tool-call.service';
+import { ToolCallPartCommand, ToolCallPartCommandBody } from './tool-call.service';
 
 export interface ChatInputArea {
   role: OpenAI.ChatCompletionRole;
@@ -419,7 +419,7 @@ export class ChatService {
     args: ChatCompletionCreateParamsWithoutMessages,
     idType: 'threadGroup' | 'thread' | 'messageGroup' | 'message' | 'contentPart',
     id: string,
-    toolCallCommandList?: ToolCallCommand[],
+    toolCallPartCommandList?: ToolCallPartCommand[],
   ): Observable<{
     connectionId: string,
     streamId: string,
@@ -444,7 +444,7 @@ export class ChatService {
     return this.open(flag).pipe(
       switchMap(connectionId => this.http.post<MessageGroupForView[]>(
         `/user/v2/chat-completion?connectionId=${connectionId}&streamId=${streamId}&type=${idType}&id=${id}`,
-        { args, toolCallCommandList },
+        { args, toolCallPartCommandList },
         // { headers: this.authService.getHeaders() }
       )),
       map(messageGroupList => messageGroupList.map(messageGroup => {
@@ -664,6 +664,7 @@ export interface PresetDef {
   label: string;
   modelSelection?: string[];
   tool_choice?: 'auto' | 'none' | 'required';
+  tool_names?: string[];
   systemLabel?: string,
   systemPrompt?: string;
   placeholder?: string;

@@ -335,7 +335,8 @@ export class MessageService {
                 // タイプによって処理を分ける
                 if (contentPart.type === ContentPartType.TOOL) {
                     // ツールの場合、ツールの内容をセットする
-                    contentPart.toolCallGroup = { toolCallList: JSON.parse(contentPart.text as string) };
+                    // TODO 適当過ぎる。。。
+                    contentPart.toolCallGroup = { id: '', projectId: '', toolCallList: JSON.parse(contentPart.text as string) };
                 } else if (contentPart.type === ContentPartType.META) {
                     // Google検索結果のメタデータをセットする
                     contentPart.meta = JSON.parse(contentPart.text as string);
@@ -796,7 +797,7 @@ export class MessageService {
         "rexx": "rex",
         "smalltalk": "st",
         "powershell": "ps1"     // PowerShell scripts
-    };
+    } as { [key: string]: string };
 
     downloadContent(threadGroupId: string): Observable<JSZip> {
         let counter = 0;

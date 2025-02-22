@@ -3,7 +3,7 @@ import { OpenAI } from "openai";
 import { ChatCompletionStreamInDto, UserStatus } from "./models";
 import { CountTokensResponse } from "../services/chat.service";
 import { ChatCompletionChunk, ChatCompletionToolMessageParam } from "openai/resources/index.mjs";
-import { ToolCallGroup, ToolCallGroupStatus } from "../services/tool-call.service";
+import { ToolCallGroup, ToolCallGroupForView, ToolCallGroupStatus } from "../services/tool-call.service";
 
 // 共通の型定義
 export type UUID = string;
@@ -320,9 +320,10 @@ export interface Message extends BaseEntity {
 export enum MessageStatusType {
     Initial = 'Initial',
     // Normal = 'Normal',
-    Editing = 'Editing',
-    Loading = 'Loading',
-    Loaded = 'Loaded',
+    Editing = 'Editing', // 手動編集中
+    Waiting = 'Waiting', // AI自動生成開始待ち
+    Loading = 'Loading', // AI自動生成中
+    Loaded = 'Loaded', // 通常
     // Error = 'Error',
     // Deleted = 'Deleted',
 }
@@ -339,7 +340,7 @@ export interface ContentPart extends BaseEntity {
     type: ContentPartType;
     seq: number;
     text?: string;
-    toolCallGroup?: ToolCallGroup;
+    toolCallGroup?: ToolCallGroupForView;
     meta?: any;
     linkId?: string;
     tokenCount?: { [modelId: string]: CountTokensResponse }; // JSON型を保存

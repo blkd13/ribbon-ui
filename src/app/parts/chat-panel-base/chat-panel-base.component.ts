@@ -17,10 +17,13 @@ import { saveAs } from 'file-saver'; // Blobファイルのダウンロードの
 import { MessageService } from './../../services/project.service';
 import { ChatService } from '../../services/chat.service';
 import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
-import { ContentPart, ContentPartType, MessageForView, MessageGroupForView } from '../../models/project-models';
+import { ContentPart, ContentPartType, MessageForView, MessageGroupForView, Project } from '../../models/project-models';
 import { Utils } from '../../utils';
 import { MatMenuModule } from '@angular/material/menu';
-import { ToolCall, ToolCallBody, ToolCallCommand, ToolCallCommandBody, ToolCallInfo, ToolCallType } from '../../services/tool-call.service';
+import { ToolCallPart, ToolCallPartBody, ToolCallPartCommand, ToolCallPartCommandBody, ToolCallPartInfo, ToolCallPartType } from '../../services/tool-call.service';
+import { MatDialog } from '@angular/material/dialog';
+import { ToolCallCallResultDialogComponent } from '../tool-call-call-result-dialog/tool-call-call-result-dialog.component';
+import { MatTabsModule } from '@angular/material/tabs';
 
 
 @Component({
@@ -68,6 +71,8 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly layout = input.required<'flex' | 'grid'>();
 
+  mIndex = 0;
+  message!: MessageForView;
   beforeScrollTop = -1;
   autoscroll = false;
   beforeText = '';
@@ -88,7 +93,7 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly removeEmitter = output<MessageGroupForView>({ alias: 'remove' });
 
-  readonly toolExecEmitter = output<{ contentPart: ContentPart, toolCallCommandList: ToolCallCommand[] }>({ alias: 'toolExec' });
+  readonly toolExecEmitter = output<{ contentPart: ContentPart, toolCallPartCommandList: ToolCallPartCommand[] }>({ alias: 'toolExec' });
 
   readonly fileSelectionUpdateEmitter = output<MessageGroupForView>({ alias: 'fileSelectionUpdate' });
 
@@ -110,14 +115,14 @@ export class ChatPanelBaseComponent implements OnInit {
     let flag = false;
     this.messageGroup().messages.map(message =>
       message.contents.filter(content =>
-        content.type === 'tool' && content.toolCallGroup?.toolCallList.find(tc => tc.type === ToolCallType.INFO)
+        content.type === 'tool' && content.toolCallGroup?.toolCallList.find(tc => tc.type === ToolCallPartType.INFO)
       )
     ).forEach(contents => {
       if (contents.length === 0) return;
-      const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCall[];
-      if ((toolCallList[0] as ToolCallInfo).body.isInteractive) {
-        const infoSize = toolCallList.filter(tc => tc.type === ToolCallType.INFO).length;
-        const commandSize = toolCallList.filter(tc => tc.type === ToolCallType.COMMAND).length;
+      const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCallPart[];
+      if ((toolCallList[0] as ToolCallPartInfo).body.isInteractive) {
+        const infoSize = toolCallList.filter(tc => tc.type === ToolCallPartType.INFO).length;
+        const commandSize = toolCallList.filter(tc => tc.type === ToolCallPartType.COMMAND).length;
         if (infoSize > commandSize) {
           // console.log(`interactive: ${infoSize} > ${commandSize}`);
           flag = true;
@@ -142,6 +147,7 @@ export class ChatPanelBaseComponent implements OnInit {
   constructor() {
     // TODO シグナル式のやり方をとりあえず実装してみた。汚い気がするので後で直したい。シグナル使う必要無いと思う？？
     effect(() => {
+      this.setMessageIndex(this.mIndex);
       if (this.messageGroup().isExpanded) {
         this.loadContent().subscribe();
       } else { }
@@ -184,6 +190,11 @@ export class ChatPanelBaseComponent implements OnInit {
     });
   }
 
+  setMessageIndex(index: number): void {
+    this.mIndex = index;
+    this.message = this.messageGroup().messages[this.mIndex];
+  }
+
   scroll(): void {
     // this.setBrackets();
     // 冷静になるとこのパネル自体はスクロールしなくていいんじゃないかという気がする。
@@ -207,41 +218,6 @@ export class ChatPanelBaseComponent implements OnInit {
     // } else { }
   }
 
-  languageExtensions: Record<string, string> = {
-    "typescript": "ts",
-    "typescriptx": "tsx", // TypeScript with JSX
-    "javascript": "js",
-    "python": "py",
-    "csharp": "cs",
-    "ruby": "rb",
-    "kotlin": "kt",
-    "bash": "sh",           // Bash scripts typically use .sh
-    "shell": "sh",          // General shell scripts
-    "perl": "pl",
-    "haskell": "hs",
-    "rust": "rs",
-    "objective-c": "m",
-    "matlab": "m",
-    "fortran": "f90",
-    "pascal": "pas",
-    "visualbasic": "vb",
-    "elixir": "ex",
-    "clojure": "clj",
-    "erlang": "erl",
-    "fsharp": "fs",
-    "yaml": "yml",
-    "markdown": "md",
-    "vhdl": "vhd",
-    "verilog": "v",
-    "julia": "jl",
-    "prolog": "pl",
-    "ocaml": "ml",
-    "scheme": "scm",
-    "rexx": "rex",
-    "smalltalk": "st",
-    "powershell": "ps1"     // PowerShell scripts
-  };
-
   downloadContent($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
@@ -249,29 +225,31 @@ export class ChatPanelBaseComponent implements OnInit {
     let counter = 0;
     const zip = new JSZip();
     this.loadContent().subscribe({
-      next: contents => {
-        const textList = contents.map((content, index) => {
-          if (content.type === 'text') {
-            // 奇数インデックスがコードブロックなので、それだけ抜き出す。
-            Utils.splitCodeBlock(content.text || '').filter((b, index) => index % 2 === 1).forEach(codeBlock => {
-              const codeLineList = codeBlock.split('\n');
-              let filename = `content-${counter}.txt`;
-              const header = codeLineList.shift() || ''; // 先頭行を破壊的に抽出
-              if (header.trim()) {
-                const headers = header.trim().split(' ');
-                const ext = this.languageExtensions[headers[0]] || headers[0];
-                filename = headers[1] || `content-${counter}.${ext}`;
-              } else {
-                // plain block
-              }
-              // ZIPにファイルを追加
-              zip.file(filename, codeLineList.join('\n'));
-              counter++;
-            });
-          } else {
-            // text以外のコンテンツは無視
-            // TODO 本来はファイルとしてダウンロードさせるべきかも・・？
-          }
+      next: contentsList => {
+        contentsList.forEach(contents => {
+          const textList = contents.map((content, index) => {
+            if (content.type === 'text') {
+              // 奇数インデックスがコードブロックなので、それだけ抜き出す。
+              Utils.splitCodeBlock(content.text || '').filter((b, index) => index % 2 === 1).forEach(codeBlock => {
+                const codeLineList = codeBlock.split('\n');
+                let filename = `content-${counter}.txt`;
+                const header = codeLineList.shift() || ''; // 先頭行を破壊的に抽出
+                if (header.trim()) {
+                  const headers = header.trim().split(' ');
+                  const ext = this.messageService.languageExtensions[headers[0]] || headers[0];
+                  filename = headers[1] || `content-${counter}.${ext}`;
+                } else {
+                  // plain block
+                }
+                // ZIPにファイルを追加
+                zip.file(filename, codeLineList.join('\n'));
+                counter++;
+              });
+            } else {
+              // text以外のコンテンツは無視
+              // TODO 本来はファイルとしてダウンロードさせるべきかも・・？
+            }
+          });
         });
         if (counter) {
           // ZIPファイルを生成し、ダウンロードする
@@ -294,15 +272,27 @@ export class ChatPanelBaseComponent implements OnInit {
     $event.stopImmediatePropagation();
     $event.preventDefault();
     this.loadContent().subscribe({
-      next: contents => {
-        const text = contents.filter(content => content.type === 'text').map(content => content.text).join('\n');
-        const textArea = document.createElement("textarea");
-        textArea.style.cssText = "position:absolute;left:-100%";
-        document.body.appendChild(textArea);
-        textArea.value = text;
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
+      next: contentsList => {
+        const textList = contentsList.map(contents => {
+          return contents.map(content => {
+            if (content.type === 'text') {
+              return content.text;
+            } else {
+              return '';
+            }
+          }).join('\n');
+        });
+        const text = textList.join('\n');
+        DomUtils.copyToClipboard(text);
+        this.snackBar.open(`コピーしました。`, 'close', { duration: 1000 });
+        // const text = contents.filter(content => content.type === 'text').map(content => content.text).join('\n');
+        // const textArea = document.createElement("textarea");
+        // textArea.style.cssText = "position:absolute;left:-100%";
+        // document.body.appendChild(textArea);
+        // textArea.value = text;
+        // textArea.select();
+        // document.execCommand("copy");
+        // document.body.removeChild(textArea);
       },
     });
   }
@@ -332,10 +322,10 @@ export class ChatPanelBaseComponent implements OnInit {
     $event.preventDefault();
     if (content) {
       this.isExecuted = true;
-      const toolCallCommandList = (JSON.parse(content.text || '[]') as ToolCall[])
-        .filter(tc => tc.type === ToolCallType.INFO)
-        .map(tc => ({ type: ToolCallType.COMMAND, body: { command: 'execute' }, toolCallId: tc.toolCallId })) as ToolCallCommand[];
-      this.toolExecEmitter.emit({ contentPart: content, toolCallCommandList });
+      const toolCallPartCommandList = (JSON.parse(content.text || '[]') as ToolCallPart[])
+        .filter(tc => tc.type === ToolCallPartType.INFO)
+        .map(tc => ({ type: ToolCallPartType.COMMAND, body: { command: 'execute' }, toolCallId: tc.toolCallId })) as ToolCallPartCommand[];
+      this.toolExecEmitter.emit({ contentPart: content, toolCallPartCommandList });
     } else { }
   }
 
@@ -365,6 +355,16 @@ export class ChatPanelBaseComponent implements OnInit {
   onChange(): void {
     // textareaの縦幅更新。遅延打ちにしないとvalueが更新されていない。
     setTimeout(() => { DomUtils.textAreaHeighAdjust(this.textAreaElem()!.nativeElement); }, 0);
+  }
+
+  readonly dialog: MatDialog = inject(MatDialog);
+  openToolCallDialog($event: MouseEvent, toolCallPart: ToolCallPart): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+    // console.log(content);
+    this.dialog.open(ToolCallCallResultDialogComponent, {
+      data: { toolCallGroupId: toolCallPart.toolCallGroupId, toolCallId: toolCallPart.toolCallId, index: 0 }
+    });
   }
 
   height: string = 'auto';
@@ -406,30 +406,34 @@ export class ChatPanelBaseComponent implements OnInit {
     return result;
   }
 
-  loadContent(): Observable<ContentPart[]> {
+  loadContent(): Observable<ContentPart[][]> {
     const messageGroup = this.messageGroup();
-    if (messageGroup.messages[0].id.startsWith('dummy-')) {
-      // TODO いちいちこんな分岐入れるのはあり得ないので他の方法を考えるべき。
-      return of([]);
-    } else if (messageGroup.messages[0].contents.length === 0) {
-      const contentPart = this.messageService.initContentPart(messageGroup.messages[0].id, messageGroup.messages[0].label);
-      messageGroup.messages[0].contents = [contentPart];
-      this.isLoading = true;
-      return this.messageService.getMessageContentParts(messageGroup.messages[0]).pipe(
-        tap(contents => {
-          this.messageGroup().messages[0].contents = contents;
+    return safeForkJoin(
+      messageGroup.messages.map(message => {
+        if (message.id.startsWith('dummy-')) {
+          // TODO いちいちこんな分岐入れるのはあり得ないので他の方法を考えるべき。
+          return of([]);
+        } else if (message.contents.length === 0) {
+          const contentPart = this.messageService.initContentPart(message.id, message.label);
+          message.contents = [contentPart];
+          this.isLoading = true;
+          return this.messageService.getMessageContentParts(message).pipe(
+            tap(contents => {
+              message.contents = contents;
+              this.setBrackets();
+              this.isLoading = false;
+              this.exPanel().open();
+            }),
+          );
+        } else {
+          // load済みのものを返す
           this.setBrackets();
-          this.isLoading = false;
-          this.exPanel().open();
-        }),
-      );
-    } else {
-      // load済みのものを返す
-      this.setBrackets();
-      // TODO exPanelが表示されてないとき？はexceptionが起きるのでtry/catchしておく。原因特定して対処したい。
-      try { if (this.exPanel && this.exPanel()) this.exPanel().open(); } catch (err) { }
-      return of(messageGroup.messages[0].contents);
-    }
+          // TODO exPanelが表示されてないとき？はexceptionが起きるのでtry/catchしておく。原因特定して対処したい。
+          try { if (this.exPanel && this.exPanel()) this.exPanel().open(); } catch (err) { }
+          return of(message.contents);
+        }
+      })
+    );
   }
 
   /** イベント伝播しないように止める */
