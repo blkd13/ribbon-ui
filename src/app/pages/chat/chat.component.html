@@ -388,11 +388,11 @@
     <!-- 履歴選択 -->
     <ng-template #messageSelectorTemplate let-messageGroup>
       @let nextMessageGroupIdList=messageService.nextMessageGroupId[messageGroup.id];
-      <div class="flex items-center justify-end mt-3">
+      <div class="flex items-center justify-end">
         @if(
         (nextMessageGroupIdList.length>messageGroup.selectedIndex&&nextMessageGroupIdList.length>1)||nextMessageGroupIdList.length===messageGroup.selectedIndex
         ){
-        <div class="flex items-center">
+        <div class="flex items-center mt-3">
           <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, -1)"
             [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
           <div class="text-center w-[60px]">

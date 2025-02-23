@@ -94,17 +94,23 @@
 
       <div class="inline-flex items-center flex-wrap gap-2">
 
-        @for(toolCall of jsonParseToArray(content.text||'[]');track $index){
-        @if(toolCall.type==='info'&&toolCall.body){
-        <button class="flex items-center command-tag cursor-pointer" (click)="openToolCallDialog($event, toolCall)">
-          <img [src]="'image/'+toolCall.body.group+'-logo.svg'" style="width: 32px;" />
+        @for(toolCallSet of jsonParseToArray(content.text||'[]');track $index){
+        
+        <button class="flex items-center command-tag cursor-pointer relative"
+          (click)="openToolCallDialog($event, toolCallSet)">
+          <img [src]="'image/'+toolCallSet.info.group+'-logo.svg'" style="width: 32px;" />
           <div class="flex flex-col items-start">
-            <div>[{{toolCall.body.name}}]</div>
-            <div>{{toolCall.body.label}}</div>
+            <div>[{{toolCallSet.info.name}}]</div>
+            <div>{{toolCallSet.info.label}}</div>
           </div>
+
+          @if(toolCallSet.info.isRunning){
+          <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10 rounded-sm">
+            <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+          </div>
+          }
+
         </button>
-        } @else {
-        }
         }
 
         <!-- @if(content.text; as info && info.isInteractive){

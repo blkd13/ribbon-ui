@@ -40,24 +40,40 @@ export class ToolCallService {
 
   toolCallListToToolCallSetList(toolCallList: ToolCallPart[]): ToolCallSet[] {
     const toolCallSetList: ToolCallSet[] = [];
-    let toolCallSet: ToolCallSet;
-    toolCallList.forEach(toolCall => {
-      switch (toolCall.type) {
-        case ToolCallPartType.INFO:
-          toolCallSet = { info: toolCall.body, call: null, commandList: [], resultList: [] } as any;
-          toolCallSetList.push(toolCallSet);
-          break;
-        case ToolCallPartType.CALL:
-          toolCallSet.call = toolCall;
-          break;
-        case ToolCallPartType.COMMAND:
-          toolCallSet.commandList.push(toolCall);
-          break;
-        case ToolCallPartType.RESULT:
-          toolCallSet.resultList.push(toolCall);
-          break;
-      }
-    });
+    toolCallList.forEach(toolCall => this.appendToolCallPart(toolCallSetList, toolCall));
+    return toolCallSetList;
+  }
+
+  appendToolCallPart(toolCallSetList: ToolCallSet[], toolCallPart: ToolCallPart): ToolCallSet[] {
+    const masterToolCallPart = toolCallSetList.find(toolCallSet => toolCallSet.toolCallId === toolCallPart.toolCallId) || {
+      toolCallGroupId: toolCallPart.toolCallGroupId,
+      toolCallId: toolCallPart.toolCallId,
+      info: null as any as ToolCallPartInfoBody,
+      call: null as any as ToolCallPartCallBody,
+      commandList: [] as ToolCallPartCommandBody[],
+      resultList: [] as ToolCallPartResultBody[],
+    } as ToolCallSet;
+    if (masterToolCallPart.info) {
+    } else {
+      toolCallSetList.push(masterToolCallPart);
+    }
+    // id系が合ったら追加しておく
+    masterToolCallPart.toolCallGroupId = masterToolCallPart.toolCallGroupId || toolCallPart.toolCallGroupId || '';
+    masterToolCallPart.toolCallId = masterToolCallPart.toolCallId || toolCallPart.toolCallId;
+    switch (toolCallPart.type) {
+      case ToolCallPartType.INFO:
+        masterToolCallPart.info = toolCallPart.body;
+        break;
+      case ToolCallPartType.CALL:
+        masterToolCallPart.call = toolCallPart.body;
+        break;
+      case ToolCallPartType.COMMAND:
+        masterToolCallPart.commandList.push(toolCallPart.body);
+        break;
+      case ToolCallPartType.RESULT:
+        masterToolCallPart.resultList.push(toolCallPart.body);
+        break;
+    }
     return toolCallSetList;
   }
 
@@ -89,10 +105,13 @@ export class ToolCallService {
 
 
 export interface ToolCallSet {
-  info: ToolCallPartInfo;
-  call: ToolCallPartCall;
-  commandList: ToolCallPartCommand[];
-  resultList: ToolCallPartResult[];
+  toolCallGroupId: string;
+  toolCallId: string;
+
+  info: ToolCallPartInfoBody;
+  call: ToolCallPartCallBody;
+  commandList: ToolCallPartCommandBody[];
+  resultList: ToolCallPartResultBody[];
 }
 
 export interface MyToolType {
@@ -119,11 +138,12 @@ export enum ToolCallPartStatus {
 
 // 情報用のinterface
 export interface ToolCallPartInfoBody {
-  isActive: boolean;
   group: string;
   name: string;
   label: string;
+  isActive: boolean;
   isInteractive: boolean; // ユーザーの入力を要するもの
+  isRunnning: boolean;
 }
 
 // 呼び出し用のinterface

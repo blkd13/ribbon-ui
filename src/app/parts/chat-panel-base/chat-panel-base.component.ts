@@ -20,7 +20,7 @@ import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { ContentPart, ContentPartType, MessageForView, MessageGroupForView, Project } from '../../models/project-models';
 import { Utils } from '../../utils';
 import { MatMenuModule } from '@angular/material/menu';
-import { ToolCallPart, ToolCallPartBody, ToolCallPartCommand, ToolCallPartCommandBody, ToolCallPartInfo, ToolCallPartType } from '../../services/tool-call.service';
+import { ToolCallPart, ToolCallPartBody, ToolCallPartCommand, ToolCallPartCommandBody, ToolCallPartInfo, ToolCallPartType, ToolCallSet } from '../../services/tool-call.service';
 import { MatDialog } from '@angular/material/dialog';
 import { ToolCallCallResultDialogComponent } from '../tool-call-call-result-dialog/tool-call-call-result-dialog.component';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -113,24 +113,15 @@ export class ChatPanelBaseComponent implements OnInit {
   isInteractive(): boolean {
     // TODO ここは遅くなる元なのであってはならない。
     let flag = false;
-    this.messageGroup().messages.map(message =>
-      message.contents.filter(content =>
-        content.type === 'tool' && content.toolCallGroup?.toolCallList.find(tc => tc.type === ToolCallPartType.INFO)
-      )
-    ).forEach(contents => {
-      if (contents.length === 0) return;
-      const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCallPart[];
-      if ((toolCallList[0] as ToolCallPartInfo).body.isInteractive) {
-        const infoSize = toolCallList.filter(tc => tc.type === ToolCallPartType.INFO).length;
-        const commandSize = toolCallList.filter(tc => tc.type === ToolCallPartType.COMMAND).length;
-        if (infoSize > commandSize) {
-          // console.log(`interactive: ${infoSize} > ${commandSize}`);
+    this.messageGroup().messages
+      .map(message => message.contents.filter(content => content.type === 'tool'))
+      .forEach(contents => {
+        if (contents.length === 0) return;
+        const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCallSet[];
+        if (toolCallList[0].info.isInteractive && toolCallList[0].commandList.length === 0) {
           flag = true;
-        } else {
-        }
-      } else {
-      }
-    });
+        } else {/** 指示不要、もしくは実行済み */ }
+      });
     // console.log(flag);
     return (!this.isExecuted && flag) ? true : false;
   }
@@ -322,8 +313,8 @@ export class ChatPanelBaseComponent implements OnInit {
     $event.preventDefault();
     if (content) {
       this.isExecuted = true;
-      const toolCallPartCommandList = (JSON.parse(content.text || '[]') as ToolCallPart[])
-        .filter(tc => tc.type === ToolCallPartType.INFO)
+      const toolCallPartCommandList = (JSON.parse(content.text || '[]') as ToolCallSet[])
+        .filter(tc => tc.info && tc.info.isInteractive)
         .map(tc => ({ type: ToolCallPartType.COMMAND, body: { command: 'execute' }, toolCallId: tc.toolCallId })) as ToolCallPartCommand[];
       this.toolExecEmitter.emit({ contentPart: content, toolCallPartCommandList });
     } else { }
@@ -358,12 +349,12 @@ export class ChatPanelBaseComponent implements OnInit {
   }
 
   readonly dialog: MatDialog = inject(MatDialog);
-  openToolCallDialog($event: MouseEvent, toolCallPart: ToolCallPart): void {
+  openToolCallDialog($event: MouseEvent, toolCallSet: ToolCallSet): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
     // console.log(content);
     this.dialog.open(ToolCallCallResultDialogComponent, {
-      data: { toolCallGroupId: toolCallPart.toolCallGroupId, toolCallId: toolCallPart.toolCallId, index: 0 }
+      data: { toolCallGroupId: toolCallSet.toolCallGroupId, toolCallId: toolCallSet.toolCallId, index: 0 }
     });
   }
 

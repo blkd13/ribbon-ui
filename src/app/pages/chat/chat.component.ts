@@ -1129,7 +1129,7 @@ export class ChatComponent implements OnInit {
                 content.toolCallGroup = { id: '', projectId: this.selectedProject.id, toolCallList: [] };
               }
               const ary = JSON.parse(content.text || '[]');
-              ary.push(info);
+              this.toolCallService.appendToolCallPart(ary, info);
               content.text = JSON.stringify(ary);
 
               // const toolCallGroupId = next.contentPart.linkId || '';
@@ -1179,14 +1179,20 @@ export class ChatComponent implements OnInit {
                   // content.meta.call.function.arguments = JSON.stringify(JSON.parse(content.meta.call.function.arguments), null, 2);
                   // content.meta.result.content = JSON.stringify(JSON.parse(content.meta.result.content), null, 2);
                   // content.text = JSON.stringify(content.meta);
-                  content.toolCallGroup.toolCallList.push({
+
+                  const toolCallPart = {
                     type: ToolCallPartType.RESULT,
                     body: choice.delta as ToolCallPartResultBody,
                     seq: content.toolCallGroup.toolCallList.length,
                     toolCallGroupId: 'content.toolCallGroup.id',//content.toolCallGroup.id,
                     // toolCallGroupId: content.toolCallGroup.id,
                     toolCallId: toolCall.tool_call_id,
-                  });
+                  } as ToolCallPartResult;
+                  content.toolCallGroup.toolCallList.push(toolCallPart);
+
+                  const ary = JSON.parse(content.text || '[]');
+                  this.toolCallService.appendToolCallPart(ary, toolCallPart);
+                  content.text = JSON.stringify(ary);
                 } else {
                   // tool以外はmetaに格納
                   content.toolCallGroup.toolCallList.push({
