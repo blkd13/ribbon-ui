@@ -95,7 +95,7 @@
       <div class="inline-flex items-center flex-wrap gap-2">
 
         @for(toolCallSet of jsonParseToArray(content.text||'[]');track $index){
-        
+
         <button class="flex items-center command-tag cursor-pointer relative"
           (click)="openToolCallDialog($event, toolCallSet)">
           <img [src]="'image/'+toolCallSet.info.group+'-logo.svg'" style="width: 32px;" />

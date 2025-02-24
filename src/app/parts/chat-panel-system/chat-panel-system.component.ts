@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, effect, inject, input, output } from '@angular/core';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,8 +16,8 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { LlmModel } from '../../services/chat.service';
 import { MatRadioModule } from '@angular/material/radio';
 import { ChatCompletionToolChoiceOption } from 'openai/resources/index.mjs';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { ToolCallService } from '../../services/tool-call.service';
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { MyToolType, ToolCallPart, ToolCallService } from '../../services/tool-call.service';
 
 @Component({
   selector: 'app-chat-panel-system',
@@ -52,6 +52,15 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     'required': { name: 'required', label: '必ず使う' }
   };
 
+  readonly effectBitCounter2 = effect(() => {
+    this.bitCounter();
+    this.initialize();
+  });
+
+  constructor() {
+    super();
+  }
+
   override ngOnInit(): void {
     super.ngOnInit();
     this.modelIdMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel }, model) => {
@@ -71,6 +80,16 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     // // ツールの初期選択状態を設定
     // this.initializeToolSelection();
   }
+  initialize(): void {
+    // ツールの初期選択状態を設定
+    const thread = this.thread();
+    if (thread) {
+      const groups = Array.from(new Set(this.toolCallService.tools.map(tool => tool.group)));
+      groups.forEach(group => {
+        this.applyGroupCheck(thread, group);
+      });
+    } else { }
+  }
 
   removeThread($event: MouseEvent): void {
     $event.stopImmediatePropagation();
@@ -89,6 +108,130 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     this.threadChangeEmitter.emit(this.thread());
   }
 
+  // TODO これはisCheckが呼ばれまくるのでよくないように思う。
+  isChecked(tool: MyToolType): boolean {
+    const thread = this.thread();
+    return thread.inDto.args.tools && thread.inDto.args.tools.find(t => t.function.name === tool.definition.function.name) ? true : false;
+  }
+
+  toolGroupCheckMas: { [toolName: string]: number } = {};
+  toolGroupClick($event: MouseEvent, groupDef: { group: string, tools: MyToolType[] }): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+
+    const thread = this.thread();
+    if (!thread.inDto.args.tools) {
+      thread.inDto.args.tools = [];
+    } else { }
+
+    if (!thread.inDto.args.tool_choice || thread.inDto.args.tool_choice === 'none') {
+      return;
+    } else { }
+
+    // 0：未選択、1：一部選択、2：全選択
+    if (this.toolGroupCheckMas[groupDef.group] === 0) {
+      this.toolGroupCheckMas[groupDef.group] = 2;
+    } else if (this.toolGroupCheckMas[groupDef.group] === 1) {
+      this.toolGroupCheckMas[groupDef.group] = 2;
+    } else if (this.toolGroupCheckMas[groupDef.group] === 2) {
+      this.toolGroupCheckMas[groupDef.group] = 0;
+    } else {
+      this.toolGroupCheckMas[groupDef.group] = 2;
+    }
+
+    // グループ選択に合わせて個別の選択状態を変更
+    for (const toolCallPart of groupDef.tools) {
+      const checkedDef = thread.inDto.args.tools.find(tool => tool.function.name === toolCallPart.definition.function.name);
+      if (this.toolGroupCheckMas[groupDef.group] === 2) {
+        if (checkedDef) {
+          // すでにある場合は何もしない
+        } else {
+          thread.inDto.args.tools.push(toolCallPart.definition);
+        }
+      } else {
+        thread.inDto.args.tools = thread.inDto.args.tools.filter(tool => tool.function.name !== toolCallPart.definition.function.name);
+      }
+    }
+    this.threadChange();
+  }
+
+  toolCheckMas: { [toolName: string]: boolean } = {};
+  toolCheck($event: MatCheckboxChange, toolCallPart: MyToolType): void {
+    const thread = this.thread();
+    if (!thread.inDto.args.tools) {
+      thread.inDto.args.tools = [];
+    } else { }
+
+    const checkedDef = thread.inDto.args.tools.find(tool => tool.function.name === toolCallPart.definition.function.name);
+    if ($event.checked) {
+      if (checkedDef) {
+        // すでにある場合は何もしない
+      } else {
+        thread.inDto.args.tools.push(toolCallPart.definition);
+      }
+    } else {
+      thread.inDto.args.tools = thread.inDto.args.tools.filter(tool => tool.function.name !== toolCallPart.definition.function.name);
+    }
+
+    this.applyGroupCheck(thread, toolCallPart.info.group);
+    this.threadChange();
+  }
+
+  applyGroupCheck(thread: Thread, group: string): void {
+    const groupDef = this.toolCallService.tools.find(tool => tool.group === group);
+    if (groupDef) {
+      const checkedCount = groupDef.tools.filter(tool => thread.inDto.args.tools?.find(_tool => tool.definition.function.name === _tool.function.name)).length;
+      // this.toolCheckMas[`${group}:indeterminate`] = checkedCount > 0 && checkedCount < groupDef.tools.length;
+
+      if (checkedCount === groupDef.tools.length) {
+        this.toolGroupCheckMas[groupDef.group] = 2;
+      } else if (checkedCount === 0) {
+        this.toolGroupCheckMas[groupDef.group] = 0;
+      } else {
+        this.toolGroupCheckMas[groupDef.group] = 1;
+      }
+    } else { }
+  }
+
+
+  // toolGroupCheck($event: MatCheckboxChange, groupDef: MyToolType[]): void {
+  //   // groupDef.forEach(toolCallPart => {
+  //   //   this.toolCheck($event, toolCallPart);
+  //   //   this.toolCheckMas[`${toolCallPart.info.group}:${toolCallPart.definition.function.name}`] = $event.checked;
+
+  //   //   // 
+  //   //   const thread = this.thread();
+  //   //   if (!thread.inDto.args.tools) {
+  //   //     thread.inDto.args.tools = [];
+  //   //   } else { }
+  //   //   if ($event.checked) {
+  //   //     thread.inDto.args.tools.push(toolCallPart.definition);
+  //   //   } else {
+  //   //     thread.inDto.args.tools = thread.inDto.args.tools.filter(tool => tool.function.name !== toolCallPart.definition.function.name);
+  //   //   }
+  //   // });
+  //   this.toolCheckMas[`${groupDef[0].info.group}:indeterminate`] = false;
+
+  //   const thread = this.thread();
+  //   if (!thread.inDto.args.tools) {
+  //     thread.inDto.args.tools = [];
+  //   } else { }
+
+  //   for (const toolCallPart of groupDef) {
+  //     const checkedDef = thread.inDto.args.tools.find(tool => tool.function.name === toolCallPart.definition.function.name);
+  //     if ($event.checked) {
+  //       if (checkedDef) {
+  //         // すでにある場合は何もしない
+  //       } else {
+  //         thread.inDto.args.tools.push(toolCallPart.definition);
+  //       }
+  //     } else {
+  //       thread.inDto.args.tools = thread.inDto.args.tools.filter(tool => tool.function.name !== toolCallPart.definition.function.name);
+  //     }
+  //   }
+  //   this.threadChange();
+  // }
+
   modelCheck(modelList: string[] = []): void {
     // const mess = this.chatService.validateModelAttributes(modelList);
     // if (mess.message.length > 0) {
@@ -97,80 +240,4 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     //   // アラート不用
     // }
   }
-
-  // // ツールの選択状態を管理
-  // selectedTools: { [key: string]: boolean } = {};
-  // groupSelection: { [key: string]: boolean } = {};
-
-
-  // private initializeToolSelection(): void {
-  //   // スレッドの設定から初期状態を設定
-  //   const thread = this.thread();
-  //   if (!thread.inDto.args.tools) {
-  //     thread.inDto.args.tools = [];
-  //   }
-
-  //   // グループとツールの選択状態を初期化
-  //   this.toolCallService.tools.forEach(group => {
-  //     this.groupSelection[group.group] = false;
-  //     group.tools.forEach(tool => {
-  //       if (thread.inDto.args.tools && tool.info) {
-  //         this.selectedTools[tool.info.name] = thread.inDto.args.tools.map(tool => tool.function?.name)?.includes(tool.info.name);
-  //         if (this.selectedTools[tool.info.name]) {
-  //           this.groupSelection[group.group] = true;
-  //         }
-  //       } else {
-  //         // ツールが未設定の場合はすべて選択状態にする
-  //       }
-  //     });
-  //   });
-  // }
-
-  // toggleGroup(groupName: string): void {
-  //   this.groupSelection[groupName] = !this.groupSelection[groupName];
-
-  //   // グループ内のすべてのツールを更新
-  //   this.toolCallService.tools
-  //     .find(g => g.group === groupName)?.tools
-  //     .forEach(tool => {
-  //       this.selectedTools[tool.info.name] = this.groupSelection[groupName];
-  //     });
-
-  //   this.updateThreadTools();
-  // }
-
-  // toggleTool(toolName: string, groupName: string): void {
-  //   this.selectedTools[toolName] = !this.selectedTools[toolName];
-
-  //   // グループの状態を更新
-  //   const group = this.toolCallService.tools.find(g => g.group === groupName);
-  //   if (group) {
-  //     this.groupSelection[groupName] = group.tools
-  //       .every(tool => this.selectedTools[tool.info.name]);
-  //   }
-
-  //   this.updateThreadTools();
-  // }
-
-  // private updateThreadTools(): void {
-  //   const thread = this.thread();
-  //   thread.inDto.args.tools = Object.entries(this.selectedTools)
-  //     .filter(([_, selected]) => selected)
-  //     .map(([name, _]) => this.toolCallService.tools
-  //       .find(g => g.tools.some(tool => tool.info.name === name))
-  //       ?.tools.find(tool => tool.info.name === name)?.definition.function).filter(Boolean) as any;
-  //   console.dir(thread.inDto.args.tools);
-  //   this.threadChangeEmitter.emit(thread);
-  // }
-
-  // isAllToolsInGroupSelected(groupName: string): boolean {
-  //   const group = this.toolCallService.tools.find(g => g.group === groupName);
-  //   return group?.tools.every(tool => this.selectedTools[tool.info.name]) ?? false;
-  // }
-
-  // isAnyToolInGroupSelected(groupName: string): boolean {
-  //   const group = this.toolCallService.tools.find(g => g.group === groupName);
-  //   return group?.tools.some(tool => this.selectedTools[tool.info.name]) ?? false;
-  // }
-
 }

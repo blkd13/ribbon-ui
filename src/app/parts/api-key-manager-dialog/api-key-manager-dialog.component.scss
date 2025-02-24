@@ -1,0 +1,19 @@
+:host {
+    ::ng-deep {
+        .mat-mdc-notch-piece.mdc-notched-outline__notch {
+            border-right: none;
+        }
+
+        mat-card-title {
+            margin-bottom: 20px;
+        }
+    }
+}
+
+.container {
+    padding: 2rem;
+}
+
+.mat-mdc-card {
+    background-color: #2b2b2b;
+}

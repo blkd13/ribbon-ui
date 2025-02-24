@@ -8,6 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { PredictHistoryComponent } from '../predict-history/predict-history.component';
 import { MatDividerModule } from '@angular/material/divider';
 import { UserSettingDialogComponent } from '../user-setting-dialog/user-setting-dialog.component';
+import { ApiKeyManagerDialogComponent } from '../api-key-manager-dialog/api-key-manager-dialog.component';
 @Component({
   selector: 'app-user-mark',
   imports: [CommonModule, MatMenuModule, MatDividerModule, MatIconModule, MatButtonModule],
@@ -25,5 +26,9 @@ export class UserMarkComponent {
 
   openUserSetting(): void {
     this.dialog.open(UserSettingDialogComponent);
+  }
+
+  openApiKeyManager(): void {
+    this.dialog.open(ApiKeyManagerDialogComponent);
   }
 }

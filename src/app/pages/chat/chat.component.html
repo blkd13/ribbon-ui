@@ -212,8 +212,8 @@
             @if(messageService.messageGroupMas[messageGroupIdList[0]]; as messageGroup) {
             <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
             <app-chat-panel-system class="top-0" style="z-index:2;" [messageGroup]="messageGroup"
-              [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="bitCounter" [thread]="thread"
-              [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
+              [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
+              [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
               (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
               (threadChange)="editSystem($event)">
             </app-chat-panel-system>
@@ -234,10 +234,10 @@
             } @else if(['assistant', 'user'].includes(messageGroup.role)) {
             <div #anchor> <!-- スクロール用のただのアンカー -->
               <app-chat-panel-message #chatPanelList [messageGroup]="messageGroup"
-                [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="bitCounter" [layout]="userService.chatLayout"
-                (edit)="editChat($event)" [index]="$index" (toolExec)="toolExec($event)"
-                (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-                (remove)="removeMessageGroup($event)">
+                [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
+                [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
+                (toolExec)="toolExec($event)" (removeContent)="removeContent($event)"
+                (removeMessage)="removeMessage($event)" (remove)="removeMessageGroup($event)">
               </app-chat-panel-message>
             </div>
             }
@@ -267,8 +267,9 @@
         @if(messageGroupIdList[0]; as messageGroupId) {
         @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
         <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
-        <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup" [bitCounter]="bitCounter"
-          [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
+        <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup"
+          [bitCounter]="messageGroupBitCounter[messageGroup.id]" [thread]="thread"
+          [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
           (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
           (threadChange)="editSystem($event)" (fileSelectionUpdateEmitter)="onChange()"
           (expanded)="expanded($event, 0, tIndex, messageGroup)">
@@ -314,7 +315,7 @@
           @if(messageGroup.role==='system') {
           } @else if(['assistant', 'user'].includes(messageGroup.role)) {
           <div>
-            <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="bitCounter"
+            <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
               [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
               (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
               (remove)="removeMessageGroup($event)" (toolExec)="toolExec($event)"
@@ -324,8 +325,14 @@
             @if(!messageService.nextMessageGroupId[messageGroupId]) {
             @if(messageService.messageGroupMas[messageGroupId].role==='user'){
             <button mat-icon-button class="pl-6" (click)="send('messageGroup', [messageGroupId]).subscribe()">
-              <mat-icon color="primary">send</mat-icon>
+              <mat-icon>send</mat-icon>
             </button>
+            } @else if(messageService.messageGroupMas[messageGroupId].role==='assistant'){
+            <!-- これはまだちょっと難しい
+            <button mat-icon-button class="pl-6" (click)="appendMessageGroup(thread.id, messageGroupId)">
+              <mat-icon>add_circle</mat-icon>
+            </button>
+            -->
             } @else {
             <!-- 追加ボタンをそのうち付けようと思ている。そもそも単純な追加APIがまだ無い。
             <button mat-icon-button class="pl-6" (click)="send('messageGroup', [messageGroupId]).subscribe()">

@@ -98,8 +98,6 @@ export class ChatComponent implements OnInit {
   // メッセージ一覧のインデックス。メッセージグループの数が最大のスレッドのメッセージグループ数を取得して、その数だけインデックスを作る。
   indexList = Array.from({ length: 0 }, (_, i) => i);
 
-  bitCounter = 0; // chatPanelにイベントを送るためだけのカウンタ
-
   // キャッシュ保持時間（1時間）
   cacheTtlInSeconds = 60 * 60;
 
@@ -142,7 +140,7 @@ export class ChatComponent implements OnInit {
   cost: number = 0;
   charCount: number = 0;
   tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
-  linkChain: boolean[] = []; // デフォルトはfalse
+  linkChain: boolean[] = [true]; // デフォルトはfalse
 
   readonly authService: AuthService = inject(AuthService);
   readonly chatService: ChatService = inject(ChatService);
@@ -292,6 +290,7 @@ export class ChatComponent implements OnInit {
           return acc;
         }, {} as { [key: string]: ChatCompletionTool })
         thread.inDto.args.tools = preset.tool_names.map(toolName => funcMap[toolName]);
+        this.messageGroupBitCounter[this.messageGroupIdListMas[thread.id][0]] = (this.messageGroupBitCounter[this.messageGroupIdListMas[thread.id][0]] ?? 0) + 1;
       } else { }
     });
     this.inputArea.content[0].text = preset.userPrompt || '';
@@ -684,6 +683,18 @@ export class ChatComponent implements OnInit {
       threadGroup.title = threadGroup.title || 'No title';
       this.saveThreadGroup(threadGroup).subscribe();
     }
+  }
+
+  appendMessageGroup(threadId: string, previousMessageGroupId: string): void {
+    // addSingleMessageGroupDry(threadId: string, previousMessageGroupId: string | undefined, role: OpenAI.ChatCompletionRole, contents: ContentPart[], vars: any = {}): MessageGroupForView {
+    const messageGroup = this.messageService.addSingleMessageGroupDry(threadId, previousMessageGroupId, 'user', [this.messageService.initContentPart(genDummyId(), '')]);
+    //     this.rebuildThreadGroup();
+    // this.messageService.upsertSingleMessageGroup(messageGroup).subscribe({
+    //   next: next => {
+    //     this.rebuildThreadGroup();
+    //     this.onChange();
+    //   },
+    // });
   }
 
   /**
@@ -1238,30 +1249,28 @@ export class ChatComponent implements OnInit {
 
         this.cdr.detectChanges();
         message.status = MessageStatusType.Loading;
-        this.bitCounter++;
+        this.messageGroupBitCounter[message.messageGroupId] = (this.messageGroupBitCounter[message.messageGroupId] ?? 0) + 1;
         if (this.autoscroll) {
           // 一回でも上スクロールしてたらオートスクロールをオフ。
           const threadIndex = this.selectedThreadGroup.threadList.map(thread => thread.id).indexOf(this.messageService.messageGroupMas[message.messageGroupId].threadId);
-          this.textBodyElem().forEach((elem, index) => {
-            // tab表示中は非表示タブの中身は消えているので0版をターゲットとする
-            if (index === threadIndex || this.userService.chatTabLayout && index === 0) {
-              requestAnimationFrame(() => {
-                const scrollTop = elem.nativeElement.scrollTop;
-                if (scrollTop > 0) {
-                  // console.log(this.beforeScrollTop, scrollTop);
-                  if (this.beforeScrollTop <= scrollTop) {
-                    this.beforeScrollTop = scrollTop;
-                    if (this.userService.chatTabLayout === 'tabs') {
-                      this.anchor().at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    } else {
-                      this.chatPanelGroupElem()?.at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                    DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement);
+          requestAnimationFrame(() => {
+            const elem = this.textBodyElem().at(threadIndex);
+            if (elem) {
+              const scrollTop = elem.nativeElement.scrollTop;
+              if (scrollTop > 0) {
+                // console.log(this.beforeScrollTop, scrollTop);
+                if (this.beforeScrollTop <= scrollTop) {
+                  this.beforeScrollTop = scrollTop;
+                  if (this.userService.chatTabLayout === 'tabs') {
+                    this.anchor().at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   } else {
-                    this.autoscroll = false;
+                    this.chatPanelGroupElem()?.at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }
+                  DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement);
+                } else {
+                  this.autoscroll = false;
                 }
-              });
+              } else { }
             } else { }
           });
         } else { }
@@ -1730,6 +1739,8 @@ export class ChatComponent implements OnInit {
     return targetMessageGrouplist;
   }
 
+  messageGroupBitCounter: { [messageGroupId: string]: number } = {};
+
   editSystem(thread: Thread): void {
     console.log(thread.inDto.args)
     if (this.linkChain[0]) {
@@ -1740,6 +1751,8 @@ export class ChatComponent implements OnInit {
           _thread.inDto.args.tools = thread.inDto.args.tools;
           _thread.inDto.args.tool_choice = thread.inDto.args.tool_choice;
           _thread.inDto.args.parallel_tool_calls = thread.inDto.args.parallel_tool_calls;
+          this.messageGroupBitCounter[this.messageGroupIdListMas[_thread.id][0]] = (this.messageGroupBitCounter[this.messageGroupIdListMas[_thread.id][0]] || 0) + 1;
+          console.log(_thread.id)
         }
       });
     } else {

@@ -9,7 +9,7 @@ import { environment } from '../../environments/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
 import { Utils } from '../utils';
-import { ToolCallPartCommand, ToolCallPartCommandBody } from './tool-call.service';
+import { ToolCallPartCommand, ToolCallPartCommandBody, ToolCallService } from './tool-call.service';
 
 export interface ChatInputArea {
   role: OpenAI.ChatCompletionRole;
@@ -577,6 +577,14 @@ export class ChatService {
     {
       label: 'Matter<br/>most',
       tool_choice: 'auto',
+      tool_names: [
+        'mattermost:mm_get_mentioned_posts',
+        'mattermost:mm_search_all_posts_by_keyword',
+        'mattermost:mm_search_posts',
+        'mattermost:mm_find_users',
+        'mattermost:mm_get_channels',
+        'mattermost:mm_send_message',
+      ],
       modelSelection: ['claude-3-5-sonnet-v2@20241022', 'gemini-2.0-pro-exp-02-05', 'gpt-4o', 'gemini-1.5-pro-002'],
       systemLabel: `Mattermost`,
       systemPrompt: Utils.trimLines(`
@@ -639,6 +647,19 @@ export class ChatService {
       userPrompt: Utils.trimLines(``),
     },
   ];
+
+  // readonly toolCallService = inject(ToolCallService);
+
+  // constructor() {
+  //   this.toolCallService.getFunctionDefinitions().subscribe((defs) => {
+  //     this.presetDefs.forEach(presetDef => {
+  //       if (presetDef.label === 'Mattermost') {
+  //         presetDef.tool_names = defs.filter(def => def.info.group === 'mattermost').map(def => def.definition.function.name);
+  //       } else {
+  //       }
+  //     });
+  //   });
+  // }
 }
 /**
  * Response returned from countTokens method.

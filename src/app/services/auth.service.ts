@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { User, TwoFactorAuthDetails } from '../models/models';
 import { PredictTransaction } from './department.service';
 
@@ -12,12 +12,17 @@ export type OAuthAccount = { id: string, userInfo: string, provider: string, pro
 export class AuthService {
   private apiUrl = '';
   private user!: User;
+  private oAuthAccountList: OAuthAccount[] = [];
   readonly http: HttpClient = inject(HttpClient);
 
   public getCurrentUser(): User {
     // Assuming the token is stored in local storage
     if (this.user) return this.user;
     throw new Error('User not found');
+  }
+
+  public getCurrentOAuthAccountList(): OAuthAccount[] {
+    return this.oAuthAccountList;
   }
 
   // --- ここから下は認証前とかユーザー登録とかの処理
@@ -159,6 +164,14 @@ export class AuthService {
     return this.http.get<{}>(url);
   }
 
+  /**
+   * APIキーを生成する。
+   * @returns 
+   */
+  genApiKey(label: string): Observable<{ apiToken: string }> {
+    return this.http.post<{ apiToken: string }>(`/user/api-token`, { label });
+  }
+
   // --- ここから下は普通にユーザー情報の取得とか更新とかの処理
 
   /**
@@ -217,22 +230,29 @@ export class AuthService {
    */
   getOAuthAccountList(): Observable<{ oauthAccounts: OAuthAccount[] }> {
     const url = `/user/oauth/account`;
-    return this.http.get<{ oauthAccounts: OAuthAccount[] }>(url);
+    return this.http.get<{ oauthAccounts: OAuthAccount[] }>(url).pipe(tap(res => this.oAuthAccountList = res.oauthAccounts));
   }
 
   /**
-   * OAuth2連携済み一覧
+   * OAuth2連携済みアカウント情報
    * @returns
    */
   getOAuthAccount(provider: string): Observable<{ oauthAccount: OAuthAccount }> {
     const url = `/user/oauth/account/${provider}`;
-    return this.http.get<{ oauthAccount: OAuthAccount }>(url);
+    return this.http.get<{ oauthAccount: OAuthAccount }>(url).pipe(tap(res => {
+      const oauth = this.oAuthAccountList.find(value => value.provider === provider);
+      if (oauth) {
+        Object.assign(oauth, res.oauthAccount);
+      } else {
+        this.oAuthAccountList.push(res.oauthAccount);
+      }
+    }));
   }
 
-  getOAuthUserInfo(provider: OAuth2Provider, api: 'user-info'): Observable<any> {
-    const url = `/user/oauth/api/basic-api/${provider}/${api}`;
-    return this.http.get<any>(url);
-  }
+  // getOAuthUserInfo(provider: OAuth2Provider, api: 'user-info'): Observable<any> {
+  //   const url = `/user/oauth/api/basic-api/${provider}/${api}`;
+  //   return this.http.get<any>(url);
+  // }
 
   isOAuth2Connected(provider: OAuth2Provider, api: 'user-info', targetUrl: string = ''): Observable<any> {
     targetUrl = targetUrl ? `?oAuth2ConnectedCheckTargetUrl=${targetUrl}` : '';
@@ -268,4 +288,24 @@ export class AuthService {
   }
 
   // Additional methods can be added below as needed
+  private baseApiUrl = '/user/oauth/api-keys'; // バックエンドのエンドポイントに合わせて調整
+
+  registApiKey(apiKey: Omit<OAuthAccount, 'id'>): Observable<OAuthAccount> {
+    return this.http.post<OAuthAccount>(`${this.baseApiUrl}/${apiKey.provider}`, apiKey).pipe(
+      tap(key => ({})),
+      catchError(error => {
+        console.error('API key creation error:', error);
+        throw error;
+      })
+    );
+  }
+
+  deleteApiKey(provider: string, id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseApiUrl}/${provider}/${id}`).pipe(
+      catchError(error => {
+        console.error('API key deletion error:', error);
+        throw error;
+      })
+    );
+  }
 }

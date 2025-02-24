@@ -136,21 +136,64 @@
             </mat-radio-group>
         </fieldset>
         <fieldset>
-            <legend>ツール一覧（現在は変更不可）</legend>
+            <legend>ツール一覧</legend>
             <!-- <mat-checkbox [(ngModel)]="thread().inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
-            @for(groupDef of this.toolCallService.tools;track $index) {
+            <!-- @for(groupDef of this.toolCallService.tools;track $index) {
             <div>
-                <div>{{groupDef.group}}</div>
+                <mat-checkbox [(ngModel)]="toolCheckMas[groupDef.group]"
+                    (change)="toolGroupCheck($event, groupDef.tools)"
+                    [(indeterminate)]="toolCheckMas[groupDef.group+':indeterminate']"
+                    [disabled]="!thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'">
+                    {{groupDef.group}}
+                </mat-checkbox>
                 @for(tool of groupDef.tools;track $index) {
                 <div style="padding-left: 40px;">
-                    [{{tool.info.name}}] {{tool.info.label}}
-                    <!-- <mat-checkbox [(ngModel)]="thread().inDto.args.isGoogleSearch">
+                    <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
+                        [disabled]="!thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'">
                         [{{tool.info.name}}] {{tool.info.label}}
-                    </mat-checkbox> -->
+                    </mat-checkbox>
                 </div>
                 }
             </div>
             }
+            -->
+
+            <mat-accordion class="accordion custom-scroll"
+                style="min-width: 0;width: 330px;height: calc(100vh - 100px);overflow-y: scroll;">
+                @for(groupDef of this.toolCallService.tools;track $index) {
+                <mat-expansion-panel
+                    [disabled]="!thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'">
+                    <mat-expansion-panel-header>
+                        <mat-panel-title style="width: 100%;">
+                            <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;">
+                                <mat-icon class="group-check" (click)="toolGroupClick($event, groupDef)"
+                                    [ngClass]="{'group-check-checked': toolGroupCheckMas[groupDef.group]===2, 'group-check-bar': toolGroupCheckMas[groupDef.group]===1}">
+                                    {{['','remove','check'][toolGroupCheckMas[groupDef.group]]}}
+                                </mat-icon>
+                                <img [src]="'./image/'+groupDef.group+'-logo.svg'" alt="icon" class="w-8 h-8"
+                                    style="min-width: 30px;">
+                                {{groupDef.group}}
+                            </div>
+                        </mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <div class="grid-container">
+                        @for(tool of groupDef.tools;track $index) {
+                        <div class="channel cursor-pointer">
+                            <!-- [{{tool.info.name}}] {{tool.info.label}} -->
+                            <!-- [(ngModel)]="toolCheckMas[tool.info.group+':'+tool.info.name]" -->
+                            <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
+                                [disabled]="!thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'">
+                                [{{tool.info.name}}] {{tool.info.label}}
+                            </mat-checkbox>
+                        </div>
+                        }
+                    </div>
+                </mat-expansion-panel>
+
+                }
+            </mat-accordion>
+
         </fieldset>
     </div>
 </mat-expansion-panel>

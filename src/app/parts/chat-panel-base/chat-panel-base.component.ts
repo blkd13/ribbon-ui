@@ -60,6 +60,8 @@ export class ChatPanelBaseComponent implements OnInit {
   // マルチスレッドの番号。2番目以降は従属的にふるまうようにしていた時代の名残。
   readonly index = input<number>();
 
+  readonly bitCounter = input<number>();
+
   // チャット入力欄
   readonly textAreaElem = viewChild<ElementRef<HTMLTextAreaElement>>('textAreaElem');
 
@@ -77,8 +79,9 @@ export class ChatPanelBaseComponent implements OnInit {
   autoscroll = false;
   beforeText = '';
   isShowTool: boolean[] = [];
-  @Input()
-  set bitCounter(bitCounter: number) {
+
+  readonly effectBitCounter = effect(() => {
+    this.bitCounter();
     const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as OpenAI.ChatCompletionContentPartText);
     if (this.beforeText === content?.text) {
       // 変更なければ何もしない
@@ -87,7 +90,7 @@ export class ChatPanelBaseComponent implements OnInit {
       setTimeout(() => this.scroll(), 1);
       this.beforeText = content?.text;
     }
-  }
+  });
 
   readonly editEmitter = output<MessageGroupForView>({ alias: 'edit' });
 

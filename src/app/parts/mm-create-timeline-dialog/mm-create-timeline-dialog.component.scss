@@ -1,0 +1,76 @@
+form {
+    height: 100%;
+    margin: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.textarea-field {
+    flex-grow: 1;
+    height: 1px;
+}
+
+button {
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    background-color: #666666;
+    color: #ffffff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+    background-color: #222;
+}
+
+.team-check-container {
+    position: absolute;
+    left: -10px;
+    top: -10px;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 34px;
+    height: 34px;
+}
+
+.team-check {
+    position: relative;
+    cursor: pointer;
+    opacity: 0;
+    color: #000;
+    background-color: transparent;
+    border: 2px solid #ccc;
+    border-radius: 30px;
+    width: 0;
+    height: 0;
+    font-size: 32px;
+    /* filter: blur(50px); */
+    transform: scale(0, 0);
+    transform-origin: 50% 50%;
+    transition: all 0.2s 0s ease-in-out;
+
+    transform: scale(1, 1);
+    opacity: 1;
+    width: 34px;
+    height: 34px;
+}
+
+.team-check-bar,
+.team-check-checked {
+    transform: scale(1, 1);
+    background-color: #69b8cd;
+    border: 2px solid #69b8cd;
+    /* color: #00dddd; */
+    /* opacity: 1; */
+    filter: blur(0);
+    width: 34px;
+    height: 34px;
+}
+
+* {
+    user-select: none;
+}

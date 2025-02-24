@@ -28,22 +28,18 @@ export enum UserRole {
     Guest = 'Guest', // ゲスト（スレッドの閲覧のみ）
 }
 
-export class User {
-    constructor(
-        public id: string,
-        public name: string,
-        public email: string,
-        public role: UserRole,
-        public status: UserStatus,
-        // public profilePictureUrl: string
-    ) { }
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    status: UserStatus;
+    // public profilePictureUrl: string
 }
-export class TwoFactorAuthDetails {
-    constructor(
-        public userId: number,
-        public secret: string,
-        public qrCodeUrl: string
-    ) { }
+export interface TwoFactorAuthDetails {
+    userId: number;
+    secret: string;
+    qrCodeUrl: string;
 }
 
 export type GPTModels = 'gpt-4o' | 'gpt-4-vision-preview' | 'gemini-1.5-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash-001' | 'gemini-1.5-pro-001' | 'gemini-1.5-flash-002' | 'gemini-1.5-pro-002' | 'gemini-1.0-pro' | 'gemini-1.0-pro-vision' | 'claude-3-5-sonnet-v2@20241022' | 'gemini-2.0-flash-exp';

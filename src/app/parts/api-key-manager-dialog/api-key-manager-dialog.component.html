@@ -1,0 +1,101 @@
+<div class="container max-w-4xl mx-auto" style="width: 72rem">
+    <h1 class="text-2xl mb-6">API鍵の管理</h1>
+
+    <mat-card class="mb-6">
+        <mat-card-header>
+            <mat-card-title>ribbon-uiのAPI鍵を作成する</mat-card-title>
+        </mat-card-header>
+        <mat-card-content style="padding-bottom: 0;">
+            <form [formGroup]="apiLabelForm" (ngSubmit)="genAPIKey()" class="flex flex-col gap-4">
+
+                <div class="flex gap-4 items-center w-full">
+                    <mat-form-field appearance="outline" class="w-0 flex-grow">
+                        <mat-label>ラベル</mat-label>
+                        <input matInput formControlName="label" placeholder="この鍵の用途を入力">
+                    </mat-form-field>
+                    <button mat-raised-button color="primary" type="submit" [disabled]="!apiLabelForm.valid">
+                        登録
+                    </button>
+                </div>
+                <!--
+                <mat-form-field appearance="outline" class="w-full">
+                    <mat-label>API鍵</mat-label>
+                    <input matInput readonly formControlName="api-key" type="text" placeholder="API鍵">
+                </mat-form-field>
+                -->
+            </form>
+        </mat-card-content>
+    </mat-card>
+
+    <mat-card class="mb-6">
+        <mat-card-header>
+            <mat-card-title>他システムのAPI鍵を登録する</mat-card-title>
+        </mat-card-header>
+        <mat-card-content style="padding-bottom: 0;">
+            <form [formGroup]="apiKeyForm" (ngSubmit)="onSubmit()" class="flex gap-4 items-center">
+                <mat-form-field appearance="outline">
+                    <mat-label>プロバイダー</mat-label>
+                    <mat-select formControlName="provider">
+                        <mat-option *ngFor="let provider of providers" [value]="provider.value">
+                            {{provider.label}}
+                        </mat-option>
+                    </mat-select>
+                </mat-form-field>
+                <!--
+                <mat-form-field appearance="outline">
+                    <mat-label>ラベル</mat-label>
+                    <input matInput formControlName="label" placeholder="この鍵の用途を入力">
+                </mat-form-field>
+                -->
+                <mat-form-field appearance="outline" class="w-0 flex-grow">
+                    <mat-label>API鍵</mat-label>
+                    <input matInput formControlName="key" [type]="hideKey ? 'password' : 'text'" placeholder="API鍵を入力">
+                    <button mat-icon-button matSuffix (click)="hideKey = !hideKey" type="button">
+                        <mat-icon>{{hideKey ? 'visibility_off' : 'visibility'}}</mat-icon>
+                    </button>
+                </mat-form-field>
+                <button mat-raised-button color="primary" type="submit" [disabled]="!apiKeyForm.valid">
+                    登録
+                </button>
+            </form>
+        </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+        <mat-card-header>
+            <mat-card-title>登録済みAPI鍵一覧</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+            <table mat-table [dataSource]="apiKeys" class="w-full">
+                <ng-container matColumnDef="provider">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let element">{{element.label || element.provider}}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="createdAt">
+                    <th mat-header-cell *matHeaderCellDef>登録日時</th>
+                    <td mat-cell *matCellDef="let element">{{element.createdAt|date:'yyyy/MM/dd HH:mm:ss.SSS'}}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="updatedAt">
+                    <th mat-header-cell *matHeaderCellDef>最終更新</th>
+                    <td mat-cell *matCellDef="let element">
+                        {{element.updatedAt ? (element.updatedAt|date:'yyyy/MM/dd HH:mm:ss.SSS') : '未使用'}}
+                    </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef>削除</th>
+                    <td mat-cell *matCellDef="let element">
+                        <button mat-icon-button (click)="deleteApiKey(element)">
+                            <mat-icon class="text-red-300">delete</mat-icon>
+                        </button>
+                    </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            </table>
+        </mat-card-content>
+    </mat-card>
+</div>

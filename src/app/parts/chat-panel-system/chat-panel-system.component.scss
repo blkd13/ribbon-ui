@@ -40,3 +40,85 @@
     }
 
 }
+
+
+.accordion {
+    mat-expansion-panel {
+        background: linear-gradient(135deg,
+                #0a0a0a 0%,
+                #1a1a1a 100%);
+    }
+
+    button {
+        padding: 10px 20px;
+        border-radius: 5px;
+        border: none;
+        background-color: #666666;
+        color: #ffffff;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    button:hover {
+        background-color: #222;
+    }
+
+    .group-check-container {
+        position: absolute;
+        left: -10px;
+        top: -10px;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 34px;
+        height: 34px;
+    }
+
+    .group-check {
+        position: relative;
+        cursor: pointer;
+        opacity: 0;
+        color: #000;
+        background-color: transparent;
+        border: 2px solid #ccc;
+        border-radius: 30px;
+        width: 0;
+        height: 0;
+        font-size: 32px;
+        /* filter: blur(50px); */
+        transform: scale(0, 0);
+        transform-origin: 50% 50%;
+        transition: all 0.2s 0s ease-in-out;
+
+        transform: scale(1, 1);
+        opacity: 1;
+        width: 34px;
+        height: 34px;
+    }
+
+    .group-check-bar,
+    .group-check-checked {
+        transform: scale(1, 1);
+        background-color: #69b8cd;
+        border: 2px solid #69b8cd;
+        /* color: #00dddd; */
+        /* opacity: 1; */
+        filter: blur(0);
+        width: 34px;
+        height: 34px;
+    }
+
+    ::ng-deep {
+        .mat-expansion-panel[ng-reflect-disabled="true"] {
+            mat-icon {
+                opacity: 0.5;
+            }
+
+            img {
+                opacity: 0.5;
+            }
+        }
+    }
+}
