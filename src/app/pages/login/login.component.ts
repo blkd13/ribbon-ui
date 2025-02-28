@@ -11,10 +11,16 @@ import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslateModule } from '@ngx-translate/core';
 import { MatIconModule } from '@angular/material/icon';
+import { environment } from '../../../environments/environment';
+import { MatExpansionModule } from '@angular/material/expansion';
 
 @Component({
   selector: 'app-login',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatSnackBarModule, MatCardModule, MatDialogModule, TranslateModule, MatIconModule],
+  imports: [
+    CommonModule, FormsModule, ReactiveFormsModule,
+    MatSnackBarModule, MatCardModule, MatDialogModule, TranslateModule, MatIconModule,
+    MatExpansionModule,
+  ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
@@ -31,6 +37,8 @@ export class LoginComponent {
   errorMessageList: string[] = [];
   hidePassword = true;
   hidePasswordConfirm = true;
+
+  curEnv = environment;
 
   readonly authService: AuthService = inject(AuthService);
   readonly formBuilder: FormBuilder = inject(FormBuilder);

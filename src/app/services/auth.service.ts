@@ -5,7 +5,8 @@ import { catchError, map, tap } from 'rxjs/operators';
 import { User, TwoFactorAuthDetails } from '../models/models';
 import { PredictTransaction } from './department.service';
 
-export type OAuth2Provider = 'box' | 'mattermost' | 'gitlab' | 'gitea';
+// export type OAuth2Provider = 'box' | 'mattermost' | 'gitlab' | 'gitea'; // この型定義は無意味。実際はプロバイダーIDと組み合わせて使うので
+export type OAuth2Provider = string; // この型定義は無意味。
 export type OAuthAccount = { id: string, userInfo: string, provider: string, providerUserId: string, providerEmail: string };
 
 @Injectable({ providedIn: 'root' })
@@ -166,7 +167,7 @@ export class AuthService {
 
   /**
    * APIキーを生成する。
-   * @returns 
+   * @returns
    */
   genApiKey(label: string): Observable<{ apiToken: string }> {
     return this.http.post<{ apiToken: string }>(`/user/api-token`, { label });

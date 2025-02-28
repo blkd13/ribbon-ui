@@ -78,7 +78,7 @@
                         </button>
                         <mat-radio-button [value]="channel.id" color="primary"
                             class="relative channel-name text-nowrap overflow-ellipsis" [ngClass]="{
-                                selected: radioSelectedId===channel.id, 
+                                selected: radioSelectedId===channel.id,
                                 unread: mmTimelineUnread[channel.id],
                                 'opacity-30': channel.isMute,
                             }">
@@ -166,7 +166,7 @@
                 <div class="sepa-row newmessage" #newMessagesElem>
                     <div class="sepa-line newmessage"></div>
                     <div class="sepa newmessage">New Messages
-                        <!-- 
+                        <!--
                         <div>{{mmGroupedFilteredLimitedPostList[$index-1][0].create_at|date:'yyyy-MM-dd HH:mm:ss.SSS'}}
                         </div>
                         <div>{{newMessageDate|date:'yyyy-MM-dd HH:mm:ss.SSS'}}</div>
@@ -201,7 +201,7 @@
                     </div>
                     <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
                         (keydown)="onKeyDown('main', $event, selectedChannelIds[0])"
-                        [placeholder]="appFileDropList().at(0)?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
+                        [placeholder]="appFileDropList().at(0)?.isHovered?'ファイルドロップ':(selectedChannelIds.length!==1 ? 'ミックス表示中はメッセージ入力ができません。\nメッセージ入力するには1チャネルモードにしてください。': 'メッセージを入力...。 Shift+Enterで改行。 '+userService.enterMode+'で送信。 Drag＆Drop、ファイル貼り付け。')"
                         #textAreaElemMain [(ngModel)]="inDto.main.message" (blur)="clearMention()"
                         (change)="onChange('main', selectedChannelIds[0])"
                         [disabled]="selectedChannelIds.length!==1"></textarea>
@@ -209,7 +209,7 @@
                     <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
                     }
                 </div>
-                <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
+                <button mat-fab color="primary" aria-label="Send" [matTooltip]="userService.enterMode"
                     [disabled]="!inDto.main.message || inDto.main.message.length===0 || isLoading"
                     (click)="post('main', selectedChannelIds[0])">
                     <mat-icon>send</mat-icon>
@@ -260,14 +260,14 @@
                     </div>
                     <textarea appCursorPosition (cursorPositionChange)="onCursorPositionChange($event)"
                         (keydown)="onKeyDown('thread', $event, mmThread[0][0].channel_id, mmThread[0][0].id)"
-                        [placeholder]="appFileDropList().at(-1)?.isHovered?'ファイルドロップ':('メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
+                        [placeholder]="appFileDropList().at(-1)?.isHovered?'ファイルドロップ':('メッセージを入力...。 Shift+Enterで改行。 '+userService.enterMode+'で送信。 Drag＆Drop、ファイル貼り付け。')"
                         #textAreaElemThread [(ngModel)]="inDto.thread.message" (blur)="clearMention()"
                         (change)="onChange('thread', mmThread[0][0].channel_id, mmThread[0][0].id)"></textarea>
                     @if(mentionInputType==='thread'){
                     <ng-container *ngTemplateOutlet="mentionTemplate"></ng-container>
                     }
                 </div>
-                <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
+                <button mat-fab color="primary" aria-label="Send" [matTooltip]="userService.enterMode"
                     [disabled]="inDto.thread.message.length===0 || isLoading"
                     (click)="post('thread', mmThread[0][0].channel_id, mmThread[0][0].id)">
                     <mat-icon>send</mat-icon>

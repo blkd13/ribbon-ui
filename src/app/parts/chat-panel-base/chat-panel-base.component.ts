@@ -24,6 +24,7 @@ import { ToolCallPart, ToolCallPartBody, ToolCallPartCommand, ToolCallPartComman
 import { MatDialog } from '@angular/material/dialog';
 import { ToolCallCallResultDialogComponent } from '../tool-call-call-result-dialog/tool-call-call-result-dialog.component';
 import { MatTabsModule } from '@angular/material/tabs';
+import { UserService } from '../../services/user.service';
 
 
 @Component({
@@ -133,6 +134,7 @@ export class ChatPanelBaseComponent implements OnInit {
     return Array.isArray(obj) ? obj : [];
   }
 
+  readonly userService: UserService = inject(UserService);
   readonly chatService: ChatService = inject(ChatService);
   readonly messageService: MessageService = inject(MessageService);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
@@ -322,11 +324,10 @@ export class ChatPanelBaseComponent implements OnInit {
       this.toolExecEmitter.emit({ contentPart: content, toolCallPartCommandList });
     } else { }
   }
-
   timeoutId: any;
   onKeyDown($event: KeyboardEvent): void {
     if ($event.key === 'Enter') {
-      if ($event.ctrlKey) {
+      if ((this.userService.enterMode === 'Ctrl+Enter' && $event.ctrlKey) || this.userService.enterMode === 'Enter') {
         // this.onSubmit();
         // ここでsubmitすると二重送信になるのでblurするだけで良い。
         this.textAreaElem()?.nativeElement.blur();

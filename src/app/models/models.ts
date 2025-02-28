@@ -42,7 +42,23 @@ export interface TwoFactorAuthDetails {
     qrCodeUrl: string;
 }
 
-export type GPTModels = 'gpt-4o' | 'gpt-4-vision-preview' | 'gemini-1.5-flash' | 'gemini-1.5-pro' | 'gemini-1.5-flash-001' | 'gemini-1.5-pro-001' | 'gemini-1.5-flash-002' | 'gemini-1.5-pro-002' | 'gemini-1.0-pro' | 'gemini-1.0-pro-vision' | 'claude-3-5-sonnet-v2@20241022' | 'gemini-2.0-flash-exp';
+export type GPTModels = 'gpt-4o'
+    | 'gpt-4-vision-preview'
+    | 'gemini-1.5-flash'
+    | 'gemini-1.5-pro'
+    | 'gemini-1.5-flash-001'
+    | 'gemini-1.5-pro-001'
+    | 'gemini-1.5-flash-002'
+    | 'gemini-1.5-pro-002'
+    | 'gemini-1.0-pro'
+    | 'gemini-1.0-pro-vision'
+    | 'claude-3-5-sonnet-v2@20241022'
+    | 'claude-3-7-sonnet'
+    | 'claude-3-7-sonnet-20250219'
+    | 'claude-3-7-sonnet-thinking-20250219'
+    | 'claude-3-7-sonnet@20250219'
+    | 'claude-3-7-sonnet-thinking@20250219'
+    | 'gemini-2.0-flash-exp';
 
 
 export interface CachedContent {

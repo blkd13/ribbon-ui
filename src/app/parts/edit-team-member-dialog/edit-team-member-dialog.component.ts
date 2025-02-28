@@ -14,16 +14,18 @@ import { MatSelectModule } from '@angular/material/select';
 import { User } from '../../models/models';
 import { Observer, Subscription } from 'rxjs';
 import { DialogComponent } from '../dialog/dialog.component';
+import { UserService } from '../../services/user.service';
 @Component({
-    selector: 'app-edit-team-member-dialog',
-    imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule],
-    templateUrl: './edit-team-member-dialog.component.html',
-    styleUrl: './edit-team-member-dialog.component.scss'
+  selector: 'app-edit-team-member-dialog',
+  imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule],
+  templateUrl: './edit-team-member-dialog.component.html',
+  styleUrl: './edit-team-member-dialog.component.scss'
 })
 export class EditTeamMemberDialogComponent implements OnInit {
   readonly projectService: ProjectService = inject(ProjectService);
   readonly teamService: TeamService = inject(TeamService);
   readonly departmentService: DepartmentService = inject(DepartmentService);
+  readonly userService: UserService = inject(UserService);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly dialogRef: MatDialogRef<EditTeamMemberDialogComponent> = inject(MatDialogRef<EditTeamMemberDialogComponent>);
   readonly data = inject<{ team: Team, teamMember: TeamMember }>(MAT_DIALOG_DATA);
@@ -70,7 +72,7 @@ export class EditTeamMemberDialogComponent implements OnInit {
     if ($event.key === 'Enter') {
       if ($event.shiftKey) {
         // this.onChange();
-      } else if ($event.ctrlKey) {
+      } else if ((this.userService.enterMode === 'Ctrl+Enter' && $event.ctrlKey) || this.userService.enterMode === 'Enter') {
       } else {
         // this.onChange();
       }

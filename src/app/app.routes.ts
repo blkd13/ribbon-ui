@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { departmentGuard, loginGuard, oAuthGuardGenerator, projectGuard, teamGuard, threadGroupGuard } from './guard/chat.guard';
 import { adminGuard } from './guard/admin.guard';
+import { environment } from '../environments/environment';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -26,8 +27,11 @@ export const routes: Routes = [
       ],
     }, { path: '**', redirectTo: 'folder' }]
   },
-  { path: 'gitlab', canActivate: [oAuthGuardGenerator('gitlab')], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) },
-  { path: 'gitea', canActivate: [oAuthGuardGenerator('gitea')], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) },
+  // giteaとgitlabはenvironから読み込んだものを当てる
+  ...(environment.oAuthProviders.filter(group => ['gitea', 'gitlab'].includes(group.value)).map(group => group.providers.map(provider => {
+    const providerId = provider.id ? `${group.value}-${provider.id}` : group.value;
+    return { path: providerId, canActivate: [oAuthGuardGenerator(providerId)], loadComponent: () => import('./pages/git/git.component').then(m => m.GitComponent) }
+  })).flat()),
   // { path: 'chat', canActivate: [loginGuard], loadComponent: () => import('./pages/error/error.component').then(m => m.ErrorComponent) },
   {
     path: 'chat', children: [{

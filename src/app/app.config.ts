@@ -1,4 +1,4 @@
-import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection, isDevMode, inject, provideAppInitializer, EnvironmentProviders, Provider } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection, isDevMode, inject, provideAppInitializer, EnvironmentProviders, Provider, APP_INITIALIZER, SecurityContext } from '@angular/core';
 import { provideRouter, withHashLocation, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -7,7 +7,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { HTTP_INTERCEPTORS, HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
-import { MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
+import { MarkdownService, MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
 import { NgxIndexedDBModule } from 'ngx-indexed-db';
 import { dbConfig } from './app.db.config';
 import { ApiInterceptor } from './api.interceptor';
@@ -60,8 +60,12 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const initializerFn = (() => {
         const iconRegistry = inject(MatIconRegistry);
+        const markdownService = inject(MarkdownService);
         return () => {
           iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
+          markdownService.renderer.link = ({ href, title, text }) => {
+            return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+          };
         };
       })();
       return initializerFn();

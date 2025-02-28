@@ -161,6 +161,7 @@ export class ChatComponent implements OnInit {
   readonly sanitizer: DomSanitizer = inject(DomSanitizer);
 
   ngOnInit(): void {
+    this.defaultPlaceholder = `メッセージを入力...。Shift+Enterで改行。${this.userService.enterMode}で送信。Drag＆Drop、ファイル貼り付け。`;
     document.title = `AI`;
     of(0).pipe(
       switchMap(() => this.loadTeams()),
@@ -344,7 +345,7 @@ export class ChatComponent implements OnInit {
         this.messageService.cloneThreadDry(baseThread),
       ]).subscribe({
         next: next => {
-          (['gpt-4o', 'claude-3-5-sonnet-v2@20241022', 'gemini-2.0-flash-exp'] as GPTModels[]).forEach((model, index) => {
+          (['gpt-4o', 'claude-3-7-sonnet@20250219', 'gemini-2.0-flash-exp'] as GPTModels[]).forEach((model, index) => {
             next[index].inDto.args.model = model;
           });
           this.presetThreadList = next;
@@ -1056,7 +1057,7 @@ export class ChatComponent implements OnInit {
                   });
                 });
                 // 一番下まで下げる
-                this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
+                DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem()[index].nativeElement);
                 this.rebuildThreadGroup();
                 this.autoscroll = true;
                 this.beforeScrollTop = -1;
@@ -1106,6 +1107,15 @@ export class ChatComponent implements OnInit {
           if (choice.delta) {
             // 通常の中身
             if (choice.delta.content && !['tool', 'info', 'command', 'input'].includes(choice.delta.role || '')) {
+              if (content.type === ContentPartType.TEXT) {
+              } else {
+                // textじゃなかったらブレイクする
+                const contentPart = this.messageService.initContentPart(message.id, '');
+                contentPart.type = ContentPartType.TEXT;
+                message.contents.push(contentPart);
+                this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
+                content = contentPart;
+              }
               const text = choice.delta.content;
               content.text += text;
               // console.log(`content=${choice.delta.content}`);
@@ -1186,10 +1196,6 @@ export class ChatComponent implements OnInit {
                 const toolCall = choice.delta as ToolCallPartBody;
                 if ('tool' === choice.delta.role) {
                   const toolCall = choice.delta as ToolCallPartResultBody;
-                  // content.meta.result = choice.delta;
-                  // content.meta.call.function.arguments = JSON.stringify(JSON.parse(content.meta.call.function.arguments), null, 2);
-                  // content.meta.result.content = JSON.stringify(JSON.parse(content.meta.result.content), null, 2);
-                  // content.text = JSON.stringify(content.meta);
 
                   const toolCallPart = {
                     type: ToolCallPartType.RESULT,
@@ -1262,7 +1268,7 @@ export class ChatComponent implements OnInit {
                 if (this.beforeScrollTop <= scrollTop) {
                   this.beforeScrollTop = scrollTop;
                   if (this.userService.chatTabLayout === 'tabs') {
-                    this.anchor().at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // this.anchor().at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   } else {
                     this.chatPanelGroupElem()?.at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }
@@ -1379,7 +1385,7 @@ export class ChatComponent implements OnInit {
     if ($event.key === 'Enter') {
       if ($event.shiftKey) {
         this.onChange();
-      } else if ($event.ctrlKey) {
+      } else if ((this.userService.enterMode === 'Ctrl+Enter' && $event.ctrlKey) || this.userService.enterMode === 'Enter') {
         // TODO: 送信処理 danger
         this.send().subscribe();
       } else {

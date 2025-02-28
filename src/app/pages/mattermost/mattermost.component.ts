@@ -44,6 +44,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
 import { MmEmojiPickerComponent } from '../../parts/mm-emoji-picker/mm-emoji-picker.component';
 import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
+import { UserService } from '../../services/user.service';
 
 type InType = 'main' | 'thread';
 type InDtoSub = { message: string, fileList: FullPathFile[] };
@@ -73,6 +74,7 @@ export class MattermostComponent implements OnInit {
   readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
   readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
   readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
+  readonly userService: UserService = inject(UserService);
 
   emojiPicker(): void {
     this.dialog.open(MmEmojiPickerComponent, {});
@@ -176,7 +178,7 @@ export class MattermostComponent implements OnInit {
             });
           } else {
             this.radioSelectedId = targetChannelId;
-            // 
+            //
             this.selectTeam(selectedTeam)
               .pipe(
                 switchMap(
@@ -721,7 +723,8 @@ export class MattermostComponent implements OnInit {
                       }
                     });
                   }
-                  post.messageForView = post.messageForView.replace('<a href="', '<a target="_blank" href="');
+                  // markdown側で対応したからやらなくてOK
+                  // post.messageForView = post.messageForView.replace('<a href="', '<a target="_blank" href="');
                   post.messageForView = replaceMentionsWithMaster(post.messageForView);
                   this.scrollToBottom();
 
@@ -838,7 +841,7 @@ export class MattermostComponent implements OnInit {
                   }
                 });
               }
-              post.messageForView = post.messageForView.replace('<a href="', '<a target="_blank" href="');
+              // post.messageForView = post.messageForView.replace('<a href="', '<a target="_blank" href="');
               post.messageForView = replaceMentionsWithMaster(post.messageForView);
 
               // messageとmetadataとedit_atだけ適用する
@@ -994,7 +997,7 @@ export class MattermostComponent implements OnInit {
     });
   }
   mmUser!: { id: string, providerUserId: string, userInfo: string };
-  // 
+  //
   mattermostInitialize(): Observable<boolean> {
     // TODO 本来は pipe->switchMap だけでやらないとダメな気はしている。
     return this.authService.getOAuthAccountList().pipe(switchMap(next => {
@@ -1126,7 +1129,7 @@ export class MattermostComponent implements OnInit {
         } else if (['D', 'G'].includes(curr.type)) {
           this.mmTeamMas['direct'].channelList.push(curr);
         } else {
-          // teamIdが存在していない場合（多分新規作成されたものが間に合ってないだけ。） 
+          // teamIdが存在していない場合（多分新規作成されたものが間に合ってないだけ。）
           // console.log(`team_id = curr.team_id=${curr.team_id}`);
           // console.log(curr);
         }
@@ -1211,7 +1214,7 @@ export class MattermostComponent implements OnInit {
         .filter(v => !!v)
         .filter(ch => new Date(ch.lastViewedAt || 0).getTime() < maxDateMas[ch.channelId]);
 
-      // mattermost向けは逐次で投げる 
+      // mattermost向けは逐次で投げる
       this.clearUnreadAndMentionCount(chIdSet).subscribe();
       // ribbon向けは並列で投げる
       safeForkJoin(
@@ -1235,7 +1238,7 @@ export class MattermostComponent implements OnInit {
 
   clearUnreadAndMentionCount(channelIdSet: Set<string>) {
     const channelIdList = Array.from(channelIdSet);
-    // mattermost向けは逐次で投げる 
+    // mattermost向けは逐次で投げる
     return from(channelIdList.map(channelId => this.apiMattermostService.mattermostView(channelId))).pipe(
       mergeMap(obs => obs, 1),
       // switchMap(next => this.updateTeamUnread()),
@@ -1520,7 +1523,7 @@ export class MattermostComponent implements OnInit {
                 posts.forEach(post => {
                   // href="
                   post.messageForView = post.message;
-                  post.messageForView = post.messageForView.replace('<a href="', '<a target="_blank" href="');
+                  // post.messageForView = post.messageForView.replace('<a href="', '<a target="_blank" href="');
                   post.messageForView = replaceMentionsWithMaster(post.messageForView);
                   // post.messageForView = '\n' + Utils.splitCodeBlock(post.messageForView).map((block, index) => {
                   //   if (index % 2 == 0) {
@@ -1728,7 +1731,7 @@ export class MattermostComponent implements OnInit {
       if ($event.key === 'Enter') {
         if ($event.shiftKey) {
           this.onChange(type, channel_id, root_id);
-        } else if ($event.ctrlKey) {
+        } else if ((this.userService.enterMode === 'Ctrl+Enter' && $event.ctrlKey) || this.userService.enterMode === 'Enter') {
           this.post(type, channel_id, root_id);
         } else {
           // なんかしらんがEnterだと文字が消えないことが多いのできっぱりCtrl+Enterだけにする。
@@ -1801,7 +1804,7 @@ export class MattermostComponent implements OnInit {
         if (this.mentionTimeout) {
           this.mentionTimeout.unsubscribe();
         } else { }
-        // 
+        //
         let threadUserList: MattermostUser[] = [];
         if (this.mentionList.length === 0 && root_id) {
           // 元が0件でthreadの場合はthreadのユーザーを取ってきて追加しておく。

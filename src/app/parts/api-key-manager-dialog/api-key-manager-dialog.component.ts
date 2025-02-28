@@ -12,6 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { AuthService, OAuthAccount } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 
 @Component({
@@ -32,13 +33,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
   apiKeyForm: FormGroup;
   hideKey = true;
 
-  providers = [
-    { value: 'confluence', label: 'Confluence' },
-    // { value: 'mattermost', label: 'Mattermost' },
-    // { value: 'box', label: 'Box' },
-    // { value: 'gitea', label: 'Gitea' },
-    // { value: 'gitlab', label: 'GitLab' }
-  ];
+  providerGroups = environment.apiKeyProviders;
 
   readonly authServices: AuthService = inject(AuthService);
 
@@ -51,7 +46,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
       label: ['', Validators.required]
     });
     this.apiKeyForm = this.fb.group({
-      provider: [this.providers[0].value, Validators.required],
+      provider: [this.providerGroups[0].value, Validators.required],
       key: ['', Validators.required]
     });
   }
@@ -81,20 +76,26 @@ export class ApiKeyManagerDialogComponent implements OnInit {
     if (this.apiKeyForm.valid) {
       const formValue = { provider: this.apiKeyForm.value.provider, accessToken: this.apiKeyForm.value.key };
 
+      // TODO ここはいけてない。メッセージをsnackbarじゃなくて画面に載せた方が良い。
       this.authServices.registApiKey(formValue as any).subscribe({
         next: next => {
           this.snackBar.open('API鍵を登録しました', '閉じる', {
-            duration: 3000
+            duration: 10000
           });
           this.loadApiKeys();
           // リセット時に初期値をセットすることで、バリデーションエラーを回避する
           this.apiKeyForm.reset({
-            provider: this.providers[0].value,
+            provider: this.providerGroups[0].value + (this.providerGroups[0].providers[0].id ? ('-' + this.providerGroups[0].providers[0].id) : ''),
             key: ''
           });
           // フォームの状態をクリアする
           // this.apiKeyForm.markAsPristine();
           this.apiKeyForm.markAsUntouched();
+        },
+        error: error => {
+          this.snackBar.open(JSON.stringify(error), '閉じる', {
+            duration: 10000
+          });
         }
       });
     }

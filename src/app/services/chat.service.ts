@@ -57,15 +57,20 @@ export class ChatService {
     { tag: '賢い', class: 'wiz', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-001', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro-002', },
 
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-20241022', },
+    // { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-20241022', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-v2@20241022', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet-20250219', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet-thinking-20250219', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet@20250219', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet-thinking@20250219', },
+    // { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 4096, maxInputTokens: 128000, isGSearch: false, isDomestic: true, isPdf: true, price: [0.00500000, 0.015000, 0.0050000, 0.015000], id: 'gpt-4o', },
 
     { tag: '賢遅', class: 'wis', isEnable: true, maxTokens: 100000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.01650000, 0.066000, 0.0165000, 0.066000], id: 'o1', },
     { tag: '賢遅', class: 'wis', isEnable: true, maxTokens: 100000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00110000, 0.004400, 0.0011000, 0.004400], id: 'o3-mini', },
 
     { tag: '実験', class: 'exp', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00012500, 0.000375, 0.0002500, 0.000750], id: 'gemini-2.0-pro-exp-02-05', },
-    { tag: '実験', class: 'exp', isEnable: true, maxTokens: 8192, maxInputTokens: 32767, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-thinking-exp-01-21', },
+    { tag: '実験', class: 'exp', isEnable: true, maxTokens: 64000, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-thinking-exp-01-21', },
 
     { tag: '速い', class: 'min', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00003750, 0.000150, 0.0000750, 0.001500], id: 'gemini-2.0-flash-lite-preview-02-05', },
 
@@ -580,17 +585,27 @@ export class ChatService {
       tool_names: [
         'mattermost:mm_get_mentioned_posts',
         'mattermost:mm_search_all_posts_by_keyword',
-        'mattermost:mm_search_posts',
+        // 'mattermost:mm_search_posts',
         'mattermost:mm_find_users',
         'mattermost:mm_get_channels',
         'mattermost:mm_send_message',
       ],
-      modelSelection: ['claude-3-5-sonnet-v2@20241022', 'gemini-2.0-pro-exp-02-05', 'gpt-4o', 'gemini-1.5-pro-002'],
+      modelSelection: ['claude-3-7-sonnet@20250219', 'gemini-2.0-pro-exp-02-05', 'gpt-4o', 'gemini-1.5-pro-002'],
       systemLabel: `Mattermost`,
       systemPrompt: Utils.trimLines(`
         エージェントAI。
         必要に応じてツールを使用する。
-        `),
+      `),
+      userPrompt: Utils.trimLines(`メンションからタスクを抽出して分類して分かりやすくまとめてください。リンクもつけて下さい。
+        例）
+        ## 案件名
+        1. タイトル
+          投稿者: （投稿者の名前）
+          日時: yyyy年MM月dd日 hh:mm
+          内容: （内容の要約）
+          リンク: 投稿リンク
+          分類: 質問
+      `),
       // ✅ ** mattermost検索が必要になった場合の注意
       // - 基本的にはメンションされた投稿をソースとする。
       // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。

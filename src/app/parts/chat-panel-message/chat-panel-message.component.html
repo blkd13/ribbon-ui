@@ -41,10 +41,10 @@
     </div>
     }
 
-    <div class="flex-grow w-0 relative" [ngClass]="{'message-notediting': !message.editing}">
+    <div class="flex-grow w-0 relative overflow-hidden" [ngClass]="{'message-notediting': !message.editing}">
 
       <!-- ファイル -->
-      <!-- 
+      <!--
       @if(message.contents.length>1){
       <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
           @for(content of message.contents; track $index){
@@ -96,9 +96,10 @@
 
         @for(toolCallSet of jsonParseToArray(content.text||'[]');track $index){
 
+        @if(toolCallSet.info){
         <button class="flex items-center command-tag cursor-pointer relative"
           (click)="openToolCallDialog($event, toolCallSet)">
-          <img [src]="'image/'+toolCallSet.info.group+'-logo.svg'" style="width: 32px;" />
+          <img [src]="'image/'+toolCallSet.info.group.split('-')[0]+'-logo.svg'" style="width: 32px;" />
           <div class="flex flex-col items-start">
             <div>[{{toolCallSet.info.name}}]</div>
             <div>{{toolCallSet.info.label}}</div>
@@ -111,6 +112,10 @@
           }
 
         </button>
+        } @else {
+        <!-- TODO infoが無いのはおかしいのでこの判定は本来不用なはずだが、とりあえず今は暫定でこうしておく。なんかエラーの時にresultが独立して飛んできてしまっているのがいけないようではあるがなぜsresultが独立してしまったのかは分からない。 -->
+        <!-- {{toolCallSet|json}} -->
+        }
         }
 
         <!-- @if(content.text; as info && info.isInteractive){

@@ -39,6 +39,8 @@ import { ApiBoxService } from '../../services/api-box.service';
 import { ApiGiteaService } from '../../services/api-gitea.service';
 import { MarkdownModule } from 'ngx-markdown';
 import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
+import { UserService } from '../../services/user.service';
+import { environment } from '../../../environments/environment';
 
 declare var _paq: any;
 @Component({
@@ -73,7 +75,7 @@ export class HomeComponent implements OnInit {
   readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
   readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
   readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
-  environment: any;
+  curEnv = environment;
   aloneTeam!: Team;
   teamList: TeamForView[] = [];
   teamWithoutAloneList: TeamForView[] = [];
@@ -144,8 +146,10 @@ export class HomeComponent implements OnInit {
     this.showRecentChats = !this.showRecentChats;
   }
 
+  readonly userService: UserService = inject(UserService);
   ngOnInit(): void {
     document.title = `Ribbon UI`;
+    this.staticMessageList.forEach(staticMessage => staticMessage.placeholder = staticMessage.placeholder.replace('Ctrl+Enter', this.userService.enterMode));
 
     if (JSON.parse(localStorage.getItem('settings-v1.0') || '{}')['model']) {
       this.model = JSON.parse(localStorage.getItem('settings-v1.0') || '{}')['model'];
@@ -269,7 +273,7 @@ export class HomeComponent implements OnInit {
     if ($event.key === 'Enter') {
       if ($event.shiftKey) {
         // this.onChange();
-      } else if ($event.ctrlKey) {
+      } else if ((this.userService.enterMode === 'Ctrl+Enter' && $event.ctrlKey) || this.userService.enterMode === 'Enter') {
         this.submit();
       } else {
         // this.onChange();

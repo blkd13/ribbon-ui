@@ -3,7 +3,6 @@
 <mat-dialog-content>
     <div class="settings-section">
         <h3>アニメーション設定</h3>
-        <mat-divider></mat-divider>
         <div class="setting-item">
             <mat-slide-toggle [checked]="current" (change)="toggleAnimation($event)">
                 アニメーションを有効にする
@@ -11,6 +10,21 @@
             <p class="setting-description">
                 UIアニメーションの有効/無効を切り替えます。
                 変更を適用するにはページの再読み込みが必要です。
+            </p>
+        </div>
+    </div>
+    <mat-divider></mat-divider>
+    <div class="settings-section">
+        <h3>Ctrl+Enterで送信 or Enterで送信</h3>
+        <div class="setting-item">
+            <mat-radio-group [value]="userService.enterMode" name="enter-mode" (change)="toggleEnterMode($event)">
+                <mat-radio-button value="Ctrl+Enter">Ctrl+Enterで送信</mat-radio-button>
+                <span class="inline-block min-w-10"></span>
+                <mat-radio-button value="Enter">Enterで送信</mat-radio-button>
+            </mat-radio-group>
+            <p class="setting-description">
+                テキストボックスの入力完了時にEnterのみで送信するかEnter+Ctrlで送信するかを指定できます。<br/>
+                デフォルトはCtrl+Enterです。
             </p>
         </div>
     </div>

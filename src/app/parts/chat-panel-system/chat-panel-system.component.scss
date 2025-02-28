@@ -1,7 +1,7 @@
 :host {
     ::ng-deep {
         .mat-expansion-panel.message .mat-expansion-panel-header-title {
-            width: 321px;
+            width: 346px;
         }
     }
 }
@@ -110,15 +110,19 @@
         height: 34px;
     }
 
-    ::ng-deep {
-        .mat-expansion-panel[ng-reflect-disabled="true"] {
-            mat-icon {
-                opacity: 0.5;
-            }
+    // ::ng-deep {
+    //     .mat-expansion-panel[ng-reflect-disabled="true"] {
+    //         mat-icon {
+    //             opacity: 0.5;
+    //         }
 
-            img {
-                opacity: 0.5;
-            }
-        }
-    }
+    //         img {
+    //             opacity: 0.5;
+    //         }
+    //     }
+    // }
+}
+
+.mat-accordion.accordion.disabled{
+  opacity: 0.5;
 }

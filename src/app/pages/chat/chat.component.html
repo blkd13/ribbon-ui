@@ -432,7 +432,7 @@
         @for(content of inputArea.content; track $index){
         @if(content.type==='text'){
         <textarea (keydown)="onKeyDown($event)" #textAreaElem
-          [placeholder]="appFileDrop()?.isHovered?'ファイルドロップ':(placeholder||'メッセージを入力...。 Shift+Enterで改行。 Ctrl+Enterで送信。 Drag＆Drop、ファイル貼り付け。')"
+          [placeholder]="appFileDrop()?.isHovered?'ファイルドロップ':(placeholder||'メッセージを入力...。 Shift+Enterで改行。 '+userService.enterMode+'で送信。 Drag＆Drop、ファイル貼り付け。')"
           [(ngModel)]="content.text" (change)="onChange()"></textarea>
 
         @if(chatStreamSubscriptionList[selectedThreadGroup.id]){
@@ -442,13 +442,13 @@
         </button>
         }@else{
         <!-- 送信ボタン -->
-        <!-- <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter"
+        <!-- <button mat-fab color="primary" aria-label="Send" matTooltip="userService.enterMode"
                         [disabled]="messageClusterList.length===0 || (!content.text && messageGroupMap[messageClusterList[messageClusterList.length-1][0].messageGroupId].role!=='user') || isLock"
                         (click)="send()">
                         <mat-icon>send</mat-icon>
                     </button> -->
-        <button mat-fab color="primary" aria-label="Send" matTooltip="Ctrl+Enter" (click)="send().subscribe()"
-          [disabled]="isLock||(!content.text&&tailRole!=='user')"
+        <button mat-fab color="primary" aria-label="Send" [matTooltip]="userService.enterMode"
+          (click)="send().subscribe()" [disabled]="isLock||(!content.text&&tailRole!=='user')"
           class="btn btn-primary"><mat-icon>send</mat-icon></button>
         }
 

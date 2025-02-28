@@ -94,9 +94,9 @@ export class ToolCallService {
   fromatToolCallSetList(toolCallPartList: ToolCallPart[]): ToolCallPart[] {
     return toolCallPartList.map(toolCall => {
       if (toolCall.type === ToolCallPartType.CALL) {
-        toolCall.body.function.arguments = JSON.stringify(JSON.parse(toolCall.body.function.arguments), null, 2);
+        toolCall.body.function.arguments = JSON.stringify(JSON.parse(toolCall.body.function.arguments || '{}'), null, 2);
       } else if (toolCall.type === ToolCallPartType.RESULT) {
-        toolCall.body.content = JSON.stringify(JSON.parse(toolCall.body.content), null, 2);
+        toolCall.body.content = JSON.stringify(JSON.parse(toolCall.body.content || '{}'), null, 2);
       } else { }
       return toolCall;
     });

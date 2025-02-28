@@ -96,7 +96,7 @@
     opacity: 0.8;
 }
 
-.federation {
+.login-container .login-form .federation {
     display: flex;
     justify-content: center;
     color: black;
@@ -112,5 +112,10 @@
 
     &:hover {
         background-color: #eee;
+    }
+    ::ng-deep{
+      .mat-content {
+        justify-content: center;
+      }
     }
 }

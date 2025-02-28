@@ -84,6 +84,8 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     // ツールの初期選択状態を設定
     const thread = this.thread();
     if (thread) {
+      // tool_choice が undefined だったら"none"を入れる。こうしないとチェックがどこにもつかない状態になる。
+      thread.inDto.args.tool_choice = thread.inDto.args.tool_choice || 'none';
       const groups = Array.from(new Set(this.toolCallService.tools.map(tool => tool.group)));
       groups.forEach(group => {
         this.applyGroupCheck(thread, group);
@@ -199,7 +201,7 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
   //   //   this.toolCheck($event, toolCallPart);
   //   //   this.toolCheckMas[`${toolCallPart.info.group}:${toolCallPart.definition.function.name}`] = $event.checked;
 
-  //   //   // 
+  //   //   //
   //   //   const thread = this.thread();
   //   //   if (!thread.inDto.args.tools) {
   //   //     thread.inDto.args.tools = [];

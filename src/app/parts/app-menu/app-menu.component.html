@@ -35,18 +35,17 @@
         <span>Gitリポジトリ</span>
     </button>
 </mat-menu>
-
 <mat-menu #gitMenu="matMenu">
-    <a mat-menu-item [routerLink]="['/gitea']">
-        <mat-icon>
-            <img src="./image/gitea-logo.svg">
-        </mat-icon>
-        <span>gitea</span>
-    </a>
-    <a mat-menu-item [routerLink]="['/gitlab']">
-        <mat-icon>
-            <img src="./image/gitlab-logo.svg">
-        </mat-icon>
-        <span>gitlab</span>
-    </a>
+  @for (group of curEnv.oAuthProviders; track $index) {
+  @if(['gitlab', 'gitea'].includes(group.value)){
+  @for (provider of group.providers; track $index) {
+  <a mat-menu-item [routerLink]="['/' + group.value]">
+    <mat-icon>
+      <img [src]="'./image/' + group.value + '-logo.svg'" [alt]="group.label + ' logo'">
+    </mat-icon>
+    <span>{{ provider.label }}</span>
+  </a>
+  }
+  }
+  }
 </mat-menu>

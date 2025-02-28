@@ -66,33 +66,14 @@
         <!-- <h1>Prompt Shortcuts</h1> -->
         <h1>API連携</h1>
         <div class="button-group">
-
-            <a class="panel chat-item w-full" [routerLink]="['/mattermost']">
-                <h3><img src="./image/mattermost-logo.svg" style="width: 80px;height: 80px;">Mettermost</h3>
-                <p>Mattermostとデータ連携します。</p>
-                <p>複数チームにまたがるチャネルを纏めることができます。</p>
-                <p>AI要約ができます。</p>
-                <a href="./static/release-note.html">リリースノート v20240925</a>
+            @for(group of curEnv.oAuthProviders;track $index){
+            @for(provider of group.providers;track $index){
+            <a class="panel chat-item w-full" [routerLink]="['/'+group.value+(provider.id?'-'+provider.id:'')]">
+                <h3><img src="./image/{{group.value}}-logo.svg" style="width: 80px;height: 80px;">{{group.label}}</h3>
+                <p>{{provider.describe}}</p>
             </a>
-
-            <a class="panel chat-item w-full" [routerLink]="['/box']">
-                <h3><img src="./image/box-logo.svg" style="width: 80px;height: 80px;">box</h3>
-                <p>【工事中】Boxとデータ連携します。</p>
-                <p>※AI機能はありません。<br />キャッシュを利かせることでやや速くしただけのBoxのブラウザ。</p>
-            </a>
-
-            <a class="panel chat-item w-full" [routerLink]="['/gitea']">
-                <h3><img src="./image/gitea-logo.svg" style="width: 80px;height: 80px;">gitea</h3>
-                <p>【工事中】giteaとデータ連携します。</p>
-                <p>※特に機能はありません。</p>
-            </a>
-
-            <a class="panel chat-item w-full" [routerLink]="['/gitlab']">
-                <h3><img src="./image/gitlab-logo.svg" style="width: 80px;height: 80px;">Gitlab</h3>
-                <p>【工事中】gitlabとデータ連携します。</p>
-                <p>※特に機能はありません。</p>
-            </a>
-
+            }
+            }
         </div>
 
         <h1>プロジェクト</h1>

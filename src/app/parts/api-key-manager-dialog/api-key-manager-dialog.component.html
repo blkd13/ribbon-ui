@@ -29,16 +29,22 @@
 
     <mat-card class="mb-6">
         <mat-card-header>
-            <mat-card-title>他システムのAPI鍵を登録する</mat-card-title>
+            <mat-card-title>他システムのAPI鍵を登録する(登録時に暗号化されます)</mat-card-title>
         </mat-card-header>
         <mat-card-content style="padding-bottom: 0;">
             <form [formGroup]="apiKeyForm" (ngSubmit)="onSubmit()" class="flex gap-4 items-center">
-                <mat-form-field appearance="outline">
+                <mat-form-field appearance="outline" class="w-80">
                     <mat-label>プロバイダー</mat-label>
                     <mat-select formControlName="provider">
-                        <mat-option *ngFor="let provider of providers" [value]="provider.value">
-                            {{provider.label}}
-                        </mat-option>
+                        @for(providerGroup of providerGroups;track $index){
+                        <mat-optgroup [label]="providerGroup.label">
+                            @for(provider of providerGroup.providers;track $index){
+                            <mat-option [value]="providerGroup.value+'-'+provider.id">
+                                {{providerGroup.label}}{{provider.label?'('+provider.label+')':''}}
+                            </mat-option>
+                            }
+                        </mat-optgroup>
+                        }
                     </mat-select>
                 </mat-form-field>
                 <!--
@@ -58,6 +64,16 @@
                     登録
                 </button>
             </form>
+            <div>
+                API鍵発行ページ：
+                @for(providerGroup of providerGroups;track $index){
+                @for(provider of providerGroup.providers;track $index){
+                <a target="_blank" class="mr-2" [href]="provider.href">
+                    {{providerGroup.label}}{{provider.label?'('+provider.label+')':''}}
+                </a>
+                }
+                }
+            </div>
         </mat-card-content>
     </mat-card>
 
