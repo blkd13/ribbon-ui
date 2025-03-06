@@ -313,14 +313,14 @@ export class ChatPanelBaseComponent implements OnInit {
     this.removeEmitter.emit(this.messageGroup());
   }
 
-  toolExec($event: MouseEvent, content?: ContentPart): void {
+  toolExec($event: MouseEvent, flag: boolean, content?: ContentPart): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
     if (content) {
       this.isExecuted = true;
       const toolCallPartCommandList = (JSON.parse(content.text || '[]') as ToolCallSet[])
         .filter(tc => tc.info && tc.info.isInteractive)
-        .map(tc => ({ type: ToolCallPartType.COMMAND, body: { command: 'execute' }, toolCallId: tc.toolCallId })) as ToolCallPartCommand[];
+        .map(tc => ({ type: ToolCallPartType.COMMAND, body: { command: flag ? 'execute' : 'cancel' }, toolCallId: tc.toolCallId })) as ToolCallPartCommand[];
       this.toolExecEmitter.emit({ contentPart: content, toolCallPartCommandList });
     } else { }
   }

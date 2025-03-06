@@ -180,7 +180,7 @@ export class ApiMattermostService {
               if (mmChannel.type === 'D') {
                 // 無名のダイレクトチャネルは名前を取ってくる。
                 if (mmChannel.name === `${this.mmUser?.id}__${this.mmUser?.id}`) {
-                  mmChannel.display_name = this.mmUser?.nickname || '';
+                  mmChannel.display_name = this.mmUser?.nickname || this.mmUser?.username || '';
                 } else {
                   mmChannel.display_name = 'dummy';
                   mmChannel.display_name = mmChannel.name.split('__').filter(id => id !== this.mmUser?.id).map(id => idMas[id].nickname || idMas[id].username || '').filter(name => name.trim()).join(', ');

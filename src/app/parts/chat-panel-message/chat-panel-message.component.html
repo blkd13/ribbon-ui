@@ -152,12 +152,19 @@
       @if(isInteractive()){
       <div class="w-full h-full">
         <div class="my-2">このコマンドを実行してもよろしいですか？</div>
-        <button class="my-2 w-full max-w-96" mat-raised-button
-          (click)="toolExec($event, messageGroup().messages.at(-1)?.contents?.at(-1))" title="実行"
-          style="margin-right: 10px;width: 100%;">
-          <mat-icon>play_arrow</mat-icon>
-          提案されたコマンドを実行する
-        </button>
+        <div class="flex my-2 gap-6">
+          <button class="w-56" mat-raised-button
+            (click)="toolExec($event, true, messageGroup().messages.at(-1)?.contents?.at(-1))" title="実行" style="">
+            <mat-icon>play_arrow</mat-icon>
+            実行
+          </button>
+          <button class="w-56" mat-raised-button
+            (click)="toolExec($event, false, messageGroup().messages.at(-1)?.contents?.at(-1))" title="キャンセル"
+            style="color: #000;background-color: #777;">
+            <mat-icon>cancel</mat-icon>
+            キャンセル
+          </button>
+        </div>
       </div>
       } @else {}
 

@@ -32,15 +32,15 @@ export const environment = {
       ],
     },
     {
-      value: 'gitea', label: 'Gitea',
+      value: 'gitea', label: 'Gitea', group: 'git',
       providers: [
-        { id: '', label: 'gitea', describe: '【工事中】 giteaとデータ連携します。\n※特に機能はありません。' },
+        { id: '', label: 'gitea-local', describe: '【工事中】 giteaとデータ連携します。\n※特に機能はありません。' },
       ],
     },
     {
-      value: 'gitlab', label: 'Gitlab',
+      value: 'gitlab', label: 'Gitlab', group: 'git',
       providers: [
-        { id: '', label: 'gitlab', describe: '【工事中】 gitlabとデータ連携します。\n※特に機能はありません。' },
+        { id: '', label: 'gitlab-local', describe: '【工事中】 gitlabとデータ連携します。\n※特に機能はありません。' },
       ],
     },
   ],
