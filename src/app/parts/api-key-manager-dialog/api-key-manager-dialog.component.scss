@@ -7,6 +7,14 @@
         mat-card-title {
             margin-bottom: 20px;
         }
+
+        .custom-scroll>table>thead{
+            position: sticky;
+            top: 0;
+            background: #101414;
+            z-index: 1;
+            border-bottom: 1px solid white;
+        }
     }
 }
 

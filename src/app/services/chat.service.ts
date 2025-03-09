@@ -582,14 +582,9 @@ export class ChatService {
     {
       label: 'Matter<br/>most',
       tool_choice: 'auto',
-      tool_names: [
-        'mattermost:mm_get_mentioned_posts',
-        'mattermost:mm_search_all_posts_by_keyword',
-        // 'mattermost:mm_search_posts',
-        'mattermost:mm_find_users',
-        'mattermost:mm_get_channels',
-        'mattermost:mm_send_message',
-      ],
+      tool_names: [],
+      tool_groups: ['mattermost'],
+      tool_clear: true,
       modelSelection: ['claude-3-7-sonnet@20250219', 'gemini-2.0-pro-exp-02-05', 'gpt-4o', 'gemini-1.5-pro-002'],
       systemLabel: `Mattermost`,
       systemPrompt: Utils.trimLines(`
@@ -606,6 +601,24 @@ export class ChatService {
           リンク: 投稿リンク
           分類: 質問
       `),
+      // ✅ ** mattermost検索が必要になった場合の注意
+      // - 基本的にはメンションされた投稿をソースとする。
+      // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
+      // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
+    },
+    {
+      label: `Box<br/>検索`,
+      tool_choice: 'auto',
+      tool_names: [],
+      tool_groups: ['box'],
+      tool_clear: true, // ツール選択状態をクリアしたうえで再設定するかどうか。
+      modelSelection: ['claude-3-7-sonnet@20250219', 'gemini-2.0-pro-exp-02-05', 'gpt-4o', 'gemini-1.5-pro-002'],
+      systemLabel: `Box`,
+      systemPrompt: Utils.trimLines(`
+        エージェントAI。
+        必要に応じてツールを使用する。
+      `),
+      userPrompt: Utils.trimLines(``),
       // ✅ ** mattermost検索が必要になった場合の注意
       // - 基本的にはメンションされた投稿をソースとする。
       // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
@@ -701,6 +714,8 @@ export interface PresetDef {
   modelSelection?: string[];
   tool_choice?: 'auto' | 'none' | 'required';
   tool_names?: string[];
+  tool_groups?: string[];
+  tool_clear?: boolean;
   systemLabel?: string,
   systemPrompt?: string;
   placeholder?: string;

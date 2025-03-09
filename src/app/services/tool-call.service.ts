@@ -144,6 +144,7 @@ export interface ToolCallPartInfoBody {
   isActive: boolean;
   isInteractive: boolean; // ユーザーの入力を要するもの
   isRunnning: boolean;
+  responseType?: 'text' | 'json' | 'markdown';
 }
 
 // 呼び出し用のinterface

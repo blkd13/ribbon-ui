@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { ToolCallPart, ToolCallPartCall, ToolCallPartResult, ToolCallService, ToolCallSet } from '../../services/tool-call.service';
 import { MarkdownModule } from 'ngx-markdown';
+import { CommonModule } from '@angular/common';
 
 
 /**
@@ -12,7 +13,7 @@ import { MarkdownModule } from 'ngx-markdown';
 
 @Component({
   selector: 'app-tool-call-call-result-dialog',
-  imports: [MarkdownModule],
+  imports: [MarkdownModule, CommonModule],
   templateUrl: './tool-call-call-result-dialog.component.html',
   styleUrl: './tool-call-call-result-dialog.component.scss'
 })
@@ -32,5 +33,14 @@ export class ToolCallCallResultDialogComponent {
     this.toolCallService.getToolCallGroupByToolCallId(this.data.toolCallId).subscribe(toolCallGroup => {
       this.toolCallSetList = this.toolCallService.toolCallListToToolCallSetList(toolCallGroup.toolCallList);
     });
+  }
+
+  jsonToString(text: string): string {
+    try {
+      JSON.parse(text);
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
   }
 }

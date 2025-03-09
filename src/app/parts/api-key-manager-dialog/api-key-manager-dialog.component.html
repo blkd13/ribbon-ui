@@ -14,7 +14,7 @@
                         <input matInput formControlName="label" placeholder="この鍵の用途を入力">
                     </mat-form-field>
                     <button mat-raised-button color="primary" type="submit" [disabled]="!apiLabelForm.valid">
-                        登録
+                        作成
                     </button>
                 </div>
                 <!--
@@ -41,7 +41,7 @@
                             @for(provider of providerGroup.providers;track $index){
                             <mat-option [value]="providerGroup.value+'-'+provider.id">
                                 {{providerGroup.label}}{{provider.label?'('+provider.label+')':''}}
-                            </mat-option>
+                        </mat-option>
                             }
                         </mat-optgroup>
                         }
@@ -65,14 +65,14 @@
                 </button>
             </form>
             <div>
-                API鍵発行ページ：
+              API鍵発行ページ：
                 @for(providerGroup of providerGroups;track $index){
                 @for(provider of providerGroup.providers;track $index){
                 <a target="_blank" class="mr-2" [href]="provider.href">
                     {{providerGroup.label}}{{provider.label?'('+provider.label+')':''}}
                 </a>
                 }
-                }
+              }
             </div>
         </mat-card-content>
     </mat-card>
@@ -81,7 +81,7 @@
         <mat-card-header>
             <mat-card-title>登録済みAPI鍵一覧</mat-card-title>
         </mat-card-header>
-        <mat-card-content>
+        <mat-card-content style="height: calc(100vh - 640px);" class="custom-scroll">
             <table mat-table [dataSource]="apiKeys" class="w-full">
                 <ng-container matColumnDef="provider">
                     <th mat-header-cell *matHeaderCellDef></th>
@@ -109,7 +109,7 @@
                     </td>
                 </ng-container>
 
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-header-row *matHeaderRowDef="displayedColumns" style=""></tr>
                 <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
             </table>
         </mat-card-content>

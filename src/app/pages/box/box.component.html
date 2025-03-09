@@ -302,6 +302,14 @@
             }
         </div>
         <div (click)="stopImmediatePropagation($event)">
+            @if(entry.type==='file'){
+            <a [href]="'/api/user/oauth/api/box/box/2.0/files/'+entry.id+'/content'" target="_blank"
+                (click)="$event.stopImmediatePropagation()" matTooltip="Download">
+                <button mat-icon-button>
+                    <mat-icon color="primary">download</mat-icon>
+                </button>
+            </a>
+            }
             <a [href]="[boxOriginUri,entry.type,entry.id].join('/')" target="_blank"
                 (click)="$event.stopImmediatePropagation()" matTooltip="BOXで開く">
                 <button mat-icon-button>

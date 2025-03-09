@@ -116,6 +116,16 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     return thread.inDto.args.tools && thread.inDto.args.tools.find(t => t.function.name === tool.definition.function.name) ? true : false;
   }
 
+  toolGroupCheckMasRecord(obj: any): { groupName: string, label: string, checked: boolean }[] {
+    return Object.keys(obj).map(key => {
+      const split = key.split('-');
+      const groupName = split[0];
+      split.splice(0, 1);
+      const label = split.join('-');
+      return { groupName, label, checked: obj[key], };
+    });
+  }
+
   toolGroupCheckMas: { [toolName: string]: number } = {};
   toolGroupClick($event: MouseEvent, groupDef: { group: string, tools: MyToolType[] }): void {
     $event.stopImmediatePropagation();

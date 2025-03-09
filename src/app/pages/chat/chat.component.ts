@@ -285,12 +285,31 @@ export class ChatComponent implements OnInit {
       messageGroup.messages.forEach(message => message.label = preset.systemLabel || this.chatService.defaultSystemPrompt);
       thread.inDto.args.tool_choice = preset.tool_choice;
 
-      if (preset.tool_names) {
+      if (preset.tool_clear) {
+        thread.inDto.args.tools = [];
+      } else { }
+      if (preset.tool_names && preset.tool_names.length > 0) {
         const funcMap = this.toolCallService.tools.map(tool => tool.tools).flat().reduce((acc, tool) => {
           acc[`${tool.info.group}:${tool.info.name}`] = tool.definition;
           return acc;
         }, {} as { [key: string]: ChatCompletionTool })
         thread.inDto.args.tools = preset.tool_names.map(toolName => funcMap[toolName]);
+        this.messageGroupBitCounter[this.messageGroupIdListMas[thread.id][0]] = (this.messageGroupBitCounter[this.messageGroupIdListMas[thread.id][0]] ?? 0) + 1;
+      } else { }
+      if (preset.tool_groups && preset.tool_groups.length > 0) {
+        const funcMap = this.toolCallService.tools.map(tool => tool.tools).flat().reduce((acc, tool) => {
+          acc[`${tool.info.group}:${tool.info.name}`] = tool.definition;
+          return acc;
+        }, {} as { [key: string]: ChatCompletionTool })
+        if (thread.inDto.args.tools) {
+          for (const group of preset.tool_groups) {
+            for (const key of Object.keys(funcMap)) {
+              if (key.startsWith(group)) {
+                thread.inDto.args.tools.push(funcMap[key]);
+              } else { }
+            }
+          }
+        }
         this.messageGroupBitCounter[this.messageGroupIdListMas[thread.id][0]] = (this.messageGroupBitCounter[this.messageGroupIdListMas[thread.id][0]] ?? 0) + 1;
       } else { }
     });
@@ -426,7 +445,7 @@ export class ChatComponent implements OnInit {
               this.allExpandCollapseFlag = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id].length < 5;
 
               this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]
-                .slice().reverse().filter((messageGroupId, index) => index < 2)
+                .slice().reverse().filter((messageGroupId, index) => index < 2 && this.messageService.messageGroupMas[messageGroupId].role !== 'system') // システムプロンプトは開かない。
                 .forEach((messageGroupId, index) => this.messageService.messageGroupMas[messageGroupId].isExpanded = true)
               );
               // スレッドオブジェクトとメッセージグループオブジェクトの不整合（複数スレッドのはずなのにメッセージグループが無いとか）が起きていても大丈夫なようにする。
@@ -1057,7 +1076,9 @@ export class ChatComponent implements OnInit {
                   });
                 });
                 // 一番下まで下げる
-                DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem()[index].nativeElement);
+                if (this.textBodyElem() && this.textBodyElem()[index] && this.textBodyElem()[index].nativeElement) {
+                  DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem()[index].nativeElement);
+                } else { }
                 this.rebuildThreadGroup();
                 this.autoscroll = true;
                 this.beforeScrollTop = -1;

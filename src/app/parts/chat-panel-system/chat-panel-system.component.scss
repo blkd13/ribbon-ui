@@ -7,13 +7,11 @@
 }
 
 .tip {
-    position: absolute;
     font-size: 11px;
-    top: 0px;
-    left: 26px;
     padding: 1px 10px 0 10px;
     border-radius: 31px;
     line-height: 14px;
+    height: 14px;
 
     &.賢い {
         color: #eee;
@@ -125,4 +123,18 @@
 
 .mat-accordion.accordion.disabled{
   opacity: 0.5;
+}
+
+
+.tooltip-small-tag {
+  width: 16px;
+  height: 16px;
+
+  background: linear-gradient(
+    135deg,
+    #e5e5e5 0%,
+    #d5d5d5 100%);
+  padding: 1px;
+  margin: 0;
+  border-radius: 4px;
 }

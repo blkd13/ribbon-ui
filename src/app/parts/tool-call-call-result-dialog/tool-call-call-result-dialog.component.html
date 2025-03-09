@@ -1,13 +1,23 @@
 <div class="h-[80vh] w-[60vw] overflow-auto p-5">
-    @if(toolCallSetList[index]){
+    @if(toolCallSetList[index] && toolCallSetList[index].info; as info){
 
     @if(toolCallSetList[index].call; as call){
     <h1>{{call.function.name}}</h1>
     <h3>arguments</h3>
     <markdown clipboard [data]="'```json\n'+call.function.arguments+'\n```'"></markdown>
     @if(toolCallSetList[index].resultList.at(-1); as result){
+    @if(result.content){
+    <markdown>---</markdown>
     <h3>result</h3>
+    @if(info.responseType==='text'){
+    <pre class="custom-scroll custom-scroll--thin"><code>{{jsonToString(result.content)}}</code></pre>
+    } @else if(info.responseType==='markdown'){
+    <markdown clipboard [data]="jsonToString(result.content)"></markdown>
+    } @else {
     <markdown clipboard [data]="'```json\n'+result.content"></markdown>
+    }
+
+    }
     }
     }
 
