@@ -211,7 +211,7 @@
           <div style="width: calc(100% - 17px);" class="pt-2 px-2">
             @if(messageService.messageGroupMas[messageGroupIdList[0]]; as messageGroup) {
             <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
-            <app-chat-panel-system class="top-0" style="z-index:2;" [messageGroup]="messageGroup"
+            <app-chat-panel-system class="top-0" style="z-index:3;" [messageGroup]="messageGroup"
               [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
               [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
               (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
@@ -260,7 +260,7 @@
     } @else {
     <!-- リスト表示 -->
 
-    <div class="flex gap-0.5 px-2" style="z-index: 2;width: calc(100% - 17px);">
+    <div class="flex gap-0.5 px-2" style="z-index: 3;width: calc(100% - 17px);">
       @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
       <div class="w-0 flex-1">
         @if(messageGroupIdListMas[thread.id]; as messageGroupIdList) {
