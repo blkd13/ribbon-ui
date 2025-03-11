@@ -10,9 +10,11 @@
 // Angular Materialのテーマ
 // @import "@angular/material/prebuilt-themes/cyan-orange.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+// @tailwind base;
+// @tailwind components;
+// @tailwind utilities;
+
 
 select {
     background-color: #080a0a;
