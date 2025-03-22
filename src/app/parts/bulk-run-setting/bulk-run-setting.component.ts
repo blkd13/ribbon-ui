@@ -24,13 +24,13 @@ export interface BulkRunSettingData {
 }
 
 @Component({
-    selector: 'app-bulk-run-setting',
-    imports: [FormsModule,
-        MatButtonModule, MatTableModule, MatProgressBarModule, MatInputModule, MatIconModule,
-        MatFormFieldModule, MatSnackBarModule, MatRadioModule,
-        FileDropDirective],
-    templateUrl: './bulk-run-setting.component.html',
-    styleUrl: './bulk-run-setting.component.scss'
+  selector: 'app-bulk-run-setting',
+  imports: [FormsModule,
+    MatButtonModule, MatTableModule, MatProgressBarModule, MatInputModule, MatIconModule,
+    MatFormFieldModule, MatSnackBarModule, MatRadioModule,
+    FileDropDirective],
+  templateUrl: './bulk-run-setting.component.html',
+  styleUrl: './bulk-run-setting.component.scss'
 })
 export class BulkRunSettingComponent {
   displayedColumns: string[] = ['no', 'question', 'actions'];
@@ -110,10 +110,14 @@ export class BulkRunSettingComponent {
       .uploadFiles({ uploadType: 'Single', projectId: this.data.projectId, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
       .subscribe({
         next: next => {
-          next.results.forEach(fileGroupEntity => {
+          next.results.forEach((fileGroupEntity, index) => {
+            const files = (fileGroupEntity as any as { files: FileEntity[] }).files;
+            if (files === null || files === undefined || files.length === 0) {
+              return;
+            } else { }
             this.dataSource = [...this.dataSource.filter(data => data.text)];
             // this.inputArea.content.push({ type: 'file', fileId: fileGroupEntity.id, text: fileGroupEntity.fileName });
-            this.dataSource.push({ type: 'file', text: fileGroupEntity.label, fileGroupId: fileGroupEntity.id });
+            this.dataSource.push({ type: 'file', text: files[0].filePath, fileGroupId: fileGroupEntity.id });
             this.dataSource = [...this.dataSource];
           });
           // this.onChange();

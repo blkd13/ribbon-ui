@@ -10,7 +10,7 @@
 // Angular Materialのテーマ
 // @import "@angular/material/prebuilt-themes/cyan-orange.css";
 
-@import "tailwindcss";
+@use "tailwindcss";
 // @tailwind base;
 // @tailwind components;
 // @tailwind utilities;
@@ -167,7 +167,10 @@ body.dark-mode {
     --mdc-outlined-text-field-focus-outline-color: rgb(105 184 205);
     --mdc-outlined-text-field-focus-label-text-color: rgb(105 184 205);
 
-
+    .cdk-overlay-pane.mat-mdc-dialog-panel {
+        max-width: var(--mat-dialog-container-max-width, 1800px);
+        min-width: var(--mat-dialog-container-min-width, 280px);
+    }
 }
 
 .mdc-dialog--open .mat-mdc-dialog-surface,

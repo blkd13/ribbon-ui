@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewEncapsulation, effect, inject, input, output, viewChild } from '@angular/core';
+import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild, ViewEncapsulation, effect, inject, input, output, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,6 +25,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ToolCallCallResultDialogComponent } from '../tool-call-call-result-dialog/tool-call-call-result-dialog.component';
 import { MatTabsModule } from '@angular/material/tabs';
 import { UserService } from '../../services/user.service';
+import { MarkdownService } from 'ngx-markdown';
 
 
 @Component({
@@ -106,6 +107,8 @@ export class ChatPanelBaseComponent implements OnInit {
   readonly removeContentEmitter = output<ContentPart>({ alias: 'removeContent' });
 
   readonly expandedEmitter = output<boolean>({ alias: 'expanded' });
+
+  readonly readyEmitter = output<boolean>({ alias: 'ready' });
 
   // Jsonの場合は```jsonで囲むための文字列
   bracketsList: { pre: '' | '```json\n', post: '' | '\n```' }[][] = [];
@@ -429,6 +432,49 @@ export class ChatPanelBaseComponent implements OnInit {
         }
       })
     );
+  }
+
+  // チャット入力欄
+  readonly mdElem = viewChild<ElementRef<HTMLTextAreaElement>>('mdElem');
+
+  onReady($event: any, type: string): void {
+    // console.log($event, type);
+    this.convertSvgToImage();
+    this.readyEmitter.emit(true);
+  }
+
+  convertSvgToImage() {
+    const container = this.textBodyElem()?.nativeElement;
+    if (container) {
+      const svgs = container.querySelectorAll('code.language-svg,code.language-xml,code.language-html,language-markdown');
+      svgs.forEach(_svg => {
+        const svg = (_svg as HTMLPreElement);
+        const textContent = svg.textContent || '';
+        if (textContent.startsWith('<svg')) {
+          // SVGをData URIに変換
+          // const xml = new XMLSerializer().serializeToString(svg);
+          const svg64 = btoa(unescape(encodeURIComponent(svg.textContent || '')));
+          const image64 = 'data:image/svg+xml;base64,' + svg64;
+
+          // 新しい<img>要素を作成
+          const img = document.createElement('img');
+          img.src = image64;
+          img.alt = svg.textContent || '';
+          // img.width = svg.width.baseVal.value; // SVGのwidthを引き継ぐ
+          // img.height = svg.height.baseVal.value; // SVGのheightを引き継ぐ
+
+          // this.message.contents[0].text = `![画像](${image64})`;
+
+          // SVGを<img>で置き換える
+          svg.style.display = 'block';
+          svg.style.height = '0';
+          svg.style.width = '0';
+          svg.style.overflow = 'hidden';
+          svg.parentNode?.appendChild(img);
+          // svg.parentNode?.replaceChild(img, svg);
+        } else { }
+      });
+    } else { }
   }
 
   /** イベント伝播しないように止める */

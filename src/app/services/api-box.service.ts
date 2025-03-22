@@ -156,7 +156,7 @@ export class ApiBoxService {
     // 「ストリームの先頭にキャッシュを流す」(二発更新の 1 発目)
     return merge(
       cached ? request$.pipe(startWith(cached)) : request$,
-      this.boxFolders(id).pipe(
+      this.boxFolders(id, offset, limit).pipe(
         map(response => {
           console.log('Folder items:', response);
           chache0.entries = response.entries;
@@ -180,16 +180,17 @@ export class ApiBoxService {
     const apiData$ = this.http.get<BoxApiFolder>(`${this.basePath}/2.0/folders/${id}?offset=${offset}&limit=${limit}`).pipe(
       tap(response => {
         this.store[storeKey] = response;
-      })
+      }),
+      catchError(() => EMPTY),
     );
 
     // サーバーキャッシュ取得のストリーム
     const serverCache$ = this.http.get<BoxApiFolder>(`${this.basePath}/2.0/folders/${id}?offset=${offset}&limit=${limit}&fromcache=true`).pipe(
-      catchError(() => EMPTY)
+      catchError(() => EMPTY),
     );
 
     // 詳細情報取得のストリーム
-    const details$ = this.boxFolders(id).pipe(
+    const details$ = this.boxFolders(id, offset, limit).pipe(
       map(response => {
         if (this.store[storeKey]) {
           this.store[storeKey].item_collection.entries = response.entries as any;

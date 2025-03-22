@@ -100,6 +100,13 @@ export class BoxComponent implements OnInit {
   ngOnInit(): void {
     this.activatedRoute.params.subscribe(params => {
       const { type, id } = params as { type: string, id: string };
+
+      // パラメータがない場合はルートフォルダを表示
+      this.offset = 0;
+      this.loading = false;
+      this.hasMoreItems = true;
+      this.scrollDebounceTimer = null;
+
       this.load(id);
     });
   }
@@ -400,41 +407,101 @@ export class BoxComponent implements OnInit {
   // 無限スクロールの実装
   offset: number = 0;
   loading: boolean = false;
+
+  // BoxComponentクラスに追加する修正実装
+  // これ以上のアイテムがあるかどうかを追跡するプロパティ
+  hasMoreItems: boolean = true;
+
+  // load()メソッドを修正してhasMoreItemsをリセットする
+  // 元のload()メソッドの中で以下のコードを追加してください
+  // this.hasMoreItems = true; // 新しいフォルダをロードする際にフラグをリセット
+
+  // スクロールで最下部到達時のデバウンス処理用タイマー
+  private scrollDebounceTimer: any = null;
+
   @HostListener('window:scroll', ['$event'])
   onScroll(event: Event): void {
-    if (this.loading || !this.item || !this.item.item_collection) {
+    // 読み込み中、アイテムがこれ以上ない、またはアイテムデータがない場合は処理しない
+    if (this.loading || !this.hasMoreItems || !this.item || !this.item.item_collection) {
       return;
     }
-    const element = event.target as HTMLElement;
-    if (element) {
-      // スクロール位置が一番下に近いかどうかを判定
-      const isBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 200;
-      if (isBottom) {
+
+    // デバウンス処理：連続したスクロールイベントを一定時間内にまとめる
+    if (this.scrollDebounceTimer) {
+      clearTimeout(this.scrollDebounceTimer);
+    }
+
+    this.scrollDebounceTimer = setTimeout(() => {
+      const windowElement = document.documentElement;
+      const scrollPosition = windowElement.scrollTop + windowElement.clientHeight;
+      const scrollThreshold = windowElement.scrollHeight - 200;
+
+      // 画面最下部に到達したかチェック
+      if (scrollPosition >= scrollThreshold && this.hasMoreItems) {
         this.loadMore();
       }
-    }
+    }, 200); // 200ミリ秒のデバウンス時間
   }
+
   loadMore(): void {
-    if (!this.item || !this.item.item_collection) {
+    // アイテムがない、読み込み中、またはこれ以上アイテムがない場合は処理しない
+    if (!this.item || !this.item.item_collection || this.loading || !this.hasMoreItems) {
       return;
     }
-    // 未実装
-    // this.loading = true;
-    // this.offset += 100;
-    // const offset = this.offset;
-    // this.apiBoxService.folder(this.item.id, this.offset).subscribe({
-    //   next: (response) => {
-    //     if (this.item && response.item_collection) {
-    //       this.item.item_collection.entries = [...this.item.item_collection.entries, ...response.item_collection.entries];
-    //       this.loading = false;
-    //     }
-    //   },
-    //   error: (error) => {
-    //     console.error('追加データの取得に失敗しました:', error);
-    //     this.snackBar.open('追加データの取得に失敗しました', '閉じる', { duration: 3000 });
-    //     this.loading = false;
-    //   },
-    // });
+
+    this.loading = true;
+    const nextOffset = this.offset + 100;
+
+    // コンソールにログを出力して追跡しやすくする
+    console.log(`追加データを取得中: offset=${nextOffset}`);
+
+    this.apiBoxService.folder(this.item.id, nextOffset).subscribe({
+      next: (response) => {
+        if (this.item && response.item_collection) {
+          // 新しいエントリーを受け取ったかチェック
+          if (response.item_collection.entries && response.item_collection.entries.length > 0) {
+            // IDで重複を除外
+            const existingIds = new Set(this.item.item_collection.entries.map(entry => entry.id));
+            const newEntries = response.item_collection.entries.filter(entry => !existingIds.has(entry.id));
+
+            console.log(`新しいエントリー数: ${newEntries.length}`);
+
+            // 新しいエントリーがある場合のみ追加
+            if (newEntries.length > 0) {
+              this.item.item_collection.entries = [...this.item.item_collection.entries, ...newEntries];
+              // 新しいエントリーがある場合のみオフセットを更新
+              this.offset = nextOffset;
+            } else {
+              // 新しいエントリーがない場合はこれ以上のアイテムはない
+              console.log('これ以上新しいエントリーはありません');
+              this.hasMoreItems = false;
+            }
+          } else {
+            // エントリーが空の場合はこれ以上のアイテムはない
+            console.log('これ以上アイテムはありません（空の応答）');
+            this.hasMoreItems = false;
+          }
+        }
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('追加データ取得に失敗しました:', error);
+
+        // 404エラー（これ以上アイテムがない）の場合
+        if (error.status === 404) {
+          console.log('404エラー: これ以上アイテムはありません');
+          this.hasMoreItems = false;
+          this.snackBar.open('これ以上アイテムはありません', '閉じる', { duration: 3000 });
+        } else {
+          this.snackBar.open('追加データの取得に失敗しました', '閉じる', { duration: 3000 });
+        }
+
+        this.loading = false;
+      },
+      complete: () => {
+        this.loading = false;
+      }
+    });
   }
 
   registCollectionId(collectionId: string): void {

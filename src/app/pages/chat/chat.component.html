@@ -237,6 +237,7 @@
                 [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
                 [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
                 (toolExec)="toolExec($event)" (removeContent)="removeContent($event)"
+                (ready)="onChatPanelReady(messageGroup)" 
                 (removeMessage)="removeMessage($event)" (remove)="removeMessageGroup($event)">
               </app-chat-panel-message>
             </div>

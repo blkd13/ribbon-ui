@@ -283,7 +283,7 @@ export class ChatComponent implements OnInit {
       const messageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][0]];
       messageGroup.messages[0].contents[0].text = preset.systemPrompt || this.chatService.defaultSystemPrompt;
       messageGroup.messages.forEach(message => message.label = preset.systemLabel || this.chatService.defaultSystemPrompt);
-      thread.inDto.args.tool_choice = preset.tool_choice;
+      thread.inDto.args.tool_choice = preset.tool_choice || 'none';
 
       if (preset.tool_clear) {
         thread.inDto.args.tools = [];
@@ -344,6 +344,9 @@ export class ChatComponent implements OnInit {
     setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
 
+  onChatPanelReady(messageGroup: MessageGroupForView): void {
+  }
+
   threadGroupChangeHandler(project: Project, threadGroupList: ThreadGroup[], threadGroupId: string): void {
     let noSend = true;
     if (threadGroupId === 'new-thread') {
@@ -375,7 +378,6 @@ export class ChatComponent implements OnInit {
 
       this.inputArea = this.generateInitalInputArea();
       // this.inputArea.previousMessageGroupId = lastMessage.id;
-      this.cdr.detectChanges();
       setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
       // ホーム画面からの遷移の場合は初期値を入れる
@@ -421,7 +423,6 @@ export class ChatComponent implements OnInit {
           this.selectedThreadGroup = threadGroup;
           this.isThreadGroupLoading = true;
 
-          this.cdr.detectChanges();
           // ちょっとご茶ついてるから直さないとダメかも。。cloneThreadDryの後に ).flat().flat().filter(message => message.contents.length === 0).map(message => this.messageService.getMessageContentParts(message)) はなんか違和感がある。
           this.messageService.initThreadGroup(threadGroup.id).pipe(
             switchMap(() => safeForkJoin(
@@ -448,6 +449,7 @@ export class ChatComponent implements OnInit {
                 .slice().reverse().filter((messageGroupId, index) => index < 2 && this.messageService.messageGroupMas[messageGroupId].role !== 'system') // システムプロンプトは開かない。
                 .forEach((messageGroupId, index) => this.messageService.messageGroupMas[messageGroupId].isExpanded = true)
               );
+              this.cdr.detectChanges();
               // スレッドオブジェクトとメッセージグループオブジェクトの不整合（複数スレッドのはずなのにメッセージグループが無いとか）が起きていても大丈夫なようにする。
             }),
             // switchMap(resDto => safeForkJoin(
@@ -495,7 +497,6 @@ export class ChatComponent implements OnInit {
             }),
           ).subscribe({
             next: next => {
-              this.cdr.detectChanges();
             },
             error: error => {
               this.isThreadGroupLoading = false;
@@ -610,7 +611,6 @@ export class ChatComponent implements OnInit {
         messageGroup.isExpanded = isExtended;
       }
     });
-    this.cdr.detectChanges();
   }
 
   saveThreadGroup(_orgThreadGroup: ThreadGroup): Observable<ThreadGroup> {
@@ -1274,7 +1274,6 @@ export class ChatComponent implements OnInit {
           }
         });
 
-        this.cdr.detectChanges();
         message.status = MessageStatusType.Loading;
         this.messageGroupBitCounter[message.messageGroupId] = (this.messageGroupBitCounter[message.messageGroupId] ?? 0) + 1;
         if (this.autoscroll) {
@@ -1352,7 +1351,6 @@ export class ChatComponent implements OnInit {
       message.contents.push(contentPart);
       this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
       contentPart.type = ContentPartType.ERROR;
-      this.cdr.detectChanges();
     } catch (err) { }
 
     if (typeof error === 'string') {
@@ -1606,7 +1604,6 @@ export class ChatComponent implements OnInit {
         chat.exPanel().close();
       }
     });
-    this.cdr.detectChanges();
   }
 
   removeContent(content: ContentPart): void {
