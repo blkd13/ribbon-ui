@@ -57,12 +57,12 @@ export class ChatService {
     { tag: '賢い', class: 'wiz', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-001', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro-002', },
 
-    // { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-20241022', },
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-v2@20241022', },
+    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-20241022', },
+    // { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-5-sonnet-v2@20241022', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet-20250219', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet-thinking-20250219', },
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet@20250219', },
-    { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet-thinking@20250219', },
+    // { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet@20250219', },
+    // { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet-thinking@20250219', },
     // { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet', },
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 4096, maxInputTokens: 128000, isGSearch: false, isDomestic: true, isPdf: true, price: [0.00500000, 0.015000, 0.0050000, 0.015000], id: 'gpt-4o', },
 
@@ -589,7 +589,7 @@ export class ChatService {
       systemLabel: `Mattermost`,
       systemPrompt: Utils.trimLines(`
         エージェントAI。
-        必要に応じてツールを使用する。
+        言われたことをするだけでなく、最高のパフォーマンスを出すために不明点があれば必要に応じてユーザーに質問し、付加価値の高い情報提供に努める。
       `),
       userPrompt: Utils.trimLines(`メンションからタスクを抽出して分類して分かりやすくまとめてください。リンクもつけて下さい。
         例）
@@ -616,7 +616,7 @@ export class ChatService {
       systemLabel: `Box`,
       systemPrompt: Utils.trimLines(`
         エージェントAI。
-        必要に応じてツールを使用する。
+        言われたことをするだけでなく、最高のパフォーマンスを出すために不明点があれば必要に応じてユーザーに質問し、付加価値の高い情報提供に努める。
       `),
       userPrompt: Utils.trimLines(``),
       // ✅ ** mattermost検索が必要になった場合の注意

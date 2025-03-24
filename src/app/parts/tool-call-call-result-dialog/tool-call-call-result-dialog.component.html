@@ -9,7 +9,7 @@
     @if(result.content){
     <markdown>---</markdown>
     <h3>result</h3>
-    @if(info.responseType==='text'){
+    @if(info.responseType==='text' && !isError){
     <pre class="custom-scroll custom-scroll--thin"><code>{{jsonToString(result.content)}}</code></pre>
     } @else if(info.responseType==='markdown'){
     <markdown clipboard [data]="jsonToString(result.content)"></markdown>
