@@ -706,15 +706,10 @@ export class ChatComponent implements OnInit {
   }
 
   appendMessageGroup(threadId: string, previousMessageGroupId: string): void {
-    // addSingleMessageGroupDry(threadId: string, previousMessageGroupId: string | undefined, role: OpenAI.ChatCompletionRole, contents: ContentPart[], vars: any = {}): MessageGroupForView {
     const messageGroup = this.messageService.addSingleMessageGroupDry(threadId, previousMessageGroupId, 'user', [this.messageService.initContentPart(genDummyId(), '')]);
-    //     this.rebuildThreadGroup();
-    // this.messageService.upsertSingleMessageGroup(messageGroup).subscribe({
-    //   next: next => {
-    //     this.rebuildThreadGroup();
-    //     this.onChange();
-    //   },
-    // });
+    messageGroup.messages[0].editing = 1;
+    this.inputArea.messageGroupId = messageGroup.id;
+    this.rebuildThreadGroup();
   }
 
   /**
@@ -722,13 +717,25 @@ export class ChatComponent implements OnInit {
    * トリガとなるメッセージIDを配信。
    * @returns トリガとなるmessageGroupIdの配列
    */
-  saveAndBuildThreadGroup(): Observable<string[]> {
+  saveAndBuildThreadGroup(threadIdList: string[] = []): Observable<string[]> {
+    // threadIdListが空の場合は全スレッドを対象にする
+    const allThreadIdList = this.selectedThreadGroup.threadList.map(thread => thread.id);
+    threadIdList = threadIdList.length === 0 ? allThreadIdList : threadIdList;
+    const indexList = threadIdList.map(threadId => allThreadIdList.indexOf(threadId)).filter(index => index >= 0);
     // 初回送信なので、スレッドを作るところから動かす
     const threadGroup = this.saveThreadGroup(this.selectedThreadGroup).pipe(
-      tap(threadGroup => this.selectedThreadGroup = threadGroup), // 選択中のものを更新（これをしておかないとthreadGroupの参照が切れる）
+      tap(threadGroup => {
+        this.selectedThreadGroup = threadGroup;
+
+        // threadIdListはdummyのIDだったものをちゃんと戻す
+        threadIdList.length = 0;
+        indexList.forEach(index => threadIdList.push(threadGroup.threadList[index].id));
+        console.log(indexList);
+        console.log(threadIdList);
+      }), // 選択中のものを更新（これをしておかないとthreadGroupの参照が切れる）
       // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
       switchMap(threadGroup =>
-        safeForkJoin(threadGroup.threadList.map(thread =>
+        safeForkJoin(threadGroup.threadList.filter(thread => threadIdList.includes(thread.id)).map(thread =>
           // 複雑になってしまったけど、直列実行したい＋配列が空の時も動かしたいを実現するためにこんな感じになっている。
           this.messageGroupIdListMas[thread.id].filter(messageGroupId => messageGroupId.startsWith('dummy-')).length === 0
             ? of([])
@@ -783,7 +790,7 @@ export class ChatComponent implements OnInit {
       switchMap(threadGroup => {
         // 入力エリアに何も書かれていない場合はスルーして直前のmessageIdを返す。
         if (this.inputArea.content[0].type === 'text' && this.inputArea.content[0].text) {
-          return safeForkJoin(threadGroup.threadList.map(thread => {
+          return safeForkJoin(threadGroup.threadList.filter(thread => threadIdList.includes(thread.id)).map(thread => {
             const contents = this.inputArea.content.map(content => {
               const contentPart = this.messageService.initContentPart(genDummyId(), content.text);
               contentPart.type = content.type as ContentPartType;
@@ -819,7 +826,7 @@ export class ChatComponent implements OnInit {
             }),
           );
         } else {
-          return of(threadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id].at(-1)!)); // 末尾にあるメッセージが発火トリガー
+          return of(threadGroup.threadList.filter(thread => threadIdList.includes(thread.id)).map(thread => this.messageGroupIdListMas[thread.id].at(-1)!)); // 末尾にあるメッセージが発火トリガー
         }
       }),
       // 発射準備完了。発射トリガーとなるメッセージIDを返す。とりあえずログ出力もしておく。
@@ -1021,7 +1028,7 @@ export class ChatComponent implements OnInit {
 
     _paq.push(['trackEvent', 'AIチャット', 'メッセージ送信', threadList.length]);
 
-    return this.saveAndBuildThreadGroup().pipe(
+    return this.saveAndBuildThreadGroup(threadList.map(thread => thread.id)).pipe(
       switchMap(messageGroupIds =>
         safeForkJoin(messageGroupIds.filter(messageGroupId => {
           if (type === 'threadGroup') {
@@ -1675,41 +1682,42 @@ export class ChatComponent implements OnInit {
   }
 
   removeMessageGroup(messageGroup: MessageGroupForView): void {
+    if (messageGroup.id.startsWith('dummy-')) {
+      // dummyを削除するのは単純削除
+      this.messageService.removeDummyMessageGroup(messageGroup);
+      this.inputArea.messageGroupId = messageGroup.previousMessageGroupId;
+      this.rebuildThreadGroup();
+      return;
+    } else { }
     this.getChaindedMessageGroupList(messageGroup).forEach(messageGroup => {
       if (this.isThreadLocked(messageGroup.threadId)) {
         this.snackBar.open(`現在処理中のため削除できません。`, 'close', { duration: 3000 });
         return;
       } else { }
-      (messageGroup.id.startsWith('dummy-') ? this.saveAndBuildThreadGroup() : of([])).subscribe({
+
+      if (messageGroup.role === 'system' || !messageGroup.previousMessageGroupId) {
+        return;
+      } else { }
+      if (!this.messageService.messageGroupMas[messageGroup.previousMessageGroupId]) return;
+
+      // あえてOutOfBoundsさせる
+      messageGroup.selectedIndex = messageGroup.messages.length;
+
+      const previousMessageGroup: MessageGroupForView = this.messageService.messageGroupMas[messageGroup.previousMessageGroupId];
+
+      this.touchMessageGroupAndRebuild(previousMessageGroup).subscribe({
         next: next => {
-          if (messageGroup.role === 'system' || !messageGroup.previousMessageGroupId) {
-            return;
-          } else { }
-          if (!this.messageService.messageGroupMas[messageGroup.previousMessageGroupId]) return;
-
-          // あえてOutOfBoundsさせる
-          messageGroup.selectedIndex = messageGroup.messages.length;
-
-          const previousMessageGroup: MessageGroupForView = this.messageService.messageGroupMas[messageGroup.previousMessageGroupId];
-
-          this.touchMessageGroupAndRebuild(previousMessageGroup).subscribe({
-            next: next => {
-              if (messageGroup.role === 'user') {
-                this.inputArea.messageGroupId = previousMessageGroup.id;
-              } else if (messageGroup.role === 'assistant') {
-                // assistantを削除するとはつまりリトライのこと
-                this.inputArea.content[0].text = '';
-                if (messageGroup.previousMessageGroupId) {
-                  // リトライさせるのは一個前のメッセージグループ
-                  this.send('messageGroup', [messageGroup.previousMessageGroupId]).subscribe({});
-                } else { }
-              } else if (messageGroup.role === 'system') {
-              }
-            },
-            error: error => {
-              this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
-            },
-          });
+          if (messageGroup.role === 'user') {
+            this.inputArea.messageGroupId = previousMessageGroup.id;
+          } else if (messageGroup.role === 'assistant') {
+            // assistantを削除するとはつまりリトライのこと
+            this.inputArea.content[0].text = '';
+            if (messageGroup.previousMessageGroupId) {
+              // リトライさせるのは一個前のメッセージグループ
+              this.send('messageGroup', [messageGroup.previousMessageGroupId]).subscribe({});
+            } else { }
+          } else if (messageGroup.role === 'system') {
+          }
         },
         error: error => {
           this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });

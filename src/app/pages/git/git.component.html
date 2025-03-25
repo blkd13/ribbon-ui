@@ -55,11 +55,11 @@
         }
     </mat-tab>
     <mat-tab label="ユーザー">
-        <div class="search-box">
-            <input type="text" style="background-color: #666;" matInput placeholder="検索キーワード"
+        <form class="search-box" (submit)="onSearch()">
+            <input type="text" matInput placeholder="検索キーワード" name="searchKeyword"
                 [(ngModel)]="searchKeyword[selectedTabIndex]">
-            <button (click)="onSearch()">検索</button>
-        </div>
+            <button type="submit">検索</button>
+        </form>
         @if(treeData.users&&treeData.users.length > 0){
         <mat-tree #tree [dataSource]="treeData.users" [childrenAccessor]="childrenAccessor">
             <!-- This is the tree node template for leaf nodes -->
@@ -104,11 +104,11 @@
         </div> -->
     </mat-tab>
     <mat-tab label="リポジトリ" style="height: 100%;overflow: hidden;">
-        <div class="search-box">
-            <input type="text" style="background-color: #666;" matInput placeholder="検索キーワード"
+        <form class="search-box" (submit)="onSearch()">
+            <input type="text" matInput placeholder="検索キーワード" name="searchKeyword"
                 [(ngModel)]="searchKeyword[selectedTabIndex]">
-            <button (click)="onSearch()">検索</button>
-        </div>
+            <button type="submit">検索</button>
+        </form>
         <div class="custom-scroll relative overflow-y-auto w-full" (scroll)="onScroll($event)"
             style="height: calc(100% - 24px);">
 

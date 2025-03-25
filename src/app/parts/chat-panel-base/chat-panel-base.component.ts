@@ -147,6 +147,9 @@ export class ChatPanelBaseComponent implements OnInit {
     // TODO シグナル式のやり方をとりあえず実装してみた。汚い気がするので後で直したい。シグナル使う必要無いと思う？？
     effect(() => {
       this.setMessageIndex(this.mIndex);
+      if (this.message.editing) {
+        this.exPanel().open();
+      } else { }
       if (this.messageGroup().isExpanded) {
         this.loadContent().subscribe();
       } else { }

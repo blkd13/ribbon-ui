@@ -328,7 +328,7 @@ export enum MessageStatusType {
     // Deleted = 'Deleted',
 }
 export interface MessageForView extends Message {
-    editing: number;
+    editing: number; // 0: 通常, 1: 編集中, 2: AI自動生成中
     status: MessageStatusType;
     selected: boolean;
     contents: ContentPart[];

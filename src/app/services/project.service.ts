@@ -597,8 +597,7 @@ export class MessageService {
                 // 要らないものを消す
                 if (orgMessageGroup.id.startsWith('dummy-')) {
                     this.idRemapTable[orgMessageGroup.id] = savedMessageGroup.id;
-                    this.messageGroupList.splice(this.messageGroupList.indexOf(orgMessageGroup), 1);
-                    delete this.messageGroupMas[orgMessageGroup.id];
+                    this.removeDummyMessageGroup(orgMessageGroup);
                     orgMessageGroup.id = savedMessageGroup.id;
                 } else { }
                 if (savedMessageGroup.previousMessageGroupId) {
@@ -627,6 +626,43 @@ export class MessageService {
         const messageGroup = this.initMessageGroup(threadId, previousMessageGroupId, role, contents);
         messageGroup.previousMessageGroupId = previousMessageGroupId;
         return this.applyMessageGroup(messageGroup);
+    }
+
+    /**
+     * dummyのメッセージグループの痕跡を消す
+     * @param messageGroup 
+     * @returns 
+     */
+    removeDummyMessageGroup(messageGroup: MessageGroupForView): void {
+        if (messageGroup.id.startsWith('dummy-')) {
+            messageGroup.messages.forEach(message => {
+                message.contents.forEach(content => {
+                    delete this.contentPartMas[content.id];
+                    this.contentPartList.splice(this.contentPartList.indexOf(content), 1);
+                });
+                delete this.messageMas[message.id];
+                this.messageList.splice(this.messageList.indexOf(message), 1);
+            });
+            this.messageGroupList.splice(this.messageGroupList.indexOf(messageGroup), 1);
+            delete this.messageGroupMas[messageGroup.id];
+            Object.keys(this.nextMessageGroupId).forEach(key => {
+                this.nextMessageGroupId[key] = this.nextMessageGroupId[key].filter(nextMessageGroupId => nextMessageGroupId !== messageGroup.id);
+                if (this.nextMessageGroupId[key].length === 0) {
+                    delete this.nextMessageGroupId[key];
+                } else { }
+            });
+            delete this.nextMessageGroupId[messageGroup.id];
+            Object.keys(this.prevMessageGroupId).forEach(key => {
+                if (this.prevMessageGroupId[key] === messageGroup.id) {
+                    delete this.prevMessageGroupId[key];
+                }
+            });
+            delete this.prevMessageGroupId[messageGroup.id];
+            return;
+        } else {
+            // dummy messageGroupではないので何もしない
+            console.error('dummy messageGroupではないので何もしない');
+        }
     }
 
     /**
