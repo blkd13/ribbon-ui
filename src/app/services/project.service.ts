@@ -168,7 +168,7 @@ export class ThreadService {
     getInitialArgs(): ChatCompletionCreateParamsWithoutMessages {
         return {
             model: 'gemini-1.5-pro-002',
-            temperature: 0.7,
+            temperature: 1.0,
             max_tokens: 0,
             stream: true,
         };
