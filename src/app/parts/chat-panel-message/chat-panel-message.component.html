@@ -41,7 +41,8 @@
     </div>
     }
 
-    <div class="flex-grow w-0 relative overflow-hidden" [ngClass]="{'message-notediting': !message.editing}">
+    <div class="flex-grow w-0 relative custom-scroll overflow-auto" [ngClass]="{'message-notediting': !message.editing}"
+      [ngClass]="[messageGroup().role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel', !message.editing ? 'message-notediting' : '']">
 
       <!-- ファイル -->
       <!--
@@ -68,8 +69,7 @@
           (load)="onLoad()" [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text"
           (change)="onSubmit()"></textarea>
       </div>
-      <div class="custom-scroll block overflow-auto"
-        [ngClass]="[messageGroup().role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']" #textBodyElem>
+      <div #textBodyElem>
         <markdown #mdElem [hidden]="message.editing" katex mermaid clipboard (load)="onReady($event, 'onLoaded')"
           (ready)="onReady($event, 'onReady')" [data]="brackets.pre+content.text+brackets.post">
         </markdown>
