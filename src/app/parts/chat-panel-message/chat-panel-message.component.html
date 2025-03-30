@@ -151,11 +151,11 @@
       }
 
       @if(isInteractive()){
-      <div class="w-full h-full">
+      <div class="w-full">
         <div class="my-2">このコマンドを実行してもよろしいですか？</div>
         <div class="flex my-2 gap-6">
           <button class="w-56" mat-raised-button
-            (click)="toolExec($event, true, messageGroup().messages.at(-1)?.contents?.at(-1))" title="実行" style="">
+            (click)="toolExec($event, true, messageGroup().messages.at(-1)?.contents?.at(-1))" title="実行">
             <mat-icon>play_arrow</mat-icon>
             実行
           </button>
