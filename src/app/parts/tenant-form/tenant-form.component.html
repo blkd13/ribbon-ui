@@ -1,0 +1,94 @@
+<!-- tenant-form.component.html -->
+<div class="tenant-form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ isEditing ? 'テナント編集' : '新規テナント登録' }}</h1>
+        <button class="btn btn-outline-secondary" (click)="cancel()">
+            <i class="bi bi-arrow-left"></i> 一覧に戻る
+        </button>
+    </div>
+
+    <!-- エラーメッセージ -->
+    @if(error) {
+    <div class="alert alert-danger" role="alert">{{ error }}</div>
+    }
+
+    <!-- 成功メッセージ -->
+    @if (successMessage) {
+    <div class="alert alert-success" role="alert">{{ successMessage }}</div>
+    }
+
+    <!-- ローディング表示 -->
+    @if(isLoading) {
+    <div class="text-center my-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">読み込み中...</span>
+        </div>
+        <p class="mt-2">テナント情報を読み込んでいます...</p>
+    </div>
+    } @else {
+    <!-- テナントフォーム -->
+    <div class="card">
+        <div class="card-body">
+            <form [formGroup]="tenantForm" (ngSubmit)="onSubmit()">
+                <div class="mb-3">
+                    <label for="name" class="form-label">テナント名 *</label>
+                    <input type="text" id="name" formControlName="name" class="form-control"
+                        [class.is-invalid]="hasError('name', 'required') || hasError('name', 'maxlength')">
+                    @if (hasError('name', 'required')) {
+                    <div class="invalid-feedback">
+                        テナント名は必須です
+                    </div>
+                    }
+                    @if (hasError('name', 'maxlength')) {
+                    <div class="invalid-feedback">
+                        テナント名は100文字以内で入力してください
+                    </div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">説明</label>
+                    <textarea id="description" formControlName="description" class="form-control" rows="3"
+                        [class.is-invalid]="hasError('description', 'maxlength')"></textarea>
+                    @if (hasError('description', 'maxlength')) {
+                    <div class="invalid-feedback">
+                        説明は500文字以内で入力してください
+                    </div>
+                    }
+                    <div class="form-text">
+                        テナントの用途や補足情報を入力してください（省略可）
+                    </div>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" id="isActive" formControlName="isActive" class="form-check-input">
+                    <label for="isActive" class="form-check-label">アクティブ状態</label>
+                    <div class="form-text">
+                        チェックを外すと、このテナントは無効になります
+                    </div>
+                </div>
+
+                <!-- ヘルプテキスト -->
+                @if(!isEditing){
+                <div class="alert alert-info mb-4" role="alert">
+                    <h5><i class="bi bi-info-circle"></i> 新規テナント作成について</h5>
+                    <p class="mb-0">テナントを作成すると、デフォルトのAPIプロバイダー設定も自動的に作成されます。
+                        テナント作成後にAPIプロバイダー設定を編集してください。</p>
+                </div>
+                }
+
+                <!-- 送信ボタン -->
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary" (click)="cancel()">キャンセル</button>
+                    <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+                        @if(isSaving){
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        {{ isEditing ? '更新' : '登録' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    }
+</div>

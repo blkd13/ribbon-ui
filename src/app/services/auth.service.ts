@@ -4,10 +4,12 @@ import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { User, TwoFactorAuthDetails } from '../models/models';
 import { PredictTransaction } from './department.service';
+import { GService } from './g.service';
 
-// export type OAuth2Provider = 'box' | 'mattermost' | 'gitlab' | 'gitea'; // この型定義は無意味。実際はプロバイダーIDと組み合わせて使うので
-export type OAuth2Provider = string; // この型定義は無意味。
 export type OAuthAccount = { id: string, userInfo: string, provider: string, providerUserId: string, providerEmail: string };
+// export type OAuthProvider = { providerType: string, name: string, label: string };
+export type ExtApiProviderType = 'mattermost' | 'box' | 'gitlab' | 'gitea' | 'confluence' | 'jira';// | 'slack' | 'teams' | 'google' | 'github' | 'okta' | 'azure' | 'aws' | 'salesforce' | 'zoom' | 'webex' | 'notion' | 'figma' | 'trello' | 'asana' | 'clickup' | 'microsoft365';
+export type ExtApiClient = { type: string, provider: string, label: string, description: string, };
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -15,6 +17,7 @@ export class AuthService {
   private user!: User;
   private oAuthAccountList: OAuthAccount[] = [];
   readonly http: HttpClient = inject(HttpClient);
+  readonly g: GService = inject(GService);
 
   public getCurrentUser(): User {
     // Assuming the token is stored in local storage
@@ -35,7 +38,7 @@ export class AuthService {
    * @returns
    */
   login(email: string, password: string): Observable<User> {
-    const url = `/login`;
+    const url = `/${this.g.tenantKey}/login`;
     return this.http.post<{ user: User, token: string }>(url, { email, password })
       .pipe(map(response => {
         // localStorage.setItem('auth_token', response.token);
@@ -107,7 +110,7 @@ export class AuthService {
    * @returns
    */
   requestForPasswordReset(email: string): Observable<{ message: any }> {
-    const url = `/request-for-password-reset`;
+    const url = `/${this.g.tenantKey}/request-for-password-reset`;
     return this.http.post<{ message: any }>(url, { email }).pipe(tap(res => {
       if (typeof res.message === 'string') {
         // メッセージが文字列だったら正常。
@@ -125,7 +128,7 @@ export class AuthService {
    * @returns
    */
   onetimeLogin(type: string, token: string): Observable<string> {
-    const url = `/onetime`;
+    const url = `/${this.g.tenantKey}/onetime`;
     return this.http.post<{ token: string }>(url, { type, token })
       .pipe(map(response => {
         sessionStorage.setItem(`${type}_token`, response.token);
@@ -250,12 +253,28 @@ export class AuthService {
     }));
   }
 
+  // /**
+  //  * OAuth2連携済みアカウント情報
+  //  * @returns
+  //  */
+  // getOAuthProvider(tenantKey: string): Observable<{ oauthAccount: OAuthAccount }> {
+  //   const url = `/user/oauth/account/${tenantKey}`;
+  //   return this.http.get<{ oauthAccount: OAuthAccount }>(url).pipe(tap(res => {
+  //     const oauth = this.oAuthAccountList.find(value => value.provider === provider);
+  //     if (oauth) {
+  //       Object.assign(oauth, res.oauthAccount);
+  //     } else {
+  //       this.oAuthAccountList.push(res.oauthAccount);
+  //     }
+  //   }));
+  // }
+
   // getOAuthUserInfo(provider: OAuth2Provider, api: 'user-info'): Observable<any> {
   //   const url = `/user/oauth/api/basic-api/${provider}/${api}`;
   //   return this.http.get<any>(url);
   // }
 
-  isOAuth2Connected(provider: OAuth2Provider, api: 'user-info', targetUrl: string = ''): Observable<any> {
+  isOAuth2Connected(provider: ExtApiProviderType, api: 'user-info', targetUrl: string = ''): Observable<any> {
     targetUrl = targetUrl ? `?oAuth2ConnectedCheckTargetUrl=${targetUrl}` : '';
     const url = `/user/oauth/api/basic-api/${provider}/${api}${targetUrl}`;
     return this.http.get<any>(url);

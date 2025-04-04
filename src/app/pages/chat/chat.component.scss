@@ -289,3 +289,50 @@
 
     transition: opacity 0.3s ease;
 }
+
+.hidden-custom-scroll {
+    overflow-y: scroll;
+    overflow-x: hidden;
+    min-height: 56px;
+    height: auto;
+
+    scrollbar-color: transparent transparent;
+
+    &::-webkit-scrollbar {
+        width: 17px;
+    }
+
+    // バーの背景色
+    &::-webkit-scrollbar-track {
+        border-radius: 10px;
+        background-color: transparent;
+    }
+
+    // バーの色
+    &::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background-color: transparent;
+    }
+
+    &:hover {
+        scrollbar-color: transparent transparent;
+
+        &::-webkit-scrollbar {}
+
+        &::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background-color: transparent;
+        }
+    }
+
+    &--thin {
+        scrollbar-width: thin;
+
+        &::-webkit-scrollbar {
+            width: 5px;
+        }
+    }
+}

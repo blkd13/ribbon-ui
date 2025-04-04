@@ -17,7 +17,6 @@ declare var _paq: any;
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [
     RouterOutlet,
     MatIconModule,

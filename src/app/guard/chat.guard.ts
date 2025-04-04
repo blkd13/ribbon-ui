@@ -1,10 +1,11 @@
-import { AuthService, OAuth2Provider } from './../services/auth.service';
+import { AuthService, ExtApiProviderType } from './../services/auth.service';
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, ActivatedRoute } from '@angular/router';
 import { ProjectService, TeamService, ThreadService } from '../services/project.service';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
 import { UserRole } from '../models/models';
+import { GService } from '../services/g.service';
 
 // export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateFn => {
 //   const guardFunc: CanActivateFn = (route, state) => {
@@ -39,16 +40,17 @@ import { UserRole } from '../models/models';
 //   return guardFunc;
 // }
 
-export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateFn => {
+export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanActivateFn => {
   const guardFunc: CanActivateFn = (route, state) => {
     const authService: AuthService = inject(AuthService);
+    const g: GService = inject(GService);
     console.log(route);
-    return authService.getOAuthAccount(oAuthProvider).pipe(
+    return authService.getOAuthAccount(oAuthProviderType).pipe(
       // getOAuthAccount の結果が返ってきたら
       // isOAuth2Connected を呼び出して結果を返すまで待つ
       switchMap(oAuthAccount => {
         console.log(route);
-        return authService.isOAuth2Connected(oAuthProvider, 'user-info', route.url.toString()).pipe(
+        return authService.isOAuth2Connected(oAuthProviderType, 'user-info', route.url.toString()).pipe(
           map(res => {
             console.log(res);
             // 成功時にはtrueを返す
@@ -67,7 +69,7 @@ export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateF
       catchError(err => {
         console.log('OAuth2ログインが必要です');
         // getOAuthAccount 自体が失敗した場合もログイン画面へ飛ばす
-        location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+        location.href = `/api/oauth/${oAuthProviderType}/login?fromUrl=${encodeURIComponent(location.href)}&tenantKey=${g.info.user.tenantKey}`;
         console.error(err);
         return of(false);
       }),

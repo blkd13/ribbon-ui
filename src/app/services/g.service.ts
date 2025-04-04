@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { User } from '../models/models';
 import { Subject } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export type Lang = 'ja' | 'en';
 export type MultilingualPrompt = Record<Lang, string>;
@@ -53,6 +54,7 @@ export class GService {
   ];
 
   lang: Lang;
+  tenantKey: string;
 
   info: { user: User } = { user: {} as User };
   public queries: { [key: string]: string } = {};
@@ -66,6 +68,9 @@ export class GService {
       const [key, value] = query.split('=');
       this.queries[key] = value;
     });
+
+    // テナントキー
+    this.tenantKey = this.queries['tenantKey'] || environment.defaultTenantKey;
 
     // 言語設定
     this.lang = this.queries['lang'] === 'en' ? 'en' : 'ja';

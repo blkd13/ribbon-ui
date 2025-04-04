@@ -204,11 +204,11 @@
     <mat-tab-group [ngClass]="{isSingleThread: selectedThreadGroup.threadList.length===1}"
       (selectedIndexChange)="restoreScrollPosition($event)">
       @for(thread of selectedThreadGroup.threadList;track $index) {
-      <mat-tab label="[Tab{{$index+1}}] {{thread.inDto.args.model}}">
+      <mat-tab label="{{thread.inDto.args.model}}">
         <div style="height: calc(100vh - 100px);" class="flex flex-col gap-1 w-full">
           @if(messageGroupIdListMas[thread.id]; as messageGroupIdList){
           @if(messageGroupIdList[0]; as messageGroupId){
-          <div style="width: calc(100% - 17px);" class="pt-2 px-2">
+          <div class="pt-2 px-2 w-full hidden-custom-scroll">
             @if(messageService.messageGroupMas[messageGroupIdList[0]]; as messageGroup) {
             <!-- システムプロンプトは唯一履歴無し。。というのが気になる。 -->
             <app-chat-panel-system class="top-0" style="z-index:3;" [messageGroup]="messageGroup"
@@ -224,7 +224,7 @@
           }
 
           <div #textBodyElem (scroll)="saveScrollPosition($index)"
-            class="custom-scroll w-full px-2 pb-52 relative flex flex-col gap-1" style="overflow-y: scroll;">
+            class="custom-scroll h-0 w-full px-2 pb-52 relative flex flex-col gap-1 grow" style="overflow-y: scroll;">
 
             @for(messageGroupId of messageGroupIdListMas[thread.id];track $index){
             @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
@@ -261,7 +261,7 @@
     } @else {
     <!-- リスト表示 -->
 
-    <div class="flex gap-0.5 px-2" style="z-index: 3;width: calc(100% - 17px);">
+    <div class="flex gap-0.5 px-2 w-full hidden-custom-scroll" style="z-index: 3;">
       @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
       <div class="w-0 flex-1">
         @if(messageGroupIdListMas[thread.id]; as messageGroupIdList) {

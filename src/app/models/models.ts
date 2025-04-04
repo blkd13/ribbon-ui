@@ -34,6 +34,7 @@ export interface User {
     email: string;
     role: UserRole;
     status: UserStatus;
+    tenantKey: string;
     // public profilePictureUrl: string
 }
 export interface TwoFactorAuthDetails {
@@ -121,4 +122,68 @@ export type MessageGroupType = 'SINGLE' | 'PARALLEL' | 'REGENERATED';
 export interface GenerateContentRequestForCache {
     ttl?: { seconds: number, nanos: number };
     expire_time?: string; // "expire_time":"2024-06-30T09:00:00.000000Z"
+}
+
+
+
+
+export interface OAuth2Config {
+    uriBaseAuth?: string;
+    clientId: string;
+    clientSecret: string;
+    pathAuthorize: string;
+    pathAccessToken: string;
+    pathTop: string;
+    scope: string;
+    postType: 'json' | 'params';
+    redirectUri: string;
+    requireMailAuth: boolean;
+}
+export class ExtApiProviderEntity {
+    id!: string; // UUID
+    tenantKey!: string; // テナントキー
+    type!: string; // 'gitlab' | 'gitea' | etc 
+    provider!: string; // 'gitlab-local' | etc 
+    label!: string; // 'GitLab' | 'Gitea' | etc 
+    uriBase!: string;
+    pathUserInfo!: string;
+    oAuth2Config?: OAuth2Config;
+    description?: string;
+    isDeleted!: boolean;
+}
+
+/**
+ * テナントエンティティのインターフェース
+ */
+export interface TenantEntity {
+    // 基本プロパティ
+    id: string;
+    name: string;
+    description?: string;
+    isActive: boolean;
+
+    // 監査情報
+    createdAt: Date;
+    updatedAt: Date;
+    createdBy: string;
+    updatedBy: string;
+    createdIp?: string;
+    updatedIp?: string;
+}
+
+/**
+ * テナント統計情報のインターフェース
+ */
+export interface TenantStats {
+    total: number;
+    active: number;
+    inactive: number;
+}
+
+/**
+ * テナントリソース情報のインターフェース
+ */
+export interface TenantResources {
+    apiProviders: number;
+    // 必要に応じて他のリソースカウント情報を追加
 }

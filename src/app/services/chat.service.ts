@@ -81,8 +81,10 @@ export class ChatService {
     { tag: '爆速', class: 'min', isEnable: true, maxTokens: 8192, maxInputTokens: 128000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00000000, 0.0000000, 0.0000000, 0.000000], id: 'deepseek-r1-distill-qwen-32b', },
     { tag: '爆速', class: 'min', isEnable: true, maxTokens: 8192, maxInputTokens: 128000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00000000, 0.0000000, 0.0000000, 0.000000], id: 'llama-3.3-70b', },
 
-    { tag: '速い', class: 'min', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00003750, 0.000150, 0.0000750, 0.001500], id: 'gemini-2.0-flash-lite-preview-02-05', },
+    { tag: '普通', class: 'nml', isEnable: true, maxTokens: 8192, maxInputTokens: 128000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00000000, 0.0000000, 0.0000000, 0.000000], id: 'command-a-03-2025', },
+    { tag: '速い', class: 'min', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00003750, 0.000150, 0.0000750, 0.001500], id: 'gemini-2.0-flash-lite-001', },
 
+    { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00003750, 0.000150, 0.0000750, 0.001500], id: 'gemini-2.0-flash-lite-preview-02-05', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 32768, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash-002', },
@@ -163,14 +165,14 @@ export class ChatService {
 
     if (Object.keys(ret).length > 0) {
       let message = '';
-      if (ret.isNotDomestic) {
-        const modelList = ret.isNotDomestic.map(model => `・${model}`).join('\n');
-        message += `以下のモデルは海外リージョンを利用します。\n個人情報は絶対に入力しないでください。\n${modelList}\n\n`;
-      } else { }
-      if (ret.isNotPdf) {
-        const modelList = ret.isNotPdf.map(model => `・${model}`).join('\n');
-        message += `以下のモデルはPDF/Word/PowerPointが未対応です。\nもし入れた場合は無視されますのでご認識ください。\nテキスト（各種ソースコード等）、画像(png/jpg/etc...）は利用できます。\n${modelList}\n\n`;
-      } else { }
+      // if (ret.isNotDomestic) {
+      //   const modelList = ret.isNotDomestic.map(model => `・${model}`).join('\n');
+      //   message += `以下のモデルは海外リージョンを利用します。\n個人情報は絶対に入力しないでください。\n${modelList}\n\n`;
+      // } else { }
+      // if (ret.isNotPdf) {
+      //   const modelList = ret.isNotPdf.map(model => `・${model}`).join('\n');
+      //   message += `以下のモデルはPDF/Word/PowerPointが未対応です。\nもし入れた場合は無視されますのでご認識ください。\nテキスト（各種ソースコード等）、画像(png/jpg/etc...）は利用できます。\n${modelList}\n\n`;
+      // } else { }
       ret.message = message;
     } else {
       // アラート不用
@@ -637,7 +639,7 @@ export class ChatService {
       label: `通訳`,
       placeholder: '翻訳の指示は要りません。英文／和文をそのまま貼ってください。',
       systemLabel: `通訳AI`,
-      modelSelection: ['gemini-1.5-flash-002', 'gemini-2.0-flash-lite-preview-02-05', 'gemini-2.0-flash-001', 'gpt-4o'],
+      modelSelection: ['gemini-1.5-flash-002', 'gemini-2.0-flash-lite-001', 'gemini-2.0-flash-001', 'gpt-4o'],
       systemPrompt: Utils.trimLines(`
         あなたは **通訳** としてふるまい、次のルールに従って翻訳を行います。
 

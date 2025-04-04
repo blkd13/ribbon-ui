@@ -1,27 +1,3 @@
-<style>
-    /* 警告スタイル */
-    .warning {
-        /* 背景色：薄い黄色 */
-        background-color: #fff3cd;
-        /* 文字色：濃い茶色 */
-        color: #856404;
-        /* 枠線色：薄いオレンジ */
-        border: 1px solid #ffeeba;
-        /* 内側の余白 */
-        padding: 10px;
-        /* 角を少し丸くする */
-        border-radius: 4px;
-        /* 文字サイズ */
-        font-size: 16px;
-        margin-bottom: 20px;
-    }
-
-    .eye {
-        position: absolute;
-        margin-top: 10px;
-        right: 36px;
-    }
-</style>
 <ng-template #errorArea>
     @if(errorMessageList.length>0){
     <mat-card appearance="outlined" class="warning">

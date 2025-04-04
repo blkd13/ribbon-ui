@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, TemplateRef, inject, viewChildren, viewChild } from '@angular/core';
-import { FormsModule, NgModel } from '@angular/forms';
+import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, TemplateRef, inject, viewChildren, viewChild, Input } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, NgModel, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
 import OpenAI from 'openai';
@@ -367,7 +367,7 @@ export class ChatComponent implements OnInit {
         this.messageService.cloneThreadDry(baseThread),
       ]).subscribe({
         next: next => {
-          (['gpt-4o', 'claude-3-7-sonnet@20250219', 'gemini-2.0-flash-exp'] as GPTModels[]).forEach((model, index) => {
+          (['gpt-4o', 'claude-3-7-sonnet-20250219', 'gemini-2.0-flash-exp'] as GPTModels[]).forEach((model, index) => {
             next[index].inDto.args.model = model;
           });
           this.presetThreadList = next;
