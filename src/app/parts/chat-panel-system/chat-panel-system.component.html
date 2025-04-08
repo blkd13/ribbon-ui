@@ -16,20 +16,21 @@
             </select>
             -->
             <div class="flex absolute top-0 left-7 gap-3">
-              <div class="tip" [ngClass]="[modelIdMas[thread().inDto.args.model].tag]">
-                {{modelIdMas[thread().inDto.args.model].tag}}
-              </div>
-              @if(thread().inDto.args.tool_choice!=='none'){
-              @for(rec of toolGroupCheckMasRecord(toolGroupCheckMas);track $index){
-              @if(rec.checked){
-              <div class="tooltip-small-tag relative">
-                <img [src]="'./image/'+rec.groupName+'-logo.svg'" alt="icon" class="" style="width: 14px;height: 14px;">
-                <!-- <div>{{rec.label}}</div> -->
-              </div>
-              }
-              }
-              }
-          </div>
+                <div class="tip" [ngClass]="[modelIdMas[thread().inDto.args.model].tag]">
+                    {{modelIdMas[thread().inDto.args.model].tag}}
+                </div>
+                @if(thread().inDto.args.tool_choice!=='none'){
+                @for(rec of toolGroupCheckMasRecord(toolGroupCheckMas);track $index){
+                @if(rec.checked){
+                <div class="tooltip-small-tag relative">
+                    <img [src]="'./image/'+rec.groupName+'-logo.svg'" alt="icon" class=""
+                        style="width: 14px;height: 14px;">
+                    <!-- <div>{{rec.label}}</div> -->
+                </div>
+                }
+                }
+                }
+            </div>
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
                 [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
                 @for(modelGroupId of modelGroupIdList;track $index){
@@ -74,8 +75,8 @@
                 }
             </button>
             <button mat-icon-button (click)="removeThread($event)" style="margin-right: 10px;"
-                [ngClass]="{invisible: !removable()}">
-                <mat-icon>close</mat-icon>
+                [ngClass]="{invisible: !removable()}" title="スレッドを削除">
+                <mat-icon>delete</mat-icon>
             </button>
         </div>
     </mat-expansion-panel-header>
@@ -183,8 +184,8 @@
                                     [ngClass]="{'group-check-checked': toolGroupCheckMas[groupDef.group]===2, 'group-check-bar': toolGroupCheckMas[groupDef.group]===1}">
                                     {{['','remove','check'][toolGroupCheckMas[groupDef.group]]}}
                                 </mat-icon>
-                                <img [src]="'./image/'+groupDef.group.split('-')[0]+'-logo.svg'" alt="icon" class="w-8 h-8"
-                                    style="min-width: 30px;">
+                                <img [src]="'./image/'+groupDef.group.split('-')[0]+'-logo.svg'" alt="icon"
+                                    class="w-8 h-8" style="min-width: 30px;">
                                 {{groupDef.group}}
                             </div>
                         </mat-panel-title>

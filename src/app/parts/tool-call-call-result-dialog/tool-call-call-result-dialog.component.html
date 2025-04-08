@@ -1,4 +1,9 @@
 <div class="h-[80vh] w-[60vw] overflow-auto p-5">
+    @if(isErrorRequest){
+    <h1>Error</h1>
+    <h3>呼び出しSyntaxエラー</h3>
+    } @else {
+
     @if(toolCallSetList[index] && toolCallSetList[index].info; as info){
 
     @if(toolCallSetList[index].call; as call){
@@ -9,7 +14,7 @@
     @if(result.content){
     <markdown>---</markdown>
     <h3>result</h3>
-    @if(info.responseType==='text' && !isError){
+    @if(info.responseType==='text' && !isErrorResponse){
     <pre class="custom-scroll custom-scroll--thin"><code>{{jsonToString(result.content)}}</code></pre>
     } @else if(info.responseType==='markdown'){
     <markdown clipboard [data]="jsonToString(result.content)"></markdown>
@@ -19,6 +24,8 @@
 
     }
     }
+    }
+
     }
 
     }

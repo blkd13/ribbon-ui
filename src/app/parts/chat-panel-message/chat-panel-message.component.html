@@ -208,6 +208,12 @@
     <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
       <mat-icon>content_copy</mat-icon>
     </button>
+
+    @if(messageGroup().role==='assistant') {
+    <button mat-icon-button (click)="onZoom($event)" title="拡大表示">
+      <mat-icon>pan_zoom</mat-icon>
+    </button>
+    } @else {
     <button mat-icon-button (click)="setEdit($event)" [title]="messageGroup().messages[0].editing?'保存':'編集'"
       [ngStyle]="{visibility: messageGroup().messages[0].cacheId?'hidden':'visible'}">
       @if(messageGroup().messages[0].editing){
@@ -216,6 +222,7 @@
       <mat-icon>edit</mat-icon>
       }
     </button>
+    }
     <button mat-icon-button (click)="remove($event)" [title]="messageGroup().role==='assistant'?'リトライ':'削除'"
       style="margin-right: 10px;"
       [ngStyle]="{visibility: (messageGroup().messages[0].cacheId || messageGroup().role==='system')?'hidden':'visible'}">

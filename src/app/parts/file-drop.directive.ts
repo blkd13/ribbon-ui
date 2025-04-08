@@ -37,7 +37,18 @@ export class FileDropDirective {
     const items = evt.dataTransfer?.items;
     if (!items) return;
 
-    this.fileManagerService.onFileOrFolderMultipleForDragAndDrop(items).then(files => {
+    const fileItems = [];
+    for (let i = 0; i < items.length; i++) {
+      console.log(i + ":" + items.length);
+      if (items[i].kind === 'string' && (items[i].type === 'text/plain' || items[i].type === 'text/html')) {
+        // テキストファイルは無視する。
+      } else {
+        fileItems.push(items[i]);
+      }
+    }
+    if (fileItems.length === 0) return;
+
+    this.fileManagerService.onFileOrFolderMultipleForDragAndDrop(fileItems).then(files => {
       this.filesDropped.emit(files);
     });
   }

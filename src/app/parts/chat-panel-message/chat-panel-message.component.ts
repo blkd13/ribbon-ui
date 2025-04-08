@@ -39,9 +39,6 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
     ]
 })
 export class ChatPanelMessageComponent extends ChatPanelBaseComponent {
-    printer(a: any): void {
-        console.log(a);
-    }
     //   // @Input() // status 0:未開始 1:実行中 2:完了
     //   // message!: MessageForView;
 

@@ -26,26 +26,33 @@ export class ToolCallCallResultDialogComponent {
   private readonly toolCallService: ToolCallService = inject(ToolCallService);
 
   index: number = 0;
-  isError = false;
+  isErrorRequest = false;
+  isErrorResponse = false;
   toolCallSetList: ToolCallSet[] = [];
 
   constructor() {
     // this.index = this.data.index;
-    this.toolCallService.getToolCallGroupByToolCallId(this.data.toolCallId).subscribe(toolCallGroup => {
-      this.toolCallSetList = this.toolCallService.toolCallListToToolCallSetList(toolCallGroup.toolCallList);
+    this.toolCallService.getToolCallGroupByToolCallId(this.data.toolCallId).subscribe({
+      next: toolCallGroup => {
+        this.toolCallSetList = this.toolCallService.toolCallListToToolCallSetList(toolCallGroup.toolCallList);
 
-      // 無理矢理エラー判定
-      if (this.toolCallSetList[this.index]) {
-        const result = this.toolCallSetList[this.index].resultList.at(-1);
-        if (result) {
-          try {
-            const json = JSON.parse(result.content);
-            if (json.isError) {
-              this.isError = true;
-            } else { }
-          } catch { }
+        // 無理矢理エラー判定
+        if (this.toolCallSetList[this.index]) {
+          const result = this.toolCallSetList[this.index].resultList.at(-1);
+          if (result) {
+            try {
+              const json = JSON.parse(result.content);
+              if (json.isError) {
+                this.isErrorResponse = true;
+              } else { }
+            } catch { }
+          } else { }
         } else { }
-      } else { }
+      },
+      error: (error) => {
+        console.error(error);
+        this.isErrorRequest = true;
+      }
     });
   }
 

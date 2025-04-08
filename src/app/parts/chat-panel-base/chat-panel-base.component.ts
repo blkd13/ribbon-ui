@@ -26,6 +26,7 @@ import { ToolCallCallResultDialogComponent } from '../tool-call-call-result-dial
 import { MatTabsModule } from '@angular/material/tabs';
 import { UserService } from '../../services/user.service';
 import { MarkdownService } from 'ngx-markdown';
+import { ChatPanelZoomDialogComponent } from '../chat-panel-zoom-dialog/chat-panel-zoom-dialog.component';
 
 
 @Component({
@@ -378,6 +379,24 @@ export class ChatPanelBaseComponent implements OnInit {
     this.messageGroup().messages.forEach(message => message.editing = 0);
   }
 
+  onZoom($event: MouseEvent): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+    if (this.messageGroup().messages.length > 0 && this.messageGroup().messages[0].contents.length > 0) {
+      this.dialog.open(ChatPanelZoomDialogComponent, {
+        data: { messageGroup: this.messageGroup() }
+      });
+    } else {
+      this.loadContent(false).subscribe({
+        next: contentsList => {
+          this.dialog.open(ChatPanelZoomDialogComponent, {
+            data: { messageGroup: this.messageGroup() }
+          });
+        }
+      });
+    }
+  }
+
   setEdit($event: MouseEvent): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
@@ -407,7 +426,7 @@ export class ChatPanelBaseComponent implements OnInit {
     return result;
   }
 
-  loadContent(): Observable<ContentPart[][]> {
+  loadContent(autoOpenPanel: boolean = true): Observable<ContentPart[][]> {
     const messageGroup = this.messageGroup();
     return safeForkJoin(
       messageGroup.messages.map(message => {
@@ -423,7 +442,9 @@ export class ChatPanelBaseComponent implements OnInit {
               message.contents = contents;
               this.setBrackets();
               this.isLoading = false;
-              this.exPanel().open();
+              if (autoOpenPanel) {
+                this.exPanel().open();
+              } else { }
             }),
           );
         } else {

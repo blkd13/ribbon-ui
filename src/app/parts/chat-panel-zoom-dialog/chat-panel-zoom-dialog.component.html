@@ -1,0 +1,39 @@
+<div style="width: calc(100vw - 200px);height: calc(100vh - 100px)" class="rounded-lg shadow-lg overflow-auto p-3"
+    #textBodyElem>
+
+    @if(data && data.messageGroup && data.messageGroup.messages && data.messageGroup.messages.length>0) {
+    <div class="flex gap-4 items-center w-full mb-3">
+        <div class="flex-grow"></div>
+        <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）">
+            <mat-icon>folder_zip</mat-icon>
+        </button>
+        <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
+            <mat-icon>content_copy</mat-icon>
+        </button>
+        <button mat-icon-button (click)="closeDialog($event)" title="閉じる">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    @for(message of data.messageGroup.messages; track $index; let mIndex=$index){
+
+    <!-- メッセージ -->
+    @for(content of message.contents; track $index ; let cIndex=$index){
+    @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket) : blankBracket;
+    @if(content.type==='text'){
+    <markdown #mdElem [hidden]="message.editing" katex mermaid clipboard (load)="onReady($event, 'onLoaded')"
+        (ready)="onReady($event, 'onReady')" [data]="brackets.pre+content.text+brackets.post">
+    </markdown>
+    } @else if(content.type==='error') {
+    <div class="text-red-500 overflow-auto">
+        <div>ERROR</div>
+        <markdown katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post"></markdown>
+    </div>
+    } @else {<!-- 最初の1個からループを掛けるのでここに来ることはない -->}
+    }
+
+    }
+
+    }
+
+</div>
