@@ -72,7 +72,7 @@ export class ChatService {
     { tag: '思考', class: 'wis', isEnable: true, maxTokens: 128000, maxInputTokens: 200000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00300000, 0.015000, 0.0030000, 0.015000], id: 'claude-3-7-sonnet-thinking-20250219', },
     { tag: '思考', class: 'wis', isEnable: true, maxTokens: 8192, maxInputTokens: 64000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.1500000, 0.600000, 0.1500000, 0.600000], id: 'deepseek-reasoner', },
 
-    { tag: '実験', class: 'exp', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00012500, 0.000375, 0.0002500, 0.000750], id: 'gemini-2.5-pro-exp-03-25', },
+    { tag: '実験', class: 'exp', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00012500, 0.000375, 0.0002500, 0.000750], id: 'gemini-2.5-pro-exp-03-25', },
     { tag: '実験', class: 'exp', isEnable: true, maxTokens: 64000, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-thinking-exp-01-21', },
 
     { tag: '爆速', class: 'min', isEnable: true, maxTokens: 8192, maxInputTokens: 128000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00000000, 0.0000000, 0.0000000, 0.000000], id: 'llama-3.3-70b-specdec', },
@@ -88,8 +88,8 @@ export class ChatService {
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 2000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00031250, 0.001250, 0.0006250, 0.002500], id: 'gemini-1.5-pro', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 32768, isGSearch: true, isDomestic: true, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-1.5-flash-002', },
-    { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-exp', },
-    { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00012500, 0.000375, 0.0001250, 0.000375], id: 'gemini-exp-1206', },
+    { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-exp', },
+    { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00012500, 0.000375, 0.0001250, 0.000375], id: 'gemini-exp-1206', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 32767, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-2.0-flash-thinking-exp-1219', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 32768, maxInputTokens: 128000, isGSearch: false, isDomestic: false, isPdf: true, price: [0.01650000, 0.066000, 0.0165000, 0.066000], id: 'o1-preview', },
     { tag: '古い', class: 'old', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: false, isDomestic: true, isPdf: true, price: [0.00001875, 0.000075, 0.0000375, 0.000750], id: 'gemini-flash-experimental', },

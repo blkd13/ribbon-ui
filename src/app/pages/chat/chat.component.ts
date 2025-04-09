@@ -80,7 +80,6 @@ export class ChatComponent implements OnInit {
   readonly textBodyElem = viewChildren<ElementRef<HTMLDivElement>>('textBodyElem');
 
   // スクロール制御用のアンカー
-  readonly chatPanelGroupElem = viewChildren<ElementRef<HTMLDivElement>>('chatPanelGroupElem');
   readonly anchor = viewChildren<ElementRef<HTMLDivElement>>('anchor');
 
 
@@ -474,7 +473,7 @@ export class ChatComponent implements OnInit {
                       // 別ページから復帰した場合に再開する。
                       message.contents[0].text = resDto.text;
                       this.chatStreamSubscriptionList[threadGroup.id] = this.chatStreamSubscriptionList[threadGroup.id] || [];
-                      this.chatStreamSubscriptionList[threadGroup.id].push(resDto.observer.subscribe(this.chatStreamHander(message)));
+                      this.chatStreamSubscriptionList[threadGroup.id].push(resDto.observer.subscribe(this.chatStreamHandler(message)));
                       isExist = true;
                     } else { }
                   } else { }
@@ -790,6 +789,11 @@ export class ChatComponent implements OnInit {
       switchMap(threadGroup => {
         // 入力エリアに何も書かれていない場合はスルーして直前のmessageIdを返す。
         if (this.inputArea.content[0].type === 'text' && this.inputArea.content[0].text) {
+          this.anchor().forEach(elem => {
+            if (elem.nativeElement.style.minHeight === 'calc(-332px + 100vh)' || elem.nativeElement.style.minHeight === 'calc(-300px + 100vh)') {
+              elem.nativeElement.style.minHeight = 'unset';
+            } else { }
+          });
           return safeForkJoin(threadGroup.threadList.filter(thread => threadIdList.includes(thread.id)).map(thread => {
             const contents = this.inputArea.content.map(content => {
               const contentPart = this.messageService.initContentPart(genDummyId(), content.text);
@@ -821,6 +825,7 @@ export class ChatComponent implements OnInit {
                 DomUtils.textAreaHeighAdjust(this.textAreaElem().nativeElement); // 高さ調整
                 // this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
               }, 0);
+
               upsertResponseList.forEach(messageGroup => messageGroup.isExpanded = true);
               return upsertResponseList.map(messageGroup => messageGroup.id);
             }),
@@ -1077,18 +1082,55 @@ export class ChatComponent implements OnInit {
                   messageGroup.messages.map(message => {
                     message.status = MessageStatusType.Waiting;
                     if (message.observer) {
-                      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHander(message)));
+                      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHandler(message)));
                       console.log(`Message ID before chat completion: ${message.id}`);
                     } else { }
                   });
                 });
-                // 一番下まで下げる
-                if (this.textBodyElem() && this.textBodyElem()[index] && this.textBodyElem()[index].nativeElement) {
-                  DomUtils.scrollToBottomIfNeededSmooth(this.textBodyElem()[index].nativeElement);
-                } else { }
+
                 this.rebuildThreadGroup();
-                this.autoscroll = true;
-                this.beforeScrollTop = -1;
+
+                // スクロール
+                setTimeout(() => {
+                  requestAnimationFrame(() => {
+                    resDto.messageGroupList.forEach(messageGroup => {
+                      const message = messageGroup.messages[0]; // 先頭のメッセージを取得
+                      const threadIndex = this.selectedThreadGroup.threadList.map(thread => thread.id).indexOf(this.messageService.messageGroupMas[message.messageGroupId].threadId);
+                      let containerIndex = 0;
+                      let anchorIndex = 0;
+                      if (this.userService.chatTabLayout === 'tabs') {
+                        // タブ表示の場合はスレッド分岐しているので、スレッドのindexを取得する。
+                        containerIndex = threadIndex;
+                        anchorIndex = 0;
+                        // アンカーはカウントアップしていかないといけない。
+                        for (let iThread = 0; iThread <= threadIndex; iThread++) {
+                          anchorIndex += this.messageGroupIdListMas[this.selectedThreadGroup.threadList[iThread].id].length - 1; // systemの分1を引く
+                        }
+                        anchorIndex--; // 末尾を取りたいので-1する。
+                      } else {
+                        // タブ表示じゃない場合はスレッド分岐してないので0にする。
+                        containerIndex = 0;
+                        anchorIndex = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[threadIndex].id].indexOf(message.messageGroupId);
+                      }
+                      // console.log(`threadIndex=${threadIndex} containerIndex=${containerIndex} anchorIndex=${anchorIndex}`);
+                      const elem = this.textBodyElem().at(containerIndex);
+                      const anchorElem = this.anchor().at(anchorIndex);
+                      // console.log(`elem=${elem} anchorElem=${anchorElem}`);
+                      // console.log(anchorElem);
+                      if (anchorElem) {
+                        if (this.userService.chatTabLayout === 'tabs') {
+                          anchorElem.nativeElement.style.minHeight = 'calc(-332px + 100vh)';
+                        } else {
+                          anchorElem.nativeElement.style.minHeight = 'calc(-300px + 100vh)';
+                        }
+                      } else { }
+                      if (elem && anchorElem) {
+                        anchorElem.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      } else { }
+                    });
+                  });
+
+                }, 100);
                 console.log(this.messageGroupIdListMas);
               }),
               catchError(error => {
@@ -1112,15 +1154,12 @@ export class ChatComponent implements OnInit {
     );
   }
 
-  scrollRange = -1;
-  autoscroll = false;
-  beforeScrollTop = -1;
   /**
    * チャットのレスポンスストリームを捌くハンドラ
    * @param message
    * @returns
    */
-  chatStreamHander(message: MessageForView): Partial<Observer<OpenAI.ChatCompletionChunk>> | ((value: OpenAI.ChatCompletionChunk) => void) {
+  chatStreamHandler(message: MessageForView): Partial<Observer<OpenAI.ChatCompletionChunk>> | ((value: OpenAI.ChatCompletionChunk) => void) {
     return {
       next: _next => {
         // ここのChatStreamにはContentPartが付与されているはず
@@ -1253,7 +1292,24 @@ export class ChatComponent implements OnInit {
                 throw new Error('content is not tool');
               } // ここに来るのはおかしいのでエラーにする
             } else {/** infoじゃないのは無視 */ }
-          } else {/** deltaが無いものはないような気もするけど、、 */ }
+          } else {/** 自作で追加したタイプはdeltaが無かったりする */ }
+
+          const thinking = (choice as any).thinking;
+          if (thinking) {
+            if (content.type === ContentPartType.META && content.meta && content.meta.thinking) {
+              content.text += thinking;
+              content.meta.thinking += thinking;
+            } else {
+              // metaじゃなかったらブレイクする
+              const contentPart = this.messageService.initContentPart(message.id, '');
+              contentPart.type = ContentPartType.META;
+              contentPart.meta = { thinking };
+              contentPart.text = thinking;
+              message.contents.push(contentPart);
+              this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
+              content = contentPart;
+            }
+          } else { }
 
           // Google検索結果のメタデータをセットする
           const groundingMetadata = (choice as any).groundingMetadata;
@@ -1281,32 +1337,13 @@ export class ChatComponent implements OnInit {
           }
         });
 
-        message.status = MessageStatusType.Loading;
-        this.messageGroupBitCounter[message.messageGroupId] = (this.messageGroupBitCounter[message.messageGroupId] ?? 0) + 1;
-        if (this.autoscroll) {
-          // 一回でも上スクロールしてたらオートスクロールをオフ。
-          const threadIndex = this.selectedThreadGroup.threadList.map(thread => thread.id).indexOf(this.messageService.messageGroupMas[message.messageGroupId].threadId);
-          requestAnimationFrame(() => {
-            const elem = this.textBodyElem().at(threadIndex);
-            if (elem) {
-              const scrollTop = elem.nativeElement.scrollTop;
-              if (scrollTop > 0) {
-                // console.log(this.beforeScrollTop, scrollTop);
-                if (this.beforeScrollTop <= scrollTop) {
-                  this.beforeScrollTop = scrollTop;
-                  if (this.userService.chatTabLayout === 'tabs') {
-                    // this.anchor().at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  } else {
-                    this.chatPanelGroupElem()?.at(-1)?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                  DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement);
-                } else {
-                  this.autoscroll = false;
-                }
-              } else { }
-            } else { }
-          });
+        // console.dir(message.contents);
+        if (message.contents.map(content => content.type === 'text' ? content.text : content.type === 'tool' ? content.text : content.type === 'meta' ? content.text : '').join('').trim().length > 0) {
+          // 1文字以上あったらローディングカバーを外す
+          message.status = MessageStatusType.Loading;
         } else { }
+
+        this.messageGroupBitCounter[message.messageGroupId] = (this.messageGroupBitCounter[message.messageGroupId] ?? 0) + 1;
       },
       error: error => {
         this.chatErrorHandler(message, error);
@@ -1328,7 +1365,6 @@ export class ChatComponent implements OnInit {
    */
   chatAfterHandler(message: MessageForView): void {
     // console.log(`after----------------`);
-    this.autoscroll = false;
     const threadId = this.messageService.messageGroupMas[message.messageGroupId].threadId;
     const threadGroup = this.threadGroupList.find(threadGroup => threadGroup.threadList.find(thread => thread.id === threadId));
     if (threadGroup) {

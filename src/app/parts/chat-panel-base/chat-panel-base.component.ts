@@ -117,7 +117,6 @@ export class ChatPanelBaseComponent implements OnInit {
 
   isLoading = false;
 
-  isExecuted = false;
   isInteractive(): boolean {
     // TODO ここは遅くなる元なのであってはならない。
     let flag = false;
@@ -125,14 +124,37 @@ export class ChatPanelBaseComponent implements OnInit {
       .map(message => message.contents.filter(content => content.type === 'tool'))
       .forEach(contents => {
         if (contents.length === 0) return;
-        const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCallSet[];
-        if (toolCallList[0].info.isInteractive && toolCallList[0].commandList.length === 0) {
-          flag = true;
-        } else {/** 指示不要、もしくは実行済み */ }
+        try {
+          const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCallSet[];
+          flag = flag || !!toolCallList.find(toolCall => toolCall.info.isInteractive && toolCall.commandList.length === 0 && !this.executedToolCallIdSet.has(toolCall.toolCallId));
+        } catch (err) {
+          // JSON parse失敗したら無視
+          console.log(contents[contents.length - 1].text);
+          console.log('JSON parse error', err);
+        }
       });
     // console.log(flag);
-    return (!this.isExecuted && flag) ? true : false;
+    return flag;
   }
+
+  executedToolCallIdSet: Set<string> = new Set<string>();
+  toolExec($event: MouseEvent, flag: boolean, content?: ContentPart): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+    if (content && content.type === 'tool') {
+      try {
+        const toolCallPartCommandList = (JSON.parse(content.text || '[]') as ToolCallSet[])
+          .filter(tc => tc.info && tc.info.isInteractive && !this.executedToolCallIdSet.has(tc.toolCallId))
+          .map(tc => ({ type: ToolCallPartType.COMMAND, body: { command: flag ? 'execute' : 'cancel' }, toolCallId: tc.toolCallId })) as ToolCallPartCommand[];
+        // 実行/キャンセルに関わらず、指示済みのものはリストに追加
+        toolCallPartCommandList.forEach(tc => this.executedToolCallIdSet.add(tc.toolCallId));
+        this.toolExecEmitter.emit({ contentPart: content, toolCallPartCommandList });
+      } catch (err) {
+        console.log('toolExec error', err);
+      }
+    } else { }
+  }
+
   jsonParseToArray(text: string): any[] {
     const obj = JSON.parse(text || '[]') as any[];
     return Array.isArray(obj) ? obj : [];
@@ -320,17 +342,6 @@ export class ChatPanelBaseComponent implements OnInit {
     this.removeEmitter.emit(this.messageGroup());
   }
 
-  toolExec($event: MouseEvent, flag: boolean, content?: ContentPart): void {
-    $event.stopImmediatePropagation();
-    $event.preventDefault();
-    if (content) {
-      this.isExecuted = true;
-      const toolCallPartCommandList = (JSON.parse(content.text || '[]') as ToolCallSet[])
-        .filter(tc => tc.info && tc.info.isInteractive)
-        .map(tc => ({ type: ToolCallPartType.COMMAND, body: { command: flag ? 'execute' : 'cancel' }, toolCallId: tc.toolCallId })) as ToolCallPartCommand[];
-      this.toolExecEmitter.emit({ contentPart: content, toolCallPartCommandList });
-    } else { }
-  }
   timeoutId: any;
   onKeyDown($event: KeyboardEvent): void {
     if ($event.key === 'Enter') {

@@ -232,7 +232,7 @@
             <!-- {{messageGroup.id}} -->
             @if(messageGroup.role==='system') {
             } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-            <div #anchor> <!-- スクロール用のただのアンカー -->
+            <div #anchor class="anchor"> <!-- スクロール用のただのアンカー -->
               <app-chat-panel-message #chatPanelList [messageGroup]="messageGroup"
                 [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
                 [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
@@ -240,6 +240,24 @@
                 (ready)="onChatPanelReady(messageGroup)" (removeMessage)="removeMessage($event)"
                 (remove)="removeMessageGroup($event)">
               </app-chat-panel-message>
+
+              <!-- 末尾だったら追加可能にする -->
+              @if(!messageService.nextMessageGroupId[messageGroupId]) {
+              @if(messageService.messageGroupMas[messageGroupId].role==='user'){
+              <button mat-icon-button class="pl-6 sgl-btn" color="primary"
+                (click)="send('messageGroup', [messageGroupId]).subscribe()">
+                <mat-icon>send</mat-icon>
+              </button>
+              } @else if(messageService.messageGroupMas[messageGroupId].role==='assistant'){
+              <!-- これはまだちょっと難しい -->
+              <button mat-icon-button class="pl-6 sgl-btn" color="primary"
+                (click)="appendMessageGroup(thread.id, messageGroupId)">
+                <mat-icon>add_circle</mat-icon>
+              </button>
+              } @else {
+              }
+              }
+
             </div>
             }
 
@@ -304,7 +322,7 @@
     <div #textBodyElem class="custom-scroll w-full flex-1 h-0 px-2 py-0 flex flex-col gap-1 relative"
       style="overflow-y: scroll;">
       @for(index of indexList; track $index;let pIndex=$index) {
-      <div #chatPanelGroupElem class="flex gap-0.5 w-full min-w-full max-w-full relative">
+      <div #anchor class="anchor flex gap-0.5 w-full min-w-full max-w-full relative">
 
         @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
         <div class="w-0 flex-grow flex flex-col justify-between relative">
@@ -322,6 +340,7 @@
               (remove)="removeMessageGroup($event)" (toolExec)="toolExec($event)"
               (fileSelectionUpdateEmitter)="onChange()" (expanded)="expanded($event, pIndex, tIndex, messageGroup)">
             </app-chat-panel-message>
+
             <!-- 末尾だったら追加可能にする -->
             @if(!messageService.nextMessageGroupId[messageGroupId]) {
             @if(messageService.messageGroupMas[messageGroupId].role==='user'){
@@ -336,13 +355,9 @@
               <mat-icon>add_circle</mat-icon>
             </button>
             } @else {
-            <!-- 追加ボタンをそのうち付けようと思ている。そもそも単純な追加APIがまだ無い。
-            <button mat-icon-button class="pl-6" (click)="send('messageGroup', [messageGroupId]).subscribe()">
-              <mat-icon color="primary">add_circle</mat-icon>
-            </button>
-            -->
             }
             }
+
           </div>
           }
 
@@ -394,47 +409,6 @@
       </div>
     </div>
     }
-    <!-- 履歴選択 -->
-    <ng-template #messageSelectorTemplate let-messageGroup>
-      @let nextMessageGroupIdList=messageService.nextMessageGroupId[messageGroup.id];
-      <div class="flex items-center justify-between">
-        @if(
-        (nextMessageGroupIdList.length>messageGroup.selectedIndex&&nextMessageGroupIdList.length>1)||nextMessageGroupIdList.length===messageGroup.selectedIndex
-        ){
-
-        <!-- 末尾だったら追加可能にする -->
-        <div class="flex items-center">
-          @if (nextMessageGroupIdList.length === messageGroup.selectedIndex) {
-          @if(messageService.messageGroupMas[messageGroup.id].role==='user'){
-          <button mat-icon-button class="pl-6 sgl-btn absolute!" color="primary"
-            (click)="send('messageGroup', [messageGroup.id]).subscribe()">
-            <mat-icon>send</mat-icon>
-          </button>
-          } @else if(messageService.messageGroupMas[messageGroup.id].role==='assistant'){
-          <button mat-icon-button class="pl-6 sgl-btn absolute!" color="primary"
-            (click)="appendMessageGroup(messageGroup.threadId, messageGroup.id)">
-            <mat-icon>add_circle</mat-icon>
-          </button>
-          }
-          }
-        </div>
-
-        <div class="flex items-center mt-3">
-          <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, -1)"
-            [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
-          <div class="text-center w-[60px]">
-            @if (nextMessageGroupIdList.length === messageGroup.selectedIndex) {
-            prev
-            } @else {
-            {{messageGroup.selectedIndex + 1}} / {{nextMessageGroupIdList.length}}
-            }
-          </div>
-          <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, 1)"
-            [ngStyle]="{'visibility': nextMessageGroupIdList.length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
-        </div>
-        }@else{<div></div>}
-      </div>
-    </ng-template>
 
     <!-- 入力エリア -->
     <div class="bottom">
@@ -521,3 +495,45 @@
   <app-user-mark></app-user-mark>
 </div>
 }
+
+<!-- 履歴選択 -->
+<ng-template #messageSelectorTemplate let-messageGroup>
+  @let nextMessageGroupIdList=messageService.nextMessageGroupId[messageGroup.id];
+  <div class="flex items-center justify-between">
+    @if(
+    (nextMessageGroupIdList.length>messageGroup.selectedIndex&&nextMessageGroupIdList.length>1)||nextMessageGroupIdList.length===messageGroup.selectedIndex
+    ){
+
+    <!-- 末尾だったら追加可能にする -->
+    <div class="flex items-center">
+      @if (nextMessageGroupIdList.length === messageGroup.selectedIndex) {
+      @if(messageService.messageGroupMas[messageGroup.id].role==='user'){
+      <button mat-icon-button class="pl-6 sgl-btn absolute!" color="primary"
+        (click)="send('messageGroup', [messageGroup.id]).subscribe()">
+        <mat-icon>send</mat-icon>
+      </button>
+      } @else if(messageService.messageGroupMas[messageGroup.id].role==='assistant'){
+      <button mat-icon-button class="pl-6 sgl-btn absolute!" color="primary"
+        (click)="appendMessageGroup(messageGroup.threadId, messageGroup.id)">
+        <mat-icon>add_circle</mat-icon>
+      </button>
+      }
+      }
+    </div>
+
+    <div class="flex items-center mt-3">
+      <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, -1)"
+        [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
+      <div class="text-center w-[60px]">
+        @if (nextMessageGroupIdList.length === messageGroup.selectedIndex) {
+        prev
+        } @else {
+        {{messageGroup.selectedIndex + 1}} / {{nextMessageGroupIdList.length}}
+        }
+      </div>
+      <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, 1)"
+        [ngStyle]="{'visibility': nextMessageGroupIdList.length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
+    </div>
+    }@else{<div></div>}
+  </div>
+</ng-template>

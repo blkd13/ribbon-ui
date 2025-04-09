@@ -144,6 +144,19 @@
         </ol>
         <div [innerHTML]="content.meta.groundingMetadata.searchEntryPoint?.renderedContent"></div>
       </div>
+      } @else if(content.meta.thinking) {
+      <mat-expansion-panel class="mb-5">
+        <mat-expansion-panel-header>
+          <mat-panel-title class="message-title" style="font-weight: normal;">思考</mat-panel-title>
+          <mat-panel-description>
+            <div class="truncate">{{content.meta.thinking}}</div>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+        <div class="p-3 rounded-md cursor-pointer" style="background-color: #333;">
+          <markdown [hidden]="message.editing" katex mermaid clipboard [data]="content.meta.thinking"></markdown>
+        </div>
+      </mat-expansion-panel>
+      <div class="h-3"></div>
       }
 
       } @else {<!-- text/error/file以外は無いのでここに来ることはない -->}
@@ -152,7 +165,9 @@
 
       @if(isInteractive()){
       <div class="w-full">
-        <div class="my-2">このコマンドを実行してもよろしいですか？</div>
+        <div class="my-2">
+          このコマンドを実行してもよろしいですか？
+        </div>
         <div class="flex my-2 gap-6">
           <button class="w-56" mat-raised-button
             (click)="toolExec($event, true, messageGroup().messages.at(-1)?.contents?.at(-1))" title="実行">
