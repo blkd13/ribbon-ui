@@ -67,7 +67,7 @@ export class BoxComponent implements OnInit {
   // readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
 
   item?: BoxApiFolder;
-  boxOriginUri = environment.boxOriginUri;
+  boxOriginUri: string = '';
 
   collectionList?: BoxApiCollectionList;
 

@@ -12,7 +12,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { AuthService, OAuthAccount } from '../../services/auth.service';
-import { environment } from '../../../environments/environment';
 import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { GService } from '../../services/g.service';
@@ -35,11 +34,13 @@ export class ApiKeyManagerDialogComponent implements OnInit {
   readonly authServices: AuthService = inject(AuthService);
   readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
 
-  apiLabelForm: FormGroup;
-  apiKeyForm: FormGroup;
+  apiLabelForm!: FormGroup;
+  apiKeyForm!: FormGroup;
   hideKey = true;
 
-  providerGroups = environment.apiKeyProviders;
+  firstProviderValue: string = '';
+
+  apiProviderGroupedKeys: string[] = [];
   apiProviderGroupedList: { [type: string]: ExtApiProviderEntity[] } = {};
 
   apiKeys: OAuthAccount[] = [];
@@ -53,6 +54,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
         this.apiProviderGroupedList = apiProviderList.filter(obj => obj.authType === ExtApiProviderAuthType.APIKey).reduce((acc: { [type: string]: ExtApiProviderEntity[] }, apiProvider: ExtApiProviderEntity) => {
           const type = apiProvider.type;
           if (!acc[type]) {
+            this.apiProviderGroupedKeys.push(type);
             acc[type] = [];
           }
           acc[type].push(apiProvider);
@@ -66,18 +68,18 @@ export class ApiKeyManagerDialogComponent implements OnInit {
         this.snackBar.open(`APIプロバイダの取得に失敗しました。`, 'close', { duration: 3000 });
       },
       complete: () => {
+        const apiProvider0 = this.apiProviderGroupedList[this.apiProviderGroupedKeys[0]][0];
+        this.firstProviderValue = `${apiProvider0.type}-${apiProvider0.name}`;
+
+        this.apiLabelForm = this.fb.group({
+          label: ['', Validators.required]
+        });
+        this.apiKeyForm = this.fb.group({
+          provider: [this.firstProviderValue, Validators.required],
+          key: ['', Validators.required]
+        });
         console.log('complete');
       }
-    });
-
-
-
-    this.apiLabelForm = this.fb.group({
-      label: ['', Validators.required]
-    });
-    this.apiKeyForm = this.fb.group({
-      provider: [this.providerGroups[0].value, Validators.required],
-      key: ['', Validators.required]
     });
   }
 
@@ -115,7 +117,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           this.loadApiKeys();
           // リセット時に初期値をセットすることで、バリデーションエラーを回避する
           this.apiKeyForm.reset({
-            provider: this.providerGroups[0].value + (this.providerGroups[0].providers[0].id ? ('-' + this.providerGroups[0].providers[0].id) : ''),
+            provider: this.firstProviderValue,
             key: ''
           });
           // フォームの状態をクリアする

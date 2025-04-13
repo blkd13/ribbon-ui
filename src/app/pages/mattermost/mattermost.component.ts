@@ -79,7 +79,7 @@ export class MattermostComponent implements OnInit, OnDestroy {
   copyToClipBoard = DomUtils.copyToClipboard;
   title: string = '';
 
-  mattermostOriginUri = environment.mattermostOriginUri;
+  mattermostOriginUri: string = '';
   mmTeamList: MattermostTeamForView[] = [];
   mmTeamMas: { [key: string]: MattermostTeamForView } = {};
   mmChannelList: MattermostChannelForView[] = [];

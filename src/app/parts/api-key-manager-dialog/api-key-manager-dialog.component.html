@@ -27,7 +27,7 @@
         </mat-card-content>
     </mat-card>
 
-    @if((apiProviderGroupedList|keyvalue).length > 0){
+    @if((apiProviderGroupedKeys).length > 0){
     <mat-card class="mb-6">
         <mat-card-header>
             <mat-card-title>他システムのAPI鍵を登録する(登録時に暗号化されます)</mat-card-title>
@@ -37,11 +37,11 @@
                 <mat-form-field appearance="outline" class="w-80">
                     <mat-label>プロバイダー</mat-label>
                     <mat-select formControlName="provider">
-                        @for(providerGroup of apiProviderGroupedList|keyvalue;track $index){
-                        <mat-optgroup [label]="providerGroup.key">
-                            @for(provider of providerGroup.value;track $index){
-                            <mat-option [value]="providerGroup.value+'-'+provider.id">
-                                {{providerGroup.key}}{{provider.label?'('+provider.label+')':''}}
+                        @for(key of apiProviderGroupedKeys;track $index){
+                        <mat-optgroup [label]="key">
+                            @for(provider of apiProviderGroupedList[key];track $index){
+                            <mat-option [value]="provider.type+'-'+provider.name">
+                                {{provider.label}}
                             </mat-option>
                             }
                         </mat-optgroup>
