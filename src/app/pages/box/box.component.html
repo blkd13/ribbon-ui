@@ -3,7 +3,7 @@
         <div class="p-4">
             <app-app-menu></app-app-menu>
         </div>
-        <a class="unstyled-link p-4" [routerLink]="['/box','folder','0']">
+        <a class="unstyled-link p-4" [routerLink]="['/','box',providerName,'folder','0']">
             <button mat-button>
                 <mat-icon>folder</mat-icon>
                 すべてのファイル
@@ -37,7 +37,7 @@
 
                     @if(entry.items.entries.length>0){
                     @for(item of entry.items.entries;track $index) {
-                    <a [routerLink]="['/box','folder',item.id]" style="width: 280px;"
+                    <a [routerLink]="['/','box',providerName,'folder',item.id]" style="width: 280px;"
                         class="unstyled-link flex items-center p-2 pr-0" [title]="item.name">
                         @if(item.type==='folder'){
                         <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:item}"></ng-container>
@@ -105,7 +105,7 @@
                         @for(entry of boxSearchResult.entries;track $index){
 
                         @if(entry.type === 'folder'){
-                        <a class="unstyled-link" mat-menu-item [routerLink]="['/box','folder',entry.id]"
+                        <a class="unstyled-link" mat-menu-item [routerLink]="['/','box',providerName,'folder',entry.id]"
                             (click)="searchKeyword='';boxSearchResult=undefined;move($event, entry.id)">
                             <div class="p-2">
                                 <div class="flex items-center">
@@ -189,7 +189,8 @@
             </button>
             @for(index of [-2, -1];track $index){
             @if(item.path_collection.entries.at(index); as entry) {
-            <a class="unstyled-link line" [routerLink]="['/box','folder',entry.id]" [title]="entry.name">
+            <a class="unstyled-link line" [routerLink]="['/','box',providerName,'folder',entry.id]"
+                [title]="entry.name">
                 {{entry.name}}
             </a>
             /
@@ -208,7 +209,7 @@
         <mat-menu #onTreeList="matMenu">
             @for(entry of item.path_collection.entries;track $index){
             <!-- click stopImmediatePropagation()しなくてもよいか？ -->
-            <a [routerLink]="['/box','folder',entry.id]" class="unstyled-link line" mat-menu-item>
+            <a [routerLink]="['/','box',providerName,'folder',entry.id]" class="unstyled-link line" mat-menu-item>
                 {{entry.name}}
             </a>
             }
@@ -221,8 +222,8 @@
             @for(entry of item.item_collection.entries;track $index) {
 
             @if(entry.type === 'folder'){
-            <a [routerLink]="['/box','folder',entry.id]" class="unstyled-link flex justify-between items-center p-2"
-                [title]="entry.name">
+            <a [routerLink]="['/','box',providerName,'folder',entry.id]"
+                class="unstyled-link flex justify-between items-center p-2" [title]="entry.name">
                 <div class="flex items-center gap-2 p-2">
                     <ng-container *ngTemplateOutlet="folderIconTmpl; context:{$implicit:entry}"></ng-container>
                     <div>{{entry.name}}</div>
@@ -303,7 +304,7 @@
         </div>
         <div (click)="stopImmediatePropagation($event)">
             @if(entry.type==='file'){
-            <a [href]="'/api/user/oauth/api/box/box/2.0/files/'+entry.id+'/content'" target="_blank"
+            <a [href]="'/api/user/oauth/api/custom-api/box/'+providerName+'/2.0/files/'+entry.id+'/content'" target="_blank"
                 (click)="$event.stopImmediatePropagation()" matTooltip="Download">
                 <button mat-icon-button>
                     <mat-icon color="primary">download</mat-icon>
@@ -339,7 +340,7 @@
     @if(fileIconType==='image') {
     <!-- imageの時はローディング中の時は両方表示、結果が出たらどっちか表示 -->
     @if(thumbnailStatusMas[entry.id]!=='error'){
-    <img src="/api/user/oauth/api/proxy/box/2.0/files/{{entry.id}}/thumbnail.png" class="w-6 h-6"
+    <img src="/api/user/oauth/api/proxy/box/{{providerName}}/2.0/files/{{entry.id}}/thumbnail.png" class="w-6 h-6"
         (load)="thumbnailStatusMas[entry.id]='fine'" (error)="thumbnailStatusMas[entry.id]='error'"
         [hidden]="!thumbnailStatusMas[entry.id]">
     }

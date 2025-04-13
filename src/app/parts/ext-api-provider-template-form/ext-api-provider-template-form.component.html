@@ -1,0 +1,180 @@
+<div class="container">
+    <h2>API Provider Templates</h2>
+    <div class="layout-container">
+        <!-- 左側：テーブル表示 -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>Provider Templates</h3>
+                <button mat-raised-button type="button" class="btn btn-sm btn-primary"
+                    (click)="createNew()">新規登録</button>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (template of providerTemplates; track $index) {
+                    <tr [class.selected]="form.value.id === template.id" (click)="selectProvider(template)">
+                        <td>{{ template.name }}</td>
+                        <td class="description-cell">{{ template.description }}</td>
+                        <td class="actions-cell">
+                            <button mat-icon-button class="mr-5"
+                                (click)="selectProvider(template); $event.stopPropagation();">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+                            <button mat-icon-button class="mr-5"
+                                (click)="deleteProvider(template.id); $event.stopPropagation();">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 右側：編集フォーム -->
+        @if(isFormVisible){
+        <div class="form-container">
+            <div class="form-header">
+                <h3>{{ isEditMode ? 'Edit Provider Template' : 'New Provider Template' }}</h3>
+                <button mat-icon-button type="button" (click)="closeForm()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </div>
+
+            <form [formGroup]="form" (ngSubmit)="register()">
+                {{form.value.authType}}
+                <!-- AuthType Selection -->
+                <div class="form-group">
+                    <label for="authType">Authorization Type <span class="required">*</span></label>
+                    <mat-button-toggle-group name="authType" aria-label="authType" formControlName="authType"
+                        (valueChange)="updateValidatorsBasedOnType($event)">
+                        <mat-button-toggle [value]="'OAuth2'">OAuth2</mat-button-toggle>
+                        <mat-button-toggle [value]="'APIKey'">APIKey</mat-button-toggle>
+                    </mat-button-toggle-group>
+                    @if(hasError('authType')){
+                    <div class="error-message">{{ getErrorMessage('authType') }}</div>
+                    }
+                </div>
+
+                @if(form.value.authType){
+                <!-- Name (Required for both) -->
+                <div class="form-group">
+                    <label for="name">Name <span class="required">*</span></label>
+                    <input id="name" type="text" formControlName="name" class="form-control"
+                        [ngClass]="{'invalid': hasError('name')}">
+                    @if(hasError('name')){
+                    <div class="error-message">{{ getErrorMessage('name') }}</div>
+                    }
+                </div>
+
+                <!-- Path User Info (Required for both) -->
+                <div class="form-group">
+                    <label for="pathUserInfo">Path User Info <span class="required">*</span></label>
+                    <input id="pathUserInfo" type="text" formControlName="pathUserInfo" class="form-control"
+                        [ngClass]="{'invalid': hasError('pathUserInfo')}" placeholder="e.g., /api/v4/user">
+                    @if(hasError('pathUserInfo')){
+                    <div class="error-message">{{ getErrorMessage('pathUserInfo') }}</div>
+                    }
+                </div>
+
+                <!-- URI Base Auth - Required for APIKey, optional for OAuth2 -->
+                <div class="form-group">
+                    <label for="uriBaseAuth">URI Base Auth
+                        @if(form.value.authType === 'APIKey'){<span class="required">*</span>}
+                    </label>
+                    <input id="uriBaseAuth" type="text" formControlName="uriBaseAuth" class="form-control"
+                        [ngClass]="{'invalid': hasError('uriBaseAuth')}"
+                        placeholder="e.g., https://example.com/api-key">
+                    @if(hasError('uriBaseAuth')){<div class="error-message">{{ getErrorMessage('uriBaseAuth') }}</div>}
+                </div>
+
+                <!-- OAuth2 specific fields -->
+                @if(form.value.authType === 'OAuth2'){
+                <div formGroupName="oAuth2Config">
+                    <!-- Path Authorize (Required for OAuth2) -->
+                    <div class="form-group">
+                        <label for="pathAuthorize">Path Authorize <span class="required">*</span></label>
+                        <input id="pathAuthorize" type="text" formControlName="pathAuthorize" class="form-control"
+                            [ngClass]="{'invalid': hasError('pathAuthorize', 'oAuth2Config')}"
+                            placeholder="e.g., /oauth/authorize">
+                        @if(hasError('pathAuthorize', 'oAuth2Config')){
+                        <div class="error-message">{{ getErrorMessage('pathAuthorize', 'oAuth2Config') }}</div>
+                        }
+                    </div>
+
+                    <!-- Path Access Token (Required for OAuth2) -->
+                    <div class="form-group">
+                        <label for="pathAccessToken">Path Access Token <span class="required">*</span></label>
+                        <input id="pathAccessToken" type="text" formControlName="pathAccessToken" class="form-control"
+                            [ngClass]="{'invalid': hasError('pathAccessToken', 'oAuth2Config')}"
+                            placeholder="e.g., /oauth/token">
+                        @if(hasError('pathAccessToken', 'oAuth2Config')){
+                        <div class="error-message">{{ getErrorMessage('pathAccessToken', 'oAuth2Config') }}</div>
+                        }
+                    </div>
+
+                    <!-- Scope (Required for OAuth2) -->
+                    <div class="form-group">
+                        <label for="scope">Scope <span class="required">*</span></label>
+                        <input id="scope" type="text" formControlName="scope" class="form-control"
+                            [ngClass]="{'invalid': hasError('scope', 'oAuth2Config')}"
+                            placeholder="e.g., api read_api read_user openid read_repository">
+                        @if(hasError('scope', 'oAuth2Config')){
+                        <div class="error-message">{{ getErrorMessage('scope', 'oAuth2Config') }}</div>
+                        }
+                    </div>
+
+                    <!-- Redirect URI (Required for OAuth2) -->
+                    <div class="form-group">
+                        <label for="redirectUri">Redirect URI <span class="required">*</span></label>
+                        <input id="redirectUri" type="text" formControlName="redirectUri" class="form-control"
+                            [ngClass]="{'invalid': hasError('redirectUri', 'oAuth2Config')}"
+                            placeholder="e.g., http://localhost:4200/api/public/oauth/callback">
+                        @if(hasError('redirectUri', 'oAuth2Config')){
+                        <div class="error-message">{{ getErrorMessage('redirectUri', 'oAuth2Config') }}</div>
+                        }
+                    </div>
+
+                    <!-- Post Type (Required for OAuth2) -->
+                    <div class="form-group">
+                        <label for="postType">Post Type <span class="required">*</span></label>
+                        <select id="postType" formControlName="postType" class="form-control"
+                            [ngClass]="{'invalid': hasError('postType', 'oAuth2Config')}">
+                            <option value="json">JSON</option>
+                            <option value="params">Params</option>
+                            <!-- <option value="form">Form</option> -->
+                        </select>
+                        @if(hasError('postType', 'oAuth2Config')){
+                        <div class="error-message">{{ getErrorMessage('postType', 'oAuth2Config') }}</div>
+                        }
+                    </div>
+                </div>
+                }
+
+                <!-- Description (Optional) -->
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" formControlName="description" class="form-control"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary" mat-raised-button>
+                        {{ isEditMode ? 'Update' : 'Register' }}
+                    </button>
+                    <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
+                        Cancel
+                    </button>
+                </div>
+                }
+            </form>
+        </div>
+        }
+    </div>
+</div>

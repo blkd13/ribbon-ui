@@ -349,13 +349,13 @@
               <mat-icon>send</mat-icon>
             </button>
             } @else if(messageService.messageGroupMas[messageGroupId].role==='assistant'){
-            <!-- これはまだちょっと難しい -->
             <button mat-icon-button class="pl-6 sgl-btn" color="primary"
               (click)="appendMessageGroup(thread.id, messageGroupId)">
               <mat-icon>add_circle</mat-icon>
             </button>
             } @else {
             }
+            <div style="min-height: 200px;"></div>
             }
 
           </div>
@@ -405,8 +405,6 @@
       </div>
       }
       -->
-      <div class="spacer" style="min-height: 200px;">
-      </div>
     </div>
     }
 

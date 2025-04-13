@@ -1,56 +1,25 @@
 import { AuthService, ExtApiProviderType } from './../services/auth.service';
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, ActivatedRoute } from '@angular/router';
+import { CanActivateFn, Router, ActivatedRoute, ActivatedRouteSnapshot } from '@angular/router';
 import { ProjectService, TeamService, ThreadService } from '../services/project.service';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
 import { UserRole } from '../models/models';
 import { GService } from '../services/g.service';
 
-// export const oAuthGuardGenerator = (oAuthProvider: OAuth2Provider): CanActivateFn => {
-//   const guardFunc: CanActivateFn = (route, state) => {
-//     const authService: AuthService = inject(AuthService);
-//     // const router = inject(Router);
-//     console.log(route);
-//     return authService.getOAuthAccount(oAuthProvider).pipe(
-//       map(oAuthAccount => {
-//         console.log(route);
-//         authService.isOAuth2Connected(oAuthProvider, 'user-info', route.url.toString()).subscribe({
-//           next: (res) => {
-//             console.log(res);
-//           },
-//           error: (err) => {
-//             console.log(location.href);
-//             console.error(err);
-//             // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
-//             location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
-//           },
-//         });
-//         return true;
-//       }),
-//       catchError(err => {
-//         console.log('OAuth2ログインが必要です');
-//         // ログインされていなかったらOAuth2のログイン画面に飛ばす（Angularの外に出る）
-//         location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
-//         console.error(err);
-//         return of(false);
-//       }),
-//     );
-//   };
-//   return guardFunc;
-// }
-
 export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanActivateFn => {
   const guardFunc: CanActivateFn = (route, state) => {
     const authService: AuthService = inject(AuthService);
     const g: GService = inject(GService);
     console.log(route);
-    return authService.getOAuthAccount(oAuthProviderType).pipe(
+    const providerName = route.paramMap.get('providerName') as string;
+    const provider = `${oAuthProviderType}-${providerName}`;
+    return authService.getOAuthAccount(oAuthProviderType, providerName).pipe(
       // getOAuthAccount の結果が返ってきたら
       // isOAuth2Connected を呼び出して結果を返すまで待つ
       switchMap(oAuthAccount => {
         console.log(route);
-        return authService.isOAuth2Connected(oAuthProviderType, 'user-info', route.url.toString()).pipe(
+        return authService.isOAuth2Connected(oAuthProviderType, providerName, 'user-info', route.url.toString()).pipe(
           map(res => {
             console.log(res);
             // 成功時にはtrueを返す
@@ -61,7 +30,7 @@ export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanA
             console.error(err);
             // 飛ばす機能をinterceptorに実装したので飛ばさない。本当にこれでいいかは再考。
             // // ログインされていなかったらOAuth2のログイン画面に飛ばす
-            // location.href = `/api/oauth/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+            // location.href = `/api/public/oauth/${g.info.user.tenantKey}/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
             return of(false);
           }),
         );
@@ -69,7 +38,7 @@ export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanA
       catchError(err => {
         console.log('OAuth2ログインが必要です');
         // getOAuthAccount 自体が失敗した場合もログイン画面へ飛ばす
-        location.href = `/api/oauth/${oAuthProviderType}/login?fromUrl=${encodeURIComponent(location.href)}&tenantKey=${g.info.user.tenantKey}`;
+        location.href = `/api/public/oauth/${g.info.user.tenantKey}/${provider}/login?fromUrl=${encodeURIComponent(location.href)}`;
         console.error(err);
         return of(false);
       }),
@@ -79,33 +48,23 @@ export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanA
   return guardFunc;
 }
 
-
-export const loginGuard: CanActivateFn = (route, state) => {
-  const authService: AuthService = inject(AuthService);
-  const router = inject(Router);
-  return authService.getUser().pipe(map(user => {
-    if (user) {
-      return true;
-    } else {
-      router.navigate(['/login']);
-      return false;
-    }
-  }));
-};
-
-export const departmentGuard: CanActivateFn = (route, state) => {
-  const authService: AuthService = inject(AuthService);
-  const router = inject(Router);
-  return authService.getUser().pipe(
-    map(user => {
-      if ([UserRole.Admin, UserRole.Maintainer].includes(user.role)) {
-        return true;
-      } else {
-        router.navigate(['/home']);
-        return false;
-      }
-    },),
-  );
+export const loginGuardGenerator = (role: UserRole, navigate: string): CanActivateFn => {
+  const rolePriority = [UserRole.User, UserRole.Admin, UserRole.Maintainer];
+  const roles = rolePriority.splice(rolePriority.indexOf(role));
+  return (route, state) => {
+    const authService: AuthService = inject(AuthService);
+    const router = inject(Router);
+    return authService.getUser().pipe(
+      map(user => {
+        if (roles.includes(user.role)) {
+          return true;
+        } else {
+          router.navigate(['/', navigate]);
+          return false;
+        }
+      },),
+    );
+  }
 };
 
 export const teamGuard: CanActivateFn = (route, state) => {

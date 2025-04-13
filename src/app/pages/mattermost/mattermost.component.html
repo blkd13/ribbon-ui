@@ -10,7 +10,7 @@
             <!-- ダイレクト用のチームは必要かと思ったけど使ってみたら要らなかったので消す。でもデータごと消すと影響が大きいのでフィルター掛ける。-->
             @if(mmTeam&&mmTeam.display_name&&mmTeam.id!=='direct'){
             <!-- TODO 本来は mmTeam が null になってるのはおかしいので後で調べるべき -->
-            <a [routerLink]="['/mattermost', mmTeam.id, 'default']" class="unstyled-link" style="display: inherit;">
+            <a [routerLink]="['/', 'mattermost', providerName, mmTeam.id, 'default']" class="unstyled-link" style="display: inherit;">
                 <app-mm-team-logo [mmTeam]="mmTeam" [ngClass]="{'selected': selectedTeam===mmTeam}"
                     [title]="mmTeam?.display_name">
                 </app-mm-team-logo>
@@ -306,7 +306,7 @@
     <a class="flex items-center relative h-9 pl-3 text-gray-300 channel-container cursor-pointer unstyled-link"
         [ngClass]="{unread: messageCountMas[channelId] && messageCountMas[channelId].unread_count && messageCountMas[channelId].unread_count>0, selected: radioSelectedId===channelId}"
         [title]="mmChannelMas[channelId].display_name||mmChannelMas[channelId].name"
-        [routerLink]="['/mattermost', teamId, channelId]">
+        [routerLink]="['/', 'mattermost', providerName, teamId, channelId]">
         <div class="channel">
             <div style="width: 20px;text-align: center;">
                 @switch (mmChannelMas[channelId].type) {

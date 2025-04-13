@@ -22,24 +22,26 @@
     <h2 class="login-title">{{ 'LOGIN' | translate }}</h2>
     <ng-container *ngTemplateOutlet="errorArea"></ng-container>
     <form [formGroup]="loginForm" class="login-form" (ngSubmit)="onSubmit()">
-
-        @for(group of curEnv.oAuthProviders;track $index){
-        @if(group.providers.length===1){
-        <a class="login-button federation" href="/api/oauth/{{group.value+(group.providers[0].id?('-'+group.providers[0].id):'')}}/login">
-            <img src="./image/{{group.value}}-logo.svg">{{group.label}}{{group.providers[0].id?('('+group.providers[0].id+')'):''}}認証
+        @for(key of apiProviderKeys;track $index){
+        @let provider=apiProviderGroupedList[key][0];
+        @if(apiProviderGroupedList[key].length===1){
+        <a class="login-button federation"
+            href="/api/public/oauth/{{g.tenantKey}}/{{provider.type}}-{{provider.name}}/login">
+            <img src="./image/{{provider.type}}-logo.svg">[{{provider.type}}] {{provider.label}}
         </a>
         } @else {
-          <mat-expansion-panel style="background: transparent;">
+        <mat-expansion-panel style="background: transparent;">
             <mat-expansion-panel-header class="login-button federation" style="border-radius: 55px;">
-              <img src="./image/{{group.value}}-logo.svg" class="mr-4">{{group.label}}認証
-              <!-- <mat-panel-title>{{group.label}}</mat-panel-title> -->
+                <img src="./image/{{provider.type}}-logo.svg" class="mr-4">{{provider.type}}
+                <!-- <mat-panel-title>{{group.label}}</mat-panel-title> -->
             </mat-expansion-panel-header>
-            @for(provider of group.providers;track $index){
-              <a class="login-button federation" href="/api/oauth/{{group.value+(provider.id?('-'+provider.id):'')}}/login">
-                  <img src="./image/{{group.value}}-logo.svg">{{group.label}}{{provider.id?('('+provider.id+')'):''}}認証
-              </a>
-              }
-          </mat-expansion-panel>
+            @for(provider of apiProviderGroupedList[key];track $index){
+            <a class="login-button federation"
+                href="/api/public/oauth/{{g.tenantKey}}/{{provider.type}}-{{provider.name}}/login">
+                <img src="./image/{{provider.type}}-logo.svg">{{provider.label}}
+            </a>
+            }
+        </mat-expansion-panel>
         }
         }
 

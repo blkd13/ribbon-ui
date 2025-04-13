@@ -13,6 +13,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { AuthService, OAuthAccount } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
+import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { GService } from '../../services/g.service';
 
 
 @Component({
@@ -28,20 +31,47 @@ export class ApiKeyManagerDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  readonly g: GService = inject(GService);
+  readonly authServices: AuthService = inject(AuthService);
+  readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
 
   apiLabelForm: FormGroup;
   apiKeyForm: FormGroup;
   hideKey = true;
 
   providerGroups = environment.apiKeyProviders;
-
-  readonly authServices: AuthService = inject(AuthService);
+  apiProviderGroupedList: { [type: string]: ExtApiProviderEntity[] } = {};
 
   apiKeys: OAuthAccount[] = [];
   // displayedColumns: string[] = ['provider', 'label', 'createdAt', 'updatedAt', 'actions'];
   displayedColumns: string[] = ['provider', 'createdAt', 'updatedAt', 'actions'];
 
   constructor() {
+
+    this.extApiProviderService.getApiProviders().subscribe({
+      next: (apiProviderList) => {
+        this.apiProviderGroupedList = apiProviderList.filter(obj => obj.authType === ExtApiProviderAuthType.APIKey).reduce((acc: { [type: string]: ExtApiProviderEntity[] }, apiProvider: ExtApiProviderEntity) => {
+          const type = apiProvider.type;
+          if (!acc[type]) {
+            acc[type] = [];
+          }
+          acc[type].push(apiProvider);
+          return acc;
+        }, {});
+        // console.log(this.apiProviderGroupedList);
+        console.log(apiProviderList);
+      },
+      error: (error) => {
+        console.log(error);
+        this.snackBar.open(`APIプロバイダの取得に失敗しました。`, 'close', { duration: 3000 });
+      },
+      complete: () => {
+        console.log('complete');
+      }
+    });
+
+
+
     this.apiLabelForm = this.fb.group({
       label: ['', Validators.required]
     });

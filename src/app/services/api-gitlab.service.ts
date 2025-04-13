@@ -11,6 +11,7 @@ export class ApiGitlabService {
   private readonly proxyBase = `/user/oauth/api/proxy`;
 
   groups(gitlabProvider: string, id?: number, childType?: 'projects' | 'subgroups'): Observable<GitLabGroupListResponse> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     let tail = '';
     const per_page = 100;
     if (id) {
@@ -22,6 +23,7 @@ export class ApiGitlabService {
   }
 
   usersChildren(gitlabProvider: string, id?: number, query?: string): Observable<(GitLabUser | GitLabProject)[]> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     // /users/:user_id/projects
     if (id) {
       return this.http.get<GitLabProject[]>(`${this.proxyBase}/${gitlabProvider}/api/v4/users/${id}/projects`);
@@ -32,6 +34,7 @@ export class ApiGitlabService {
   }
 
   groupChildren(gitlabProvider: string, groupId?: number): Observable<(GitLabGroup | GitLabProject)[]> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     const per_page = 100;
     let tail = '';
     if (groupId) {
@@ -72,12 +75,14 @@ export class ApiGitlabService {
    * 例: 具体的な GitLab のブランチ取得エンドポイント
    */
   branchesAll(gitlabProvider: string, projectId: number): Observable<GitlabBranch[]> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     const initialUrl = `${this.proxyBase}/${gitlabProvider}/api/v4/projects/${projectId}/repository/branches?per_page=100&page=1`;
     // 上の汎用関数を使う
     return this.fetchAllPages<GitlabBranch>(initialUrl);
   }
 
   projects(gitlabProvider: string, groupId?: number, params: { page?: number; per_page?: number, search?: string } = {}): Observable<GitLabProjectListResponse> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     const group = groupId === undefined ? '' : `/groups/${groupId}`;
     const url = `${this.proxyBase}/${gitlabProvider}/api/v4${group}/projects`;
     if (params.search === undefined) {
@@ -87,18 +92,22 @@ export class ApiGitlabService {
   }
 
   branches(gitlabProvider: string, projectId: number): Observable<GitlabBranch[]> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     const url = `${this.proxyBase}/${gitlabProvider}/api/v4/projects/${projectId}/repository/branches`;
     return this.http.get<GitlabBranch[]>(url);
   }
   tags(gitlabProvider: string, projectId: number): Observable<GitlabTag[]> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     const url = `${this.proxyBase}/${gitlabProvider}/api/v4/projects/${projectId}/repository/tags`;
     return this.http.get<GitlabTag[]>(url);
   }
   commits(gitlabProvider: string, projectId: number): Observable<GitlabCommit[]> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     const url = `${this.proxyBase}/${gitlabProvider}/api/v4/projects/${projectId}/repository/commits`;
     return this.http.get<GitlabCommit[]>(url);
   }
   fetchCommit(gitlabProvider: string, gitlabProjectId: number, projectInDto: { projectId: string, }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     let params = '';
     if ((type === undefined) !== (id === undefined)) {
       throw new Error('Both type and id must be specified');
@@ -106,7 +115,7 @@ export class ApiGitlabService {
     } else {
       params = `/${type}/${id}`;
     }
-    const url = `/user/oauth/api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
+    const url = `/user/oauth/api/custom-api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
     return this.http.post<RootObject>(url, projectInDto);
   }
   // projectClone(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
@@ -118,6 +127,7 @@ export class ApiGitlabService {
   //   return this.http.get<GitLabProjectListResponse>(url);
   // }
   projectFileDownload(gitlabProvider: string, gitlabProjectId: number, projectInDto: { projectId: string, systemPrompt: string }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
     let params = '';
     if ((type === undefined) !== (id === undefined)) {
       throw new Error('Both type and id must be specified');
@@ -125,7 +135,7 @@ export class ApiGitlabService {
     } else {
       params = `/${type}/${id}`;
     }
-    const url = `/user/oauth/api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
+    const url = `/user/oauth/api/custom-api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
     return this.http.post<RootObject>(url, projectInDto);
   }
 }

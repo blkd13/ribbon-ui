@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TenantService } from '../../services/tenant.service';
 import { TenantEntity, ExtApiProviderEntity } from '../../models/models';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { CommonModule } from '@angular/common';
+import { GService } from '../../services/g.service';
 
 @Component({
   selector: 'app-tenant-detail',
@@ -12,6 +13,9 @@ import { CommonModule } from '@angular/common';
   styleUrl: './tenant-detail.component.scss'
 })
 export class TenantDetailComponent implements OnInit {
+
+  readonly g: GService = inject(GService);
+
   tenant: TenantEntity | null = null;
   apiProviders: ExtApiProviderEntity[] = [];
   isLoading = false;
@@ -27,11 +31,16 @@ export class TenantDetailComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
-      const id = params.get('id');
-      if (id) {
-        this.loadTenant(id);
-        this.loadApiProviders(id);
+    this.route.paramMap.subscribe({
+      next: params => {
+        const id = params.get('id');
+        if (id) {
+          this.loadTenant(id);
+          this.loadApiProviders();
+        }
+      },
+      error: err => {
+        console.error('Route param error', err);
       }
     });
   }
@@ -40,46 +49,46 @@ export class TenantDetailComponent implements OnInit {
     this.isLoading = true;
     this.error = null;
 
-    this.tenantService.getTenantById(id).subscribe(
-      tenant => {
+    this.tenantService.getTenantById(id).subscribe({
+      next: tenant => {
         this.tenant = tenant;
         this.isLoading = false;
       },
-      err => {
+      error: error => {
         this.error = 'テナント情報の取得に失敗しました';
         this.isLoading = false;
-        console.error(err);
+        console.error(error);
       }
-    );
+    });
   }
 
-  private loadApiProviders(tenantKey: string): void {
+  private loadApiProviders(): void {
     this.isLoadingProviders = true;
 
-    this.extApiProviderService.getApiProviders(tenantKey).subscribe(
-      providers => {
+    this.extApiProviderService.getApiProviders().subscribe({
+      next: providers => {
         this.apiProviders = providers;
         this.isLoadingProviders = false;
       },
-      err => {
-        console.error('APIプロバイダー情報の取得に失敗しました', err);
+      error: error => {
+        console.error('APIプロバイダー情報の取得に失敗しました', error);
         this.isLoadingProviders = false;
-      }
-    );
+      },
+    });
   }
 
   toggleTenantActive(): void {
     if (!this.tenant) return;
 
     const newState = !this.tenant.isActive;
-    this.tenantService.toggleTenantActive(this.tenant.id, newState).subscribe(
-      updatedTenant => {
+    this.tenantService.toggleTenantActive(this.tenant.id, newState).subscribe({
+      next: updatedTenant => {
         this.tenant = updatedTenant;
       },
-      err => {
-        console.error('テナントのステータス変更に失敗しました', err);
+      error: error => {
+        console.error('テナントのステータス変更に失敗しました', error);
       }
-    );
+    });
   }
 
   navigateToEdit(): void {
@@ -107,14 +116,16 @@ export class TenantDetailComponent implements OnInit {
     if (!this.tenant) return;
 
     if (confirm(`テナント "${this.tenant.name}" を削除してもよろしいですか？この操作は元に戻せません。`)) {
-      this.tenantService.deleteTenant(this.tenant.id).subscribe(
-        () => {
+      this.tenantService.deleteTenant(this.tenant.id).subscribe({
+        next: () => {
+          alert('テナントが削除されました。');
           this.router.navigate(['/tenants']);
         },
-        err => {
-          console.error('テナントの削除に失敗しました', err);
-          this.error = 'テナントの削除に失敗しました';
+        error: error => {
+          console.error('テナントの削除に失敗しました', error);
+          alert('テナントの削除に失敗しました。');
         }
+      }
       );
     }
   }

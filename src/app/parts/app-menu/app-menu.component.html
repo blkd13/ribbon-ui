@@ -11,38 +11,59 @@
         <mat-icon>chat</mat-icon>
         <span>AIチャット</span>
     </a>
-    <!-- <a mat-menu-item [routerLink]="['/mattermost']">
-        <mat-icon>
-            <img src="./image/mattermost-logo-white.svg">
-        </mat-icon>
-        <span>疑似 Mattermost</span>
-    </a>
-    -->
-    <a mat-menu-item [routerLink]="['/box']">
-        <mat-icon>
-            <img src="./image/box-logo-white.svg">
-        </mat-icon>
-        <span>速い box</span>
-    </a>
-
+    @for(key of groupKeys; track $index) {
+    @if(key === 'git') {
     <button mat-menu-item [matMenuTriggerFor]="gitMenu">
         <mat-icon>
             <img src="./vsc-material-icons/icons/git.svg">
         </mat-icon>
         <span>Gitリポジトリ</span>
     </button>
+    } @else {
+
+    @for(apiProvider of apiProviderGroupedList[key]; track $index) {
+    <a mat-menu-item [routerLink]="['/', key, apiProvider.name]">
+        <mat-icon>
+            <img src="./image/{{key}}-logo-white.svg">
+        </mat-icon>
+        <span>{{apiProvider.label}}</span>
+    </a>
+    }
+    }
+
+    }
+
+    @if(['User','Admin','Maintainer'].indexOf(user.role)>0){
+    <a mat-menu-item [routerLink]="['/', 'admin', 'ext-api-provider']">
+        <mat-icon>settings</mat-icon>
+        <span>APIプロバイダー設定</span>
+    </a>
+    }
+
+    @if(isDepartmentAdmin){
+    <a mat-menu-item [routerLink]="['/', 'admin', 'department']">
+        <mat-icon>settings</mat-icon>
+        <span>利用状況一覧</span>
+    </a>
+    }
+
+    @if(['User','Admin','Maintainer'].indexOf(user.role)>1){
+    <a mat-menu-item [routerLink]="['/', 'maintainer', 'announcements']">
+        <mat-icon>settings</mat-icon>
+        <span>アナウンス設定</span>
+    </a>
+    }
+
 </mat-menu>
 <mat-menu #gitMenu="matMenu">
-  @for (group of curEnv.oAuthProviders; track $index) {
-  @if(['gitlab', 'gitea'].includes(group.value)){
-  @for (provider of group.providers; track $index) {
-  <a mat-menu-item [routerLink]="['/', group.value+'-'+provider.id]">
-    <mat-icon>
-      <img [src]="'./image/' + group.value + '-logo.svg'" [alt]="group.label + ' logo'">
-    </mat-icon>
-    <span>{{ provider.label }}</span>
-  </a>
-  }
-  }
-  }
+    @for (apiProvider of apiProviderGroupedList['git']; track $index) {
+    @if(['gitlab', 'gitea'].includes(apiProvider.type)){
+    <a mat-menu-item [routerLink]="['/', apiProvider.type, apiProvider.name]">
+        <mat-icon>
+            <img [src]="'./image/' + apiProvider.type + '-logo.svg'" [alt]="apiProvider.type + ' logo'">
+        </mat-icon>
+        <span>{{ apiProvider.label }}</span>
+    </a>
+    }
+    }
 </mat-menu>

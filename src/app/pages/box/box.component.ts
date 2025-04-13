@@ -35,6 +35,7 @@ import { getFileIcon, getFolderIcon } from '../../ext/vscode-material-icon-theme
 import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 
 @Component({
   selector: 'app-box',
@@ -61,6 +62,7 @@ export class BoxComponent implements OnInit {
   // readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
   // readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
   readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
+  readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
   readonly http: HttpClient = inject(HttpClient);
   // readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
 
@@ -76,10 +78,6 @@ export class BoxComponent implements OnInit {
 
   dateFormat = 'yyyy 年 MM 月 dd 日 hh 時 mm 分 ss 秒'; // SSS はどうせ000なので表示しないことにした
   thumbnailStatusMas: { [extension: string]: undefined | 'fine' | 'error' } = {};
-
-  constructor() {
-    this.refreshCollection();
-  }
 
   getVSCodeFileIcon = getFileIcon;
   getVSCodeFolderIcon = getFolderIcon;
@@ -97,17 +95,34 @@ export class BoxComponent implements OnInit {
     });
   }
 
+  providerName: string = 'sample';
   ngOnInit(): void {
     this.activatedRoute.params.subscribe(params => {
-      const { type, id } = params as { type: string, id: string };
+      const { providerName, type, id } = params as { providerName: string, type: string, id: string };
 
-      // パラメータがない場合はルートフォルダを表示
-      this.offset = 0;
-      this.loading = false;
-      this.hasMoreItems = true;
-      this.scrollDebounceTimer = null;
+      this.extApiProviderService.getApiProvider(`box-${providerName}`).subscribe({
+        next: next => {
+          // console.log(next);
+          this.boxOriginUri = next.uriBase;
 
-      this.load(id);
+          // パラメータがない場合はルートフォルダを表示
+          this.offset = 0;
+          this.loading = false;
+          this.hasMoreItems = true;
+          this.scrollDebounceTimer = null;
+
+          this.providerName = providerName;
+          this.apiBoxService.setProviderName(this.providerName);
+
+
+          this.refreshCollection();
+          this.load(id);
+        },
+        error: error => {
+          console.error(error);
+          this.snackBar.open('APIプロバイダの取得に失敗しました', '閉じる', { duration: 3000 });
+        },
+      });
     });
   }
 
@@ -116,7 +131,7 @@ export class BoxComponent implements OnInit {
     const url = new URL(this.boxUrl);
     const paths = url.pathname.split('/');
     if (paths[1] === 'folder') {
-      this.router.navigate(['/box', 'folder', paths[2]]);
+      this.router.navigate(['/', 'box', this.providerName, 'folder', paths[2]]);
     } else {
 
     }
@@ -128,7 +143,7 @@ export class BoxComponent implements OnInit {
     if ($event.ctrlKey || $event.shiftKey || $event.altKey) {
       // メタキーが押されている場合はブラウザのデフォルト動作を行う
     } else {
-      this.router.navigate(['/box', 'folder', itemId]);
+      this.router.navigate(['/', 'box', this.providerName, 'folder', itemId]);
       this.stopImmediatePropagation($event);
     }
     // タブ機能は難しい上にブラウザでやった方がいい気もしてきたので一旦やめた
@@ -236,7 +251,7 @@ export class BoxComponent implements OnInit {
 
   // ファイルクリックハンドラを追加
   onNodeClick(itemId: string): void {
-    this.router.navigate(['/box', 'folder', itemId]);
+    this.router.navigate(['/', 'box', this.providerName, 'folder', itemId]);
   }
 
   boxSearchResult?: BoxApiSearchResults;

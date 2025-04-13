@@ -2,7 +2,7 @@ import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MattermostChannelsCategoriesResponse, MattermostChannelsCategory, MattermostChannelsMembers, MattermostChannelsMembersResponse, MattermostEmoji, MattermostPost, MattermostReaction, MattermostTeamForView, MattermostTimeline, MattermostTimelineChannel, MattermostTimelineService, ToAiFilterType, ToAiIdType } from './../../services/api-mattermost.service';
 import { ApiMattermostService, ChannelPosts, MattermostChannel, MattermostChannelForView, MattermostTeam, MattermostTeamUnread, MattermostThread, MattermostUser, Post, Preference } from '../../services/api-mattermost.service';
-import { ChangeDetectorRef, Component, ElementRef, inject, OnInit, viewChild, viewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, inject, OnDestroy, OnInit, viewChild, viewChildren } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -12,11 +12,8 @@ import { MarkdownModule } from 'ngx-markdown';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 
-import { AuthService } from '../../services/auth.service';
+import { AuthService, OAuthAccount } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
-import { ApiGitlabService } from '../../services/api-gitlab.service';
-import { ApiBoxService } from '../../services/api-box.service';
-import { ApiGiteaService } from '../../services/api-gitea.service';
 import { safeForkJoin } from '../../utils/dom-utils';
 import { catchError, finalize, from, map, mergeMap, Observable, Subscription, of, switchMap, tap, toArray } from 'rxjs';
 import { Utils } from '../../utils';
@@ -45,6 +42,8 @@ import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from 
 import { MmEmojiPickerComponent } from '../../parts/mm-emoji-picker/mm-emoji-picker.component';
 import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
 import { UserService } from '../../services/user.service';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { ExtApiProviderEntity } from '../../models/models';
 
 type InType = 'main' | 'thread';
 type InDtoSub = { message: string, fileList: FullPathFile[] };
@@ -62,18 +61,15 @@ type InDto = Record<InType, InDtoSub>;
   templateUrl: './mattermost.component.html',
   styleUrl: './mattermost.component.scss'
 })
-export class MattermostComponent implements OnInit {
+export class MattermostComponent implements OnInit, OnDestroy {
   readonly authService: AuthService = inject(AuthService);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly router: Router = inject(Router);
   readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly g: GService = inject(GService);
-  readonly apiGitlabService: ApiGitlabService = inject(ApiGitlabService);
   readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
   readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
-  readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
-  readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
   readonly userService: UserService = inject(UserService);
 
   emojiPicker(): void {
@@ -134,75 +130,103 @@ export class MattermostComponent implements OnInit {
   directChannelViewCountDelta = 20;
   directChannelViewCount = this.directChannelViewCountDelta;
 
+  providerName = 'sample';
+
   ngOnInit(): void {
-    // WebSocket接続
-    this.wsConnect();
-    this.isLoading = true;
-    // 主にチームとチャネルと設定の取得。この辺りは更新頻度低いので初回ロードのみにする。
-    this.mattermostInitialize().subscribe({
-      next: next => {
-        this.isLoading = false;
+    let { befProviderName, befTargetTeamId, befTargetChannelId } = {} as { befProviderName: string, befTargetTeamId: string, befTargetChannelId: string };
 
-        // パス変更検知
-        this.activatedRoute.params.subscribe(params => {
-          this.isLoading = true;
-          // 指定されたIDのチームを選択。（指定されたIDが無かったら先頭（0）を選ぶ）
-          const { targetTeamId, targetChannelId } = params as { targetTeamId: string, targetChannelId: string };
-
-          const selectedTeam = this.mmTeamList[Math.max(this.mmTeamList.findIndex(mmTeam => mmTeam.id === targetTeamId), 0)];
-          if (targetChannelId === 'default') {
-            // default の場合はnextのIDを持ってきてルーティング
-            this.selectTeam(selectedTeam).subscribe({
-              next: next => {
-                let nextId = '';
-                if (targetTeamId === 'timeline') {
-                  if (next.length > 0 && next[0].channel_ids.length > 0) {
-                    nextId = next[0].channel_ids[0];
-                  } else {
-                    nextId = 'new-timeline';
-                  }
-                } else {
-                  const category = next.find(o => o.channel_ids.length > 0);
-                  if (category) {
-                    nextId = category.channel_ids[0];
-                  } else {
-                    nextId = 'new-channel';
-                  }
-                }
-                this.router.navigate((['/mattermost', targetTeamId, nextId]));
-                this.isLoading = false;
-              },
-              error: error => {
-                this.isLoading = false;
+    const targetUpdate = (targetTeamId: string, targetChannelId: string) => {
+      const selectedTeam = this.mmTeamList[Math.max(this.mmTeamList.findIndex(mmTeam => mmTeam.id === targetTeamId), 0)];
+      if (targetChannelId === 'default') {
+        // default の場合はnextのIDを持ってきてルーティング
+        this.selectTeam(selectedTeam).subscribe({
+          next: next => {
+            let nextId = '';
+            if (targetTeamId === 'timeline') {
+              if (next.length > 0 && next[0].channel_ids.length > 0) {
+                nextId = next[0].channel_ids[0];
+              } else {
+                nextId = 'new-timeline';
               }
-            });
-          } else {
-            this.radioSelectedId = targetChannelId;
-            //
-            this.selectTeam(selectedTeam)
-              .pipe(
-                switchMap(
-                  next => (targetTeamId === 'timeline'
-                    ? this.selectTimeline(targetChannelId)
-                    : this.selectChannel(targetChannelId)
-                  )))
-              .subscribe({
-                next: next => {
-                  this.isLoading = false;
-                },
-                error: error => {
-                  this.isLoading = false;
-                }
-              });
+            } else {
+              const category = next.find(o => o.channel_ids.length > 0);
+              if (category) {
+                nextId = category.channel_ids[0];
+              } else {
+                nextId = 'new-channel';
+              }
+            }
+            this.router.navigate((['/', 'mattermost', this.providerName, targetTeamId, nextId]));
+            this.isLoading = false;
+          },
+          error: error => {
+            this.isLoading = false;
           }
         });
-      },
-      error: error => {
-        // alert(error);
-        console.error(error);
-        // location.href = `/api/oauth/mattermost/login/mattermost`;
-      },
-    })
+      } else {
+        this.radioSelectedId = targetChannelId;
+        //
+        this.selectTeam(selectedTeam)
+          .pipe(
+            switchMap(
+              next => (targetTeamId === 'timeline'
+                ? this.selectTimeline(targetChannelId)
+                : this.selectChannel(targetChannelId)
+              )))
+          .subscribe({
+            next: next => {
+              this.isLoading = false;
+            },
+            error: error => {
+              this.isLoading = false;
+            }
+          });
+      }
+    };
+
+    // パス変更検知
+    this.activatedRoute.params.subscribe(params => {
+      // 指定されたIDのチームを選択。（指定されたIDが無かったら先頭（0）を選ぶ）
+      const { providerName, targetTeamId, targetChannelId } = params as { providerName: string, targetTeamId: string, targetChannelId: string };
+
+      if (providerName === befProviderName) {
+        // 同じプロバイダ名の場合は、チームとチャネルの変更があったかどうかを確認する。
+        if (targetTeamId === befTargetTeamId && targetChannelId === befTargetChannelId) {
+        } else {
+          targetUpdate(targetTeamId, targetChannelId);
+        }
+      } else {
+        // プロバイダ名が変更された場合は、初期化処理を行う。
+        // providerNameを設定
+        this.providerName = providerName;
+        this.mattermostTimelineService.setProviderName(providerName);
+        this.apiMattermostService.setProviderName(providerName);
+        // WebSocket接続
+        this.wsConnect();
+
+        this.isLoading = true;
+        // 主にチームとチャネルと設定の取得。この辺りは更新頻度低いので初回ロードのみにする。
+        this.mattermostInitialize(providerName).subscribe({
+          next: next => {
+            targetUpdate(targetTeamId, targetChannelId);
+          },
+          error: error => {
+            // alert(error);
+            console.error(error);
+            // location.href = `/api/oauth/mattermost/login/mattermost`;
+          },
+        })
+        befProviderName = providerName;
+      }
+
+      befTargetTeamId = targetTeamId;
+      befTargetChannelId = targetChannelId;
+    });
+  }
+
+  ngOnDestroy(): void {
+    // 気持ちの問題
+    this.apiMattermostService.disconnect();
   }
 
   selectTimeline(mmTimelineId: string): Observable<any> {
@@ -244,10 +268,10 @@ export class MattermostComponent implements OnInit {
     const tlch = this.tlchMas[radioSelectedId];
     switch (tlch.type) {
       case 'timeline':
-        this.router.navigate(['/mattermost', 'timeline', tlch.obj.id]);
+        this.router.navigate(['/', 'mattermost', this.providerName, 'timeline', tlch.obj.id]);
         break;
       case 'channel':
-        this.router.navigate(['/mattermost', 'timeline', tlch.obj.id]);
+        this.router.navigate(['/', 'mattermost', this.providerName, 'timeline', tlch.obj.id]);
         break;
     }
   }
@@ -292,7 +316,7 @@ export class MattermostComponent implements OnInit {
           this.reloadTimeline().subscribe({
             next: _ => {
               this.snackBar.open(`登録しました`, 'close', { duration: 3000 });
-              this.router.navigate(['/mattermost', 'timeline', next.id]);
+              this.router.navigate(['/', 'mattermost', this.providerName, 'timeline', next.id]);
             },
             error: error => {
               this.snackBar.open(`登録に失敗しました。`, 'close', { duration: 3000 });
@@ -996,13 +1020,19 @@ export class MattermostComponent implements OnInit {
       }
     });
   }
+
+  readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
   mmUser!: { id: string, providerUserId: string, userInfo: string };
   //
-  mattermostInitialize(): Observable<boolean> {
+  mattermostInitialize(providerName: string): Observable<boolean> {
     // TODO 本来は pipe->switchMap だけでやらないとダメな気はしている。
-    return this.authService.getOAuthAccountList().pipe(switchMap(next => {
-      const oAuthAccountList = next.oauthAccounts;
-      const mmUser = oAuthAccountList.find(oAuthAccount => oAuthAccount.provider === 'mattermost');
+    ;
+    return safeForkJoin<ExtApiProviderEntity | { oauthAccounts: OAuthAccount[] }>([
+      this.extApiProviderService.getApiProvider(`mattermost-${providerName}`).pipe(tap(next => { this.mattermostOriginUri = next.uriBase; })),
+      this.authService.getOAuthAccountList()
+    ]).pipe(switchMap(next => {
+      const oAuthAccountList = (next[1] as { oauthAccounts: OAuthAccount[] }).oauthAccounts;
+      const mmUser = oAuthAccountList.find(oAuthAccount => oAuthAccount.provider === `mattermost-${providerName}`);
       if (mmUser) {
         this.mmUser = mmUser;
         // mattermost認証済みだったら初回ロード時用のものを全部持ってくる。

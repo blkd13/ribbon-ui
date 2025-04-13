@@ -14,6 +14,10 @@ export class DepartmentService {
     return this.http.get<{ departmentList: Department[] }>('/user/department');
   }
 
+  getDepartmentMemberList(): Observable<{ departmentMemberList: DepartmentMember[] }> {
+    return this.http.get<{ departmentMemberList: DepartmentMember[] }>('/user/department-member');
+  }
+
   getDepartment(): Observable<{ departmentList: { department: DepartmentForView, cost: { [key: string]: Cost }, members: DepartmentMember[] }[] }> {
     return this.http.get<{ departmentList: { department: DepartmentForView, cost: { [key: string]: Cost }, members: DepartmentMember[] }[] }>('/admin/department');
   }
@@ -34,6 +38,13 @@ export class DepartmentService {
       return of({ userList: this.userList });
     }
   }
+}
+
+export interface DepartmentMember {
+  departmentId: string;
+  departmentRole: string;
+  userId: string;
+  name: string;
 }
 
 export enum DepartmentRoleType {

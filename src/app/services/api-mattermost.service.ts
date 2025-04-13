@@ -7,13 +7,26 @@ import { CustomEmoji } from '@mattermost/types/emojis';
 import { Thread, ThreadGroup } from '../models/project-models';
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './file-manager.service';
 import { Utils } from '../utils';
+import { GService } from './g.service';
 
 @Injectable({ providedIn: 'root' })
 export class ApiMattermostService {
 
   private readonly http: HttpClient = inject(HttpClient);
+  readonly g: GService = inject(GService);
 
-  public baseUrl = '/user/oauth/api/proxy/mattermost/api/v4';
+  providerName = 'sample'; // OAuth2プロバイダ名
+  public baseUrl = `/user/oauth/api/proxy/mattermost/${this.providerName}/api/v4`;
+
+  /**
+   * 
+   * @param provider OAuth2プロバイダ名(providerName)を指定する。
+   */
+  setProviderName(providerName: string) {
+    this.providerName = providerName;
+    this.baseUrl = `/user/oauth/api/proxy/mattermost/${providerName}/api/v4`;
+  }
+
 
   mmUser?: MattermostUser;
 
@@ -32,7 +45,7 @@ export class ApiMattermostService {
     if (userIds.length === 0 && userNames.length === 0) {
       return of([]);
     } else {
-      const url = `/user/mattermost/user`;
+      const url = `/user/mattermost/${this.providerName}/user`;
       return this.http.post<MattermostUser[]>(url, { ids: userIds, names: userNames }).pipe(tap(users =>
         users.forEach(user => user.nickname = user.nickname || user.last_name || user.first_name || user.username)
       ));
@@ -292,20 +305,32 @@ export class ApiMattermostService {
       return mas;
     }, this.emojiMap as { [key: string]: string });
   }
-
+  isConnected = 0;
   connect(): Observable<WebSocketMessage> {
-    this.wsClient.initialize(`/api${this.baseUrl}/websocket`, '');
-    this.wsClient.addMessageListener((message: WebSocketMessage) => {
-      console.log(message);
-      this.listener.next(message);
-    });
-    this.wsClient.addErrorListener((event: Event) => {
-      this.listener.next({ event: 'error', data: { event }, broadcast: { omit_users: {}, user_id: '', channel_id: '', team_id: '', }, seq: -1, });
-    });
-    this.wsClient.addCloseListener((connectFailCount: number) => {
-      this.listener.next({ event: 'close', data: { connectFailCount }, broadcast: { omit_users: {}, user_id: '', channel_id: '', team_id: '', }, seq: -1, });
-    });
+    if (this.isConnected > 0) {
+
+    } else {
+      this.isConnected = 1;
+      const baseUrl = `/user/oauth/ws/proxy/${this.g.info.user.tenantKey}/mattermost/${this.providerName}/api/v4`;
+      this.wsClient.initialize(`/api${baseUrl}/websocket`, '');
+      this.wsClient.addMessageListener((message: WebSocketMessage) => {
+        console.log(message);
+        this.isConnected = 2;
+        this.listener.next(message);
+      });
+      this.wsClient.addErrorListener((event: Event) => {
+        this.listener.next({ event: 'error', data: { event }, broadcast: { omit_users: {}, user_id: '', channel_id: '', team_id: '', }, seq: -1, });
+      });
+      this.wsClient.addCloseListener((connectFailCount: number) => {
+        this.listener.next({ event: 'close', data: { connectFailCount }, broadcast: { omit_users: {}, user_id: '', channel_id: '', team_id: '', }, seq: -1, });
+        this.isConnected = 0;
+      });
+    }
     return this.listener;
+  }
+  disconnect() {
+    this.wsClient.close();
+    this.isConnected = 0;
   }
 }
 export interface Preference {
@@ -745,9 +770,15 @@ export interface MattermostTimelineChannel {
   providedIn: 'root'
 })
 export class MattermostTimelineService {
-  private apiUrl = `/user/mattermost/timeline`; // APIのベースURLを適切に設定してください
+  providerName = 'sample'; // OAuth2プロバイダ名
+  private apiUrl = `/user/mattermost/${this.providerName}/timeline`; // APIのベースURLを適切に設定してください
 
-  constructor(private http: HttpClient) { }
+  readonly http: HttpClient = inject(HttpClient);
+
+  setProviderName(providerName: string) {
+    this.providerName = providerName;
+    this.apiUrl = `/user/mattermost/${providerName}/timeline`;
+  }
 
   getTimelines(): Observable<MattermostTimeline[]> {
     return this.http.get<MattermostTimeline[]>(this.apiUrl).pipe(tap(ret => {

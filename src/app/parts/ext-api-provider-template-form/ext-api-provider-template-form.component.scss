@@ -1,0 +1,197 @@
+/* OAuth Provider Template Form Component Styles */
+
+:host {
+    display: block;
+}
+
+.container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    color: #e0e0e0;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+h2 {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+
+h3 {
+    color: #e0e0e0;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* レイアウト */
+.layout-container {
+    display: flex;
+    gap: 20px;
+}
+
+.table-container {
+    flex: 1;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    padding: 0;
+    border: 1px solid #3a3a3a;
+    overflow: hidden;
+}
+
+.form-container {
+    flex: 0 0 35%;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    border: 1px solid #3a3a3a;
+    overflow: hidden;
+}
+
+/* テーブルヘッダー */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #2c2c2c;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+/* テーブルスタイル */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 12px 15px;
+    background-color: #2c2c2c;
+    font-weight: 500;
+    color: #ccc;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.data-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid #333;
+    color: #e0e0e0;
+}
+
+.data-table tr:hover {
+    background-color: #333;
+    cursor: pointer;
+}
+
+.data-table tr.selected {
+    background-color: #2c3e50;
+}
+
+.description-cell {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.actions-cell {
+    width: 120px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* フォームヘッダー */
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #2c2c2c;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+/* フォームスタイル */
+form {
+    padding: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #ccc;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    // border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+
+/* レスポンシブデザイン */
+@media (max-width: 992px) {
+    .layout-container {
+        flex-direction: column;
+    }
+
+    .form-container {
+        flex: none;
+        width: 100%;
+    }
+}
+
+/* Adding to existing SCSS file - these are the additional styles for validation */
+
+/* Required field indicator */
+.required {
+    color: #e74c3c;
+    margin-left: 3px;
+}
+
+/* Invalid input styling */
+.form-control.invalid {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+/* Error message styling */
+.error-message {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+    min-height: 16px;
+}

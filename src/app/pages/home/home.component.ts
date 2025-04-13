@@ -41,18 +41,30 @@ import { MarkdownModule } from 'ngx-markdown';
 import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
 import { UserService } from '../../services/user.service';
 import { environment } from '../../../environments/environment';
+import { ExtApiProviderFormComponent } from "../../parts/ext-api-provider-form/ext-api-provider-form.component";
+import { ExtApiProviderTemplateFormComponent } from "../../parts/ext-api-provider-template-form/ext-api-provider-template-form.component";
+import { TenantDetailComponent } from "../../parts/tenant-detail/tenant-detail.component";
+import { TenantFormComponent } from "../../parts/tenant-form/tenant-form.component";
+import { TenantListComponent } from "../../parts/tenant-list/tenant-list.component";
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
 
 declare var _paq: any;
 @Component({
   selector: 'app-home',
   imports: [
     CommonModule, FormsModule, RouterModule, FileDropDirective,
+    ExtApiProviderFormComponent,
+    ExtApiProviderTemplateFormComponent,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
     MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,
     MarkdownModule,
     NewlineToBrPipe, RelativeTimePipe,
     UserMarkComponent,
+    TenantDetailComponent,
+    TenantFormComponent,
+    TenantListComponent,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
@@ -75,11 +87,15 @@ export class HomeComponent implements OnInit {
   readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
   readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
   readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
-  curEnv = environment;
+  readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
+  readonly userService: UserService = inject(UserService);
+
   aloneTeam!: Team;
   teamList: TeamForView[] = [];
   teamWithoutAloneList: TeamForView[] = [];
   teamMap: { [key: string]: TeamForView } = {};
+
+  apiProviderList: ExtApiProviderEntity[] = [];
 
   defaultProject!: Project;
   projectList: Project[] = [];
@@ -146,9 +162,22 @@ export class HomeComponent implements OnInit {
     this.showRecentChats = !this.showRecentChats;
   }
 
-  readonly userService: UserService = inject(UserService);
   ngOnInit(): void {
     document.title = `Ribbon UI`;
+
+    this.extApiProviderService.getApiProviders().subscribe({
+      next: (apiProviderList) => {
+        this.apiProviderList = apiProviderList.filter(apiProvider => apiProvider.authType === ExtApiProviderAuthType.OAuth2);
+      },
+      error: (error) => {
+        console.log(error);
+        this.snackBar.open(`APIプロバイダの取得に失敗しました。`, 'close', { duration: 3000 });
+      },
+      complete: () => {
+        console.log('complete');
+      }
+    });
+
     this.staticMessageList.forEach(staticMessage => staticMessage.placeholder = staticMessage.placeholder.replace('Ctrl+Enter', this.userService.enterMode));
 
     if (JSON.parse(localStorage.getItem('settings-v1.0') || '{}')['model']) {
@@ -328,11 +357,11 @@ export class HomeComponent implements OnInit {
   //             this.router.navigate(['/', provider]);
   //           },
   //           error: error => {
-  //             location.href = `/api/oauth/${provider}/login/${provider}`;
+  //             location.href = `/api/public/oauth/${provider}/login/${provider}`;
   //           },
   //         });
   //       } else {
-  //         location.href = `/api/oauth/${provider}/login/${provider}`;
+  //         location.href = `/api/public/oauth/${provider}/login/${provider}`;
   //       }
   //     }
   //   });

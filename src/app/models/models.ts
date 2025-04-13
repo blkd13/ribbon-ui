@@ -1,6 +1,7 @@
 // ./src/app/models.ts
 
 import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions';
+import { BaseEntity } from './project-models';
 
 export enum UserStatus {
     // アクティブ系
@@ -124,66 +125,47 @@ export interface GenerateContentRequestForCache {
     expire_time?: string; // "expire_time":"2024-06-30T09:00:00.000000Z"
 }
 
+export enum ExtApiProviderAuthType {
+    OAuth2 = 'OAuth2',
+    APIKey = 'APIKey',
+}
 
+export enum ExtApiProviderPostType {
+    json = 'json',
+    params = 'params',
+    // form = 'form',
+}
 
-
-export interface OAuth2Config {
-    uriBaseAuth?: string;
-    clientId: string;
-    clientSecret: string;
+export interface OAuth2ConfigTemplate {
     pathAuthorize: string;
     pathAccessToken: string;
-    pathTop: string;
     scope: string;
-    postType: 'json' | 'params';
+    postType: ExtApiProviderPostType;
     redirectUri: string;
+}
+export interface OAuth2Config extends OAuth2ConfigTemplate {
+    clientId: string;
+    clientSecret: string;
     requireMailAuth: boolean;
 }
-export class ExtApiProviderEntity {
-    id!: string; // UUID
-    tenantKey!: string; // テナントキー
-    type!: string; // 'gitlab' | 'gitea' | etc 
-    provider!: string; // 'gitlab-local' | etc 
-    label!: string; // 'GitLab' | 'Gitea' | etc 
-    uriBase!: string;
-    pathUserInfo!: string;
-    oAuth2Config?: OAuth2Config;
+export interface ExtApiProviderTemplateEntity extends BaseEntity {
+    name: string; // 'gitlab' | 'gitea' | etc
+    authType: ExtApiProviderAuthType;
+    pathUserInfo: string;
+    uriBaseAuth: string;
+    oAuth2Config?: OAuth2ConfigTemplate;
     description?: string;
-    isDeleted!: boolean;
+}
+export interface ExtApiProviderEntity extends ExtApiProviderTemplateEntity {
+    type: string; // 'gitlab' | 'gitea' | etc
+    label: string; // 'GitLab' | 'Gitea' | etc
+    uriBase: string;
+    oAuth2Config?: OAuth2Config;
+    sortSeq: number;
 }
 
-/**
- * テナントエンティティのインターフェース
- */
-export interface TenantEntity {
-    // 基本プロパティ
-    id: string;
+export interface TenantEntity extends BaseEntity {
     name: string;
     description?: string;
     isActive: boolean;
-
-    // 監査情報
-    createdAt: Date;
-    updatedAt: Date;
-    createdBy: string;
-    updatedBy: string;
-    createdIp?: string;
-    updatedIp?: string;
-}
-
-/**
- * テナント統計情報のインターフェース
- */
-export interface TenantStats {
-    total: number;
-    active: number;
-    inactive: number;
-}
-
-/**
- * テナントリソース情報のインターフェース
- */
-export interface TenantResources {
-    apiProviders: number;
-    // 必要に応じて他のリソースカウント情報を追加
 }

@@ -508,7 +508,7 @@ export class ChatService {
    * VertexAI Gemini用トークン数カウントAPI
    */
   countTokens(inDto: ChatCompletionStreamInDto): Observable<CountTokensResponse> {
-    return this.http.post<CountTokensResponse>(`/count-tokens`, inDto);
+    return this.http.post<CountTokensResponse>(`/public/count-tokens`, inDto);
   }
 
   countTokensByProjectModel(inDto: ChatInputArea[], type: 'message' | 'messageGroup', id: string = ''): Observable<CountTokensResponse> {

@@ -14,7 +14,7 @@ import { GitSelectorDialogComponent } from '../../parts/git-selector-dialog/git-
 import { ApiGiteaService, GiteaRepository, GiteaUser } from '../../services/api-gitea.service';
 import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
-import { OAuth2Provider } from '../../services/auth.service';
+
 import { safeForkJoin } from '../../utils/dom-utils';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
@@ -59,26 +59,26 @@ export class GitComponent implements OnInit {
   readonly route: ActivatedRoute = inject(ActivatedRoute);
 
   // 子ノードの取得
-  readonly database: { [provider: string]: { [key: string]: (provider: OAuth2Provider, node?: GitNode) => Observable<GitNode[]> } } = {
+  readonly database: { [provider: string]: { [key: string]: (provider: string, node?: GitNode) => Observable<GitNode[]> } } = {
     gitlab: {
-      groups: (provider: OAuth2Provider, node?: GitNode): Observable<GitNode[]> => {
+      groups: (provider: string, node?: GitNode): Observable<GitNode[]> => {
         return this.apiGitlabService.groupChildren(provider, node?.id).pipe(
           map(groups => (groups as GitLabProject[]).map(item => <GitNode>{ ...item, isExpandable: !item.path_with_namespace })),
         )
       },
-      users: (provider: OAuth2Provider, node?: GitNode): Observable<GitNode[]> => {
+      users: (provider: string, node?: GitNode): Observable<GitNode[]> => {
         return this.apiGitlabService.usersChildren(provider, node?.id, this.searchKeyword[this.selectedTabIndex]).pipe(
           map(groups => (groups as (GitLabUser | GitLabProject)[]).map(item => <GitNode>{ ...item, isExpandable: !(item as GitLabProject).path_with_namespace, web_url: item.web_url })),
         );
       },
     },
     gitea: {
-      groups: (provider: OAuth2Provider, node?: GitNode): Observable<GitNode[]> => {
+      groups: (provider: string, node?: GitNode): Observable<GitNode[]> => {
         return this.apiGiteaService.groupChildren(provider, (node as any)?.key).pipe(
           map(groups => (groups as GiteaRepository[]).map(item => <GitNode>{ ...item, isExpandable: !item.clone_url, web_url: item.html_url })),
         )
       },
-      users: (provider: OAuth2Provider, node?: GitNode): Observable<GitNode[]> => {
+      users: (provider: string, node?: GitNode): Observable<GitNode[]> => {
         return this.apiGiteaService.userChildren(provider, (node as any)?.key).pipe(
           map(users => (users as (GiteaUser | GiteaRepository)[]).map(item => <GitNode>{ ...item, isExpandable: !(item as GiteaRepository).clone_url, web_url: (item as GiteaRepository).html_url || `` })),
         );
@@ -88,7 +88,9 @@ export class GitComponent implements OnInit {
 
   listTypes: ('groups' | 'users')[] = ['groups', 'users'];
   gitType!: 'gitlab' | 'gitea'; //
-  provider!: OAuth2Provider;
+  providerType!: 'gitlab' | 'gitea'; //
+  providerName!: string; //
+  provider!: string;
 
   /**
    * ツリー用のデータ。
@@ -155,8 +157,10 @@ export class GitComponent implements OnInit {
   ngOnInit(): void {
     this.route.url.subscribe({
       next: url => {
-        this.provider = url[0].path as OAuth2Provider;
-        this.gitType = this.provider.split('-')[0] as 'gitlab' | 'gitea';
+        this.gitType = url[0].path as 'gitlab' | 'gitea';
+        this.providerType = url[0].path as 'gitlab' | 'gitea';
+        this.providerName = this.route.snapshot.paramMap.get('providerName') || '';
+        this.provider = `${this.providerType}-${this.providerName}`;
         document.title = `${this.provider}`;
 
         // Object.keys(this.database)

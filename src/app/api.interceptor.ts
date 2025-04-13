@@ -35,6 +35,9 @@ export class ApiInterceptor implements HttpInterceptor {
     } else {
       // request.headers.set('Authorization', 'xxx');
     }
+
+    // url = `${location.origin}${location.pathname.replaceAll(/\/$/g, '')}${url}`;
+    // console.log(`intercepted:${url}`);
     request = request.clone({ url, method, headers: request.headers.set('X-App-Version', this.g.version) });
 
     // // 同時リクエストが多くなるとブラウザエラーになることがあったので適当に遅延させる機能を付けた
@@ -85,14 +88,14 @@ export class ApiInterceptor implements HttpInterceptor {
 
             const fromUrl = encodeURIComponent(fromUrlObject.toString());
             if (request.url.startsWith(`/api/user/oauth/api/`) && !request.url.includes('/logout') && !request.url.includes('/revoke')) { // logoutは除外する
-              const provider = request.url.split('/')[6];
+              const [_0, _1, _2, _3, _4, _5, providerType, provierName] = request.url.split('/');
               // ログインページにリダイレクトする場合、リクエストURLを保存しておく
-              location.href = `/api/oauth/${provider}/login?fromUrl=${fromUrl}&tenantKey=${this.g.info.user.tenantKey}`;
+              location.href = `/api/public/oauth/${this.g.info.user.tenantKey}/${providerType}-${provierName}/login?fromUrl=${fromUrl}`;
               console.log(`redirect to login page: ${location.href}`);
             } else if (request.url.startsWith(`/api/user/oauth/account/`) && !request.url.includes('/logout') && !request.url.includes('/revoke')) { // logoutは除外する
-              const provider = request.url.split('/')[5];
+              const [_0, _1, _2, _3, _4, providerType, provierName] = request.url.split('/');
               // ログインページにリダイレクトする場合、リクエストURLを保存しておく
-              location.href = `/api/oauth/${provider}/login?fromUrl=${fromUrl}&tenantKey=${this.g.info.user.tenantKey}`;
+              location.href = `/api/public/oauth/${this.g.info.user.tenantKey}/${providerType}-${provierName}/login?fromUrl=${fromUrl}`;
               console.log(`redirect to login page: ${location.href}`);
             } else {
               // 未認証の場合、ログインページにリダイレクト

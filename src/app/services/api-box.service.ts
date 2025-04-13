@@ -9,8 +9,19 @@ const ITEM_QUERY = `fields=name,modified_at,modified_by,created_at,content_modif
 @Injectable({ providedIn: 'root' })
 export class ApiBoxService {
 
-  proxyBasePath = `/user/oauth/api/proxy/box`;
-  basePath = `/user/oauth/api/box/box`;
+  providerName = 'sample';
+  proxyBasePath = `/user/oauth/api/proxy/box/${this.providerName}`;
+  basePath = `/user/oauth/api/custom-api/box/${this.providerName}`;
+
+  /**
+   * 
+   * @param provider OAuth2プロバイダ名(providerName)を指定する。
+   */
+  setProviderName(providerName: string) {
+    this.providerName = providerName;
+    this.proxyBasePath = `/user/oauth/api/proxy/box/${providerName}`;
+    this.basePath = `/user/oauth/api/custom-api/box/${providerName}`;
+  }
 
   storageKey = 'box-v1.0';
   store: { [itemId: string]: BoxApiFolder } = localStorage.getItem(this.storageKey) ? JSON.parse(localStorage.getItem(this.storageKey) as string) : {};

@@ -66,13 +66,14 @@
         <!-- <h1>Prompt Shortcuts</h1> -->
         <h1>API連携</h1>
         <div class="button-group">
-            @for(group of curEnv.oAuthProviders;track $index){
-            @for(provider of group.providers;track $index){
-            <a class="panel chat-item w-full" [routerLink]="['/'+group.value+(provider.id?'-'+provider.id:'')]">
-                <h3><img src="./image/{{group.value}}-logo.svg" style="width: 80px;height: 80px;">{{group.label}}</h3>
-                <p>{{provider.describe}}</p>
+            @for(provider of apiProviderList;track $index){
+            <a class="panel chat-item w-full" [routerLink]="['/', provider.type, provider.name]">
+                <h3>
+                    <img src="./image/{{provider.type}}-logo.svg" style="width: 80px;height: 80px;">
+                    {{provider.label}}
+                </h3>
+                <p>{{provider.description}}</p>
             </a>
-            }
             }
         </div>
 

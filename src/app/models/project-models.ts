@@ -241,6 +241,7 @@ export interface BaseEntity {
     createdAt: Date;
     updatedAt: Date;
 }
+export type BaseEntityFields = keyof BaseEntity;
 
 export interface Team extends BaseEntity {
     name: string;

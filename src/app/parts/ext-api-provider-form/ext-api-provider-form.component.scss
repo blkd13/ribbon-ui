@@ -1,0 +1,329 @@
+/* API Provider Form Component Styles */
+
+:host {
+    display: block;
+}
+
+.container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    color: #e0e0e0;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+h2 {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+
+h3 {
+    color: #e0e0e0;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+}
+
+h4 {
+    color: #ccc;
+    font-size: 15px;
+    font-weight: 500;
+    margin: 15px 0 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333;
+}
+
+/* レイアウト */
+.layout-container {
+    display: flex;
+    gap: 20px;
+}
+
+.table-container {
+    flex: 1;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    padding: 0;
+    border: 1px solid #3a3a3a;
+    overflow: hidden;
+}
+
+.form-container {
+    flex: 0 0 35%;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    border: 1px solid #3a3a3a;
+    overflow: hidden;
+}
+
+/* テーブルヘッダー */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #2c2c2c;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+/* テーブルスタイル */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 12px 15px;
+    background-color: #2c2c2c;
+    font-weight: 500;
+    color: #ccc;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.data-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid #333;
+    color: #e0e0e0;
+}
+
+.data-table tr:hover {
+    background-color: #333;
+    cursor: pointer;
+}
+
+.data-table tr.selected {
+    background-color: #2c3e50;
+}
+
+.actions-cell {
+    width: 120px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* フォームヘッダー */
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #2c2c2c;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+/* フォームスタイル */
+form {
+    padding: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #ccc;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* OAuth2 セクション */
+.oauth2-section {
+    background-color: #282828;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+/* Provider Sync Section - 新しいスタイル */
+.provider-sync-section {
+    background-color: #2d333b;
+    border: 1px solid #4a5568;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.sync-section-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    color: #64b5f6;
+}
+
+.sync-icon {
+    margin-right: 8px;
+    color: #64b5f6;
+}
+
+.sync-section-description {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+.sync-field {
+    background-color: #252a33;
+    border: 1px solid #4a5568;
+    color: #64b5f6;
+    font-family: 'Courier New', monospace;
+}
+
+/* Section Divider - 新しいスタイル */
+.divider-container {
+    position: relative;
+    text-align: center;
+    margin: 25px 0;
+}
+
+.section-divider {
+    border: 0;
+    height: 1px;
+    background-color: #3a3a3a;
+    margin: 0;
+}
+
+.divider-label {
+    position: relative;
+    top: -0.5em;
+    display: inline-block;
+    background-color: #282828;
+    padding: 0 10px;
+    font-size: 12px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* チェックボックス */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Required field indicator */
+.required {
+    color: #e74c3c;
+    margin-left: 3px;
+}
+
+/* Invalid input styling */
+.form-control.invalid {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+/* Error message styling */
+.error-message {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+    min-height: 16px;
+}
+
+/* リダイレクトURI表示用のスタイル追加 */
+.copy-field-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.readonly-field {
+    background-color: #252525;
+    color: #64b5f6;
+    border: 1px dashed #444;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    padding-right: 40px;
+}
+
+.copy-button {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #64b5f6;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+    background-color: rgba(100, 181, 246, 0.1);
+}
+
+.copy-button:active {
+    background-color: rgba(100, 181, 246, 0.2);
+}
+
+.field-hint {
+    color: #999;
+    font-size: 12px;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 992px) {
+    .layout-container {
+        flex-direction: column;
+    }
+
+    .form-container {
+        flex: none;
+        width: 100%;
+    }
+}

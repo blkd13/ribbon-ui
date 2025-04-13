@@ -13,6 +13,8 @@ import { TranslateModule } from '@ngx-translate/core';
 import { MatIconModule } from '@angular/material/icon';
 import { environment } from '../../../environments/environment';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 
 @Component({
   selector: 'app-login',
@@ -47,9 +49,36 @@ export class LoginComponent {
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly g: GService = inject(GService);
+  readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
+
+  apiProviderKeys: string[] = [];
+  apiProviderGroupedList: { [type: string]: ExtApiProviderEntity[] } = {};
 
   ngOnInit(): void {
     document.title = `Ribbon UI`;
+
+    this.extApiProviderService.getApiProvidersNonAuth(this.g.tenantKey).subscribe({
+      next: (apiProviderList) => {
+        this.apiProviderGroupedList = apiProviderList.filter(obj => obj.authType === ExtApiProviderAuthType.OAuth2).reduce((acc: { [type: string]: ExtApiProviderEntity[] }, apiProvider: ExtApiProviderEntity) => {
+          const type = apiProvider.type;
+          if (!acc[type]) {
+            this.apiProviderKeys.push(type);
+            acc[type] = [];
+          }
+          acc[type].push(apiProvider);
+          return acc;
+        }, {});
+        // console.log(this.apiProviderGroupedList);
+        console.log(apiProviderList);
+      },
+      error: (error) => {
+        console.log(error);
+        this.snackBar.open(`APIプロバイダの取得に失敗しました。`, 'close', { duration: 3000 });
+      },
+      complete: () => {
+        console.log('complete');
+      }
+    });
 
     const onetimeToken = this.activatedRoute.snapshot.paramMap.get('onetimeToken');
     if (onetimeToken) {

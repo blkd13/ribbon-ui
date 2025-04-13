@@ -21,6 +21,7 @@ export class ApiGiteaService {
    * 一つの配列に合体して返す。
    */
   groupChildren(giteaProvider: string, key?: string): Observable<(GiteaUser | GiteaRepository | GiteaOrganization)[]> {
+    giteaProvider = giteaProvider.replace('-', '/');
     const limit = 1000;
     if (key) {
       return this.http.get<GiteaRepository[]>(`${this.proxyBase}/${giteaProvider}/api/v1/${key}/repos?limit=${limit}`);
@@ -43,6 +44,7 @@ export class ApiGiteaService {
    * 一つの配列に合体して返す。
    */
   userChildren(giteaProvider: string, key?: string): Observable<(GiteaUser | GiteaRepository | GiteaOrganization)[]> {
+    giteaProvider = giteaProvider.replace('-', '/');
     const limit = 1000;
     if (key) {
       return this.http.get<GiteaRepository[]>(`${this.proxyBase}/${giteaProvider}/api/v1/${key}/repos?limit=${limit}`);
@@ -61,34 +63,39 @@ export class ApiGiteaService {
     }
   }
 
-  projects(provider: string, owner?: string, params: { page?: number; limit?: number, q?: string } = {}): Observable<GiteaRepositoryResponse> {
+  projects(giteaProvider: string, owner?: string, params: { page?: number; limit?: number, q?: string } = {}): Observable<GiteaRepositoryResponse> {
+    giteaProvider = giteaProvider.replace('-', '/');
     if (params.q) {
-      const url = `/user/oauth/api/proxy/${provider}/api/v1/repos/search`;
+      const url = `/user/oauth/api/proxy/${giteaProvider}/api/v1/repos/search`;
       return this.http.get<{ data: GiteaRepositoryResponse, ok: boolean }>(url, { params }).pipe(map(res => res.data));
     } else {
       delete params.q;
       const ownerPath = owner ? `/orgs/${owner}` : '/user';
-      const url = `/user/oauth/api/proxy/${provider}/api/v1${ownerPath}/repos`;
+      const url = `/user/oauth/api/proxy/${giteaProvider}/api/v1${ownerPath}/repos`;
       return this.http.get<GiteaRepositoryResponse>(url, { params });
     }
   }
 
-  branches(provider: string, owner: string, repo: string): Observable<GiteaBranch[]> {
-    const url = `/user/oauth/api/proxy/${provider}/api/v1/repos/${owner}/${repo}/branches`;
+  branches(giteaProvider: string, owner: string, repo: string): Observable<GiteaBranch[]> {
+    giteaProvider = giteaProvider.replace('-', '/');
+    const url = `/user/oauth/api/proxy/${giteaProvider}/api/v1/repos/${owner}/${repo}/branches`;
     return this.http.get<GiteaBranch[]>(url);
   }
 
-  tags(provider: string, owner: string, repo: string): Observable<GiteaTag[]> {
-    const url = `/user/oauth/api/proxy/${provider}/api/v1/repos/${owner}/${repo}/tags`;
+  tags(giteaProvider: string, owner: string, repo: string): Observable<GiteaTag[]> {
+    giteaProvider = giteaProvider.replace('-', '/');
+    const url = `/user/oauth/api/proxy/${giteaProvider}/api/v1/repos/${owner}/${repo}/tags`;
     return this.http.get<GiteaTag[]>(url);
   }
 
-  commits(provider: string, owner: string, repo: string): Observable<GiteaCommit[]> {
-    const url = `/user/oauth/api/proxy/${provider}/api/v1/repos/${owner}/${repo}/commits`;
+  commits(giteaProvider: string, owner: string, repo: string): Observable<GiteaCommit[]> {
+    giteaProvider = giteaProvider.replace('-', '/');
+    const url = `/user/oauth/api/proxy/${giteaProvider}/api/v1/repos/${owner}/${repo}/commits`;
     return this.http.get<GiteaCommit[]>(url);
   }
 
-  fetchCommit(provider: string, owner: string, repo: string, projectInDto: { projectId: string; }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
+  fetchCommit(giteaProvider: string, owner: string, repo: string, projectInDto: { projectId: string; }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
+    giteaProvider = giteaProvider.replace('-', '/');
     let params = '';
     if ((type === undefined) !== (id === undefined)) {
       throw new Error('Both type and id must be specified');
@@ -96,7 +103,7 @@ export class ApiGiteaService {
     } else {
       params = `/${type}/${id}`;
     }
-    const url = `/user/oauth/api/gitea/${provider}/files/${owner}/${repo}${params}`;
+    const url = `/user/oauth/api/custom-api/gitea/${giteaProvider}/files/${owner}/${repo}${params}`;
     return this.http.post<RootObject>(url, projectInDto);
   }
 }
