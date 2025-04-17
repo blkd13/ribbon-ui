@@ -40,6 +40,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
 
   firstProviderValue: string = '';
 
+  apiProviderMap: { [key: string]: ExtApiProviderEntity } = {};
   apiProviderGroupedKeys: string[] = [];
   apiProviderGroupedList: { [type: string]: ExtApiProviderEntity[] } = {};
 
@@ -51,6 +52,10 @@ export class ApiKeyManagerDialogComponent implements OnInit {
 
     this.extApiProviderService.getApiProviders().subscribe({
       next: (apiProviderList) => {
+        this.apiProviderMap = apiProviderList.reduce((acc: { [key: string]: ExtApiProviderEntity }, apiProvider: ExtApiProviderEntity) => {
+          acc[`${apiProvider.type}-${apiProvider.name}`] = apiProvider;
+          return acc;
+        }, {});
         this.apiProviderGroupedList = apiProviderList.filter(obj => obj.authType === ExtApiProviderAuthType.APIKey).reduce((acc: { [type: string]: ExtApiProviderEntity[] }, apiProvider: ExtApiProviderEntity) => {
           const type = apiProvider.type;
           if (!acc[type]) {
@@ -79,18 +84,24 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           key: ['', Validators.required]
         });
         console.log('complete');
+        this.loadApiKeys();
       }
     });
   }
 
   ngOnInit(): void {
-    this.loadApiKeys();
   }
 
   loadApiKeys(): void {
     this.authServices.getOAuthAccountList().subscribe({
       next: next => {
         this.apiKeys = next.oauthAccounts;
+        this.apiKeys.forEach(key => {
+          (key as any).label = this.apiProviderMap[key.provider] ? this.apiProviderMap[key.provider].label : key.provider;
+        });
+      },
+      error: error => {
+        this.snackBar.open('API鍵の取得に失敗しました', '閉じる', { duration: 3000 });
       },
     });
   }
@@ -164,7 +175,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           <mat-icon>content_copy</mat-icon>
         </button>
       </div>
-      <p>API鍵はこの画面は一度閉じると二度と表示されません。</p>
+      <p>API鍵はこの画面を一度閉じると二度と表示されません。</p>
     </mat-dialog-content>
     <mat-dialog-actions>
       <button mat-button mat-dialog-close>閉じる</button>

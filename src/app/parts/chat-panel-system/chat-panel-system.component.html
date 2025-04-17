@@ -186,7 +186,7 @@
                                 </mat-icon>
                                 <img [src]="'./image/'+groupDef.group.split('-')[0]+'-logo.svg'" alt="icon"
                                     class="w-8 h-8" style="min-width: 30px;">
-                                {{groupDef.group}}
+                                {{providerMas[groupDef.group]?providerMas[groupDef.group].label:groupDef.group}}
                             </div>
                         </mat-panel-title>
                     </mat-expansion-panel-header>

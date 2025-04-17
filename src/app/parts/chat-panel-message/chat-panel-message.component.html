@@ -96,22 +96,21 @@
       <div class="inline-flex items-center flex-wrap gap-2">
 
         @for(toolCallSet of jsonParseToArray(content.text||'[]');track $index){
-
         @if(toolCallSet.info){
-        <button class="flex items-center command-tag cursor-pointer relative"
+        @let info = toolCallSet.info;
+        @let isRunning = info.isRunning && !info.isInteractive && toolCallSet.resultList.length===0;
+        <button class="flex items-center command-tag cursor-pointer relative overflow-hidden"
           (click)="openToolCallDialog($event, toolCallSet)">
-          <img [src]="'image/'+toolCallSet.info.group.split('-')[0]+'-logo.svg'" style="width: 32px;" />
+          <img [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 32px;" />
           <div class="flex flex-col items-start">
-            <div>[{{toolCallSet.info.name}}]</div>
-            <div>{{toolCallSet.info.label}}</div>
+            <div>[{{info.name}}]</div>
+            <div>{{info.label}}</div>
           </div>
-
-          @if(toolCallSet.info.isRunning){
-          <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10 rounded-sm">
+          @if(isRunning){
+          <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10 rounded-xl">
             <mat-spinner style="transform: scale(0.4);"></mat-spinner>
           </div>
           }
-
         </button>
         } @else {
         <!-- TODO infoが無いのはおかしいのでこの判定は本来不用なはずだが、とりあえず今は暫定でこうしておく。なんかエラーの時にresultが独立して飛んできてしまっているのがいけないようではあるがなぜsresultが独立してしまったのかは分からない。 -->

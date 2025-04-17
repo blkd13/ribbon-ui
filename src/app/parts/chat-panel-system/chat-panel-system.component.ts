@@ -18,6 +18,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { ChatCompletionToolChoiceOption } from 'openai/resources/index.mjs';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MyToolType, ToolCallPart, ToolCallService } from '../../services/tool-call.service';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 
 @Component({
   selector: 'app-chat-panel-system',
@@ -42,6 +43,8 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   readonly toolCallService: ToolCallService = inject(ToolCallService);
 
+  readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
+
   modelIdMas: { [modelId: string]: LlmModel } = {};
   modelGroupMas: { [modelId: string]: LlmModel[] } = {};
   modelGroupIdList: string[] = [];
@@ -52,6 +55,8 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     'required': { name: 'required', label: '必ず使う' }
   };
 
+  providerMas: { [provider: string]: { type: string, name: string, label: string } } = {};
+
   readonly effectBitCounter2 = effect(() => {
     this.bitCounter();
     this.initialize();
@@ -59,6 +64,14 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   constructor() {
     super();
+    this.extApiProviderService.getApiProviders().subscribe({
+      next: extApiProviderList => {
+        this.providerMas = extApiProviderList.reduce((acc: { [provider: string]: { type: string, name: string, label: string } }, provider) => {
+          acc[`${provider.type}-${provider.name}`] = { type: provider.type, name: provider.name, label: provider.label };
+          return acc;
+        }, {});
+      }
+    });
   }
 
   override ngOnInit(): void {

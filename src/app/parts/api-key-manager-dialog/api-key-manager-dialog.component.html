@@ -69,9 +69,7 @@
                 API鍵発行ページ：
                 @for(providerGroup of apiProviderGroupedList|keyvalue;track $index){
                 @for(provider of providerGroup.value;track $index){
-                <a target="_blank" class="mr-2" [href]="provider.uriBase">
-                    {{providerGroup.key}}{{provider.label?'('+provider.label+')':''}}
-                </a>
+                <a target="_blank" class="mr-2" [href]="provider.uriBase+provider.uriBaseAuth">{{provider.label}}</a>
                 }
                 }
             </div>

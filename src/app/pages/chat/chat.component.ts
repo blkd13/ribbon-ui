@@ -37,7 +37,7 @@ import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { AuthService } from '../../services/auth.service';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
-import { BaseEntity, ContentPart, ContentPartType, Message, MessageClusterType, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectVisibility, Team, TeamType, Thread, ThreadGroup, ThreadGroupType, ThreadGroupVisibility, UUID } from '../../models/project-models';
+import { BaseEntity, ContentPart, ContentPartType, Message, MessageClusterType, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupType, ThreadGroupVisibility, UUID } from '../../models/project-models';
 import { GService } from '../../services/g.service';
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-run-setting/bulk-run-setting.component';
@@ -106,9 +106,11 @@ export class ChatComponent implements OnInit {
   defaultProject!: Project;
 
   selectedTeam!: Team;
+  teamList: Team[] = [];
   selectedProject!: Project;
   projectList: Project[] = [];
   teamMap: { [key: string]: Team } = {};
+  teamForViewList: TeamForView[] = [];
 
   placeholder = '';
   defaultPlaceholder = 'メッセージを入力...。Shift+Enterで改行。Ctrl+Enterで送信。Drag＆Drop、ファイル貼り付け。';
@@ -533,6 +535,7 @@ export class ChatComponent implements OnInit {
       });
       // ノーマルスレッドグループだけ持ってくる
       const _threadGroupList = this.sortThreadGroup(threadGroupList).filter(threadGroup => threadGroup.type === ThreadGroupType.Normal);
+      this.threadGroupList = [];
       const mergedUsers = _threadGroupList.map(newObj => {
         const oldObj = this.threadGroupList.find(oldObj => oldObj.id === newObj.id); // idでマッチする詳細を検索
         if (oldObj) {
@@ -551,12 +554,26 @@ export class ChatComponent implements OnInit {
         this.projectList = projectList;
         // guardが掛かっているので必ずある
         this.defaultProject = projectList.find(project => project.visibility === ProjectVisibility.Default) as Project;
+
+        const tmpTeamMapas: { [teamId: string]: TeamForView } = {};
+        this.teamForViewList = [];
+        projectList.map(project => {
+          const team = tmpTeamMapas[project.teamId];
+          if (team) {
+            team.projects.push(project);
+          } else {
+            tmpTeamMapas[project.teamId] = this.teamMap[project.teamId] as TeamForView;
+            tmpTeamMapas[project.teamId].projects = [project];
+            this.teamForViewList.push(tmpTeamMapas[project.teamId]);
+          }
+        });
       }));
   }
 
   loadTeams(): Observable<Team[]> {
     return this.teamService.getTeamList().pipe(
       tap(teamList => {
+        this.teamList = teamList;
         // guardが掛かっているので必ずある
         this.aloneTeam = teamList.find(team => team.teamType === TeamType.Alone) as Team;
         this.teamMap = Object.fromEntries(teamList.map(team => [team.id, team]));
@@ -876,7 +893,7 @@ export class ChatComponent implements OnInit {
     this.stopPropagation($event);
     const selectedIndex = group.selectedIndex + delta;
     // Chainされている場合はシンクロ
-    const chainedList = this.getChaindedMessageGroupList(group, 1);
+    const chainedList = this.getChainedMessageGroupList(group, 1);
     chainedList.forEach(group => {
       console.log(group.id, selectedIndex, group.selectedIndex);
       group.selectedIndex = Math.min(Math.max(0, selectedIndex), this.messageService.nextMessageGroupId[group.id].length - 1);
@@ -1210,6 +1227,7 @@ export class ChatComponent implements OnInit {
               // 最初の1行のみidが振られているので、それを使ってtoolCallを作る。
               const toolCallId = (choice.delta as { tool_call_id: string }).tool_call_id;
               const infoBody = JSON.parse(choice.delta.content || '{}') as ToolCallPartInfoBody;
+              infoBody.isRunning = true;
               const info = { type: ToolCallPartType.INFO, body: infoBody, toolCallId } as ToolCallPartInfo;
               if (content.toolCallGroup) {
               } else {
@@ -1719,13 +1737,20 @@ export class ChatComponent implements OnInit {
 
   removeMessageGroup(messageGroup: MessageGroupForView): void {
     if (messageGroup.id.startsWith('dummy-')) {
-      // dummyを削除するのは単純削除
-      this.messageService.removeDummyMessageGroup(messageGroup);
-      this.inputArea.messageGroupId = messageGroup.previousMessageGroupId;
-      this.rebuildThreadGroup();
-      return;
+      if (this.messageGroupIdListMas[messageGroup.threadId][0].startsWith('dummy-') && messageGroup.role === 'assistant') {
+        // スレッドの先頭がダミーの場合は追加直後のスレッドということなので、選択されたものがassistantならその一個前のメッセージで発火
+        // userとかの場合はどうせ全部ダミーなので単純削除に回す。
+        this.send('messageGroup', [messageGroup.previousMessageGroupId || '']).subscribe();
+        return;
+      } else {
+        // dummyを削除するのは単純削除
+        this.messageService.removeDummyMessageGroup(messageGroup);
+        this.inputArea.messageGroupId = messageGroup.previousMessageGroupId;
+        this.rebuildThreadGroup();
+        return;
+      }
     } else { }
-    this.getChaindedMessageGroupList(messageGroup).forEach(messageGroup => {
+    this.getChainedMessageGroupList(messageGroup).forEach(messageGroup => {
       if (this.isThreadLocked(messageGroup.threadId)) {
         this.snackBar.open(`現在処理中のため削除できません。`, 'close', { duration: 3000 });
         return;
@@ -1782,7 +1807,7 @@ export class ChatComponent implements OnInit {
    * @param messageGroup
    * @returns
    */
-  getChaindedMessageGroupList(messageGroup: MessageGroupForView, offset: number = 0): MessageGroupForView[] {
+  getChainedMessageGroupList(messageGroup: MessageGroupForView, offset: number = 0): MessageGroupForView[] {
     const targetMessageGrouplist = [];
     if (this.userService.chatTabLayout === 'tabs') {
       // tabモードの時は単独
@@ -1828,7 +1853,7 @@ export class ChatComponent implements OnInit {
     }
   }
   editChat(messageGroup: MessageGroupForView): void {
-    const targetMessageGroupList = this.getChaindedMessageGroupList(messageGroup);
+    const targetMessageGroupList = this.getChainedMessageGroupList(messageGroup);
     const syncTargetMessageGroupList = targetMessageGroupList.filter(_messageGroup => _messageGroup !== messageGroup);
 
     // 複数ある場合はシンクロさせる

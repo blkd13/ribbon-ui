@@ -8,8 +8,51 @@
 
     @if(toolCallSetList[index].call; as call){
     <h1>{{call.function.name}}</h1>
+    @if(call.function.arguments){
+    @if(call.function.name.startsWith('mm_') && call.function.name.endsWith('_send_message')){
+    <!-- メッセージ送信用 -->
+    @let arguments = jsonParseToObject(call.function.arguments);
+    <div class="p-4 bg-gray-800 rounded-lg shadow-md">
+        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">送信先</div>
+        <div class="mb-4 pl-2 text-blue-400">
+            {{arguments.channel_display_name}}
+            <span class="text-gray-400 text-sm">({{arguments.channel_id}})</span>
+        </div>
+
+        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">送信内容</div>
+        <div class="bg-gray-700 p-3 rounded border border-gray-600">
+            <markdown clipboard [data]="arguments.message" class="prose prose-invert"></markdown>
+        </div>
+    </div>
+
+    } @else if(call.function.name.startsWith('run_python_code')) {
+    <!-- コードインタープリター用 -->
+    @let arguments = jsonParseToObject(call.function.arguments);
+    <div>Python {{arguments.pythonVersion||'3.11'}}</div>
+    @if(arguments.requirements && arguments.requirements.length>0){
+    <div class="rounded-lg shadow-md mb-4">
+        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">requirements</div>
+        <pre class=""><code>{{arguments.requirements}}</code></pre>
+    </div>
+    }
+    @if(arguments.entryPoint){
+    <div>Entry Point = {{arguments.entrypoin}}</div>
+    }
+    <mat-tab-group mat-stretch backgroundColor="primary" class="mb-4">
+        @for(codeSet of arguments.codeSet;track $index){
+        <mat-tab [label]="codeSet.fullpath||'script.py'">
+            <markdown clipboard [data]="'```python\n'+codeSet.code+'\n```'"></markdown>
+        </mat-tab>
+        }
+    </mat-tab-group>
+    <!-- <markdown clipboard [data]="'```json\n'+call.function.arguments+'\n```'"></markdown> -->
+    } @else {
+    <!-- 通常 -->
     <h3>arguments</h3>
     <markdown clipboard [data]="'```json\n'+call.function.arguments+'\n```'"></markdown>
+    }
+    }
+
     @if(toolCallSetList[index].resultList.at(-1); as result){
     @if(result.content){
     <markdown>---</markdown>
@@ -17,13 +60,17 @@
     @if(info.responseType==='text' && !isErrorResponse){
     <pre class="custom-scroll custom-scroll--thin"><code>{{jsonToString(result.content)}}</code></pre>
     } @else if(info.responseType==='markdown'){
-    <markdown clipboard [data]="jsonToString(result.content)"></markdown>
+    <div #textBodyElem>
+        <markdown clipboard [data]="jsonToString(result.content)"></markdown>
+    </div>
     } @else {
     <markdown clipboard [data]="'```json\n'+result.content"></markdown>
     }
 
     }
     }
+    } @else {
+    <div>Loading...</div>
     }
 
     }

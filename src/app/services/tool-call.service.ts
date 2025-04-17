@@ -143,7 +143,7 @@ export interface ToolCallPartInfoBody {
   label: string;
   isActive: boolean;
   isInteractive: boolean; // ユーザーの入力を要するもの
-  isRunnning: boolean;
+  isRunning: boolean;
   responseType?: 'text' | 'json' | 'markdown';
 }
 

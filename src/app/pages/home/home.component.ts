@@ -40,12 +40,6 @@ import { ApiGiteaService } from '../../services/api-gitea.service';
 import { MarkdownModule } from 'ngx-markdown';
 import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
 import { UserService } from '../../services/user.service';
-import { environment } from '../../../environments/environment';
-import { ExtApiProviderFormComponent } from "../../parts/ext-api-provider-form/ext-api-provider-form.component";
-import { ExtApiProviderTemplateFormComponent } from "../../parts/ext-api-provider-template-form/ext-api-provider-template-form.component";
-import { TenantDetailComponent } from "../../parts/tenant-detail/tenant-detail.component";
-import { TenantFormComponent } from "../../parts/tenant-form/tenant-form.component";
-import { TenantListComponent } from "../../parts/tenant-list/tenant-list.component";
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
 
@@ -54,17 +48,12 @@ declare var _paq: any;
   selector: 'app-home',
   imports: [
     CommonModule, FormsModule, RouterModule, FileDropDirective,
-    ExtApiProviderFormComponent,
-    ExtApiProviderTemplateFormComponent,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
     MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,
     MarkdownModule,
     NewlineToBrPipe, RelativeTimePipe,
     UserMarkComponent,
-    TenantDetailComponent,
-    TenantFormComponent,
-    TenantListComponent,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'

@@ -17,16 +17,22 @@
       <div class="p-4">
         <app-app-menu></app-app-menu>
       </div>
-      <!--
-            <a class="add-thread" [routerLink]="['/home']" style="padding-left: 7px;">
-                <button mat-icon-button matTooltip="Back to home" style="width: 32px;">
-                    <mat-icon>arrow_back_ios</mat-icon>
-                </button>
-                <div>ホームへ</div>
-            </a>
-             -->
-      <div class="project-title gradient-text" [title]="selectedProject.label"
-        [ngClass]="{'team-project':selectedTeam.teamType!=='Alone'}">{{selectedProject.label}}</div>
+      <button class="project-title gradient-text cursor-pointer" [title]="selectedProject.label"
+        [matMenuTriggerFor]="projectMenu">
+        {{selectedProject.label}}
+      </button>
+      <mat-menu #projectMenu="matMenu" xPosition="before" [overlapTrigger]="false">
+        @for(team of teamForViewList; track team.id) {
+        <div class="gradient-text pl-3">{{team.label}}</div>
+        @for(project of team.projects; track project.id) {
+        <a mat-menu-item [routerLink]="['/chat', project.id, 'new-thread']">
+          {{project.label}}
+        </a>
+        }
+        <mat-divider *ngIf="team !== teamForViewList[teamForViewList.length-1]"></mat-divider>
+        }
+      </mat-menu>
+
       @if(selectedTeam.teamType!=='Alone'){
       <div class="share-tag">Share:{{selectedTeam.label}}</div>
       }
