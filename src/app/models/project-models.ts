@@ -296,6 +296,7 @@ export interface MessageGroup extends BaseEntity {
     type: MessageGroupType; // Single, Parallel, Regenerated
     seq: number;
     role: OpenAI.ChatCompletionRole;
+    source?: 'user' | string;
     // label: string;
     previousMessageGroupId?: UUID;
     // editedRootMessageGroupId?: UUID;

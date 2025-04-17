@@ -16,6 +16,12 @@
         <option value="assistant">assistant</option>
       </select>
       }
+      <!-- @if(messageGroup().role==='assistant'){
+      <span
+        style="white-space: nowrap;word-break: keep-all;margin-left: 10px;position: absolute;top:-2px;left:24px;font-size:12px;">
+        by {{messageGroup().source}}
+      </span>
+      } -->
     </mat-panel-title>
     <mat-panel-description>
       <div class="truncate">{{messageGroup().messages[0].label}}</div>
@@ -195,6 +201,12 @@
   }
   @if (!messageGroup().messages[mIndex].editing) {
   <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'bottom'}"></ng-container>
+  }
+
+  @if(messageGroup().role==='assistant' && messageGroup().source){
+  <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap" style="color: #908070;"><!-- #BFAE9D -->
+    by {{ messageGroup().source }}
+  </div>
   }
 </mat-expansion-panel>
 } @else {
