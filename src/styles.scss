@@ -592,6 +592,33 @@ h1,
     @extend %loading-cover-common;
 }
 
+.waiting-text {
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    animation: text-gradient 1s linear infinite;
+    background: linear-gradient(120deg,
+            rgba(97, 87, 78, 0.55) 0%,
+            rgba(97, 87, 78, 0.55) 40%,
+            rgba(191, 174, 157, 0.55) 50%,
+            rgba(97, 87, 78, 0.55) 60%,
+            rgba(97, 87, 78, 0.55) 100%);
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+@keyframes text-gradient {
+    0% {
+        background-position: 100% 0%;
+    }
+
+    100% {
+        background-position: 0% 100%;
+    }
+}
+
+
 
 option.古い {
     color: #b0b0b0;

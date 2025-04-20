@@ -57,7 +57,7 @@ export class ToolCallService {
     } else {
       toolCallSetList.push(masterToolCallPart);
     }
-    // id系が合ったら追加しておく
+    // id系があったら追加しておく
     masterToolCallPart.toolCallGroupId = masterToolCallPart.toolCallGroupId || toolCallPart.toolCallGroupId || '';
     masterToolCallPart.toolCallId = masterToolCallPart.toolCallId || toolCallPart.toolCallId;
     switch (toolCallPart.type) {
@@ -72,7 +72,10 @@ export class ToolCallService {
         break;
       case ToolCallPartType.RESULT:
         masterToolCallPart.resultList.push(toolCallPart.body);
+        masterToolCallPart.info.isRunning = false;
         break;
+      default:
+        console.error('Unknown ToolCallPart type:', toolCallPart);
     }
     return toolCallSetList;
   }
@@ -181,7 +184,7 @@ export type ToolCallPartBody =
 
 interface ToolCallBase {
   seq?: number;
-  toolCallGroupId?: string;
+  toolCallGroupId: string;
   toolCallId: string;
 }
 export interface ToolCallPartInfo extends ToolCallBase {

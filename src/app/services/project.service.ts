@@ -123,8 +123,8 @@ export class ThreadService {
     private readonly http: HttpClient = inject(HttpClient);
     private threadListMas: { [threadGroupId: string]: ThreadGroup[] } = {};
 
-    genInitialThreadGroupEntity(projectId: string): ThreadGroup {
-        const deafultThreadGroup = Object.keys(this.threadListMas).map(key => this.threadListMas[key].find(threadGroup => threadGroup.type === ThreadGroupType.Default)).filter(threadGroup => threadGroup)[0];
+    genInitialThreadGroupEntity(projectId: string, template?: ThreadGroup): ThreadGroup {
+        const deafultThreadGroup = template || Object.keys(this.threadListMas).map(key => this.threadListMas[key].find(threadGroup => threadGroup.type === ThreadGroupType.Default)).filter(threadGroup => threadGroup)[0];
         if (deafultThreadGroup) {
             const threadGroup = Utils.clone(deafultThreadGroup);
             threadGroup.createdAt = new Date(threadGroup.createdAt);

@@ -19,14 +19,14 @@ import { DialogComponent } from '../dialog/dialog.component';
 declare const _paq: any;
 
 @Component({
-    selector: 'app-parameter-setting-dialog',
-    imports: [
-        CommonModule, FormsModule,
-        MatButtonModule, MatFormFieldModule, MatSelectModule, MatSliderModule, MatCheckboxModule,
-        MatDividerModule, MatTooltipModule, MatDialogModule,
-    ],
-    templateUrl: './parameter-setting-dialog.component.html',
-    styleUrl: './parameter-setting-dialog.component.scss'
+  selector: 'app-parameter-setting-dialog',
+  imports: [
+    CommonModule, FormsModule,
+    MatButtonModule, MatFormFieldModule, MatSelectModule, MatSliderModule, MatCheckboxModule,
+    MatDividerModule, MatTooltipModule, MatDialogModule,
+  ],
+  templateUrl: './parameter-setting-dialog.component.html',
+  styleUrl: './parameter-setting-dialog.component.scss'
 })
 export class ParameterSettingDialogComponent {
 
@@ -90,6 +90,28 @@ export class ParameterSettingDialogComponent {
         (threadGroup.id as any) = undefined;
         threadGroup.title = 'Default';
         threadGroup.type = ThreadGroupType.Default;
+        threadGroup.threadList.forEach((thread) => {
+          (thread.id as any) = undefined;
+          thread.status = 'Normal';
+        });
+        this.threadService.upsertThreadGroup(defaultProject.id, threadGroup).subscribe((threadGroup) => {
+          this.snackBar.open('設定を保存しました。', 'Close', { duration: 2000 });
+        });
+      } else {
+      }
+    });
+    this.submit();
+  }
+
+  saveAs() {
+    // デフォルトプロジェクトにも保存。これ自体は終わってなくても問題ないので待たなくてもよい
+    this.projectService.getProjectList().subscribe((projects) => {
+      const defaultProject = projects.find(p => p.visibility === ProjectVisibility.Default);
+      if (defaultProject) {
+        const threadGroup = Utils.clone(this.threadGroup);
+        (threadGroup.id as any) = undefined;
+        threadGroup.title = 'Default';
+        threadGroup.type = ThreadGroupType.Template;
         threadGroup.threadList.forEach((thread) => {
           (thread.id as any) = undefined;
           thread.status = 'Normal';

@@ -326,6 +326,7 @@ export enum MessageStatusType {
     Waiting = 'Waiting', // AI自動生成開始待ち
     Loading = 'Loading', // AI自動生成中
     Loaded = 'Loaded', // 通常
+    Canceled = 'Canceled', // キャンセル
     // Error = 'Error',
     // Deleted = 'Deleted',
 }

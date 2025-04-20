@@ -72,10 +72,10 @@ export class ChatPanelZoomDialogComponent {
       svgs.forEach(_svg => {
         const svg = (_svg as HTMLPreElement);
         const textContent = svg.textContent || '';
-        if (textContent.startsWith('<svg')) {
+        if (/<svg[\s>]/i.test(textContent)) {
           // SVGをData URIに変換
           // const xml = new XMLSerializer().serializeToString(svg);
-          const svg64 = btoa(unescape(encodeURIComponent(svg.textContent || '')));
+          const svg64 = btoa(decodeURIComponent(encodeURIComponent(svg.textContent || '')));
           const image64 = 'data:image/svg+xml;base64,' + svg64;
 
           // 新しい<img>要素を作成

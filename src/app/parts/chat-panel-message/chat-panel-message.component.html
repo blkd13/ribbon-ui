@@ -1,4 +1,4 @@
-@if(messageGroup() && messageGroup().messages && messageGroup().messages.length>0){
+@if(messageGroup() && messageGroup().messages && messageGroup().messages.length>0 && message){
 <mat-expansion-panel class="message"
   [ngClass]="[messageGroup().messages[0].cacheId?'cached':'', messageGroup().role, exPanel.expanded?'expanded':'closed']"
   #exPanel [expanded]="messageGroup().isExpanded" (opened)="loadContent().subscribe()"
@@ -76,9 +76,13 @@
           (change)="onSubmit()"></textarea>
       </div>
       <div #textBodyElem>
+        @if (['Waiting'].includes(message.status)) {
+        <div class="waiting-text">Waiting...</div>
+        } @else if (message){
         <markdown #mdElem [hidden]="message.editing" katex mermaid clipboard (load)="onReady($event, 'onLoaded')"
           (ready)="onReady($event, 'onReady')" [data]="brackets.pre+content.text+brackets.post">
         </markdown>
+        }
       </div>
       } @else if(content.type==='error') {
       <div class="text-red-500 overflow-auto">
@@ -104,7 +108,7 @@
         @for(toolCallSet of jsonParseToArray(content.text||'[]');track $index){
         @if(toolCallSet.info){
         @let info = toolCallSet.info;
-        @let isRunning = info.isRunning && !info.isInteractive && toolCallSet.resultList.length===0;
+        @let isRunning = info.isRunning && !info.isInteractive;
         <button class="flex items-center command-tag cursor-pointer relative overflow-hidden"
           (click)="openToolCallDialog($event, toolCallSet)">
           <img [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 32px;" />
@@ -189,16 +193,22 @@
       </div>
       } @else {}
 
+      @if(message.status==='Loading'){
+      <div class="waiting-text">Writting...</div>
+      }
+
     </div>
   </div>
 
   <!-- Loading -->
   <!-- アニメーションつけるかどうか [@fadeAnimation] -->
-  @if (messageGroup().messages[mIndex].status === 'Waiting') {
+  <!-- 
+  @if (['Waiting'].includes(message.status)) {
   <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10">
     <mat-spinner style="transform: scale(0.4);"></mat-spinner>
   </div>
   }
+  -->
   @if (!messageGroup().messages[mIndex].editing) {
   <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'bottom'}"></ng-container>
   }
@@ -249,11 +259,24 @@
       }
     </button>
     }
-    <button mat-icon-button (click)="remove($event)" [title]="messageGroup().role==='assistant'?'リトライ':'削除'"
-      style="margin-right: 10px;"
-      [ngStyle]="{visibility: (messageGroup().messages[0].cacheId || messageGroup().role==='system')?'hidden':'visible'}">
-      <mat-icon>@if(messageGroup().role==='assistant'){ refresh }@else{ close }</mat-icon>
+
+    @if(messageGroup().messages[0].cacheId || messageGroup().role==='system'){
+    <button mat-icon-button style="margin-right: 10px;visibility: hidden;"><mat-icon>close</mat-icon></button>
+    } @else if(messageGroup().role==='user'){
+    <button mat-icon-button (click)="remove($event)" title="削除" style="margin-right: 10px;">
+      <mat-icon>close</mat-icon>
     </button>
+    } @else if(messageGroup().role==='assistant'){
+    @if(['Waiting','Loading'].includes(messageGroup().messages[mIndex].status)){
+    <button mat-icon-button (click)="cancel($event)" title="キャンセル" style="margin-right: 10px;">
+      <mat-icon>cancel</mat-icon>
+    </button>
+    } @else {
+    <button mat-icon-button (click)="remove($event)" title="リトライ" style="margin-right: 10px;">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    }
+    } @else { }
 
     <!-- 'margin-right': position === 'bottom' ? '-6px' : '10px' -->
     @if(position==='bottom'){

@@ -145,7 +145,7 @@
   </div>
 
   <div class="drop-zone relative" appFileDrop (filesDropped)="onFilesDropped($event)">
-    <div class="w-full flex items-center justify-between gap-5">
+    <div class="w-full flex items-center justify-between gap-5" style="z-index: 2;">
       <div style="min-width: 0;flex-grow: 1;"></div>
       <div class="command-dock" style="line-height: 0;">
         <div class="grid-layout mr-2">
@@ -183,24 +183,31 @@
 
       </div>
     </div>
+
+    <!-- プリセット系 -->
     @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length===1){
-    <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col "
-      style="transform: scale(0.5);z-index: 1;">
-      <h1>スレッド数</h1>
+    <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col " style="z-index: 1;">
+      <h1 style="font-size: 1.78rem;">スレッド数</h1>
       <div class="w-full flex justify-center items-center gap-10">
         @for(index of [1, 2, 3, 4];track $index){
-        <div class="course-panel" (click)="loadPreset(index)"
+        <div class="course-panel" style="font-size: 24px;" (click)="loadPreset(index)"
           [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
         }
       </div>
-      <h1 style="margin-top: 80px;">モード</h1>
-      <div class="w-full flex justify-center items-center gap-10">
+      <h1 style="font-size: 1.78rem;margin-top: 80px;">モード</h1>
+      <div class="w-full flex justify-center items-center gap-10 flex-wrap">
         @for(preset of chatService.presetDefs;track $index){
         <div class="course-panel text-center" (click)="selectPreset(preset)" [innerHTML]="preset.label"
           [ngClass]="{selected:presetLabel===preset.label}" style="line-height: 1.5;"></div>
         }
+        @for (item of templateThreadGroupList; track $index) {
+        <div class="course-panel" (click)="selectTemplateThreadGroup(item)" [ngClass]="{selected:presetLabel===item.id}"
+          style="line-height: 1.5;">
+          {{item.title}}
+        </div>
+        }
       </div>
-      <div class="text-xl mt-10 text-[#999]">スレッド数／定型文はオプションなので選ばなくてもよい。</div>
+      <div class="text-sm mt-10 text-[#999]">スレッド数／定型文はオプションなので選ばなくてもよい。</div>
     </div>
     }
     <!-- チャットエリア -->
@@ -238,29 +245,33 @@
             <!-- {{messageGroup.id}} -->
             @if(messageGroup.role==='system') {
             } @else if(['assistant', 'user'].includes(messageGroup.role)) {
-            <div #anchor class="anchor"> <!-- スクロール用のただのアンカー -->
+            <div #anchor class="anchor"
+              [ngClass]="{'anchor-loading-tabs':hasWaitingOrLoadingMessages('tabs',messageGroup)}">
+              <!-- スクロール用のただのアンカー -->
               <app-chat-panel-message #chatPanelList [messageGroup]="messageGroup"
                 [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
                 [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
                 (toolExec)="toolExec($event)" (removeContent)="removeContent($event)"
                 (ready)="onChatPanelReady(messageGroup)" (removeMessage)="removeMessage($event)"
-                (remove)="removeMessageGroup($event)">
+                (remove)="removeMessageGroup($event)" (cancel)="cancelGenerating($event)">
               </app-chat-panel-message>
 
               <!-- 末尾だったら追加可能にする -->
               @if(!messageService.nextMessageGroupId[messageGroupId]) {
-              @if(messageService.messageGroupMas[messageGroupId].role==='user'){
+              @if(!['Waiting','Loading'].includes(messageGroup.messages[0].status)){
+              @if(messageGroup.role==='user'){
               <button mat-icon-button class="pl-6 sgl-btn" color="primary"
                 (click)="send('messageGroup', [messageGroupId]).subscribe()">
                 <mat-icon>send</mat-icon>
               </button>
-              } @else if(messageService.messageGroupMas[messageGroupId].role==='assistant'){
+              } @else if(messageGroup.role==='assistant'){
               <!-- これはまだちょっと難しい -->
               <button mat-icon-button class="pl-6 sgl-btn" color="primary"
                 (click)="appendMessageGroup(thread.id, messageGroupId)">
                 <mat-icon>add_circle</mat-icon>
               </button>
               } @else {
+              }
               }
               }
 
@@ -328,7 +339,8 @@
     <div #textBodyElem class="custom-scroll w-full flex-1 h-0 px-2 py-0 flex flex-col gap-1 relative"
       style="overflow-y: scroll;">
       @for(index of indexList; track $index;let pIndex=$index) {
-      <div #anchor class="anchor flex gap-0.5 w-full min-w-full max-w-full relative">
+      <div #anchor class="anchor flex gap-0.5 w-full min-w-full max-w-full relative"
+        [ngClass]="{'anchor-loading-list':indexList.length-1===pIndex && hasWaitingOrLoadingMessages('list', undefined)}">
 
         @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
         <div class="w-0 flex-grow flex flex-col justify-between relative">
@@ -343,12 +355,13 @@
             <app-chat-panel-message [messageGroup]="messageGroup" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
               [layout]="userService.chatLayout" (edit)="editChat($event)" [index]="$index"
               (removeContent)="removeContent($event)" (removeMessage)="removeMessage($event)"
-              (remove)="removeMessageGroup($event)" (toolExec)="toolExec($event)"
+              (remove)="removeMessageGroup($event)" (cancel)="cancelGenerating($event)" (toolExec)="toolExec($event)"
               (fileSelectionUpdateEmitter)="onChange()" (expanded)="expanded($event, pIndex, tIndex, messageGroup)">
             </app-chat-panel-message>
 
             <!-- 末尾だったら追加可能にする -->
             @if(!messageService.nextMessageGroupId[messageGroupId]) {
+            @if(!['Waiting','Loading'].includes(messageGroup.messages[0].status)){
             @if(messageService.messageGroupMas[messageGroupId].role==='user'){
             <button mat-icon-button class="pl-6 sgl-btn" color="primary"
               (click)="send('messageGroup', [messageGroupId]).subscribe()">
@@ -360,6 +373,7 @@
               <mat-icon>add_circle</mat-icon>
             </button>
             } @else {
+            }
             }
             <div style="min-height: 200px;"></div>
             }
