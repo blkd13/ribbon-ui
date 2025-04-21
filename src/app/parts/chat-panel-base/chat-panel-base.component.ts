@@ -85,6 +85,7 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly effectBitCounter = effect(() => {
     this.bitCounter();
+    this.setMessageIndex(this.mIndex); // これが無いと復旧したときのmessageの実体が反映しない
     const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as OpenAI.ChatCompletionContentPartText);
     if (this.beforeText === content?.text) {
       // 変更なければ何もしない

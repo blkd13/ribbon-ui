@@ -74,11 +74,11 @@
               class="h-7 m-1 pl-2 text-[#303030]" (change)="renameThreadGroup($event, threadGroup, false, $index)"
               (blur)="editNameThreadId=''" />
             } @else {
-            <div class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis"
-              style="padding:5px 10px;height: 35px;min-width: 0;width: 1px;flex-grow: 1;"
+            <a class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis grow unstyled-link"
+              style="padding:5px 10px;height: 35px;min-width: 0;width: 1px;"
               [routerLink]="['/chat', selectedProject.id, threadGroup.id]" [title]="threadGroup.title">
               {{threadGroup.title}}
-            </div>
+            </a>
             }
             <div>
               @if(isCacheLive(threadGroup)){

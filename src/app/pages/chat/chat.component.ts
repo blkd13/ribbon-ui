@@ -116,7 +116,7 @@ export class ChatComponent implements OnInit {
 
   placeholder = '';
   defaultPlaceholder = 'メッセージを入力...。Shift+Enterで改行。Ctrl+Enterで送信。Drag＆Drop、ファイル貼り付け。';
-  chatStreamSubscriptionList: { [threadGroupId: string]: Subscription[] } = {};
+  chatStreamSubscriptionList: { [threadGroupId: string]: { message: MessageForView, subscription: Subscription }[] } = {};
   cacheMap: { [key: string]: CachedContent } = {};
   editNameThreadId: string = '';
   private timeoutId: any;
@@ -384,28 +384,22 @@ export class ChatComponent implements OnInit {
           // )),
           tap(tapRes => {
 
-            let isExist = false;
             // 実行中のメッセージがあったら復旧する
             Object.keys(this.messageGroupIdListMas).forEach(threadId => {
               this.messageGroupIdListMas[threadId].forEach(messageGroupId => {
-                if (this.messageService.messageGroupMas[messageGroupId]) {
-                  const message = this.messageService.messageGroupMas[messageGroupId].messages.at(-1)!;
-                  const resDto = this.chatService.getObserver(message.id);
-                  if (resDto && resDto.observer) {
-                    // 別ページから復帰した場合に再開する。
-                    message.contents[0].text = resDto.text;
-                    this.chatStreamSubscriptionList[threadGroup.id] = this.chatStreamSubscriptionList[threadGroup.id] || [];
-                    this.chatStreamSubscriptionList[threadGroup.id].push(resDto.observer.subscribe(this.chatStreamHandler(message)));
-                    isExist = true;
+                const messageGroup = this.messageService.messageGroupMas[messageGroupId];
+                if (messageGroup) {
+                  const message = messageGroup.messages.at(-1)!;
+                  if (this.chatStreamSubscriptionList[threadGroup.id]) {
+                    const existMessage = this.chatStreamSubscriptionList[threadGroup.id].find(sub => sub.message.id === message.id);
+                    if (existMessage) {
+                      messageGroup.messages[messageGroup.messages.length - 1] = existMessage.message;
+                    } else { }
                   } else { }
                 } else { }
               });
             });
 
-            if (isExist) {
-            } else {
-              this.onChange();
-            }
             this.isThreadGroupLoading = false;
 
             // 一番下まで下げる
@@ -573,28 +567,22 @@ export class ChatComponent implements OnInit {
             // )),
             tap(tapRes => {
 
-              let isExist = false;
               // 実行中のメッセージがあったら復旧する
               Object.keys(this.messageGroupIdListMas).forEach(threadId => {
                 this.messageGroupIdListMas[threadId].forEach(messageGroupId => {
-                  if (this.messageService.messageGroupMas[messageGroupId]) {
-                    const message = this.messageService.messageGroupMas[messageGroupId].messages.at(-1)!;
-                    const resDto = this.chatService.getObserver(message.id);
-                    if (resDto && resDto.observer) {
-                      // 別ページから復帰した場合に再開する。
-                      message.contents[0].text = resDto.text;
-                      this.chatStreamSubscriptionList[threadGroup.id] = this.chatStreamSubscriptionList[threadGroup.id] || [];
-                      this.chatStreamSubscriptionList[threadGroup.id].push(resDto.observer.subscribe(this.chatStreamHandler(message)));
-                      isExist = true;
+                  const messageGroup = this.messageService.messageGroupMas[messageGroupId];
+                  if (messageGroup) {
+                    const message = messageGroup.messages.at(-1)!;
+                    if (this.chatStreamSubscriptionList[threadGroup.id]) {
+                      const existMessage = this.chatStreamSubscriptionList[threadGroup.id].find(sub => sub.message.id === message.id);
+                      if (existMessage) {
+                        messageGroup.messages[messageGroup.messages.length - 1] = existMessage.message;
+                      } else { }
                     } else { }
                   } else { }
                 });
               });
 
-              if (isExist) {
-              } else {
-                this.onChange();
-              }
               this.isThreadGroupLoading = false;
 
               // 一番下まで下げる
@@ -1204,7 +1192,7 @@ export class ChatComponent implements OnInit {
                   messageGroup.messages.map(message => {
                     message.status = MessageStatusType.Waiting;
                     if (message.observer) {
-                      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push(message.observer.subscribe(this.chatStreamHandler(message)));
+                      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push({ message, subscription: message.observer.subscribe(this.chatStreamHandler(message)) });
                       console.log(`Message ID before chat completion: ${message.id}`);
                     } else { }
                   });
@@ -1299,7 +1287,7 @@ export class ChatComponent implements OnInit {
               }
               const text = choice.delta.content;
               content.text += text;
-              // console.log(`content=${choice.delta.content}`);
+              // console.log(`content[${content.id}]=${choice.delta.content}`);
             } else { }
 
             const toolCallGroupId = message.contents.findLast(content => content.type === ContentPartType.TOOL)?.id || ''; // toolCallGroupIdは発番はされているが取ってくるのが難しいので一旦contentIdで代用。発行単位が同じなのでこれでも大丈夫だと思う。
@@ -1558,7 +1546,7 @@ export class ChatComponent implements OnInit {
         // スレッドのロックを解除する
         this.threadLocks[thread.id] = false;
         setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
-        this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.unsubscribe());
+        this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.subscription.unsubscribe());
       }
     });
     delete this.chatStreamSubscriptionList[this.selectedThreadGroup.id];
@@ -1645,7 +1633,7 @@ export class ChatComponent implements OnInit {
           tokenObj.totalTokens += res.totalTokens;
           tokenObj.totalBillableCharacters = tokenObj.totalBillableCharacters || 0; // undefinedの場合があるので初期化
           tokenObj.totalBillableCharacters += res.totalBillableCharacters || 0;
-          tokenObj.text += res.text;
+          // tokenObj.text += res.text;
           tokenObj.image += res.image;
           tokenObj.audio += res.audio;
           tokenObj.video += res.video;
@@ -1937,7 +1925,7 @@ export class ChatComponent implements OnInit {
     if (this.chatStreamSubscriptionList[this.selectedThreadGroup.id]) {
       this.threadLocks[thread.id] = false;
       setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
-      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.unsubscribe());
+      this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.subscription.unsubscribe());
     }
     delete this.chatStreamSubscriptionList[this.selectedThreadGroup.id];
   }
