@@ -1113,7 +1113,10 @@ export class ChatComponent implements OnInit {
         throw new Error(`メッセージ受信中のスレッドがあります。`);
       }
     }
-    // 対象スレッドをロック
+
+    // ダミーIDを本物のIDに変換するために、スレッドIDを一旦保存しておく。
+    const beforeTreadIdList = threadList.map(thread => thread.id);
+    // 対象スレッドをロック（ダミーIDだけどとりあえず二重送信抑止のため）
     threadList.forEach(thread => this.threadLocks[thread.id] = true);
 
     // 初回送信後はプレースホルダをデフォルトのものに戻す。
@@ -1144,6 +1147,12 @@ export class ChatComponent implements OnInit {
     _paq.push(['trackEvent', 'AIチャット', 'メッセージ送信', threadList.length]);
 
     return this.saveAndBuildThreadGroup(threadList.map(thread => thread.id)).pipe(
+      tap(_ => {
+        // 対象スレッドをロック (dummy-idから本物のIDに変更する)
+        beforeTreadIdList.forEach(threadId => this.threadLocks[threadId] = false);
+        threadList.forEach(thread => this.threadLocks[thread.id] = true);
+        // console.log(`threadLocks`, this.threadLocks);
+      }),
       switchMap(messageGroupIds =>
         safeForkJoin(messageGroupIds.filter(messageGroupId => {
           if (type === 'threadGroup') {
@@ -1359,7 +1368,7 @@ export class ChatComponent implements OnInit {
 
             // tool_result
             if (['tool', 'command', 'input'].includes(choice.delta.role || '')) {
-              console.log('tool_result', choice.delta);
+              // console.log('tool_result', choice.delta);
               const tool_call_id = (choice.delta as { tool_call_id: string }).tool_call_id;
               const content = message.contents.find(content => content.type === ContentPartType.TOOL && content.id === toolCallGroupId);
               if (content && content.toolCallGroup) {
@@ -1569,7 +1578,11 @@ export class ChatComponent implements OnInit {
         const messageGroupId = this.messageGroupIdListMas[thread.id].at(-1);
         if (messageGroupId) {
           const messageGroup = this.messageService.messageGroupMas[messageGroupId];
-          return messageGroup.messages.some(message => ['Waiting', 'Loading'].includes(message.status)) ?? false;
+          if (messageGroup) {
+            return messageGroup.messages.some(message => ['Waiting', 'Loading'].includes(message.status)) ?? false;
+          } else {
+            return false;
+          }
         } else {
           return false;
         }
@@ -1633,7 +1646,7 @@ export class ChatComponent implements OnInit {
           tokenObj.totalTokens += res.totalTokens;
           tokenObj.totalBillableCharacters = tokenObj.totalBillableCharacters || 0; // undefinedの場合があるので初期化
           tokenObj.totalBillableCharacters += res.totalBillableCharacters || 0;
-          // tokenObj.text += res.text;
+          tokenObj.text += res.text;
           tokenObj.image += res.image;
           tokenObj.audio += res.audio;
           tokenObj.video += res.video;
