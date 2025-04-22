@@ -13,14 +13,13 @@
   </div>
   <!-- スレッドリスト -->
   <div class="h-full w-52 pt-0 overflow-hidden left-pane relative" [ngStyle]="{width: showThreadList?'208px':'8px'}">
+    <!-- スレッドリストを閉じるときに横幅が狭まるが、中身は狭めないようにするために一層設けておく -->
     <div class="h-full w-52 overflow-hidden relative flex flex-col">
-      <div class="p-4">
-        <app-app-menu></app-app-menu>
+      <app-app-menu class="p-4"></app-app-menu>
+      <div class="project-title gradient-text" [title]="selectedProject.label">
+        <label for="projectMenuTrigger" class="cursor-pointer">{{selectedProject.label}}</label>
+        <button id="projectMenuTrigger" [matMenuTriggerFor]="projectMenu"></button>
       </div>
-      <button class="project-title gradient-text cursor-pointer" [title]="selectedProject.label"
-        [matMenuTriggerFor]="projectMenu">
-        {{selectedProject.label}}
-      </button>
       <mat-menu #projectMenu="matMenu" xPosition="before" [overlapTrigger]="false">
         @for(team of teamForViewList; track team.id) {
         <div class="gradient-text pl-3">{{team.label}}</div>
@@ -29,10 +28,9 @@
           {{project.label}}
         </a>
         }
-        <mat-divider *ngIf="team !== teamForViewList[teamForViewList.length-1]"></mat-divider>
+        @if(team !== teamForViewList[teamForViewList.length-1]){<mat-divider></mat-divider>}
         }
       </mat-menu>
-
       @if(selectedTeam.teamType!=='Alone'){
       <div class="share-tag">Share:{{selectedTeam.label}}</div>
       }
@@ -94,7 +92,7 @@
                 <mat-icon>edit</mat-icon>
                 <span>名前変更</span>
               </button>
-              <button mat-menu-item (click)="cloneThreadGroup(threadGroup.id)">
+              <button mat-menu-item (click)="cloneThreadGroup($event, threadGroup.id)">
                 <mat-icon>file_copy</mat-icon>コピー
               </button>
               @if(projectList.length>1){
@@ -124,10 +122,14 @@
               </button>
             </mat-menu>
             <mat-menu #sendToProjesTemplate="matMenu">
+              @for(team of teamForViewList; track team.id) {
+              <div class="gradient-text pl-3">{{team.label}}</div>
               @for(project of projectList;track project.id){
               @if(project!==selectedProject){
               <button mat-menu-item (click)="sendThreadToProject(project, threadGroup)">{{project.label}}</button>
               }
+              }
+              @if(team !== teamForViewList[teamForViewList.length-1]){<mat-divider></mat-divider>}
               }
             </mat-menu>
 
@@ -176,6 +178,9 @@
         <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse()" title="チャットパネルの開閉">
           <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
         </button>
+        <button mat-icon-button color="primary" (click)="saveAsTemplate()" title="名前を付けて保存">
+          <mat-icon>save</mat-icon>
+        </button>
         <button mat-icon-button color="primary" (click)="openModelSetting()" title="設定">
           <mat-icon>settings</mat-icon>
         </button>
@@ -185,28 +190,74 @@
     </div>
 
     <!-- プリセット系 -->
-    @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length===1){
+    @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&1>=messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length){
     <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col " style="z-index: 1;">
       <h1 style="font-size: 1.78rem;">スレッド数</h1>
-      <div class="w-full flex justify-center items-center gap-10">
+      <div class="w-full flex justify-center items-center gap-5">
         @for(index of [1, 2, 3, 4];track $index){
         <div class="course-panel" style="font-size: 24px;" (click)="loadPreset(index)"
           [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
         }
       </div>
-      <h1 style="font-size: 1.78rem;margin-top: 80px;">モード</h1>
-      <div class="w-full flex justify-center items-center gap-10 flex-wrap">
+      <h1 style="font-size: 1.78rem;margin-top: 40px;">モード</h1>
+      <div class="w-full flex justify-center items-center gap-5 flex-wrap">
         @for(preset of chatService.presetDefs;track $index){
         <div class="course-panel text-center" (click)="selectPreset(preset)" [innerHTML]="preset.label"
           [ngClass]="{selected:presetLabel===preset.label}" style="line-height: 1.5;"></div>
         }
-        @for (item of templateThreadGroupList; track $index) {
-        <div class="course-panel" (click)="selectTemplateThreadGroup(item)" [ngClass]="{selected:presetLabel===item.id}"
-          style="line-height: 1.5;">
-          {{item.title}}
+      </div>
+      <!-- 個人用モード -->
+      <div class="w-full flex justify-center items-center gap-5 flex-wrap mt-5">
+        @for (item of templateThreadGroupList.slice().reverse(); track $index) {
+        <div class="relative">
+          <button class="course-panel" (click)="selectTemplateThreadGroup(item)"
+            [matTooltip]="item.description||item.title" [ngClass]="{selected:presetLabel===item.id}"
+            style="line-height: 1.5;">
+            {{item.title}}
+          </button>
+          <button mat-icon-button class="course-panel-close" [matMenuTriggerFor]="templateMenu">
+            <mat-icon class="small-icon">more_vert</mat-icon>
+          </button>
         </div>
+        <mat-menu #templateMenu="matMenu">
+          <button mat-menu-item (click)="editTemplateThreadGroup($event, item)">
+            <mat-icon>edit</mat-icon>
+            <span>名前変更</span>
+          </button>
+          <button mat-menu-item (click)="cloneThreadGroup($event, item.id)">
+            <mat-icon>file_copy</mat-icon>
+            <span>コピー</span>
+          </button>
+          <button mat-menu-item [matMenuTriggerFor]="sendTemplateToProjesTemplate">
+            <mat-icon>move_item</mat-icon>
+            <span>送る</span>
+          </button>
+          <!-- <button mat-menu-item (click)="editTemplateThreadGroup($event, item)" title="現在のチャット設定をこのモードに上書き保存します">
+            <mat-icon>save</mat-icon>
+            <span>上書き</span>
+          </button> -->
+          <mat-divider></mat-divider>
+          <mat-divider></mat-divider>
+          <button mat-menu-item (click)="removeTemplateThreadGroup($event, item)">
+            <mat-icon style="color: #FF6666">close</mat-icon>
+            <span style="color: #FF6666">削除</span>
+          </button>
+        </mat-menu>
+
+        <mat-menu #sendTemplateToProjesTemplate="matMenu">
+          @for(team of teamForViewList; track team.id) {
+          <div class="gradient-text pl-3">{{team.label}}</div>
+          @for(project of projectList;track project.id){
+          @if(project!==selectedProject){
+          <button mat-menu-item (click)="sendThreadToProject(project, item)">{{project.label}}</button>
+          }
+          }
+          @if(team !== teamForViewList[teamForViewList.length-1]){<mat-divider></mat-divider>}
+          }
+        </mat-menu>
         }
       </div>
+
       <div class="text-sm mt-10 text-[#999]">スレッド数／定型文はオプションなので選ばなくてもよい。</div>
     </div>
     }

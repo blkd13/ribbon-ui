@@ -178,6 +178,10 @@ export class ThreadService {
     //     localStorage.setItem('settings-v2.0', JSON.stringify(threadGroup));
     // }
 
+    updateThreadGroupTitleAndDescription(projectId: string, threadGroup: ThreadGroup): Observable<ThreadGroup> {
+        return this.http.patch<ThreadGroup>(`/user/project/${projectId}/thread-group`, threadGroup);
+    }
+
     upsertThreadGroup(projectId: string, threadGroup: ThreadGroupUpsertDto): Observable<ThreadGroup> {
         const inDto = Utils.clone(threadGroup);
         if (inDto.id?.startsWith('dummy-')) {
@@ -221,8 +225,8 @@ export class ThreadService {
         return this.http.put<ThreadGroup>(`/user/thread-group/${threadGroupId}`, { projectId });
     }
 
-    cloneThreadGroup(threadGroupId: string): Observable<ThreadGroup> {
-        return this.http.post<ThreadGroup>(`/user/thread-group/clone/${threadGroupId}`, {}).pipe(tap(threadGroupResponseHandler));
+    cloneThreadGroup(threadGroupId: string, options?: { type: ThreadGroupType, title: string, description: string }): Observable<ThreadGroup> {
+        return this.http.post<ThreadGroup>(`/user/thread-group/clone/${threadGroupId}`, options || {}).pipe(tap(threadGroupResponseHandler));
     }
 
     // cloneThread(threadId: string): Observable<Thread> {

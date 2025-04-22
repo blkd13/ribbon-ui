@@ -103,28 +103,6 @@ export class ParameterSettingDialogComponent {
     this.submit();
   }
 
-  saveAs() {
-    // デフォルトプロジェクトにも保存。これ自体は終わってなくても問題ないので待たなくてもよい
-    this.projectService.getProjectList().subscribe((projects) => {
-      const defaultProject = projects.find(p => p.visibility === ProjectVisibility.Default);
-      if (defaultProject) {
-        const threadGroup = Utils.clone(this.threadGroup);
-        (threadGroup.id as any) = undefined;
-        threadGroup.title = 'Default';
-        threadGroup.type = ThreadGroupType.Template;
-        threadGroup.threadList.forEach((thread) => {
-          (thread.id as any) = undefined;
-          thread.status = 'Normal';
-        });
-        this.threadService.upsertThreadGroup(defaultProject.id, threadGroup).subscribe((threadGroup) => {
-          this.snackBar.open('設定を保存しました。', 'Close', { duration: 2000 });
-        });
-      } else {
-      }
-    });
-    this.submit();
-  }
-
   submit(savedFlag = false) {
     _paq.push(['trackEvent', 'チャットの設定', '確定', savedFlag]);
     this.threadGroup.threadList.forEach((_, index) => {
@@ -153,9 +131,9 @@ export class ParameterSettingDialogComponent {
 
   removeModel(index: number) {
     const threadGroup = this.threadGroup as ThreadGroup;
-    this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${this.threadGroup.threadList[index].inDto.args.model}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
+    this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${this.threadGroup.threadList[index].inDto.args.model}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
       next: next => {
-        if (next === 0) {
+        if (next === 1) {
           threadGroup.threadList.splice(index, 1);
           this.reload();
         } else { /** 削除キャンセル */ }

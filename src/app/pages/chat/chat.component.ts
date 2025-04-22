@@ -48,6 +48,7 @@ import { UserService } from '../../services/user.service';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
 import { ToolCallPart, ToolCallPartBody, ToolCallPartInfoBody, ToolCallPartCallBody, ToolCallPartCommandBody, ToolCallPartResultBody, ToolCallPartType, ToolCallPartInfo, ToolCallPartCall, ToolCallPartCommand, ToolCallPartResult, ToolCallService, MyToolType, } from '../../services/tool-call.service';
 import { ChatCompletionTool } from 'openai/resources/index.mjs';
+import { SaveThreadData, SaveThreadDialogComponent } from '../../parts/save-thread-dialog/save-thread-dialog.component';
 
 declare var _paq: any;
 
@@ -95,6 +96,7 @@ export class ChatComponent implements OnInit {
   messageGroupIdListMas: { [threadId: string]: string[] } = {};
 
   templateThreadGroupList: ThreadGroup[] = [];
+  threadGroupListAll: ThreadGroup[] = [];
 
   // メッセージ一覧のインデックス。メッセージグループの数が最大のスレッドのメッセージグループ数を取得して、その数だけインデックスを作る。
   indexList = Array.from({ length: 0 }, (_, i) => i);
@@ -325,9 +327,14 @@ export class ChatComponent implements OnInit {
   }
 
   selectTemplateThreadGroup(templateThreadGroup: ThreadGroup): void {
-    // TODO : threadGroupChangeHandlerと同じことをやってるので共通化する。
+    // TODO : threadGroupChangeHandlerと似たようなことやってるのでほんとは共通化したい。
     this.presetLabel = templateThreadGroup.id;
     this.selectedThreadGroup = templateThreadGroup;
+
+    if ((templateThreadGroup.threadList[0].inDto as any).inputArea) {
+      // inputAreaがある場合はそれを使う。
+      Object.assign(this.inputArea, (templateThreadGroup.threadList[0].inDto as any).inputArea);
+    } else { }
 
     _paq.push(['trackEvent', 'AIチャット', 'テンプレート選択', templateThreadGroup.id]);
     // const threadGroup = this.threadService.genInitialThreadGroupEntity(this.selectedProject.id, this.selectedThreadGroup);
@@ -373,15 +380,6 @@ export class ChatComponent implements OnInit {
             this.cdr.detectChanges();
             // スレッドオブジェクトとメッセージグループオブジェクトの不整合（複数スレッドのはずなのにメッセージグループが無いとか）が起きていても大丈夫なようにする。
           }),
-          // switchMap(resDto => safeForkJoin(
-          //   this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]
-          //     .slice().reverse().filter((messageGroupId, index) => index < 2)
-          //     .map((messageGroupId, index) => {
-          //       this.messageService.messageGroupMas[messageGroupId].isExpanded = true;
-          //       return this.messageService.messageGroupMas[messageGroupId].messages;
-          //     })
-          //   ).flat().flat().filter(message => message.contents.length === 0).map(message => this.messageService.getMessageContentParts(message))
-          // )),
           tap(tapRes => {
 
             // 実行中のメッセージがあったら復旧する
@@ -405,7 +403,6 @@ export class ChatComponent implements OnInit {
             // 一番下まで下げる
             // this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
 
-            // this.router.navigate(['chat', this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
             setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
             document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
@@ -632,6 +629,7 @@ export class ChatComponent implements OnInit {
       });
       // ノーマルスレッドグループだけ持ってくる
       const _threadGroupList = this.sortThreadGroup(threadGroupList).filter(threadGroup => threadGroup.type === ThreadGroupType.Normal);
+      this.threadGroupListAll = threadGroupList;
       this.templateThreadGroupList = threadGroupList.filter(threadGroup => threadGroup.type === ThreadGroupType.Template);
       this.threadGroupList = [];
       _threadGroupList.map(newObj => {
@@ -701,14 +699,23 @@ export class ChatComponent implements OnInit {
     }));
   }
 
-  cloneThreadGroup(threadGroupId: string) {
-    this.isThreadGroupLoading = true
-    this.threadService.cloneThreadGroup(threadGroupId).subscribe({
+  cloneThreadGroup($event: Event, threadGroupId: string) {
+    // this.stopPropagation($event);
+    this.isThreadGroupLoading = true;
+    const threadGroup = this.threadGroupListAll.find(threadGroup => threadGroup.id === threadGroupId)!;
+    const { title, type, description } = threadGroup;
+    this.threadService.cloneThreadGroup(threadGroupId, { title: `Copy of ${title}`, type, description }).subscribe({
       next: threadGroup => {
-        this.threadGroupList.unshift(threadGroup);
-        this.threadGroupList = [...this.threadGroupList];
-        this.sortThreadGroup(this.threadGroupList);
         this.isThreadGroupLoading = false;
+        this.threadGroupListAll.unshift(threadGroup);
+        if (threadGroup.type === ThreadGroupType.Normal) {
+          this.threadGroupList.unshift(threadGroup);
+          this.threadGroupList = [...this.threadGroupList];
+          this.sortThreadGroup(this.threadGroupList);
+        } else if (threadGroup.type === ThreadGroupType.Template) {
+          this.templateThreadGroupList.unshift(threadGroup);
+          this.templateThreadGroupList = [...this.templateThreadGroupList];
+        }
       },
       error: error => {
         console.error(error);
@@ -1841,9 +1848,9 @@ export class ChatComponent implements OnInit {
     const threadGroup = this.selectedThreadGroup;
     const thread = threadGroup.threadList.find(_thread => _thread.id === targetThread.id);
     if (thread && threadGroup.threadList.length > 1) {
-      this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${thread.inDto.args.model}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
+      this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${thread.inDto.args.model}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
         next: next => {
-          if (next === 0) {
+          if (next === 1) {
             threadGroup.threadList.splice(threadGroup.threadList.indexOf(thread), 1);
             if (thread.id.startsWith('dummy-')) {
               // ダミーの場合はAPIには送る必要が無い。
@@ -2101,9 +2108,9 @@ export class ChatComponent implements OnInit {
 
   removeThreadGroup($event: MouseEvent, $index: number, threadGroup: ThreadGroup): void {
     // this.stopPropagation($event);
-    this.dialog.open(DialogComponent, { data: { title: 'チャット削除', message: `このチャットを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['削除', 'キャンセル'] } }).afterClosed().subscribe({
+    this.dialog.open(DialogComponent, { data: { title: 'チャット削除', message: `このチャットを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
       next: next => {
-        if (next === 0) {
+        if (next === 1) {
           this.threadService.deleteThreadGroup(threadGroup.id).subscribe({
             next: next => {
               this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
@@ -2161,9 +2168,9 @@ export class ChatComponent implements OnInit {
         Login: 'ログインユーザー全員',
         Public: '無制限',
       }
-      this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `共有範囲の異なるプロジェクトに送ります。\n[${table[this.selectedProject.visibility]}]${this.selectedProject.label}->[${table[project.visibility]}]${project.label}\nよろしいですか？`, options: ['OK', 'キャンセル'] } }).afterClosed().subscribe({
+      this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `共有範囲の異なるプロジェクトに送ります。\n[${table[this.selectedProject.visibility]}]${this.selectedProject.label}->[${table[project.visibility]}]${project.label}\nよろしいですか？`, options: ['キャンセル', 'OK',] } }).afterClosed().subscribe({
         next: next => {
-          if (next === 0) {
+          if (next === 1) {
             exec();
           }
         }
@@ -2234,6 +2241,188 @@ export class ChatComponent implements OnInit {
         }
       });
     }
+  }
+
+  saveAsTemplate(threadGroupId?: string): void {
+    const selectedProject = this.selectedProject;
+    const selectedThreadGroup = this.selectedThreadGroup;
+    const threadIdList = selectedThreadGroup.threadList.map(thread => thread.id);
+
+    // TODO 本当はロック掛けたい。    
+
+    this.dialog.open(SaveThreadDialogComponent, {
+      data: {
+        templateThreadGroupList: this.templateThreadGroupList,
+        threadGroupId, // 新規作成なのでundefined
+        threadName: selectedThreadGroup.title,
+        description: selectedThreadGroup.description,
+        includeMessages: this.indexList.length > 1,
+        isRenameOnly: false,
+      } as SaveThreadData,
+    }).beforeClosed().subscribe({
+      next: (params: SaveThreadData) => {
+        if (params) {
+          // 既存のスレッドグループが指定されていたら一旦削除してから再登録
+          // TODO 本当は更新ロジックを作った方がいいけど面倒だから削除再登録にする
+          const cleanup = params.threadGroupId ? this.threadService.deleteThreadGroup(params.threadGroupId).pipe(tap(() => { this.templateThreadGroupList.splice(this.templateThreadGroupList.findIndex(tg => tg.id === threadGroupId), 1); })) : of(undefined);
+          ((() => {
+            if (params.includeMessages) {
+              const inputArea = this.inputArea;
+              this.inputArea = this.generateInitalInputArea();
+              return of(0).pipe(
+                switchMap(() => cleanup),
+                switchMap(() => this.saveAndBuildThreadGroup()),
+                switchMap(threadIdList =>
+                  this.threadService.cloneThreadGroup(selectedThreadGroup.id, {
+                    type: ThreadGroupType.Template,
+                    title: params.threadName,
+                    description: params.description
+                  })
+                ),
+                // inputAreaを強制的に入れる
+                tap(clonedGroup => {
+                  clonedGroup.threadList.forEach(thread => {
+                    (thread.inDto as any).inputArea = inputArea;
+                  });
+                }),
+                switchMap(clonedGroup =>
+                  this.threadService.upsertThreadGroup(selectedProject.id, clonedGroup)
+                ),
+                tap(() => {
+                  this.inputArea = inputArea; // 元に戻す
+                }),
+              );
+            } else {
+              // メッセージは含めない場合⇒クローンを使わずに積み上げ
+              const threadGroup = {
+                ...genInitialBaseEntity(),
+                ...selectedThreadGroup,
+                id: genDummyId(), // 新規作成なのでDummyIDを付与
+                title: params.threadName,
+                description: params.description,
+                type: ThreadGroupType.Template,
+                threadList: selectedThreadGroup.threadList.map(_thread => {
+                  // 元オブジェクトを破壊しないようにcloneしておく
+                  const thread = Utils.clone(_thread);
+                  (thread.inDto as any).inputArea = this.inputArea; // 無理矢理inputAreaを入れる
+                  return {
+                    ...thread,
+                    id: genDummyId(), // 新規作成なのでDummyIDを付与
+                    inDto: {
+                      ...thread.inDto,
+                      args: {
+                        ...thread.inDto.args,
+                        cachedContent: undefined, // キャッシュは消す
+                      }
+                    }
+                  };
+                })
+              } as ThreadGroup;
+              // スレッドグループを保存する
+              return of(0).pipe(
+                switchMap(() => cleanup),
+                switchMap(() => this.threadService.upsertThreadGroup(threadGroup.projectId, threadGroup)),
+                switchMap(savedThreadGroup => {
+                  // // スレッドグループを保存したらメッセージグループを保存する
+
+                  // 元メッセージの0番目（システムプロンプト）を取得する 
+                  const systemMessageGroupList = threadIdList.map(threadId => {
+                    const systemMessageGroupId = this.messageGroupIdListMas[threadId][0];
+                    return this.messageService.messageGroupMas[systemMessageGroupId];
+                  });
+                  // 元オブジェクトを破壊しないようにcloneしておく 
+                  const forInsert = Utils.clone(systemMessageGroupList);
+                  forInsert.forEach((messageGroup, index) => {
+                    messageGroup.id = genDummyId(); // 新規作成なのでDummyIDを付与
+                    messageGroup.threadId = savedThreadGroup.threadList[index].id;
+                    messageGroup.messages.forEach(message => {
+                      message.id = genDummyId(); // 新規作成なのでDummyIDを付与
+                      message.cacheId = undefined; // キャッシュは消す 
+                      message.messageGroupId = messageGroup.id; // 新規作成なのでDummyIDを付与
+                      message.contents.forEach(content => {
+                        content.id = genDummyId();
+                        content.messageId = message.id; // 新規作成なのでDummyIDを付与
+                      });
+                    });
+                  });
+                  // メッセージグループを保存する 
+                  return safeForkJoin(forInsert.map(messageGroup =>
+                    this.messageService.upsertSingleMessageGroup(messageGroup)
+                  )).pipe(map(next => savedThreadGroup)); // メッセージグループを保存したらスレッドグループを返す
+                }),
+              );
+            }
+          })() as Observable<ThreadGroup>).subscribe({
+            next: newTemplate => {
+              this.templateThreadGroupList.unshift(newTemplate);
+              this.templateThreadGroupList = [...this.templateThreadGroupList];
+              this.threadGroupListAll.unshift(newTemplate);
+              this.snackBar.open(`「${params.threadName}」モードを追加しました。`, 'close', { duration: 3000 });
+            },
+            error: error => {
+              this.snackBar.open(`エラーが起きて保存できませんでした。`, 'close', { duration: 3000 });
+            }
+          });
+        } else { /** キャンセル */ }
+      }
+    });
+  }
+
+  /**
+   * スレッドグループを編集する
+   * @param $event 
+   * @param threadGroup 
+   */
+  editTemplateThreadGroup($event: MouseEvent, threadGroup: ThreadGroup): void {
+    this.stopPropagation($event);
+    this.dialog.open(SaveThreadDialogComponent, {
+      data: {
+        threadName: threadGroup.title,
+        description: threadGroup.description,
+        includeMessages: false,
+        isRenameOnly: true,
+      } as SaveThreadData,
+    }).afterClosed().subscribe({
+      next: (params: SaveThreadData) => {
+        if (params) {
+          const inDto = Utils.clone(threadGroup);
+          inDto.title = params.threadName;
+          inDto.description = params.description;
+          this.threadService.updateThreadGroupTitleAndDescription(threadGroup.projectId, inDto).subscribe({
+            next: next => {
+              // 元DTOは更新が完了してから反映する
+              threadGroup.title = params.threadName;
+              threadGroup.description = params.description;
+              this.snackBar.open(`「${params.threadName}」モードを更新しました。`, 'close', { duration: 3000 });
+            },
+            error: error => {
+              this.snackBar.open(`エラーが起きて保存できませんでした。`, 'close', { duration: 3000 });
+            },
+          });
+        } else { /** キャンセル */ }
+      }
+    });
+  }
+
+  /**
+   * スレッドグループを削除する
+   * @param $event 
+   * @param threadGroup 
+   */
+  removeTemplateThreadGroup($event: MouseEvent, threadGroup: ThreadGroup): void {
+    // this.stopPropagation($event);
+    this.dialog.open(DialogComponent, { data: { title: 'モード削除', message: `このモードを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
+      next: next => {
+        if (next === 1) {
+          this.threadService.deleteThreadGroup(threadGroup.id).subscribe({
+            next: next => {
+              this.templateThreadGroupList.splice(this.templateThreadGroupList.indexOf(threadGroup), 1);
+              this.templateThreadGroupList = [...this.templateThreadGroupList];
+            }
+          });
+        } else { /** 削除キャンセル */ }
+      }
+    });
   }
 
   tabIndex = 0;

@@ -1,0 +1,26 @@
+<div class="p-10">
+    <h1 mat-dialog-title>Save As Mode</h1>
+    <p mat-dialog-content>現在のスレッドを「モード」として保存します。</p>
+    <div mat-dialog-content class="save-thread-dialog mt-10">
+        <mat-form-field appearance="fill" class="w-full">
+            <mat-label>モード名</mat-label>
+            <input matInput [(ngModel)]="data.threadName" placeholder="例：高機能エージェント" required>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" class="w-full mt-4">
+            <mat-label>説明</mat-label>
+            <textarea matInput rows="3" [(ngModel)]="data.description" placeholder="例：全ツールONのモード"></textarea>
+        </mat-form-field>
+
+        @if(!data.isRenameOnly){
+        <mat-checkbox class="mt-4" [(ngModel)]="data.includeMessages">
+            メッセージを含めて保存する
+        </mat-checkbox>
+        }
+    </div>
+
+    <div mat-dialog-actions class="flex justify-between mt-4">
+        <button mat-button (click)="onCancel()">キャンセル</button>
+        <button mat-raised-button color="primary" (click)="onSave()">保存</button>
+    </div>
+</div>
