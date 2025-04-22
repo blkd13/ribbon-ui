@@ -14,6 +14,7 @@ export interface SaveThreadData {
   threadName: string;
   description: string;
   includeMessages: boolean;
+  hasMessages: boolean;
   isRenameOnly: boolean;
   templateThreadGroupList: ThreadGroup[];
 }

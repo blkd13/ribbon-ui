@@ -5,16 +5,18 @@ import { MatSelectModule } from '@angular/material/select';
 import { ChatService } from '../../services/chat.service';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ProjectVisibility, Thread, ThreadGroup, ThreadGroupType } from '../../models/project-models';
+import { MessageGroupForView, ProjectVisibility, Thread, ThreadGroup, ThreadGroupType } from '../../models/project-models';
 import { Utils } from '../../utils';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { ProjectService, ThreadService } from '../../services/project.service';
+import { genDummyId, MessageService, ProjectService, ThreadService } from '../../services/project.service';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogComponent } from '../dialog/dialog.component';
+import { map, switchMap, tap } from 'rxjs';
+import { safeForkJoin } from '../../utils/dom-utils';
 
 declare const _paq: any;
 
@@ -33,6 +35,7 @@ export class ParameterSettingDialogComponent {
   readonly chatService: ChatService = inject(ChatService);
   readonly projectService: ProjectService = inject(ProjectService);
   readonly threadService: ThreadService = inject(ThreadService);
+  readonly messageService: MessageService = inject(MessageService);
 
   readonly dialog: MatDialog = inject(MatDialog);
   readonly dialogRef: MatDialogRef<ParameterSettingDialogComponent> = inject(MatDialogRef);
@@ -82,8 +85,11 @@ export class ParameterSettingDialogComponent {
   }
 
   saveAndSubmit() {
-    // デフォルトプロジェクトにも保存。これ自体は終わってなくても問題ないので待たなくてもよい
-    this.projectService.getProjectList().subscribe((projects) => {
+    // 保存すると元IDが消えるので、元IDを保持しておく
+    const threadIdList = this.threadGroup.threadList.map(thread => thread.id);
+
+    // デフォルトプロジェクトにも保存。
+    this.projectService.getProjectList().subscribe(projects => {
       const defaultProject = projects.find(p => p.visibility === ProjectVisibility.Default);
       if (defaultProject) {
         const threadGroup = Utils.clone(this.threadGroup);
@@ -94,13 +100,44 @@ export class ParameterSettingDialogComponent {
           (thread.id as any) = undefined;
           thread.status = 'Normal';
         });
-        this.threadService.upsertThreadGroup(defaultProject.id, threadGroup).subscribe((threadGroup) => {
+        this.threadService.upsertThreadGroup(defaultProject.id, threadGroup).pipe(
+          switchMap(savedThreadGroup => {
+            // システムプロンプトを保存する
+
+            // 元メッセージの0番目（システムプロンプト）を取得する 
+            const systemMessageGroupList = threadIdList.map(threadId => {
+              return this.messageService.messageGroupList.find(messageGroup => {
+                return messageGroup.threadId === threadId && messageGroup.role === 'system';
+              });
+            }).filter(messageGroup => !!messageGroup) as MessageGroupForView[];
+            // 元オブジェクトを破壊しないようにcloneしておく 
+            const forInsert = Utils.clone(systemMessageGroupList);
+            forInsert.forEach((messageGroup, index) => {
+              messageGroup.id = genDummyId('messageGroup'); // 新規作成なのでDummyIDを付与
+              messageGroup.threadId = savedThreadGroup.threadList[index].id;
+              messageGroup.messages.forEach(message => {
+                message.id = genDummyId('message'); // 新規作成なのでDummyIDを付与
+                message.cacheId = undefined; // キャッシュは消す 
+                message.messageGroupId = messageGroup.id; // 新規作成なのでDummyIDを付与
+                message.contents.forEach(content => {
+                  content.id = genDummyId('contentPart');
+                  content.messageId = message.id; // 新規作成なのでDummyIDを付与
+                });
+              });
+            });
+            // メッセージグループを保存する 
+            return safeForkJoin(forInsert.map(messageGroup =>
+              this.messageService.upsertSingleMessageGroup(messageGroup)
+            )).pipe(map(next => savedThreadGroup)); // メッセージグループを保存したらスレッドグループを返す
+          }),
+        ).subscribe((threadGroup) => {
           this.snackBar.open('設定を保存しました。', 'Close', { duration: 2000 });
+          Object.assign(this.threadGroup, threadGroup); // スレッドグループを上書きする
+          this.submit();
         });
       } else {
       }
     });
-    this.submit();
   }
 
   submit(savedFlag = false) {

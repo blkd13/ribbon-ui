@@ -287,8 +287,6 @@ export class MessageService {
     // private readonly authService: AuthService = inject(AuthService);
     private readonly http: HttpClient = inject(HttpClient);
 
-    showMessageGroupIdListMas: { [threadId: string]: string[] } = {};
-
     messageGroupList: MessageGroupForView[] = [];
     messageList: MessageForView[] = [];
     contentPartList: ContentPart[] = [];
@@ -433,42 +431,48 @@ export class MessageService {
         this.idRemapTable = {};
     }
 
-    initThreadGroup(threadGroupId: string, page: number = 1, limit: number = 1000): Observable<{ messageGroups: MessageGroupForView[] }> {
+    initThreadGroup(messageGroupList: MessageGroupForView[]): { messageGroups: MessageGroupForView[] } {
         this.clear();
-        return this.getMessageGroupList(threadGroupId, page, limit).pipe(tap(res => {
-            this.messageGroupList = res.messageGroups;
-            this.messageGroupList.sort((a, b) => a.seq - b.seq);
-            this.messageGroupMas = this.messageGroupList.reduce((acc, messageGroup) => {
+        this.messageGroupList = messageGroupList;
+        this.messageGroupList.sort((a, b) => a.seq - b.seq);
+        this.messageGroupMas = this.messageGroupList.reduce((acc, messageGroup) => {
+            //// 新規で増えたのでマスターを更新
+            // 並び替え用
+            if (messageGroup.previousMessageGroupId) {
+                this.prevMessageGroupId[messageGroup.id] = messageGroup.previousMessageGroupId;
+                this.nextMessageGroupId[messageGroup.previousMessageGroupId] = this.nextMessageGroupId[messageGroup.previousMessageGroupId] || [];
+                this.nextMessageGroupId[messageGroup.previousMessageGroupId].push(messageGroup.id);
+            } else { /** 登録済みなので何もしない */ }
+
+            acc[messageGroup.id] = messageGroup;
+            messageGroup.messages.forEach(message => {
+                this.messageList.push(message);
+                this.messageList.sort((a, b) => a.seq - b.seq);
+                this.messageMas[message.id] = message;
+                message.contents = message.contents || [];
+
                 //// 新規で増えたのでマスターを更新
-                // 並び替え用
-                if (messageGroup.previousMessageGroupId) {
-                    this.prevMessageGroupId[messageGroup.id] = messageGroup.previousMessageGroupId;
-                    this.nextMessageGroupId[messageGroup.previousMessageGroupId] = this.nextMessageGroupId[messageGroup.previousMessageGroupId] || [];
-                    this.nextMessageGroupId[messageGroup.previousMessageGroupId].push(messageGroup.id);
+                // 編集判定用
+                if (message.editedRootMessageId) {
+                    this.oldMessageId[message.editedRootMessageId] = message.id;
+                    this.newMessageId[message.id] = this.newMessageId[message.id] || [];
+                    this.newMessageId[message.id].push(message.editedRootMessageId);
                 } else { /** 登録済みなので何もしない */ }
 
-                acc[messageGroup.id] = messageGroup;
-                messageGroup.messages.forEach(message => {
-                    this.messageList.push(message);
-                    this.messageList.sort((a, b) => a.seq - b.seq);
-                    this.messageMas[message.id] = message;
-                    message.contents = message.contents || [];
+            });
+            return acc;
+        }, this.messageGroupMas);
 
-                    //// 新規で増えたのでマスターを更新
-                    // 編集判定用
-                    if (message.editedRootMessageId) {
-                        this.oldMessageId[message.editedRootMessageId] = message.id;
-                        this.newMessageId[message.id] = this.newMessageId[message.id] || [];
-                        this.newMessageId[message.id].push(message.editedRootMessageId);
-                    } else { /** 登録済みなので何もしない */ }
+        // messageGroupのselectedIndexを設定
+        Object.keys(this.nextMessageGroupId).forEach(previousMessageGroupId => this.resetSelectedIndex(previousMessageGroupId));
 
-                });
-                return acc;
-            }, this.messageGroupMas);
+        return { messageGroups: this.messageGroupList };
+    }
 
-            // messageGroupのselectedIndexを設定
-            Object.keys(this.nextMessageGroupId).forEach(previousMessageGroupId => this.resetSelectedIndex(previousMessageGroupId));
-        }));
+    loadAndInitThreadGroup(threadGroupId: string, page: number = 1, limit: number = 1000): Observable<{ messageGroups: MessageGroupForView[] }> {
+        return this.getMessageGroupList(threadGroupId, page, limit).pipe(
+            tap(res => this.initThreadGroup(res.messageGroups)),
+        );
     }
 
     /**

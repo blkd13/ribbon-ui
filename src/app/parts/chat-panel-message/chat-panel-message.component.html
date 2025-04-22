@@ -135,7 +135,7 @@
         } -->
       </div>
 
-      } @else if(content.type==='meta') {
+      } @else if(content.type==='meta' && content.meta) {
 
       @if(content.meta.groundingMetadata && content.meta.groundingMetadata.searchEntryPoint?.renderedContent){
       <div class="p-3 rounded-md" style="background-color: #333;">

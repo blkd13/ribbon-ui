@@ -178,7 +178,7 @@
         <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse()" title="チャットパネルの開閉">
           <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
         </button>
-        <button mat-icon-button color="primary" (click)="saveAsTemplate()" title="名前を付けて保存">
+        <button mat-icon-button color="primary" (click)="openSaveAsTemplateDialog()" title="名前を付けて保存">
           <mat-icon>save</mat-icon>
         </button>
         <button mat-icon-button color="primary" (click)="openModelSetting()" title="設定">
@@ -232,6 +232,12 @@
             <mat-icon>move_item</mat-icon>
             <span>送る</span>
           </button>
+          @if(this.presetLabel===item.id){
+          <button mat-menu-item (click)="saveAsTemplate(item.title, item.description, false, item.id)">
+            <mat-icon>save</mat-icon>
+            <span>現在の設定で上書き</span>
+          </button>
+          }
           <!-- <button mat-menu-item (click)="editTemplateThreadGroup($event, item)" title="現在のチャット設定をこのモードに上書き保存します">
             <mat-icon>save</mat-icon>
             <span>上書き</span>
