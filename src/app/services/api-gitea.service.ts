@@ -103,7 +103,7 @@ export class ApiGiteaService {
     } else {
       params = `/${type}/${id}`;
     }
-    const url = `/user/oauth/api/custom-api/gitea/${giteaProvider}/files/${owner}/${repo}${params}`;
+    const url = `/user/oauth/api/custom-api/${giteaProvider}/files/${owner}/${repo}${params}`;
     return this.http.post<RootObject>(url, projectInDto);
   }
 }

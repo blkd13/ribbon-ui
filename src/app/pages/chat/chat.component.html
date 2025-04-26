@@ -125,7 +125,7 @@
               @for(team of teamForViewList; track team.id) {
               <div class="gradient-text pl-3">{{team.label}}</div>
               @for(project of projectList;track project.id){
-              @if(project!==selectedProject){
+              @if(project!==selectedProject && project.teamId===team.id){
               <button mat-menu-item (click)="sendThreadToProject(project, threadGroup)">{{project.label}}</button>
               }
               }
@@ -191,7 +191,8 @@
 
     <!-- プリセット系 -->
     @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&1>=messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length){
-    <div class="absolute t-0 l-0 w-full h-full flex justify-center items-center flex-col " style="z-index: 1;">
+    <div class="absolute t-0 l-0 w-full flex justify-center items-center flex-col "
+      style="z-index: 2;top: calc(50vh);transform: translate(0, -50%);">
       <h1 style="font-size: 1.78rem;">スレッド数</h1>
       <div class="w-full flex justify-center items-center gap-5">
         @for(index of [1, 2, 3, 4];track $index){
@@ -254,7 +255,7 @@
           @for(team of teamForViewList; track team.id) {
           <div class="gradient-text pl-3">{{team.label}}</div>
           @for(project of projectList;track project.id){
-          @if(project!==selectedProject){
+          @if(project!==selectedProject && project.teamId===team.id){
           <button mat-menu-item (click)="sendThreadToProject(project, item)">{{project.label}}</button>
           }
           }
@@ -272,7 +273,7 @@
     @if(userService.chatTabLayout==='tabs') {
     <!-- タブ表示 -->
     <mat-tab-group [ngClass]="{isSingleThread: selectedThreadGroup.threadList.length===1}"
-      (selectedIndexChange)="restoreScrollPosition($event)">
+      (selectedIndexChange)="restoreScrollPosition($event)" [selectedIndex]="tabIndex">
       @for(thread of selectedThreadGroup.threadList;track $index) {
       <mat-tab label="{{thread.inDto.args.model}}">
         <div style="height: calc(100vh - 100px);" class="flex flex-col gap-1 w-full">

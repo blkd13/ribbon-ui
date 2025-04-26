@@ -115,15 +115,15 @@ export class ApiGitlabService {
     } else {
       params = `/${type}/${id}`;
     }
-    const url = `/user/oauth/api/custom-api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
+    const url = `/user/oauth/api/custom-api/${gitlabProvider}/files/${gitlabProjectId}${params}`;
     return this.http.post<RootObject>(url, projectInDto);
   }
   // projectClone(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
-  //   const url = `/user/oauth/api/gitlab/${gitlabProvider}/clone/${projectId}`;
+  //   const url = `/user/oauth/api/${gitlabProvider}/clone/${projectId}`;
   //   return this.http.get<GitLabProjectListResponse>(url);
   // }
   // projectDownload(gitlabProvider: string, projectId: number): Observable<GitLabProjectListResponse> {
-  //   const url = `/user/oauth/api/gitlab/${gitlabProvider}/download/${projectId}`;
+  //   const url = `/user/oauth/api/${gitlabProvider}/download/${projectId}`;
   //   return this.http.get<GitLabProjectListResponse>(url);
   // }
   projectFileDownload(gitlabProvider: string, gitlabProjectId: number, projectInDto: { projectId: string, systemPrompt: string }, type?: 'branches' | 'tags' | 'commits', id?: string): Observable<RootObject> {
@@ -135,7 +135,7 @@ export class ApiGitlabService {
     } else {
       params = `/${type}/${id}`;
     }
-    const url = `/user/oauth/api/custom-api/gitlab/${gitlabProvider}/files/${gitlabProjectId}${params}`;
+    const url = `/user/oauth/api/custom-api/${gitlabProvider}/files/${gitlabProjectId}${params}`;
     return this.http.post<RootObject>(url, projectInDto);
   }
 }

@@ -5,12 +5,13 @@ import { Component, inject, OnInit } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { Utils } from '../../utils';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
-    selector: 'app-predict-history',
-    imports: [CommonModule],
-    templateUrl: './predict-history.component.html',
-    styleUrl: './predict-history.component.scss'
+  selector: 'app-predict-history',
+  imports: [CommonModule, MatProgressSpinnerModule],
+  templateUrl: './predict-history.component.html',
+  styleUrl: './predict-history.component.scss'
 })
 export class PredictHistoryComponent implements OnInit {
 
@@ -24,8 +25,10 @@ export class PredictHistoryComponent implements OnInit {
   predictHistory: PredictTransaction[] = [];
   member?: DepartmentMember;
   monthlySummary: MonthlySummary[] = [];
+  isLoading = false;
 
   ngOnInit(): void {
+    this.isLoading = true;
     if (this.data && this.data.member) {
       this.member = this.data.member;
       const userId = this.data.member.user?.id;
@@ -33,12 +36,14 @@ export class PredictHistoryComponent implements OnInit {
         this.departmentService.predictHistory(userId).subscribe(response => {
           this.predictHistory = response.predictHistory;
           this.calcSum();
+          this.isLoading = false;
         });
       }
     } else {
       this.aAuthService.getPredictHistory().subscribe(response => {
         this.predictHistory = response.predictHistory;
         this.calcSum();
+        this.isLoading = false;
       });
     }
   }

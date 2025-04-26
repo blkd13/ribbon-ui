@@ -251,7 +251,8 @@ export class ChatComponent implements OnInit {
 
   routerChangeHandler(): void {
     this.activatedRoute.params.subscribe(params => {
-      const { projectId, threadGroupId } = params as { projectId: string, threadGroupId: string };
+      const { projectId, threadGroupId, tabIndex } = params as { projectId: string, threadGroupId: string, tabIndex?: string };
+      this.tabIndex = tabIndex ? parseInt(tabIndex) : 0;
       const project = this.projectList.find(project => project.id === projectId);
 
       if (this.selectedProject === project) {
@@ -2295,7 +2296,7 @@ export class ChatComponent implements OnInit {
     const cleanup = threadGroupId ? this.threadService.deleteThreadGroup(threadGroupId).pipe(
       tap(() => {
         replaceIndex = this.templateThreadGroupList.findIndex(tg => tg.id === threadGroupId);
-        this.templateThreadGroupList.splice(replaceIndex, 1);
+        // this.templateThreadGroupList.splice(replaceIndex, 1);
       }),
     ) : of(undefined);
     ((() => {
@@ -2420,7 +2421,7 @@ export class ChatComponent implements OnInit {
     }).beforeClosed().subscribe({
       next: (params: SaveThreadData) => {
         if (params) {
-          this.saveAsTemplate(params.threadName, params.description, params.includeMessages, threadGroupId);
+          this.saveAsTemplate(params.threadName, params.description, params.includeMessages, params.threadGroupId);
         } else { /** キャンセル */ }
       }
     });
@@ -2493,8 +2494,11 @@ export class ChatComponent implements OnInit {
       this.scrollPositions[tabIndex] = bodyElem.nativeElement.scrollTop || 0;
     } else { }
   }
+
   restoreScrollPosition(tabIndex: number): void {
-    this.tabIndex = tabIndex;
+    // this.tabIndex = tabIndex;
+    const threadId = (this.selectedThreadGroup && !this.selectedThreadGroup.id.startsWith('dummy-')) ? this.selectedThreadGroup.id : 'new-thread';
+    this.router.navigate(['/chat', this.selectedProject.id, threadId, { tabIndex }]);
     setTimeout(() => {
       const bodyElem = this.textBodyElem().at(tabIndex);
       if (bodyElem) {
