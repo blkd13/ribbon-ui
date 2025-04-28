@@ -13,7 +13,7 @@ import { MarkdownComponent } from 'ngx-markdown';
 import { MessageGroupForView, Thread } from '../../models/project-models';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DialogComponent } from '../dialog/dialog.component';
-import { LlmModel } from '../../services/chat.service';
+import { CountTokensResponseForView, LlmModel } from '../../services/chat.service';
 import { MatRadioModule } from '@angular/material/radio';
 import { ChatCompletionToolChoiceOption } from 'openai/resources/index.mjs';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
@@ -34,6 +34,7 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   readonly thread = input.required<Thread>();
   readonly removable = input.required<boolean>();
+  readonly tokenObject = input.required<CountTokensResponseForView>();
 
   readonly removeThreadEmitter = output<Thread>({ alias: 'removeThread' });
 

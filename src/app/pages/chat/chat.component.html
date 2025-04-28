@@ -286,7 +286,7 @@
               [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
               [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
               (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
-              (threadChange)="editSystem($event)">
+              (threadChange)="editSystem($event)" [tokenObject]="tokenObjList[tIndex]">
             </app-chat-panel-system>
             }
           </div>
@@ -335,13 +335,14 @@
                 } @else {
                 <div><!-- レイアウトがズレないように空オブジェクトを入れておく --></div>
                 }
-
+                <!-- 
                 @if(tokenObjList[tIndex]){
                 <div class="text-xs text-[#999]">
                   {{tokenObjList[tIndex].totalTokens|number:'1.0-0'}} /
                   {{chatService.modelMap[selectedThreadGroup.threadList[tIndex].inDto.args.model].maxInputTokens|number:'1.0-0'}}
                 </div>
                 }
+                -->
               </div>
 
               }
@@ -379,7 +380,7 @@
           [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
           (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
           (threadChange)="editSystem($event)" (fileSelectionUpdateEmitter)="onChange()"
-          (expanded)="expanded($event, 0, tIndex, messageGroup)">
+          (expanded)="expanded($event, 0, tIndex, messageGroup)" [tokenObject]="tokenObjList[tIndex]">
         </app-chat-panel-system>
         }
         }
@@ -450,13 +451,14 @@
               } @else {
               <div><!-- レイアウトがズレないように空オブジェクトを入れておく --></div>
               }
-
+              <!-- 
               @if(tokenObjList[tIndex]){
               <div class="text-xs text-[#999]">
                 {{tokenObjList[tIndex].totalTokens|number:'1.0-0'}} /
                 {{chatService.modelMap[selectedThreadGroup.threadList[tIndex].inDto.args.model].maxInputTokens|number:'1.0-0'}}
               </div>
               }
+              -->
             </div>
 
             <div style="min-height: 200px;"></div>
