@@ -59,7 +59,7 @@
         </mat-panel-description>
         <div class="grow"></div>
         <div class="text-xs text-[#999] flex items-center mr-4">
-            {{tokenObject()?.totalTokens|number:'1.0-0'}} /
+            {{tokenObject().totalTokens|number:'1.0-0'}} /
             {{chatService.modelMap[thread().inDto.args.model].maxInputTokens|number:'1.0-0'}}
         </div>
         <div class="right-0 top-0 flex gap-2">

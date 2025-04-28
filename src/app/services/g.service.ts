@@ -11,7 +11,7 @@ export type MultilingualPrompt = Record<Lang, string>;
 })
 export class GService {
 
-  version = 'v20250326';
+  version = 'v20250428';
 
   // ローディング中のHTTP通信数
   httpConnectCount: Subject<number> = new Subject<number>();
