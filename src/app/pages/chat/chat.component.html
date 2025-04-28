@@ -153,18 +153,18 @@
         <div class="grid-layout mr-2">
           <div class="grid-label">Tokens : </div>
           <div class="grid-item">
-            @if(tokenObj.totalTokens ==-1){ wait.. } @else { {{tokenObj.totalTokens||0|number}} }
+            @if(tokenObjSummary.totalTokens ==-1){ wait.. } @else { {{tokenObjSummary.totalTokens||0|number}} }
           </div> |
-          <div class="grid-label">Chars :</div>
+          <!-- <div class="grid-label">Chars :</div>
           <div class="grid-item">
-            @if(tokenObj.totalTokens ==-1){ wait.. } @else {
-            {{(this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio +
-            this.tokenObj.video) || this.tokenObj.totalBillableCharacters |number:'1.0-0'}}
+            @if(tokenObjSummary.totalTokens ==-1){ wait.. } @else {
+            {{(this.tokenObjSummary.text + this.tokenObjSummary.image + this.tokenObjSummary.audio +
+            this.tokenObjSummary.video) || this.tokenObjSummary.totalBillableCharacters |number:'1.0-0'}}
             }
-          </div> |
+          </div> | -->
           <div class="grid-label">Cost :</div>
           <div class="grid-item">
-            @if(tokenObj.totalTokens ==-1){ wait.. } @else { $ {{cost|number:'1.2-2'}} }
+            @if(tokenObjSummary.totalTokens ==-1){ wait.. } @else { $ {{cost|number:'1.2-2'}} }
           </div> |
         </div>
         <button mat-icon-button color="primary" (click)="userService.toggleChatTabLayout().subscribe()"
@@ -274,7 +274,7 @@
     <!-- タブ表示 -->
     <mat-tab-group [ngClass]="{isSingleThread: selectedThreadGroup.threadList.length===1}"
       (selectedIndexChange)="restoreScrollPosition($event)" [selectedIndex]="tabIndex">
-      @for(thread of selectedThreadGroup.threadList;track $index) {
+      @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
       <mat-tab label="{{thread.inDto.args.model}}">
         <div style="height: calc(100vh - 100px);" class="flex flex-col gap-1 w-full">
           @if(messageGroupIdListMas[thread.id]; as messageGroupIdList){
@@ -297,7 +297,7 @@
           <div #textBodyElem (scroll)="saveScrollPosition($index)"
             class="custom-scroll h-0 w-full px-2 pb-52 relative flex flex-col gap-1 grow" style="overflow-y: scroll;">
 
-            @for(messageGroupId of messageGroupIdListMas[thread.id];track $index){
+            @for(messageGroupId of messageGroupIdListMas[thread.id];track $index;let mIndex=$index){
             @if(messageService.messageGroupMas[messageGroupId]; as messageGroup) {
 
             <!-- {{messageGroup.id}} -->
@@ -316,21 +316,34 @@
 
               <!-- 末尾だったら追加可能にする -->
               @if(!messageService.nextMessageGroupId[messageGroupId]) {
-              @if(!['Waiting','Loading'].includes(messageGroup.messages[0].status)){
-              @if(messageGroup.role==='user'){
-              <button mat-icon-button class="pl-6 sgl-btn" color="primary"
-                (click)="send('messageGroup', [messageGroupId]).subscribe()">
-                <mat-icon>send</mat-icon>
-              </button>
-              } @else if(messageGroup.role==='assistant'){
-              <!-- これはまだちょっと難しい -->
-              <button mat-icon-button class="pl-6 sgl-btn" color="primary"
-                (click)="appendMessageGroup(thread.id, messageGroupId)">
-                <mat-icon>add_circle</mat-icon>
-              </button>
-              } @else {
-              }
-              }
+              <div class="flex items-center justify-between">
+                @if(!['Waiting','Loading'].includes(messageGroup.messages[0].status)){
+                @if(messageGroup.role==='user'){
+                <button mat-icon-button class="pl-6 sgl-btn" color="primary"
+                  (click)="send('messageGroup', [messageGroupId]).subscribe()">
+                  <mat-icon>send</mat-icon>
+                </button>
+                } @else if(messageGroup.role==='assistant'){
+                <!-- これはまだちょっと難しい -->
+                <button mat-icon-button class="pl-6 sgl-btn" color="primary"
+                  (click)="appendMessageGroup(thread.id, messageGroupId)">
+                  <mat-icon>add_circle</mat-icon>
+                </button>
+                } @else {
+                <div><!-- レイアウトがズレないように空オブジェクトを入れておく --></div>
+                }
+                } @else {
+                <div><!-- レイアウトがズレないように空オブジェクトを入れておく --></div>
+                }
+
+                @if(tokenObjList[tIndex]){
+                <div class="text-xs text-[#999]">
+                  {{tokenObjList[tIndex].totalTokens|number:'1.0-0'}} /
+                  {{chatService.modelMap[selectedThreadGroup.threadList[tIndex].inDto.args.model].maxInputTokens|number:'1.0-0'}}
+                </div>
+                }
+              </div>
+
               }
 
             </div>
@@ -419,20 +432,33 @@
 
             <!-- 末尾だったら追加可能にする -->
             @if(!messageService.nextMessageGroupId[messageGroupId]) {
-            @if(!['Waiting','Loading'].includes(messageGroup.messages[0].status)){
-            @if(messageService.messageGroupMas[messageGroupId].role==='user'){
-            <button mat-icon-button class="pl-6 sgl-btn" color="primary"
-              (click)="send('messageGroup', [messageGroupId]).subscribe()">
-              <mat-icon>send</mat-icon>
-            </button>
-            } @else if(messageService.messageGroupMas[messageGroupId].role==='assistant'){
-            <button mat-icon-button class="pl-6 sgl-btn" color="primary"
-              (click)="appendMessageGroup(thread.id, messageGroupId)">
-              <mat-icon>add_circle</mat-icon>
-            </button>
-            } @else {
-            }
-            }
+            <div class="flex items-center justify-between">
+              @if(!['Waiting','Loading'].includes(messageGroup.messages[0].status)){
+              @if(messageService.messageGroupMas[messageGroupId].role==='user'){
+              <button mat-icon-button class="pl-6 sgl-btn" color="primary"
+                (click)="send('messageGroup', [messageGroupId]).subscribe()">
+                <mat-icon>send</mat-icon>
+              </button>
+              } @else if(messageService.messageGroupMas[messageGroupId].role==='assistant'){
+              <button mat-icon-button class="pl-6 sgl-btn" color="primary"
+                (click)="appendMessageGroup(thread.id, messageGroupId)">
+                <mat-icon>add_circle</mat-icon>
+              </button>
+              } @else {
+              <div><!-- レイアウトがズレないように空オブジェクトを入れておく --></div>
+              }
+              } @else {
+              <div><!-- レイアウトがズレないように空オブジェクトを入れておく --></div>
+              }
+
+              @if(tokenObjList[tIndex]){
+              <div class="text-xs text-[#999]">
+                {{tokenObjList[tIndex].totalTokens|number:'1.0-0'}} /
+                {{chatService.modelMap[selectedThreadGroup.threadList[tIndex].inDto.args.model].maxInputTokens|number:'1.0-0'}}
+              </div>
+              }
+            </div>
+
             <div style="min-height: 200px;"></div>
             }
 

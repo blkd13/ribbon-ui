@@ -29,7 +29,7 @@ import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-p
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
 import { genDummyId, genInitialBaseEntity, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 import { CachedContent, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
-import { ChatContent, ChatInputArea, ChatService, CountTokensResponse, PresetDef } from '../../services/chat.service';
+import { ChatContent, ChatInputArea, ChatService, CountTokensResponse, CountTokensResponseForView, PresetDef } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { Observable, tap, toArray } from 'rxjs';
@@ -144,7 +144,8 @@ export class ChatComponent implements OnInit {
   tailRole = 'system';
   cost: number = 0;
   charCount: number = 0;
-  tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
+  tokenObjSummary: CountTokensResponseForView = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
+  tokenObjList: CountTokensResponseForView[] = [];
   linkChain: boolean[] = [true]; // デフォルトはfalse
 
   readonly authService: AuthService = inject(AuthService);
@@ -562,6 +563,7 @@ export class ChatComponent implements OnInit {
                       const existMessage = this.chatStreamSubscriptionList[threadGroup.id].find(sub => sub.message.id === message.id);
                       if (existMessage) {
                         messageGroup.messages[messageGroup.messages.length - 1] = existMessage.message;
+                        existMessage.message.status = MessageStatusType.Loading; // ステータス再設定は不要のはずだが、、何故か反映しないので強制で戻す。
                       } else { }
                     } else { }
                   } else { }
@@ -577,6 +579,8 @@ export class ChatComponent implements OnInit {
               setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
               document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
+
+              this.onChange();
             }),
           ).subscribe({
             next: next => {
@@ -792,7 +796,7 @@ export class ChatComponent implements OnInit {
 
   onFilesDropped(files: FullPathFile[]): Subscription {
     // 複数ファイルを纏めて追加したときは全部読み込み終わってからカウントする。
-    this.tokenObj.totalTokens = -1;
+    this.tokenObjSummary.totalTokens = -1;
     this.isLock = true;
 
     let label = '';
@@ -841,15 +845,20 @@ export class ChatComponent implements OnInit {
     fileInput.click();
   }
 
-  calcCost(): number {
-    const charCount = (this.tokenObj.text + this.tokenObj.image + this.tokenObj.audio + this.tokenObj.video) || this.tokenObj.totalBillableCharacters || 0;
-    const isLarge = this.tokenObj.totalTokens > 128000 ? 2 : 0;
-    // const cost = charCount / 1000 * this.chatService.modelMap[this.inDto.args.model || 'gemini-1.5-pro'].price[isLarge];
-    const cost = this.selectedThreadGroup.threadList.map(thread => thread.inDto.args).reduce((prev, curr) => {
-      // console.log(`prev=${prev} charCount=${charCount} curr=${this.chatService.modelMap[curr.model || 'gemini-1.5-pro'].price[isLarge]}`)
-      return prev + charCount / 1000 * this.chatService.modelMap[curr.model || 'gemini-1.5-pro'].price[isLarge];
-    }, 0);
-    return cost;
+  calcCost(index: number): number {
+    const model = this.selectedThreadGroup.threadList[index].inDto.args.model;
+    if (model.startsWith('gemini-1.5')) {
+      const charCount = (this.tokenObjSummary.text + this.tokenObjSummary.image + this.tokenObjSummary.audio + this.tokenObjSummary.video) || this.tokenObjSummary.totalBillableCharacters || 0;
+      const isLarge = this.tokenObjSummary.totalTokens > 128000 ? 2 : 1;
+      return charCount / 1000 * this.chatService.modelMap[model].price[0] * isLarge;
+    } else if (model.startsWith('gemini-2')) {
+      const tokenCount = (this.tokenObjSummary.text + this.tokenObjSummary.image + this.tokenObjSummary.audio + this.tokenObjSummary.video) || this.tokenObjSummary.totalTokens;
+      const isLarge = this.tokenObjSummary.totalTokens > 200000 ? 2 : 1;
+      return tokenCount / 1000 * this.chatService.modelMap[model].price[0] * isLarge;
+    } else {
+      const tokenCount = (this.tokenObjSummary.text + this.tokenObjSummary.image + this.tokenObjSummary.audio + this.tokenObjSummary.video) || this.tokenObjSummary.totalTokens;
+      return tokenCount / 1000 * this.chatService.modelMap[model].price[0];
+    }
   }
 
   renameThreadGroup($event: Event, threadGroup: ThreadGroup, flag: boolean, $index: number): void {
@@ -1112,6 +1121,7 @@ export class ChatComponent implements OnInit {
       throw new Error('Not implemented');
     }
 
+    let threadIndex = 0;
     for (const thread of threadList) {
       const tailMessageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id].at(-1)!];
       const modelName = thread.inDto.args.model ?? '';
@@ -1121,7 +1131,7 @@ export class ChatComponent implements OnInit {
       // バリデーションエラー
       if (!args.model) {
         throw new Error('Model is not set');
-      } else if (this.tokenObj.totalTokens > model.maxInputTokens) {
+      } else if (this.tokenObjList[threadIndex].totalTokens > model.maxInputTokens) {
         this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`, 'close', { duration: 3000 });
         throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`);
       } else if (args.isGoogleSearch && !this.chatService.modelMap[args.model].isGSearch) {
@@ -1144,10 +1154,11 @@ export class ChatComponent implements OnInit {
         thread.inDto.args.temperature = 1;
       } else { }
       const turnCount = Math.floor(this.messageGroupIdListMas[thread.id].length / 2);
-      if (turnCount / 7 > 1 && turnCount % 7 % 2 === 0 && this.tokenObj.totalTokens > 16384) {
+      if (turnCount / 7 > 1 && turnCount % 7 % 2 === 0 && this.tokenObjList[threadIndex].totalTokens > 16384) {
         // 7問い合わせごとにアラート出す
         this.snackBar.open(`チャット内のやり取りが長引いてきました。話題が変わった際は左上の「新規チャット」から新規チャットを始めることをお勧めします。\n（チャットが長くなるとAIの回答精度が落ちていきます）`, 'close', { duration: 6000 });
       } else { }
+      threadIndex++;
     }
 
     // this.isLock = true;
@@ -1659,7 +1670,30 @@ export class ChatComponent implements OnInit {
 
   onChange(): void {
     this.charCount = 0;
-    this.tokenObj.totalTokens = -1;
+    this.tokenObjSummary.totalTokens = -1;
+
+    // 全スレッド纏めてやろうとしたけどdummyが積み重なってるパターンの考慮が出来てなくて頓死
+    // const ids = this.selectedThreadGroup.threadList.filter(thread => !thread.id.startsWith('dummy-')).map(thread => thread.id);
+    // this.chatService.countTokensByThread(ids).subscribe({
+    //   next: next => {
+    //     this.tokenObjList = next.map(tokenObj => ({
+    //       ...tokenObj,
+    //       cost: this.calcCost(next.findIndex(tokenObj => tokenObj.id === tokenObj.id)),
+    //       model: this.selectedThreadGroup.threadList.find(thread => thread.id === tokenObj.id)!.inDto.args.model,
+    //     }));
+    //     this.tokenObjSummary = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
+    //     this.tokenObjList.forEach(tokenObj => {
+    //       this.tokenObjSummary.totalTokens += tokenObj.totalTokens;
+    //       this.tokenObjSummary.totalBillableCharacters! += tokenObj.totalBillableCharacters || 0;
+    //       this.tokenObjSummary.text += tokenObj.text;
+    //       this.tokenObjSummary.image += tokenObj.image;
+    //       this.tokenObjSummary.audio += tokenObj.audio;
+    //       this.tokenObjSummary.video += tokenObj.video;
+    //       this.tokenObjSummary.cost += tokenObj.cost;
+    //     });
+    //   },
+    // });
+
     safeForkJoin(this.selectedThreadGroup.threadList.map(thread => {
       // console.log(this.messageGroupIdListMas[thread.id].at(-1));
       const inDto: ChatInputArea[] = [];
@@ -1690,8 +1724,10 @@ export class ChatComponent implements OnInit {
       return this.chatService.countTokensByProjectModel(inDto, 'messageGroup', tailMessageGroupId);
     })).subscribe({
       next: next => {
-        const tokenObj: CountTokensResponse = { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
-        next.forEach(res => {
+        this.tokenObjSummary = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
+        this.tokenObjList = [];
+        next.forEach((res, index) => {
+          const tokenObj: CountTokensResponseForView = { id: this.selectedThreadGroup.threadList[index].id, totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: this.selectedThreadGroup.threadList[index].inDto.args.model };
           tokenObj.totalTokens += res.totalTokens;
           tokenObj.totalBillableCharacters = tokenObj.totalBillableCharacters || 0; // undefinedの場合があるので初期化
           tokenObj.totalBillableCharacters += res.totalBillableCharacters || 0;
@@ -1699,13 +1735,26 @@ export class ChatComponent implements OnInit {
           tokenObj.image += res.image;
           tokenObj.audio += res.audio;
           tokenObj.video += res.video;
+          tokenObj.cost += this.calcCost(index);
+          this.tokenObjList.push(tokenObj);
+
+          this.tokenObjSummary.totalTokens += tokenObj.totalTokens;
+          this.tokenObjSummary.totalBillableCharacters! += tokenObj.totalBillableCharacters;
+          this.tokenObjSummary.text += tokenObj.text;
+          this.tokenObjSummary.image += tokenObj.image;
+          this.tokenObjSummary.audio += tokenObj.audio;
+          this.tokenObjSummary.video += tokenObj.video;
+          this.tokenObjSummary.cost += tokenObj.cost;
         });
-        this.tokenObj = tokenObj;
-        this.cost = this.calcCost();;
+        this.cost = this.tokenObjSummary.cost;
       },
     });
     // textareaの縦幅更新。遅延打ちにしないとvalueが更新されていない。
     this.textAreaElem() && setTimeout(() => { DomUtils.textAreaHeighAdjust(this.textAreaElem().nativeElement); }, 0);
+  }
+
+  tokenString(): string {
+    return this.tokenObjList.map(tokenObj => `${tokenObj.model}:${tokenObj.totalTokens}`).join('\n');
   }
 
   contextCacheControl(threadGroup: ThreadGroup): void {
@@ -1748,10 +1797,10 @@ export class ChatComponent implements OnInit {
     // this.dialog.open(DialogComponent, { data: { title: 'alert', message: `現在 ${disabledModels.join('、')}は使えません。他のモデルを使ってください。`, options: ['Close'] } });
 
     this.isLock = true;
-    safeForkJoin(threadGroup.threadList.map(thread => {
+    safeForkJoin(threadGroup.threadList.map((thread, index) => {
       // 32768トークン以上ないとキャッシュ作成できない
-      if (this.tokenObj.totalTokens < 32768) {
-        const message = `コンテキストキャッシュを作るには 32,768 トークン以上必要です。\n現在 ${this.tokenObj.totalTokens} トークンしかありません。`;
+      if (this.tokenObjList[index].totalTokens < 32768) {
+        const message = `コンテキストキャッシュを作るには 32,768 トークン以上必要です。\n現在 ${this.tokenObjList[index].totalTokens} トークンしかありません。`;
         this.dialog.open(DialogComponent, { data: { title: 'alert', message, options: ['Close'] } });
         throw new Error(message);
       } else if (!threadGroup.threadList[0].inDto.args.model?.endsWith('-001') && !threadGroup.threadList[0].inDto.args.model?.endsWith('-002')) {
@@ -2396,6 +2445,7 @@ export class ChatComponent implements OnInit {
         this.templateThreadGroupList = [...this.templateThreadGroupList].sort((a, b) => a.title.localeCompare(b.title));
         this.threadGroupListAll.unshift(newTemplate);
         this.snackBar.open(`「${threadName}」モードを追加しました。`, 'close', { duration: 3000 });
+        this.presetLabel = newTemplate.id;
       },
       error: error => {
         this.snackBar.open(`エラーが起きて保存できませんでした。`, 'close', { duration: 3000 });

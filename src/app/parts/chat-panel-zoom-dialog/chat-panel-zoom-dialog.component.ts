@@ -68,14 +68,18 @@ export class ChatPanelZoomDialogComponent {
   convertSvgToImage() {
     const container = this.textBodyElem()?.nativeElement;
     if (container) {
-      const svgs = container.querySelectorAll('code.language-svg,code.language-xml,code.language-html,language-markdown');
+      const svgs = container.querySelectorAll('code.language-svg,code.language-xml,code.language-markdown');
       svgs.forEach(_svg => {
         const svg = (_svg as HTMLPreElement);
-        const textContent = svg.textContent || '';
+        let textContent = svg.textContent || '';
         if (/<svg[\s>]/i.test(textContent)) {
+          if (!textContent.includes('xmlns=')) {
+            textContent = textContent.replace('>', ' xmlns="http://www.w3.org/2000/svg">');
+          } else { }
+          // textContent.includes('xmlns="http://www.w3.org/2000/svg"')
           // SVGをData URIに変換
           // const xml = new XMLSerializer().serializeToString(svg);
-          const svg64 = btoa(decodeURIComponent(encodeURIComponent(svg.textContent || '')));
+          const svg64 = Utils.toBase64(textContent || '');
           const image64 = 'data:image/svg+xml;base64,' + svg64;
 
           // 新しい<img>要素を作成
@@ -95,6 +99,51 @@ export class ChatPanelZoomDialogComponent {
           svg.parentNode?.appendChild(img);
           // svg.parentNode?.replaceChild(img, svg);
         } else { }
+      });
+      const html = container.querySelectorAll('code.language-html');
+      html.forEach(_html => {
+        const html = (_html as HTMLPreElement);
+        const textContent = html.textContent || '';
+        if (/<html[\s>]/i.test(textContent)) {
+          // iframe要素を作成
+          const iframe = document.createElement('iframe');
+          iframe.srcdoc = html.textContent || '';
+          iframe.width = '100%';
+          iframe.style.border = 'none';
+          iframe.style.backgroundColor = 'white';
+          const maxHeight = 800;
+
+          // iframeのload時にheightを調整する関数を設定
+          iframe.onload = () => {
+            try {
+              // iframeのコンテンツの高さを取得して設定
+              const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+              if (iframeDoc) {
+                // スクロール高さを取得
+                const height = Math.min(iframeDoc.documentElement.scrollHeight, maxHeight);
+                iframe.height = `${height}px`;
+
+                // リサイズイベントを監視して高さを再調整（レスポンシブ対応）
+                const resizeObserver = new ResizeObserver(() => {
+                  const newHeight = Math.min(iframeDoc.documentElement.scrollHeight, maxHeight);
+                  iframe.height = `${newHeight}px`;
+                });
+                resizeObserver.observe(iframeDoc.body);
+              }
+            } catch (e) {
+              console.error('iframe height adjustment failed:', e);
+              // エラー時はデフォルト高さを設定
+              iframe.height = '500px';
+            }
+          };
+
+          // 元のHTML要素を非表示にする
+          html.style.display = 'block';
+          html.style.height = '0';
+          html.style.width = '0';
+          html.style.overflow = 'hidden';
+          html.parentNode?.appendChild(iframe);
+        }
       });
     } else { }
   }

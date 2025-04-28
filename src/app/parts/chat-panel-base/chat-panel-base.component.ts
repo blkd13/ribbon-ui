@@ -488,16 +488,21 @@ export class ChatPanelBaseComponent implements OnInit {
   }
 
   convertSvgToImage() {
+
     const container = this.textBodyElem()?.nativeElement;
     if (container && !['Loading'].includes(this.message.status)) {
-      const svgs = container.querySelectorAll('code.language-svg,code.language-xml,code.language-html,language-markdown');
+      const svgs = container.querySelectorAll('code.language-svg,code.language-xml,code.language-markdown');
       svgs.forEach(_svg => {
         const svg = (_svg as HTMLPreElement);
-        const textContent = svg.textContent || '';
+        let textContent = svg.textContent || '';
         if (/<svg[\s>]/i.test(textContent)) {
+          if (!textContent.includes('xmlns=')) {
+            textContent = textContent.replace('>', ' xmlns="http://www.w3.org/2000/svg">');
+          } else { }
+
           // SVGをData URIに変換
           // const xml = new XMLSerializer().serializeToString(svg);
-          const svg64 = btoa(decodeURIComponent(encodeURIComponent(svg.textContent || '')));
+          const svg64 = Utils.toBase64(textContent || '');
           const image64 = 'data:image/svg+xml;base64,' + svg64;
 
           // 新しい<img>要素を作成
@@ -528,6 +533,7 @@ export class ChatPanelBaseComponent implements OnInit {
           iframe.srcdoc = html.textContent || '';
           iframe.width = '100%';
           iframe.style.border = 'none';
+          iframe.style.backgroundColor = 'white';
           const maxHeight = 800;
 
           // iframeのload時にheightを調整する関数を設定

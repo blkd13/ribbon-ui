@@ -63,6 +63,7 @@ export const appConfig: ApplicationConfig = {
         const markdownService = inject(MarkdownService);
         return () => {
           iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
+          // Markdown内のリンクは別ウィンドウで開くようにする。
           markdownService.renderer.link = ({ href, title, text }) => {
             return `<a href="${href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
           };
