@@ -1,7 +1,7 @@
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FullPathFile, FileUploadContent, FileManagerService } from './../../services/file-manager.service';
 import { MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
-import { forkJoin, from, map, mergeMap, of, switchMap } from 'rxjs';
+import { Observable, tap, forkJoin, from, map, mergeMap, of, switchMap } from 'rxjs';
 import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -21,10 +21,12 @@ import { MatGridListModule } from '@angular/material/grid-list';
 import { MatCardModule } from '@angular/material/card';
 import { MatBadgeModule } from '@angular/material/badge';
 
+import { NgxIndexedDBService } from 'ngx-indexed-db';
+import { MarkdownModule } from 'ngx-markdown';
+import { TranslateModule } from '@ngx-translate/core';
+
 import { ChatService, } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
-import { NgxIndexedDBService } from 'ngx-indexed-db';
-import { Observable, tap } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupVisibility, UUID } from '../../models/project-models';
@@ -33,11 +35,10 @@ import { RelativeTimePipe } from '../../pipe/relative-time.pipe';
 import { Utils } from '../../utils';
 import { GService } from '../../services/g.service';
 import { CreateProjectDialogComponent } from '../../parts/create-project-dialog/create-project-dialog.component';
-import { ApiGitlabService, GitLabProject } from '../../services/api-gitlab.service';
-import { ApiMattermostService, MattermostChannel, MattermostTeam, MattermostTeamForView, MattermostTeamUnread, MattermostThread } from '../../services/api-mattermost.service';
+import { ApiGitlabService } from '../../services/api-gitlab.service';
+import { ApiMattermostService, } from '../../services/api-mattermost.service';
 import { ApiBoxService } from '../../services/api-box.service';
 import { ApiGiteaService } from '../../services/api-gitea.service';
-import { MarkdownModule } from 'ngx-markdown';
 import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
 import { UserService } from '../../services/user.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
@@ -47,7 +48,7 @@ declare var _paq: any;
 @Component({
   selector: 'app-home',
   imports: [
-    CommonModule, FormsModule, RouterModule, FileDropDirective,
+    CommonModule, FormsModule, RouterModule, FileDropDirective, TranslateModule,
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatGridListModule,
     MatDividerModule, MatSnackBarModule, MatCardModule, MatBadgeModule,

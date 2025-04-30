@@ -9,9 +9,9 @@
     @if(toolCallSetList[index].call; as call){
     <h1>{{call.function.name}}</h1>
     @if(call.function.arguments){
+    @let arguments = jsonParseToObject(call.function.arguments);
     @if(call.function.name.startsWith('mm_') && call.function.name.endsWith('_send_message')){
     <!-- メッセージ送信用 -->
-    @let arguments = jsonParseToObject(call.function.arguments);
     <div class="p-4 bg-gray-800 rounded-lg shadow-md">
         <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">送信先</div>
         <div class="mb-4 pl-2 text-blue-400">
@@ -27,7 +27,6 @@
 
     } @else if(call.function.name.startsWith('run_python_code')) {
     <!-- コードインタープリター用 -->
-    @let arguments = jsonParseToObject(call.function.arguments);
     <div>Python {{arguments.pythonVersion||'3.11'}}</div>
     @if(arguments.requirements && arguments.requirements.length>0){
     <div class="rounded-lg shadow-md mb-4">
@@ -51,17 +50,75 @@
     <h3>arguments</h3>
     <markdown clipboard [data]="'```json\n'+call.function.arguments+'\n```'"></markdown>
     }
-    }
 
     @if(toolCallSetList[index].resultList.at(-1); as result){
     @if(result.content){
     <markdown>---</markdown>
     <h3>result</h3>
-    @if(info.responseType==='text' && !isErrorResponse){
-    <pre class="custom-scroll custom-scroll--thin"><code>{{jsonToString(result.content)}}</code></pre>
+    @if(call.function.name==='web_search' && webSearchDto.items.length>0&& !isErrorResponse){
+    @if(['MARKDOWN', 'TEXT', 'HTML'].includes(arguments.loadContentType)){
+    <mat-accordion class="mb-4">
+        @for(item of webSearchDto.items;track $index){
+        <mat-expansion-panel class="mb-4">
+            <mat-expansion-panel-header style="height: 80px;">
+                <mat-panel-title>
+                    <img [src]="item.faviconUrl" class="w-6 h-6 inline-block mr-1" alt="" />
+                </mat-panel-title>
+                <div class="flex flex-col">
+                    {{item.title}}
+                    <p class="text-xs">{{item.snippet}}</p>
+                </div>
+            </mat-expansion-panel-header>
+            <div class="p-4 rounded-lg shadow-md">
+                リンク：<a [href]="item.link" target="_blank" class="text-blue-500 hover:underline">
+                    {{item.title}}
+                </a>
+                <div>
+                    {{item.body}}
+                </div>
+            </div>
+        </mat-expansion-panel>
+        }
+    </mat-accordion>
+    } @else {
+    @for(item of webSearchDto.items;track $index){
+    <mat-card class="mb-2 p-4 shadow-md">
+        <a [href]="item.link" target="_blank" class="text-blue-500 hover:underline">
+            <img [src]="item.faviconUrl" class="w-4 h-4 inline-block mr-1" alt="" />
+            {{item.title}}
+        </a>
+        <p class="text-sm">{{item.snippet}}</p>
+        <p>{{item.body}}</p>
+    </mat-card>
+    }
+    }
+    } @else if(call.function.name==='get_web_page_contents' && webContentDto.items.length>0&& !isErrorResponse){
+    <mat-tab-group mat-stretch backgroundColor="primary" class="mb-4">
+        @for(item of webContentDto.items;track $index){
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <img [src]="item.faviconUrl" class="w-4 h-4 inline-block mr-1" alt="" />
+                {{(item.title||'(no title)' | slice:0:20) + '...'}}
+            </ng-template>
+            リンク： <h1 style="font-size:32px;display: inline-block;">
+                <a [href]="item.url" target="_blank" class="hover:underline">{{item.title}}</a>
+            </h1>
+            @if(arguments.loadContentType==='MARKDOWN' || arguments.loadContentType==='TEXT'){
+            <markdown clipboard [data]="item.body" class="prose prose-invert"></markdown>
+            } @else if(arguments.loadContentType==='HTML'){
+            <div [innerHTML]="item.safeBody"></div>
+            } @else {
+            <pre class="custom-scroll custom-scroll--thin"><code>{{item.body}}</code></pre>
+            }
+        </mat-tab>
+        }
+    </mat-tab-group>
+
+    } @else if(info.responseType==='text' && !isErrorResponse){
+    <pre class="custom-scroll custom-scroll--thin"><code>{{jsonPretty(result.content)}}</code></pre>
     } @else if(info.responseType==='markdown'){
     <div #textBodyElem>
-        <markdown clipboard [data]="jsonToString(result.content)"></markdown>
+        <markdown clipboard [data]="jsonPretty(result.content)"></markdown>
     </div>
     } @else {
     <markdown clipboard [data]="'```json\n'+result.content"></markdown>
@@ -69,6 +126,8 @@
 
     }
     }
+    }
+
     } @else {
     <div>Loading...</div>
     }

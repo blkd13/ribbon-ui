@@ -2,7 +2,7 @@
     <div class="container" appFileDrop (filesDropped)="onFilesDropped($event)">
         <div class="min-h-32"></div>
         <div class="flex justify-between items-center w-full">
-            <h1 style="margin-top:0;">AIチャットを始める</h1>
+            <h1 style="margin-top:0;">{{'START_CHAT'|translate}}</h1>
             <div class="flex flex-col justify-between gap-3 items-end">
                 <select [(ngModel)]="model" class="model-select" (change)="changeModel()">
                     @for(option of chatService.modelList;track $index){
@@ -13,7 +13,7 @@
             </div>
         </div>
         @if(systemPrompt&&systemPrompt!==staticMessageList[0].systemPrompt){
-        <h3>AIへの指示</h3>
+        <h3>{{'INSTRUCTION_FOR_AI'|translate}}</h3>
         <div [innerHTML]="systemPrompt|newlineToBr"></div>
         }
         <div class="input-area relative">
@@ -22,10 +22,10 @@
                 (keydown)="onKeyDown($event)"></textarea>
             <button [disabled]="!inputText" style="width: 120px;position: absolute;right: 45px;bottom: 30px;"
                 color="primary" mat-fab extended (click)="submit()">
-                <mat-icon>send</mat-icon>送信
+                <mat-icon>send</mat-icon>{{ 'SEND_MESSAGE' | translate }}
             </button>
         </div>
-        <a class="block text-right" href="./#/chat/">チャット画面へのリンク</a>
+        <a class="block text-right" href="./#/chat/">{{ 'LINK_TO_CHAT' | translate }}</a>
 
         <!-- <h1>Prompt Shortcuts</h1> -->
         <!-- 
@@ -46,27 +46,27 @@
 
         <!-- <h1>Recent Chats</h1> -->
         @if(threadGroupList.length>0){
-        <h1>チャット履歴</h1>
+        <h1>{{'CHAT_HISTORY' | translate}}</h1>
         <div class="recent-chats">
             @for(thread of threadGroupList;track $index){
             @if(maxDisplay > $index || showRecentChats){
             <a class="panel chat-item" [routerLink]="['/chat', thread.projectId,thread.id]">
                 <h3>{{thread.title}}</h3>
                 <p>{{thread.description}}</p>
-                <p>最終利用: {{ thread.updatedAt|relativeTime}}</p>
+                <p>{{'LAST_USED' | translate}}: {{ thread.updatedAt|relativeTime}}</p>
             </a>
             }
             }
         </div>
         @if(threadGroupList.length > 6){
         <button class="panel mt-5 w-full" (click)="toggleRecentChats()">
-            {{ showRecentChats ? '隠す' : 'もっと見る' }}
+            {{ (showRecentChats ? 'HIDE' : 'SHOW_MORE') | translate }}
         </button>
         }
         }
 
         <!-- <h1>Prompt Shortcuts</h1> -->
-        <h1>API連携</h1>
+        <h1>{{ 'API_INTEGRATION' | translate }}</h1>
         <div class="button-group">
             @for(provider of apiProviderList;track $index){
             <a class="panel chat-item w-full" [routerLink]="['/', provider.type, provider.name]">
@@ -79,33 +79,33 @@
             }
         </div>
 
-        <h1>プロジェクト</h1>
+        <h1>{{ 'PROJECTS' | translate }}</h1>
         <!-- <h1>Projects</h1> -->
         <div class="recent-chats">
             @if(defaultProject){
             <a class="panel chat-item" [routerLink]="['/chat', defaultProject.id]">
                 <div>
-                    <p>[個人用]</p>
-                    <h3>デフォルト</h3>
-                    <p>【編集不可】個人用のデフォルトプロジェクト。</p>
+                    <p>[{{'DEFAULT_PROJECT' | translate}}]</p>
+                    <h3>{{ 'DEFAULT_PROJECT' | translate }}</h3>
+                    <p>{{ 'DEFAULT_PROJECT_DESCRIPTION' | translate }}</p>
                 </div>
-                <p>最終利用: {{defaultProject.updatedAt|relativeTime}}</p>
+                <p>{{'LAST_USED' | translate}}: {{defaultProject.updatedAt|relativeTime}}</p>
             </a>
             }
             @for(project of projectWithoutDefaultList;track $index){
             <a class="panel chat-item" [routerLink]="['/chat', project.id]">
                 <div>
                     <p>[{{teamMap[project.teamId].label
-                        ==='Alone'?'個人用':teamMap[project.teamId].label}}]</p>
+                        ==='Alone'?('PERSONAL'|translate):teamMap[project.teamId].label}}]</p>
                     <h3>{{project.label}}</h3>
                     <p>{{project.description}}</p>
                 </div>
-                <p>最終利用: {{ project.updatedAt|relativeTime}}</p>
+                <p>{{'LAST_USED' | translate}}: {{ project.updatedAt|relativeTime}}</p>
             </a>
             }
-            <button class="panel chat-item" (click)="createProject()">新規作成</button>
+            <button class="panel chat-item" (click)="createProject()">{{ 'CREATE_NEW' | translate }}</button>
         </div>
-        <h1>チーム</h1>
+        <h1>{{'TEAM' | translate}}</h1>
         <!-- <h1>Projects</h1> -->
         <div class="recent-chats">
             @for(team of teamWithoutAloneList;track $index){
@@ -115,7 +115,7 @@
                 <!-- <p>最終利用: {{ team.updatedAt|relativeTime}}</p> -->
             </a>
             }
-            <button class="panel chat-item" [routerLink]="['/team', 'new-team']">新規作成</button>
+            <button class="panel chat-item" [routerLink]="['/team', 'new-team']">{{ 'CREATE_NEW' | translate }}</button>
         </div>
     </div>
 </div>

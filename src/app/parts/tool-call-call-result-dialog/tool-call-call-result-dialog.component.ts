@@ -5,6 +5,9 @@ import { MarkdownModule } from 'ngx-markdown';
 import { CommonModule } from '@angular/common';
 import { Utils } from '../../utils';
 import { MatTabsModule } from '@angular/material/tabs';
+import { DomSanitizer, SafeHtml, SafeUrl } from '@angular/platform-browser';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatCardModule } from '@angular/material/card';
 
 
 /**
@@ -15,7 +18,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 
 @Component({
   selector: 'app-tool-call-call-result-dialog',
-  imports: [MarkdownModule, CommonModule, MatTabsModule],
+  imports: [MarkdownModule, CommonModule, MatTabsModule, MatExpansionModule, MatCardModule],
   templateUrl: './tool-call-call-result-dialog.component.html',
   styleUrl: './tool-call-call-result-dialog.component.scss'
 })
@@ -24,6 +27,8 @@ export class ToolCallCallResultDialogComponent {
   public dialogRef: MatDialogRef<ToolCallCallResultDialogComponent> = inject(MatDialogRef);
   // public readonly data = inject<{ toolCallGroupId: string, index: number }>(MAT_DIALOG_DATA);
   public readonly data = inject<{ toolCallId: string }>(MAT_DIALOG_DATA);
+  readonly sanitizer: DomSanitizer = inject(DomSanitizer);
+
 
   private readonly toolCallService: ToolCallService = inject(ToolCallService);
 
@@ -47,6 +52,13 @@ export class ToolCallCallResultDialogComponent {
               if (json.isError) {
                 this.isErrorResponse = true;
               } else { }
+
+              // web_searchの結果を表示するために、JSONをパースしてDTOに変換
+              if (this.toolCallSetList[this.index].info.name === 'web_search') {
+                this.buildWebSearchDto(result.content);
+              } else if (this.toolCallSetList[this.index].info.name === 'get_web_page_contents') {
+                this.buildWebContentDto(result.content);
+              } else { }
               setTimeout(() => {
                 this.convertSvgToImage();
               }, 10);
@@ -61,7 +73,7 @@ export class ToolCallCallResultDialogComponent {
     });
   }
 
-  jsonToString(text: string): string {
+  jsonPretty(text: string): string {
     try {
       const json = JSON.parse(text);
       if (typeof json === 'string') {
@@ -122,6 +134,50 @@ export class ToolCallCallResultDialogComponent {
         } else { }
       });
     } else { }
+  }
+
+  webSearchDto: {
+    items: {
+      title: string;
+      link: string;
+      snippet: string;
+      body: string;
+      faviconUrl: SafeUrl;
+    }[]
+  } = { items: [] }; // Changed from {} to [] to initialize as an array
+  buildWebSearchDto(content: string): SafeUrl {
+    try {
+      JSON.parse(content).forEach((item: { title: string, link: string, snippet: string, body?: string }) => {
+        const urlObj = new URL(item.link);
+        const faviconUrl = this.sanitizer.bypassSecurityTrustUrl(`https://${urlObj.hostname}/favicon.ico`);
+        this.webSearchDto.items.push({ title: item.title, link: item.link, snippet: item.snippet, body: item.body || '', faviconUrl });
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    return '';
+  }
+
+  webContentDto: {
+    items: {
+      body: string;
+      title: string;
+      safeBody: SafeHtml;
+      faviconUrl: SafeUrl;
+      url: string
+    }[]
+  } = { items: [] }; // Changed from {} to [] to initialize as an array
+  buildWebContentDto(content: string): SafeUrl {
+    try {
+      JSON.parse(content).forEach((item: { title: string, body: string, url: string }) => {
+        const urlObj = new URL(item.url);
+        const faviconUrl = this.sanitizer.bypassSecurityTrustUrl(`https://${urlObj.hostname}/favicon.ico`);
+        this.webContentDto.items.push({ title: item.title, body: item.body, safeBody: this.sanitizer.bypassSecurityTrustHtml(item.body || ''), faviconUrl, url: item.url });
+      });
+    } catch (e) {
+      console.error(e);
+    }
+    return '';
   }
 
 }

@@ -46,7 +46,7 @@
         }
 
         <div class="w-full my-10" style="border: 1px solid gray;"></div>
-        <h3 class="text-left">個別認証</h3>
+        <h3 class="text-left">{{ 'EMAIL_AUTH' | translate }}</h3>
         <div class="form-group">
             <label for="email">{{ 'EMAIL' | translate }}</label>
             <input formControlName="email" type="text" id="email" name="email"
@@ -96,8 +96,9 @@
     @case ('password-reset') {
     <h2 class="login-title">{{ 'PASSWORD_RESET' | translate }}</h2>
     <div class="text-left">
-        <p>16文字以上。大文字、小文字、数字、記号を含めること。</p>
-        <p><a href="javascript:void(0)" (click)="onGeneratePassword()">自動生成</a>時は必ずパスワードをメモしてください。</p>
+        <p>{{ 'PASSWORD_RULE' | translate }}</p>
+        <p><a href="javascript:void(0)" (click)="onGeneratePassword()">{{ 'GENERATE_PASSWORD_NOTICE' | translate }}</a>
+        </p>
     </div>
     <ng-container *ngTemplateOutlet="errorArea"></ng-container>
 
