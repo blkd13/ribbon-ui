@@ -169,8 +169,9 @@ export class ToolCallCallResultDialogComponent {
   } = { items: [] }; // Changed from {} to [] to initialize as an array
   buildWebContentDto(content: string): SafeUrl {
     try {
-      JSON.parse(content).forEach((item: { title: string, body: string, url: string }) => {
-        const urlObj = new URL(item.url);
+      const args = JSON.parse(this.toolCallSetList[this.index].call.function.arguments);
+      JSON.parse(content).forEach((item: { title: string, body: string, url: string }, index: number) => {
+        const urlObj = new URL(args.urls[index] || item.url);
         const faviconUrl = this.sanitizer.bypassSecurityTrustUrl(`https://${urlObj.hostname}/favicon.ico`);
         this.webContentDto.items.push({ title: item.title, body: item.body, safeBody: this.sanitizer.bypassSecurityTrustHtml(item.body || ''), faviconUrl, url: item.url });
       });
