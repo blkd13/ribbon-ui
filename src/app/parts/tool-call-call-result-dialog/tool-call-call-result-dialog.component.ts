@@ -147,9 +147,9 @@ export class ToolCallCallResultDialogComponent {
   } = { items: [] }; // Changed from {} to [] to initialize as an array
   buildWebSearchDto(content: string): SafeUrl {
     try {
-      JSON.parse(content).forEach((item: { title: string, link: string, snippet: string, body?: string }) => {
-        const urlObj = new URL(item.link);
-        const faviconUrl = this.sanitizer.bypassSecurityTrustUrl(`https://${urlObj.hostname}/favicon.ico`);
+      JSON.parse(content).forEach((item: { title: string, link: string, snippet: string, body?: string, favicon?: string }) => {
+        const faviconUrlRaw = item.favicon ? item.favicon : `https://${new URL(item.link).hostname}/favicon.ico`;
+        const faviconUrl = this.sanitizer.bypassSecurityTrustUrl(faviconUrlRaw);
         this.webSearchDto.items.push({ title: item.title, link: item.link, snippet: item.snippet, body: item.body || '', faviconUrl });
       });
     } catch (e) {
@@ -170,9 +170,9 @@ export class ToolCallCallResultDialogComponent {
   buildWebContentDto(content: string): SafeUrl {
     try {
       const args = JSON.parse(this.toolCallSetList[this.index].call.function.arguments);
-      JSON.parse(content).forEach((item: { title: string, body: string, url: string }, index: number) => {
-        const urlObj = new URL(args.urls[index] || item.url);
-        const faviconUrl = this.sanitizer.bypassSecurityTrustUrl(`https://${urlObj.hostname}/favicon.ico`);
+      JSON.parse(content).forEach((item: { title: string, body: string, url: string, favicon?: string }, index: number) => {
+        const faviconUrlRaw = item.favicon ? item.favicon : `https://${new URL(args.urls[index] || item.url).hostname}/favicon.ico`;
+        const faviconUrl = this.sanitizer.bypassSecurityTrustUrl(faviconUrlRaw);
         this.webContentDto.items.push({ title: item.title, body: item.body, safeBody: this.sanitizer.bypassSecurityTrustHtml(item.body || ''), faviconUrl, url: item.url });
       });
     } catch (e) {
