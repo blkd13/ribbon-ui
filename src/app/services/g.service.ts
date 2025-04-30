@@ -23,6 +23,7 @@ export class GService {
   invalidMimeTypes = [
     'application/octet-stream',
     'application/java-vm',
+    'application/java-archive',
     'application/x-elf',
     'application/x-msdownload',
     'application/gzip',

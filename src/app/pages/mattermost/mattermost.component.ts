@@ -1430,16 +1430,18 @@ export class MattermostComponent implements OnInit, OnDestroy {
         toArray(),
         tap(_ => {
           const draft = this.draftMap[mmChannelIdList[0]];
-          this.inDto.main.message = draft.message;
-          // console.log(draft.message);
-          this.inDto.main.fileList = draft.file_ids
-            .map(file_id => draft.metadata.files.find(file => file.id === file_id))
-            .filter(file => !!file).map(file => ({
-              id: file.id,
-              file: file as any as File, // ごまかし
-              fullPath: file.name,
-              base64String: `data:${file.mime_type};base64,${file.mini_preview}`,
-            }));
+          if (draft) {
+            this.inDto.main.message = draft.message;
+            // console.log(draft.message);
+            this.inDto.main.fileList = draft.file_ids
+              .map(file_id => draft.metadata.files.find(file => file.id === file_id))
+              .filter(file => !!file).map(file => ({
+                id: file.id,
+                file: file as any as File, // ごまかし
+                fullPath: file.name,
+                base64String: `data:${file.mime_type};base64,${file.mini_preview}`,
+              }));
+          } else { }
         }),
       ).subscribe();
     } else { }

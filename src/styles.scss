@@ -529,7 +529,7 @@ html>body {
 
         td {
             white-space: nowrap;
-            background-color: #3b3b3b;
+            background-color: var(--plain-background);
         }
 
         tr:nth-child(odd) td {
@@ -538,7 +538,7 @@ html>body {
 
         th {
             background-color: rgba(0, 0, 0, .1);
-            background-color: var(--border-light);
+            background-color: var(--plain-background-hover);
 
             &:first-child {
                 border-top-left-radius: 1em;

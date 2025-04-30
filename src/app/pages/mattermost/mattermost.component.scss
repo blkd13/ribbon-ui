@@ -137,12 +137,12 @@ app-mm-team-logo {
 }
 
 .unread {
-    color: white;
+    color: var(--plain-color);
     font-weight: bold;
 }
 
 ::ng-deep .unread .mdc-label {
-    color: white;
+    color: var(--plain-color);
     font-weight: bold;
     text-decoration: underline;
 }

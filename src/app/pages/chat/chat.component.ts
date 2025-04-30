@@ -336,6 +336,9 @@ export class ChatComponent implements OnInit {
     if (isModelChange) {
       this.modelCheck();
     }
+
+    this.onChange();
+    this.rebuildThreadGroup();
     setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
 
@@ -394,6 +397,8 @@ export class ChatComponent implements OnInit {
 
         this.isThreadGroupLoading = false;
 
+        this.onChange();
+        this.rebuildThreadGroup();
         setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
         document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
