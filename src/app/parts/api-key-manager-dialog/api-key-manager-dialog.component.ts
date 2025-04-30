@@ -49,6 +49,9 @@ export class ApiKeyManagerDialogComponent implements OnInit {
   displayedColumns: string[] = ['provider', 'createdAt', 'updatedAt', 'actions'];
 
   constructor() {
+    this.apiLabelForm = this.fb.group({
+      label: ['', Validators.required]
+    });
 
     this.extApiProviderService.getApiProviders().subscribe({
       next: (apiProviderList) => {
@@ -73,12 +76,13 @@ export class ApiKeyManagerDialogComponent implements OnInit {
         this.snackBar.open(`APIプロバイダの取得に失敗しました。`, 'close', { duration: 3000 });
       },
       complete: () => {
+        if (this.apiProviderGroupedKeys.length === 0) {
+          // this.snackBar.open('APIプロバイダが登録されていません。', '閉じる', { duration: 3000 });
+          return;
+        }
         const apiProvider0 = this.apiProviderGroupedList[this.apiProviderGroupedKeys[0]][0];
         this.firstProviderValue = `${apiProvider0.type}-${apiProvider0.name}`;
 
-        this.apiLabelForm = this.fb.group({
-          label: ['', Validators.required]
-        });
         this.apiKeyForm = this.fb.group({
           provider: [this.firstProviderValue, Validators.required],
           key: ['', Validators.required]

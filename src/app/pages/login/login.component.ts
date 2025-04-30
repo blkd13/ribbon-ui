@@ -16,6 +16,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { MatButtonModule } from '@angular/material/button';
+import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-login',
@@ -44,6 +45,7 @@ export class LoginComponent {
   curEnv = environment;
 
   readonly authService: AuthService = inject(AuthService);
+  readonly userService: UserService = inject(UserService);
   readonly formBuilder: FormBuilder = inject(FormBuilder);
   readonly router: Router = inject(Router);
   readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);

@@ -25,6 +25,8 @@ export class UserService {
 
   constructor() {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+    this.theme = prefersDark.matches ? 'dark' : 'light';
+    this.applyTheme(this.theme);
     // システム設定が変わったときに対応
     prefersDark.addEventListener('change', (e) => {
       this.applyTheme(this.theme);
