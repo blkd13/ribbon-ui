@@ -15,13 +15,14 @@ import { environment } from '../../../environments/environment';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-login',
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule,
     MatSnackBarModule, MatCardModule, MatDialogModule, TranslateModule, MatIconModule,
-    MatExpansionModule,
+    MatExpansionModule, MatButtonModule,
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'

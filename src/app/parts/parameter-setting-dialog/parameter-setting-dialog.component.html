@@ -45,6 +45,7 @@
             @for(option of chatService.modelList;track $index){
             <mat-option [value]="option.id" [disabled]="!option.isEnable">{{option.tag}}：{{option.id}}</mat-option>
             }
+            <!-- <mat-optgroup label="Gemini-1.5"></mat-optgroup> -->
           </mat-select>
         </mat-form-field>
         <div class="flex items-center" style="width: 150px;"

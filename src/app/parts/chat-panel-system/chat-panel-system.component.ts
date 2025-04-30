@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output } from '@angular/core';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -32,7 +32,6 @@ import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 })
 export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
-  readonly thread = input.required<Thread>();
   readonly removable = input.required<boolean>();
   readonly tokenObject = input.required<CountTokensResponseForView>();
 

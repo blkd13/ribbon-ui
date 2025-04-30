@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild, ViewEncapsulation, effect, inject, input, output, viewChild } from '@angular/core';
+import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild, ViewEncapsulation, computed, effect, inject, input, output, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,7 +17,7 @@ import { saveAs } from 'file-saver'; // Blobファイルのダウンロードの
 import { MessageService } from './../../services/project.service';
 import { ChatService } from '../../services/chat.service';
 import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
-import { ContentPart, ContentPartType, MessageForView, MessageGroupForView, Project } from '../../models/project-models';
+import { ContentPart, ContentPartType, MessageForView, MessageGroupForView, Project, Thread } from '../../models/project-models';
 import { Utils } from '../../utils';
 import { MatMenuModule } from '@angular/material/menu';
 import { ToolCallPart, ToolCallPartBody, ToolCallPartCommand, ToolCallPartCommandBody, ToolCallPartInfo, ToolCallPartType, ToolCallSet } from '../../services/tool-call.service';
@@ -54,6 +54,7 @@ export class ChatPanelBaseComponent implements OnInit {
 
   // @Input() // status 0:未開始 1:実行中 2:完了
   // message!: MessageForView;
+  readonly thread = input.required<Thread>();
 
   readonly messageGroup = input.required<MessageGroupForView>();
 
@@ -96,6 +97,11 @@ export class ChatPanelBaseComponent implements OnInit {
       this.cdr.detectChanges();
     }
   });
+
+  readonly viewModel = computed(() => ({
+    messageGroup: this.messageGroup(),
+    thread: this.thread()
+  }));
 
   readonly editEmitter = output<MessageGroupForView>({ alias: 'edit' });
 

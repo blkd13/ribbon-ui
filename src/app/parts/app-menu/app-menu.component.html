@@ -24,7 +24,7 @@
     @for(apiProvider of apiProviderGroupedList[key]; track $index) {
     <a mat-menu-item [routerLink]="['/', key, apiProvider.name]">
         <mat-icon>
-            <img src="./image/{{key}}-logo-white.svg">
+            <img src="./image/{{key}}-logo.svg">
         </mat-icon>
         <span>{{apiProvider.label}}</span>
     </a>

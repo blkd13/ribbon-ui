@@ -5,7 +5,7 @@
 
 .message {
     line-height: 1.5;
-    background-color: #313131;
+    background-color: var(--plain-background);
     border-radius: 5px;
 }
 
@@ -13,7 +13,7 @@
     select {
         padding: 2px 5px;
         border-radius: 4px;
-        background-color: #292929;
+        background-color: var(--plain-background);
         cursor: pointer;
         margin-left: 2px;
     }
@@ -24,6 +24,7 @@
     top: 0;
     transition: top 0.3s 0s linear;
     z-index: 1;
+    height: 38px;
 }
 
 // stickyが少し複雑になってしまった、、
@@ -46,7 +47,7 @@
 
 
 .message-notediting {
-    border: 1px solid #444;
+    border: 1px solid var(--plain-border-color);
     padding: 2px 6px 2px;
 }
 
@@ -60,12 +61,12 @@
     textarea {
         flex-grow: 1;
         padding: 10px;
-        border: 2px solid #c0c0c0;
+        border: 2px solid var(--plain-border-color);
         border-radius: 4px;
         /* resize: none; */
         min-height: 60px;
         /* max-height: 300px; */
-        background-color: #303030;
+        background-color: var(--plain-background);
     }
 }
 
@@ -76,47 +77,47 @@
 .message.user,
 .user .message-header,
 .message.user .controller-bottom {
-    background-color: rgb(42, 50, 53);
+    background-color: var(--message-background-user);
 
     .message-notediting {
-        border: 1px solid color.mix(white, rgb(42, 50, 53), 7%);
+        border: 1px solid var(--message-border-user);
     }
 }
 
 .user {
     .message-title {
-        color: rgb(123, 207, 230);
+        color: var(--message-color-user);
     }
 
     textarea {
-        border-color: rgb(105 184 205);
+        border-color: var(--mat-sys-primary);
     }
 }
 
 .message.assistant,
 .assistant .message-header,
 .message.assistant .controller-bottom {
-    background-color: rgb(56, 53, 49);
-    background-color: rgb(53, 49, 43);
+    background-color: var(--message-background-assistant);
 
     .message-notediting {
-        border: 1px solid color.mix(white, rgb(56, 53, 49), 7%);
+        border: 1px solid var(--message-border-assistant);
+        ;
     }
 }
 
 .assistant {
     .message-title {
-        color: #BFAE9D;
+        color: var(--message-color-assistant);
     }
 
     textarea {
-        border-color: #BFAE9D;
+        border-color: var(--message-color-assistant);
     }
 }
 
 .message.cached,
 .message.cached .controller-bottom {
-    background-color: #313131;
+    background-color: var(--plain-background);
 }
 
 .cached {
@@ -169,7 +170,7 @@
     top: auto;
     right: 0;
     border-radius: 40px;
-    border: 1px solid rgb(68, 68, 68);
+    border: 1px solid var(--plain-border-color);
 }
 
 .controller-bottom {

@@ -13,7 +13,7 @@
 }
 
 .input-area {
-    background-color: #2b2b2b;
+    background-color: var(--plain-background);
     border-radius: 8px;
     padding: 1.5rem;
     margin-bottom: 2rem;
@@ -23,7 +23,7 @@ textarea {
     width: 100%;
     background-color: transparent;
     border: none;
-    color: #f5f5f5;
+    color: var(--plain-color);
     padding: 1rem;
     font-size: 1rem;
     resize: vertical;
@@ -37,8 +37,8 @@ textarea {
 }
 
 .panel {
-    background-color: #3c3c3c;
-    color: #f5f5f5;
+    background-color: var(--plain-background);
+    color: var(--plain-color);
     border: none;
     padding: 0.8rem 1.5rem;
     border-radius: 6px;
@@ -47,14 +47,15 @@ textarea {
 }
 
 .panel:hover {
-    background-color: #505050;
+    background-color: var(--plain-background-hover);
     /* color: rgb(105 184 205); */
     background-color: rgb(55, 97, 107);
+    background-color: var(--mat-sys-primary-fixed);
 }
 
 .banner {
-    background-color: #384e77;
-    color: #f5f5f5;
+    background-color: var(--plain-background);
+    color: var(--plain-color);
     padding: 1rem 1.5rem;
     border-radius: 6px;
 }
@@ -67,7 +68,7 @@ textarea {
 .model-select {
     width: auto;
     padding: 10px;
-    background-color: #606060;
+    background-color: var(--plain-background);
     cursor: pointer;
 
     option {
@@ -102,6 +103,7 @@ textarea {
 }
 
 h1 {
+    display: inline-block;
     margin-top: 1.25em;
 }
 

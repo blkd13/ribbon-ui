@@ -15,15 +15,30 @@
     </div>
     <mat-divider></mat-divider>
     <div class="settings-section">
+        <h3>カラーテーマ</h3>
+        <div class="setting-item">
+            <mat-button-toggle-group [(value)]="theme" (change)="toggleTheme($event)">
+                <mat-button-toggle value="system">システム</mat-button-toggle>
+                <mat-button-toggle value="dark">ダーク</mat-button-toggle>
+                <mat-button-toggle value="light">ライト</mat-button-toggle>
+            </mat-button-toggle-group>
+            <p class="setting-description">
+                アプリケーションのカラーテーマを変更します。<br />
+                デフォルトはシステム設定と同じです。
+            </p>
+        </div>
+    </div>
+    <mat-divider></mat-divider>
+    <div class="settings-section">
         <h3>Ctrl+Enterで送信 or Enterで送信</h3>
         <div class="setting-item">
-            <mat-radio-group [value]="userService.enterMode" name="enter-mode" (change)="toggleEnterMode($event)">
+            <mat-radio-group [value]="enterMode" name="enter-mode" (change)="toggleEnterMode($event)">
                 <mat-radio-button value="Ctrl+Enter">Ctrl+Enterで送信</mat-radio-button>
                 <span class="inline-block min-w-10"></span>
                 <mat-radio-button value="Enter">Enterで送信</mat-radio-button>
             </mat-radio-group>
             <p class="setting-description">
-                テキストボックスの入力完了時にEnterのみで送信するかEnter+Ctrlで送信するかを指定できます。<br/>
+                テキストボックスの入力完了時にEnterのみで送信するかEnter+Ctrlで送信するかを指定できます。<br />
                 デフォルトはCtrl+Enterです。
             </p>
         </div>

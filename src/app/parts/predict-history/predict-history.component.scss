@@ -4,8 +4,16 @@
     height: calc(100vh - 50px);
 }
 
+h1 {
+    display: inline;
+}
+
 table {
     width: 100%;
+
+    >tr {
+        background-color: var(--plain-background);
+    }
 
     td {
         padding: 5px 10px;

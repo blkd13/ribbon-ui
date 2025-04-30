@@ -20,7 +20,7 @@
 
 .grid-item {
     position: relative;
-    background-color: #333;
+    background-color: var(--plain-background);
     padding: 0;
     text-align: center;
     border-radius: 40px;
@@ -106,17 +106,16 @@
 }
 
 .channel-container:hover {
-    background-color: #26383d;
+    background-color: var(--radio-color-hover);
 }
 
 .timeline-radio-group.selected {
-    background-color: #17262b;
+    background-color: var(--radio-group-color-selected);
 }
 
 .selected {
-    color: white;
-    background-color: #39565e;
-    background-color: #173842;
+    color: var(--plain-color);
+    background-color: var(--radio-color-selected);
 }
 
 .accordion div {
@@ -207,11 +206,11 @@ app-mm-team-logo {
 }
 
 .post-group:hover {
-    background-color: #33333388;
+    background-color: var(--loading-cover-background);
 }
 
 .post-group-hover-sync {
-    background-color: #44444488;
+    background-color: var(--loading-cover-background);
 }
 
 .user-line {
@@ -252,7 +251,7 @@ app-mm-team-logo {
 .emoji {
     display: flex;
     cursor: pointer;
-    border: 1px solid #666;
+    border: 1px solid var(--plain-border-color);
     width: 74px;
     gap: 14px;
     border-radius: 8px;
@@ -274,26 +273,26 @@ app-mm-team-logo {
 
 .sepa {
     &.dateline {
-        border: 1px solid #aaa;
+        border: 1px solid var(--plain-color-area);
     }
 
     &.newmessage {
-        border: 1px solid #3fcfff;
+        border: 1px solid var(--mat-sys-primary);
     }
 
     border-radius: 20px;
     padding: 0 10px;
     position: relative;
-    background: black;
+    background: var(--plain-background);
 }
 
 .sepa-line {
     &.dateline {
-        border: 1px solid #aaa;
+        border: 1px solid var(--plain-color-area);
     }
 
     &.newmessage {
-        border: 1px solid #3fcfff;
+        border: 1px solid var(--mat-sys-primary);
     }
 
     position: absolute;
@@ -316,16 +315,16 @@ app-mm-team-logo {
     textarea {
         flex-grow: 1;
         padding: 10px;
-        border: 2px solid rgb(105 184 205);
+        border: 2px solid var(--mat-sys-primary);
         border-radius: 4px;
         resize: none;
         min-height: 60px;
         max-height: 300px;
-        background-color: #303030;
+        background-color: var(--plain-background);
         width: calc(100% - 80px);
 
         &:disabled {
-            border-color: #666;
+            border-color: var(--plain-border-color);
         }
     }
 }
@@ -336,7 +335,7 @@ app-mm-team-logo {
     top: 4px;
     right: 10px;
     display: none;
-    background-color: #333;
+    background-color: var(--plain-background);
     border: 1px solid #999;
     padding: 0 10px;
     gap: 10px;
@@ -369,7 +368,7 @@ app-mm-team-logo {
 .mention-container {
     position: fixed;
     padding: 10px;
-    background-color: #333;
+    background-color: var(--plain-background);
     border: 1px solid #999;
     width: 400px;
     height: 300px;
@@ -424,4 +423,8 @@ app-mm-team-logo {
             color: inherit;
         }
     }
+}
+
+.color-icon {
+    color: var(--mat-sys-primary);
 }

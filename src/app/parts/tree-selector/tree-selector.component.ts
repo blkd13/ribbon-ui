@@ -14,8 +14,6 @@ import { AuthService } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
 import { ApiBoxService } from '../../services/api-box.service';
 
-import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
-
 import { CollectionViewer, SelectionChange, DataSource } from '@angular/cdk/collections';
 import { FlatTreeControl } from '@angular/cdk/tree';
 import { OnInit, Component, Injectable, inject } from '@angular/core';
@@ -190,7 +188,6 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
     imports: [
         CommonModule, FormsModule,
         MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
-        UserMarkComponent,
     ],
     templateUrl: './tree-selector.component.html',
     styleUrl: './tree-selector.component.scss'

@@ -37,6 +37,8 @@
     </ul>
 </div>
 
+<mat-divider class="m-5" style="margin: 12px 0;"></mat-divider>
+
 <!-- ファイルツリー -->
 <div>
     <div>ファイルツリー</div>
@@ -49,9 +51,11 @@
         <li>
             @switch (node.type) {
             @case ('folder') {
-            <div (click)="switchFolder(node)" style="display: flex;align-items: center;">
-                <mat-icon color="primary"
-                    style="display: flex;justify-content: center;align-items: center;height:40px;width:40px;min-width: 40px;transform: translateY(0);">{{node.expanded?'folder_open':'folder'}}</mat-icon>
+            <div (click)="switchFolder(node)" class="flex items-center">
+                <button mat-icon-button color="primary" class="flex items-center justify-center cursor-pointer"
+                    style="height:40px;width:40px;min-width: 40px;transform: translateY(0);">
+                    <mat-icon>{{node.expanded?'folder_open':'folder'}}</mat-icon>
+                </button>
                 <div class="flex items-center" [title]="node.path">
                     <mat-checkbox [indeterminate]="node.indeterminate"
                         [color]="node.indeterminate?'secondary':'primary'" (click)="stopPropagation($event)"

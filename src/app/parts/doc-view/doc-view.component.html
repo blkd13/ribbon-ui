@@ -11,7 +11,7 @@
         @if(type==='image'){
         <img class="content" [src]="dataUrl" />
         }@else if(type==='text'){
-        <select [(ngModel)]="encode" (change)="decode()" style="margin:0 20px;background-color: #303030;">
+        <select [(ngModel)]="encode" (change)="decode()" style="margin:0 20px;">
             <option value="UTF-8">UTF-8</option>
             <option value="Windows-31J">Shift-JIS(Windows-31J)</option>
             <option value="EUC-JP">EUC-JP</option>

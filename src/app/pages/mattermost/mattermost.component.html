@@ -10,7 +10,8 @@
             <!-- ダイレクト用のチームは必要かと思ったけど使ってみたら要らなかったので消す。でもデータごと消すと影響が大きいのでフィルター掛ける。-->
             @if(mmTeam&&mmTeam.display_name&&mmTeam.id!=='direct'){
             <!-- TODO 本来は mmTeam が null になってるのはおかしいので後で調べるべき -->
-            <a [routerLink]="['/', 'mattermost', providerName, mmTeam.id, 'default']" class="unstyled-link" style="display: inherit;">
+            <a [routerLink]="['/', 'mattermost', providerName, mmTeam.id, 'default']" class="unstyled-link"
+                style="display: inherit;">
                 <app-mm-team-logo [mmTeam]="mmTeam" [ngClass]="{'selected': selectedTeam===mmTeam}"
                     [title]="mmTeam?.display_name">
                 </app-mm-team-logo>
@@ -219,13 +220,13 @@
 
         @if(mmThread && mmThread.length>0){
         <div class="flex items-center cursor-ew-resize" [appDragDelta]="threadElem" position="left">
-            <mat-icon class="rotate-90 ">drag_handle</mat-icon>
+            <mat-icon class="rotate-90">drag_handle</mat-icon>
         </div>
         <div #threadElem class="flex flex-col" style="width: 35%;" appFileDrop
             (filesDropped)="onFilesDropped('thread', mmThread[0][0].channel_id, $event)">
             <div class="flex gap-5 items-center">
                 <span style="font-size: 14px;">Thread</span>
-                <button type="button" mat-icon-button (click)="mmThread=[]" style="color:#add8e6;">
+                <button type="button" mat-icon-button (click)="mmThread=[]" color="color-icon">
                     <mat-icon>close</mat-icon>
                 </button>
                 <span class="">[{{mmTeamMas[mmChannelMas[mmThread[0][0].channel_id].team_id].display_name}}]</span>
@@ -397,18 +398,18 @@
                 src="/api{{apiMattermostService.baseUrl}}/emoji/x5ckjocskfy7ppc39kus45qu4a/image">
             <!-- <button (click)="emojiPicker()">Emoji</button> -->
             @if(selectedTimeline && selectedTimeline.channels && selectedTimeline.channels.length>1){
-            <button mat-icon-button style="color:#add8e6;" class="cursor-pointer" matTooltip="1チャネル表示にする"
+            <button mat-icon-button color="primary" class="cursor-pointer" matTooltip="1チャネル表示にする"
                 (click)="setRadioSelectedId(radioSelectedId===selectedTimeline.channelIdMas[postGroup[0].channel_id].id ? selectedTimeline.id : selectedTimeline.channelIdMas[postGroup[0].channel_id].id )">
                 <mat-icon>filter_alt{{selectedChannelIds.length===1?'_off':''}}</mat-icon>
             </button>
             }
             <!-- mattermostウィンドウを作って毎回そこに向くようにリンクを貼る -->
-            <a target="mattermost" color="primary" mat-icon-button style="color:#add8e6;" matTooltip="mattermostで開く"
+            <a target="mattermost" color="primary" mat-icon-button matTooltip="mattermostで開く"
                 href="{{mattermostOriginUri}}/{{mmTeamMas[mmChannelMas[postGroup[0].channel_id].team_id].name}}/pl/{{postGroup[0].id}}">
                 <mat-icon>arrow_outward</mat-icon>
             </a>
             @if(!isThread){
-            <button mat-icon-button style="color:#add8e6;" (click)="viewThread(postGroup[0])" matTooltip="返信">
+            <button mat-icon-button color="primary" (click)="viewThread(postGroup[0])" matTooltip="返信">
                 <mat-icon>reply</mat-icon>
             </button>
             }

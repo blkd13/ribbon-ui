@@ -6,9 +6,9 @@
     margin: 50px auto;
     padding: 20px;
     border-radius: 8px;
-    background: #333;
-    color: #ccc;
-    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+    background: var(--plain-background);
+    color: var(--plain-color);
+    box-shadow: var(--plain-shadow);
     text-align: center;
 }
 
@@ -51,16 +51,16 @@
     display: block;
     margin-bottom: 5px;
     text-align: left;
-    color: #ccc;
+    color: var(--plain-color);
 }
 
 .form-group input {
     width: 100%;
     padding: 10px;
-    border: 1px solid #555;
+    border: 1px solid var(--plain-border-color);
     border-radius: 4px;
-    background: #333;
-    color: #ccc;
+    background: var(--plain-background);
+    color: var(--plain-color);
 }
 
 .login-button {
@@ -101,6 +101,7 @@
     justify-content: center;
     color: black;
     background-color: white;
+    box-shadow: var(--plain-shadow);
     gap: 10px;
     text-decoration: none;
     margin-top: 20px;

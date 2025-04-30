@@ -66,6 +66,7 @@ export class ChatService {
     { tag: '賢い', class: 'wis', isEnable: true, maxTokens: 32_768, maxInputTokens: 1_047_576, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00200000, 0.008000], id: 'gpt-4.1', },
 
     { tag: '普通', class: 'nml', isEnable: true, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075], id: 'gemini-2.0-flash-001', },
+    { tag: '普通', class: 'nml', isEnable: false, maxTokens: 8192, maxInputTokens: 1000000, isGSearch: true, isDomestic: false, isPdf: true, price: [0.00001875, 0.000075], id: 'gemini-2.0-pro-exp-02-05', },
     { tag: '普通', class: 'nml', isEnable: true, maxTokens: 32_768, maxInputTokens: 1_047_576, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00040000, 0.001600], id: 'gpt-4.1-mini', },
 
     { tag: '速い', class: 'min', isEnable: true, maxTokens: 32_768, maxInputTokens: 1_047_576, isGSearch: false, isDomestic: false, isPdf: true, price: [0.00010000, 0.000400], id: 'gpt-4.1-nano', },
@@ -161,23 +162,24 @@ export class ChatService {
       //   // 既にアラート出したことのあるモデルは除外。
       //   return;
       // } else { }
-
-      // Check if the model is not a PDF
-      if (!modelMas[model].isPdf) {
-        if (!ret.isNotPdf) {
-          ret.isNotPdf = []; // Initialize the array if not already done
+      if (modelMas[model]) {
+        // Check if the model is not a PDF
+        if (!modelMas[model].isPdf) {
+          if (!ret.isNotPdf) {
+            ret.isNotPdf = []; // Initialize the array if not already done
+          } else { }
+          ret.isNotPdf.push(model); // Add the model to isNotPdf
         } else { }
-        ret.isNotPdf.push(model); // Add the model to isNotPdf
-      } else { }
 
-      // Check if the model is not domestic
-      if (!modelMas[model].isDomestic) {
-        if (!ret.isNotDomestic) {
-          ret.isNotDomestic = []; // Initialize the array if not already done
+        // Check if the model is not domestic
+        if (!modelMas[model].isDomestic) {
+          if (!ret.isNotDomestic) {
+            ret.isNotDomestic = []; // Initialize the array if not already done
+          } else { }
+          ret.isNotDomestic.push(model); // Add the model to isNotDomestic
         } else { }
-        ret.isNotDomestic.push(model); // Add the model to isNotDomestic
+        this.checkOkModels.add(model);
       } else { }
-      this.checkOkModels.add(model);
     });
 
 

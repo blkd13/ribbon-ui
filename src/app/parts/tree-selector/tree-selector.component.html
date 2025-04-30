@@ -9,7 +9,7 @@
     <!-- フォルダノード -->
     <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding>
         <div matTreeNodeToggle class="flex items-center cursor-pointer">
-            <button mat-icon-button>
+            <button mat-icon-button color="primary">
                 @if(node.isLoading){
                 <mat-spinner diameter="20"></mat-spinner>
                 } @else {

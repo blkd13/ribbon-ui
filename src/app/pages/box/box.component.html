@@ -265,7 +265,7 @@
             }
 
             @if (loading) {
-            <div class="flex justify-center">
+            <div class="loading-cover">
                 <mat-spinner diameter="50"></mat-spinner>
             </div>
             }
@@ -283,14 +283,14 @@
 <app-user-mark></app-user-mark>
 
 @if(isLoading){
-<div class="fixed top-0 left-0 flex items-center justify-center w-full h-full bg-black bg-opacity-50">
+<div class="loading-cover">
     <mat-spinner></mat-spinner>
 </div>
 }
 
 <ng-template #itemInfoTempl let-entry>
     <div class="flex items-center gap-2">
-        <div class="text-sm text-gray-300 text-right flex flex-col items-end">
+        <div class="text-sm text-right flex flex-col items-end detail-info">
             @if(entry.modified_at){
             <div>{{entry.modified_at|date:dateFormat}}</div>
             <div class="flex items-center gap-2">
@@ -304,8 +304,8 @@
         </div>
         <div (click)="stopImmediatePropagation($event)">
             @if(entry.type==='file'){
-            <a [href]="'/api/user/oauth/api/custom-api/box/'+providerName+'/2.0/files/'+entry.id+'/content'" target="_blank"
-                (click)="$event.stopImmediatePropagation()" matTooltip="Download">
+            <a [href]="'/api/user/oauth/api/custom-api/box/'+providerName+'/2.0/files/'+entry.id+'/content'"
+                target="_blank" (click)="$event.stopImmediatePropagation()" matTooltip="Download">
                 <button mat-icon-button>
                     <mat-icon color="primary">download</mat-icon>
                 </button>

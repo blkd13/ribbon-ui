@@ -1,46 +1,47 @@
-@if(messageGroup() && messageGroup().messages && messageGroup().messages.length>0 && message){
+@if(viewModel(); as vm){
+@if(vm.messageGroup && vm.messageGroup.messages && vm.messageGroup.messages.length>0 && message){
 <mat-expansion-panel class="message"
-  [ngClass]="[messageGroup().messages[0].cacheId?'cached':'', messageGroup().role, exPanel.expanded?'expanded':'closed']"
-  #exPanel [expanded]="messageGroup().isExpanded" (opened)="loadContent().subscribe()"
+  [ngClass]="[vm.messageGroup.messages[0].cacheId?'cached':'', vm.messageGroup.role, exPanel.expanded?'expanded':'closed']"
+  #exPanel [expanded]="vm.messageGroup.isExpanded" (opened)="loadContent().subscribe()"
   (expandedChange)="expandedEmitter.emit($event)">
   <mat-expansion-panel-header class="message-header message-header-message">
     <mat-panel-title class="message-title" style="font-weight: normal;">
       <!-- {{message.role}} -->
-      @if(messageGroup().role==='system'){
-      {{messageGroup().role}}
-      } @else if(messageGroup().messages[0].cacheId){
+      @if(vm.messageGroup.role==='system'){
+      {{vm.messageGroup.role}}
+      } @else if(vm.messageGroup.messages[0].cacheId){
       キャッシュ
       } @else {
-      <select [(ngModel)]="messageGroup().role" (click)="stopPropagation($event)">
+      <select [(ngModel)]="vm.messageGroup.role" (click)="stopPropagation($event)">
         <option value="user">user</option>
         <option value="assistant">assistant</option>
       </select>
       }
-      <!-- @if(messageGroup().role==='assistant'){
+      <!-- @if(vm.messageGroup.role==='assistant'){
       <span
         style="white-space: nowrap;word-break: keep-all;margin-left: 10px;position: absolute;top:-2px;left:24px;font-size:12px;">
-        by {{messageGroup().source}}
+        by {{vm.messageGroup.source}}
       </span>
       } -->
     </mat-panel-title>
     <mat-panel-description>
-      <div class="truncate">{{messageGroup().messages[0].label}}</div>
+      <div class="truncate">{{vm.messageGroup.messages[0].label}}</div>
     </mat-panel-description>
     <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'top'}"></ng-container>
   </mat-expansion-panel-header>
 
   <div class="flex w-full gap-2">
     <!-- <div class="flex flex-col gap-2">
-      @for(_ of messageGroup().messages.keys();track $index){
+      @for(_ of vm.messageGroup.messages.keys();track $index){
       <button mat-raised-button (click)="setMessageIndex($index)">{{$index+1}}</button>
       }
     </div> -->
 
-    @if(messageGroup().messages.length>1){
+    @if(vm.messageGroup.messages.length>1){
     <div>
       <mat-button-toggle-group [value]="mIndex" (change)="setMessageIndex($event.value)" class="min-w-8"
         style="border-radius: 4px;" vertical hideSingleSelectionIndicator>
-        @for(_ of messageGroup().messages.keys();track $index){
+        @for(_ of vm.messageGroup.messages.keys();track $index){
         <mat-button-toggle [value]="$index" [ngClass]="{'selected': $index===mIndex}">{{$index+1}}</mat-button-toggle>
         }
       </mat-button-toggle-group>
@@ -48,7 +49,7 @@
     }
 
     <div class="flex-grow w-0 relative custom-scroll overflow-auto" [ngClass]="{'message-notediting': !message.editing}"
-      [ngClass]="[messageGroup().role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel', !message.editing ? 'message-notediting' : '']">
+      [ngClass]="[vm.messageGroup.role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel', !message.editing ? 'message-notediting' : '']">
 
       <!-- ファイル -->
       <!--
@@ -87,6 +88,7 @@
       } @else if(content.type==='error') {
       <div class="text-red-500 overflow-auto">
         <div>ERROR</div>
+        {{content.id}}
         <markdown katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post"></markdown>
       </div>
       } @else if(content.type==='file') {
@@ -138,7 +140,7 @@
       } @else if(content.type==='meta' && content.meta) {
 
       @if(content.meta.groundingMetadata && content.meta.groundingMetadata.searchEntryPoint?.renderedContent){
-      <div class="p-3 rounded-md" style="background-color: #333;">
+      <div class="p-3 rounded-md quote-area">
         参考リンク
         <ol class="list-decimal pl-10 py-2">
           @for(chunk of content.meta.groundingMetadata.groundingChunks||[];track $index){
@@ -161,7 +163,7 @@
             <div class="truncate">{{content.meta.thinking}}</div>
           </mat-panel-description>
         </mat-expansion-panel-header>
-        <div class="p-3 rounded-md cursor-pointer" style="background-color: #333;">
+        <div class="p-3 rounded-md quote-area">
           <markdown [hidden]="message.editing" katex mermaid clipboard [data]="content.meta.thinking"></markdown>
         </div>
       </mat-expansion-panel>
@@ -179,12 +181,12 @@
         </div>
         <div class="flex my-2 gap-6">
           <button class="w-56" mat-raised-button
-            (click)="toolExec($event, true, messageGroup().messages.at(-1)?.contents?.at(-1))" title="実行">
+            (click)="toolExec($event, true, vm.messageGroup.messages.at(-1)?.contents?.at(-1))" title="実行">
             <mat-icon>play_arrow</mat-icon>
             実行
           </button>
           <button class="w-56" mat-raised-button
-            (click)="toolExec($event, false, messageGroup().messages.at(-1)?.contents?.at(-1))" title="キャンセル"
+            (click)="toolExec($event, false, vm.messageGroup.messages.at(-1)?.contents?.at(-1))" title="キャンセル"
             style="color: #000;background-color: #777;">
             <mat-icon>cancel</mat-icon>
             キャンセル
@@ -209,28 +211,30 @@
   </div>
   }
   -->
-  @if (!messageGroup().messages[mIndex].editing) {
+  @if (!vm.messageGroup.messages[mIndex].editing) {
   <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'bottom'}"></ng-container>
   }
 
-  @if(messageGroup().role==='assistant' && messageGroup().source){
-  <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap" style="color: #908070;height: 0px;margin: 5px 0;"><!-- #BFAE9D -->
-    by {{ messageGroup().source }}
+  @if(vm.messageGroup.role==='assistant' && vm.messageGroup.source){
+  <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap" style="color: #908070;height: 0px;margin: 5px 0;">
+    <!-- #BFAE9D -->
+    by {{ vm.messageGroup.source }}
   </div>
   }
 </mat-expansion-panel>
 } @else {
-{{messageGroup().messages.length}}
+{{vm.messageGroup.messages.length}}
 }
+
 <ng-template #controller let-exPanel="exPanel" let-position="position">
   <div class="right-0 top-0 flex gap-2" style="padding-right: 0;"
     [ngClass]="{'controller-bottom': position==='bottom', 'controller-bottom--hide': !exPanel.expanded && position==='bottom'}">
     <!-- style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"  -->
-    @if(messageGroup().type) {
+    @if(vm.messageGroup.type) {
     <!-- 並列実行（バッチを想定） -->
-    }@else if(messageGroup().type==='Regenerated' && messageGroup().messages.length>1) {
+    }@else if(vm.messageGroup.type==='Regenerated' && vm.messageGroup.messages.length>1) {
     <!-- 再ラン -->
-    @for(message of messageGroup().messages; track $index){
+    @for(message of vm.messageGroup.messages; track $index){
     {{$index}},
     }
     }@else {
@@ -238,21 +242,21 @@
     }
 
     <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）"
-      [ngStyle]="{visibility: messageGroup().role==='assistant'?'visible':'hidden'}">
+      [ngStyle]="{visibility: vm.messageGroup.role==='assistant'?'visible':'hidden'}">
       <mat-icon>folder_zip</mat-icon>
     </button>
     <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
       <mat-icon>content_copy</mat-icon>
     </button>
 
-    @if(messageGroup().role==='assistant') {
+    @if(vm.messageGroup.role==='assistant') {
     <button mat-icon-button (click)="onZoom($event)" title="拡大表示">
       <mat-icon>pan_zoom</mat-icon>
     </button>
     } @else {
-    <button mat-icon-button (click)="setEdit($event)" [title]="messageGroup().messages[0].editing?'保存':'編集'"
-      [ngStyle]="{visibility: messageGroup().messages[0].cacheId?'hidden':'visible'}">
-      @if(messageGroup().messages[0].editing){
+    <button mat-icon-button (click)="setEdit($event)" [title]="vm.messageGroup.messages[0].editing?'保存':'編集'"
+      [ngStyle]="{visibility: vm.messageGroup.messages[0].cacheId?'hidden':'visible'}">
+      @if(vm.messageGroup.messages[0].editing){
       <mat-icon>check_circle</mat-icon>
       }@else{
       <mat-icon>edit</mat-icon>
@@ -260,14 +264,14 @@
     </button>
     }
 
-    @if(messageGroup().messages[0].cacheId || messageGroup().role==='system'){
+    @if(vm.messageGroup.messages[0].cacheId || vm.messageGroup.role==='system'){
     <button mat-icon-button style="margin-right: 10px;visibility: hidden;"><mat-icon>close</mat-icon></button>
-    } @else if(messageGroup().role==='user'){
+    } @else if(vm.messageGroup.role==='user'){
     <button mat-icon-button (click)="remove($event)" title="削除" style="margin-right: 10px;">
       <mat-icon>close</mat-icon>
     </button>
-    } @else if(messageGroup().role==='assistant'){
-    @if(['Waiting','Loading'].includes(messageGroup().messages[mIndex].status)){
+    } @else if(vm.messageGroup.role==='assistant'){
+    @if(['Waiting','Loading'].includes(vm.messageGroup.messages[mIndex].status)){
     <button mat-icon-button (click)="cancel($event)" title="キャンセル" style="margin-right: 10px;">
       <mat-icon>cancel</mat-icon>
     </button>
@@ -281,9 +285,10 @@
     <!-- 'margin-right': position === 'bottom' ? '-6px' : '10px' -->
     @if(position==='bottom'){
     <button mat-icon-button (click)="exPanel.close()" title="閉じる" style="margin-left: -17px"
-      [ngStyle]="{visibility: messageGroup().role==='assistant'?'visible':'hidden'}">
+      [ngStyle]="{visibility: vm.messageGroup.role==='assistant'?'visible':'hidden'}">
       <mat-icon>{{exPanel.opened ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}}</mat-icon>
     </button>
     }
   </div>
 </ng-template>
+}

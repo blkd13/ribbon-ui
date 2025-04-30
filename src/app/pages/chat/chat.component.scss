@@ -63,7 +63,7 @@
         resize: none;
         min-height: 60px;
         max-height: 300px;
-        background-color: #303030;
+        background-color: var(--plain-background);
     }
 }
 
@@ -130,20 +130,20 @@
 
 .add-thread {
     cursor: pointer;
-    background-color: #121212;
+    // background-color: #121212;
     transition: all 0.1s 0s linear;
     display: flex;
     align-items: center;
 }
 
 .add-thread:hover {
-    background-color: #606060;
+    // background-color: #606060;
 }
 
 .mimi {
     position: absolute;
     top: 82px;
-    background: #333;
+    background: var(--plain-background);
     padding: 0px;
     width: 33px;
     height: 30px;
@@ -151,10 +151,11 @@
     border-bottom-right-radius: 6px;
     cursor: pointer;
     transition: background-color 0.3s 0s linear, left 0.3s 0s ease;
-    z-index: 3;
+    z-index: 4;
+    box-shadow: var(--plain-shadow);
 
     &:hover {
-        background-color: #555;
+        background-color: var(--plain-background-area);
     }
 
     mat-icon {
@@ -187,9 +188,11 @@
     border-radius: 20px;
     background: linear-gradient(170deg, #232526 0%, #1c1c1c 50%, #141414 100%);
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-    box-shadow:
-        -10px -10px 30px rgba(255, 255, 255, 0.05),
-        10px 10px 30px rgba(0, 0, 0, 0.8);
+    background: var(--background-gradient);
+    box-shadow: var(--plain-shadow);
+    // box-shadow:
+    //     -10px -10px 30px rgba(255, 255, 255, 0.05),
+    //     10px 10px 30px rgba(0, 0, 0, 0.8);
 }
 
 .link-chain {
@@ -198,7 +201,8 @@
     width: 0;
     padding: 0;
     z-index: 2;
-    transform: translate(0, 2px);
+    transform: translate(0, -4px);
+    transition: opacity 0.3s 0s ease;
     overflow: visible;
     // color: rgb(105 184 205);
     cursor: pointer;
@@ -212,8 +216,13 @@
     }
 
     &.off {
-        color: rgba(255, 255, 255, 0.2);
+        // color: rgba(255, 255, 255, 0.2);
+        opacity: 0.2;
     }
+}
+
+.hidden-custom-scroll .link-chain {
+    transform: translate(0, 1px);
 }
 
 /* CSS Grid Layout */
@@ -249,7 +258,7 @@
     flex-direction: column;
     width: 75px;
     height: 75px;
-    background: linear-gradient(to bottom, #444444, #222222);
+    background: var(--badge-background);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     border-radius: 8px;
     font-size: 16px;
@@ -268,7 +277,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(to bottom, rgb(30, 109, 131), #19393b);
+    background: var(--badge-background-active);
     border-radius: 8px;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -285,6 +294,15 @@
     opacity: 1;
 }
 
+.thread-group {
+    border-bottom: 1px solid var(--plain-border-color);
+
+    &.selected {
+        background-color: #303031;
+        background-color: var(--plain-background);
+    }
+}
+
 .course-panel-close {
     position: absolute;
     top: -8px;
@@ -296,20 +314,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--tip-background);
     border-radius: 50%;
     z-index: 1;
 }
 
 .course-panel-close:hover {
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: var(--tip-background-hover);
 }
 
 .small-icon {
     font-size: 14px;
     width: 14px;
     height: 14px;
-    color: white;
+    color: var(--plain-color);
 }
 
 .sgl-btn {

@@ -4,6 +4,8 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { FileEntity, FileEntityForView, FileGroupEntity, FileGroupEntityForView, FileManagerService } from '../../services/file-manager.service';
 import { GService } from '../../services/g.service';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonModule } from '@angular/material/button';
 
 interface OrgStruct {
   pare: OrgNode | undefined;
@@ -218,7 +220,7 @@ function buildMimeTree(_files: FileInfo[]): MimeTreeNode[] {
 
 @Component({
   selector: 'app-select-tree',
-  imports: [CommonModule, MatCheckboxModule, MatIconModule],
+  imports: [CommonModule, MatCheckboxModule, MatButtonModule, MatIconModule, MatDividerModule],
   templateUrl: './select-tree.component.html',
   styleUrls: ['./select-tree.component.scss']
 })

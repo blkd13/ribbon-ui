@@ -14,11 +14,11 @@
 }
 
 input {
-    background-color: #666;
+    background-color: var(--plain-background);
     text-align: right;
 }
 
 input:disabled {
-    background-color: #333;
-    color: #999;
+    background-color: var(--plain-background-area);
+    color: var(--plain-color-area);
 }

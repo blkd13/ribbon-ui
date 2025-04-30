@@ -34,12 +34,16 @@ td {
 
 mat-tree-node {
     &:hover {
-        background-color: #444;
+        background-color: var(--plain-background);
     }
 }
 
 .search-box {
     input {
-        background-color: #444;
+        background-color: var(--plain-background);
     }
+}
+
+.header {
+    background-color: var(--plain-background);
 }

@@ -1,0 +1,361 @@
+// 
+html>body.dark-theme {
+    --body-background-gradient: linear-gradient(135deg, #121212 0%, rgb(15, 24, 30) 80%, rgb(2, 2, 2) 100%);
+
+    --text-gradient-start: rgb(175, 210, 219);
+    --text-gradient-mid: rgb(236, 255, 255);
+    --text-gradient-deep: rgb(166, 214, 228);
+    --text-gradient-end: #ffffff;
+
+    --text-gradient: linear-gradient(135deg,
+            var(--text-gradient-start) 0%,
+            var(--text-gradient-mid) 8%,
+            var(--text-gradient-deep) 80%,
+            var(--text-gradient-end) 100%);
+
+    --background-gradient: linear-gradient(135deg,
+            #0a0a0a 0%,
+            #1a1a1a 100%);
+
+    --badge-background: linear-gradient(to bottom, #444444, #222222);
+    --badge-background-active: linear-gradient(to bottom, rgb(30, 109, 131), #19393b);
+
+    --plain-color: #fff;
+    --plain-color-area: #ccc;
+    --plain-background: #2c2c2c;
+    --plain-background-area: #333;
+    --plain-background-hover: #353536;
+    --plain-border-color: #3c4043;
+    --plain-shadow: -3px -3px 8px rgba(255, 255, 255, 0.05), 3px 3px 8px rgba(0, 0, 0, 0.8);
+
+    --radio-color-hover: #26383d;
+    --radio-group-color-selected: #17262b;
+    --radio-color-selected: #173842;
+
+    --loading-cover-background: #00000088;
+    --scroll-bar-color: rgb(59, 108, 121);
+
+    --message-border-user: color.mix(white, rgb(42, 50, 53), 7%);
+    --message-border-assistant: color.mix(white, rgb(56, 53, 49), 7%);
+    --message-background-user: rgb(42, 50, 53);
+    --message-background-assistant: rgb(56, 53, 49);
+    --message-background-assistant: rgb(53, 49, 43);
+    --message-color-user: #7bcfe6;
+    --message-color-assistant: #BFAE9D;
+    // --message-background-system: rgb(237, 248, 255);
+    // --message-background-error: #ffcccc;
+
+    --link-color: lightblue;
+
+
+    --tip-background: rgba(0, 0, 0, 0.5);
+    --tip-background-hover: rgba(0, 0, 0, 0.7);
+
+    --h2-color: #ffffff;
+    --h3-color: #ffffff;
+}
+
+html>body.dark-theme {
+    --mat-sys-background: #101414;
+    --mat-sys-error: #ffb4ab;
+    --mat-sys-error-container: #93000a;
+    --mat-sys-inverse-on-surface: #2d3131;
+    --mat-sys-inverse-primary: #006a6a;
+    --mat-sys-inverse-surface: #e0e3e2;
+    --mat-sys-on-background: #e0e3e2;
+    --mat-sys-on-error: #690005;
+    --mat-sys-on-error-container: #ffdad6;
+    --mat-sys-on-primary: #003737;
+    --mat-sys-on-primary-container: #00fbfb;
+    --mat-sys-on-primary-fixed: #002020;
+    --mat-sys-on-primary-fixed-variant: #004f4f;
+    --mat-sys-on-secondary: #1b3534;
+    --mat-sys-on-secondary-container: #cce8e7;
+    --mat-sys-on-secondary-fixed: #051f1f;
+    --mat-sys-on-secondary-fixed-variant: #324b4b;
+    --mat-sys-on-surface: #e0e3e2;
+    --mat-sys-on-surface-variant: #dae5e4;
+    --mat-sys-on-tertiary: #502400;
+    --mat-sys-on-tertiary-container: #ffdcc7;
+    --mat-sys-on-tertiary-fixed: #311300;
+    --mat-sys-on-tertiary-fixed-variant: #723600;
+    --mat-sys-outline: #889392;
+    --mat-sys-outline-variant: #3f4948;
+    --mat-sys-primary: #00dddd;
+    --mat-sys-primary-container: #004f4f;
+    --mat-sys-primary-fixed: #00fbfb;
+    --mat-sys-primary-fixed-dim: #00dddd;
+    --mat-sys-scrim: #000000;
+    --mat-sys-secondary: #b0cccb;
+    --mat-sys-secondary-container: #324b4b;
+    --mat-sys-secondary-fixed: #cce8e7;
+    --mat-sys-secondary-fixed-dim: #b0cccb;
+    --mat-sys-shadow: #000000;
+    --mat-sys-surface: #101414;
+    --mat-sys-surface-bright: #363a39;
+    --mat-sys-surface-container: #1c2020;
+    --mat-sys-surface-container-high: #272b2a;
+    --mat-sys-surface-container-highest: #313635;
+    --mat-sys-surface-container-low: #191c1c;
+    --mat-sys-surface-container-lowest: #0b0f0e;
+    --mat-sys-surface-dim: #101414;
+    --mat-sys-surface-tint: #00dddd;
+    --mat-sys-surface-variant: #3f4948;
+    --mat-sys-tertiary: #ffb787;
+    --mat-sys-tertiary-container: #723600;
+    --mat-sys-tertiary-fixed: #ffdcc7;
+    --mat-sys-tertiary-fixed-dim: #ffb787;
+    --mat-sys-neutral-variant20: #293232;
+    --mat-sys-neutral10: #191c1c;
+
+    // // 編集分
+    --mat-sys-primary: #69b8cd;
+    /* ← 新しいメインカラー */
+    // --mat-sys-primary-container: #0c4e5a;          /* 濃い背景向け */
+    // --mat-sys-on-primary: #ffffff;                 /* 白にしてコントラスト確保 */
+    --mat-sys-on-primary-container: #b7e8f2;
+    /* 容器上のテキストやアイコン */
+    --mat-sys-primary-fixed: #b7e8f2;
+    --mat-sys-primary-fixed-dim: #69b8cd;
+    // --mat-sys-on-primary-fixed: #002b34;
+    // --mat-sys-on-primary-fixed-variant: #0c4e5a;
+
+    --mat-sys-surface-tint: #69b8cd;
+
+    // --mat-sys-inverse-primary: #0c4e5a;            /* primary-containerと合わせて落ち着いた対比色に */
+
+    // --mat-sys-outline: #6e8f97;                    /* 線や境界の色も少しブルー系に */
+    // --mat-sys-outline-variant: #3c5a5f;
+
+    // --mat-sys-secondary: #a8c9ce;                  /* 優しい青みのあるグレー */
+    // --mat-sys-secondary-container: #355b61;
+    // --mat-sys-on-secondary: #ffffff;
+    // --mat-sys-on-secondary-container: #d4eef2;
+    --mat-sys-secondary-fixed: #d4eef2;
+    --mat-sys-secondary-fixed-dim: #a8c9ce;
+    // --mat-sys-on-secondary-fixed: #002e35;
+    // --mat-sys-on-secondary-fixed-variant: #355b61;
+
+    // --mat-sys-tertiary: #f7bfa4;                   /* 補色系：柔らかいオレンジでアクセント */
+    // --mat-sys-tertiary-container: #78442e;
+    // --mat-sys-on-tertiary: #ffffff;
+    // --mat-sys-on-tertiary-container: #ffeadf;
+    // --mat-sys-tertiary-fixed: #ffeadf;
+    // --mat-sys-tertiary-fixed-dim: #f7bfa4;
+    // --mat-sys-on-tertiary-fixed: #3b2015;
+    // --mat-sys-on-tertiary-fixed-variant: #78442e;
+    // 
+
+    // ------------------------------------------
+
+    // /* 基本カラー */
+    // --mat-sys-on-primary: #002830; /* プライマリカラー上のテキスト色（暗め） */
+    // --mat-sys-primary-container: #004854; /* プライマリコンテナ色（深め） */
+    // --mat-sys-on-primary-container: #b8eeff; /* プライマリコンテナ上のテキスト色 */
+    // --mat-sys-primary-fixed: #b8eeff; /* 固定プライマリ色 */
+    // --mat-sys-primary-fixed-dim: rgb(105 184 205); /* 固定プライマリ色（薄め） */
+
+    // /* セカンダリカラー - 少し調整してプライマリと調和させる */
+    // --mat-sys-secondary: #b0c9d0; /* セカンダリカラー（プライマリに合わせて調整） */
+    // --mat-sys-on-secondary: #1a3540; /* セカンダリカラー上のテキスト色 */
+    // --mat-sys-secondary-container: #324a54; /* セカンダリコンテナ色 */
+    // --mat-sys-on-secondary-container: #cce5ed; /* セカンダリコンテナ上のテキスト色 */
+    // --mat-sys-secondary-fixed: #cce5ed; /* 固定セカンダリ色 */
+    // --mat-sys-secondary-fixed-dim: #b0c9d0; /* 固定セカンダリ色（薄め） */
+
+    // /* 基本カラー（継続） */
+    // --mat-sys-on-primary-fixed: #002029; /* 固定プライマリ色上のテキスト色 */
+    // --mat-sys-on-primary-fixed-variant: #004a54; /* 固定プライマリバリアント上のテキスト色 */
+    // --mat-sys-on-secondary-fixed: #051f29; /* 固定セカンダリ色上のテキスト色 */
+    // --mat-sys-on-secondary-fixed-variant: #324b54; /* 固定セカンダリバリアント上のテキスト色 */
+
+    // /* ターシャリーカラー - アクセントとして維持 */
+    // --mat-sys-tertiary: #ffb787; /* 元の色を維持（良いアクセントになる） */
+    // --mat-sys-on-tertiary: #502400; /* 元の色を維持 */
+    // --mat-sys-tertiary-container: #723600; /* 元の色を維持 */
+    // --mat-sys-on-tertiary-container: #ffdcc7; /* 元の色を維持 */
+    // --mat-sys-tertiary-fixed: #ffdcc7; /* 元の色を維持 */
+    // --mat-sys-tertiary-fixed-dim: #ffb787; /* 元の色を維持 */
+    // --mat-sys-on-tertiary-fixed: #311300; /* 元の色を維持 */
+    // --mat-sys-on-tertiary-fixed-variant: #723600; /* 元の色を維持 */
+
+    // /* 背景・サーフェス系カラー */
+    // --mat-sys-background: #101418; /* 背景色（少し青みを加えた） */
+    // --mat-sys-on-background: #e0e3e6; /* 背景上のテキスト色 */
+    // --mat-sys-surface: #101418; /* サーフェス色 */
+    // --mat-sys-on-surface: #e0e3e6; /* サーフェス上のテキスト色 */
+    // --mat-sys-surface-variant: #3f4950; /* サーフェスバリアント色 */
+    // --mat-sys-on-surface-variant: #dae2e6; /* サーフェスバリアント上のテキスト色 */
+    // --mat-sys-inverse-surface: #e0e3e6; /* 反転サーフェス色 */
+    // --mat-sys-inverse-on-surface: #2d3136; /* 反転サーフェス上のテキスト色 */
+    // --mat-sys-inverse-primary: #00687a; /* 反転プライマリ色 */
+    // --mat-sys-surface-tint: rgb(105 184 205); /* サーフェスティント色 */
+
+    // /* サーフェスコンテナ */
+    // --mat-sys-surface-container-lowest: #0b0f14; /* サーフェスコンテナ（最も低い） */
+    // --mat-sys-surface-container-low: #191c22; /* サーフェスコンテナ（低い） */
+    // --mat-sys-surface-container: #1c2026; /* サーフェスコンテナ */
+    // --mat-sys-surface-container-high: #272b31; /* サーフェスコンテナ（高い） */
+    // --mat-sys-surface-container-highest: #31353b; /* サーフェスコンテナ（最も高い） */
+    // --mat-sys-surface-bright: #36393f; /* 明るいサーフェス */
+    // --mat-sys-surface-dim: #101418; /* 暗いサーフェス */
+
+    // /* エラー系カラー - 元の色を維持 */
+    // --mat-sys-error: #ffb4ab; /* 元の色を維持 */
+    // --mat-sys-on-error: #690005; /* 元の色を維持 */
+    // --mat-sys-error-container: #93000a; /* 元の色を維持 */
+    // --mat-sys-on-error-container: #ffdad6; /* 元の色を維持 */
+
+    // /* アウトライン・その他 */
+    // --mat-sys-outline: #889399; /* アウトライン色（プライマリに合わせて調整） */
+    // --mat-sys-outline-variant: #3f494f; /* アウトラインバリアント色 */
+    // --mat-sys-scrim: #000000; /* スクリム色 */
+    // --mat-sys-shadow: #000000; /* シャドウ色 */
+    // --mat-sys-neutral-variant20: #293237; /* ニュートラルバリアント20 */
+    // --mat-sys-neutral10: #191c22; /* ニュートラル10 */
+
+
+    /* 新しいプライマリカラー */
+    --mat-sys-primary: rgb(105 184 205);
+}
+
+html>body.dark-theme {
+    --mat-sys-level0: 0px 0px 0px 0px rgba(0, 0, 0, 0.2), 0px 0px 0px 0px rgba(0, 0, 0, 0.14), 0px 0px 0px 0px rgba(0, 0, 0, 0.12)
+}
+
+html>body.dark-theme {
+    --mat-sys-level1: 0px 2px 1px -1px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 1px 3px 0px rgba(0, 0, 0, 0.12)
+}
+
+html>body.dark-theme {
+    --mat-sys-level2: 0px 3px 3px -2px rgba(0, 0, 0, 0.2), 0px 3px 4px 0px rgba(0, 0, 0, 0.14), 0px 1px 8px 0px rgba(0, 0, 0, 0.12)
+}
+
+html>body.dark-theme {
+    --mat-sys-level3: 0px 3px 5px -1px rgba(0, 0, 0, 0.2), 0px 6px 10px 0px rgba(0, 0, 0, 0.14), 0px 1px 18px 0px rgba(0, 0, 0, 0.12)
+}
+
+html>body.dark-theme {
+    --mat-sys-level4: 0px 5px 5px -3px rgba(0, 0, 0, 0.2), 0px 8px 10px 1px rgba(0, 0, 0, 0.14), 0px 3px 14px 2px rgba(0, 0, 0, 0.12)
+}
+
+html>body.dark-theme {
+    --mat-sys-level5: 0px 7px 8px -4px rgba(0, 0, 0, 0.2), 0px 12px 17px 2px rgba(0, 0, 0, 0.14), 0px 5px 22px 4px rgba(0, 0, 0, 0.12)
+}
+
+html>body.dark-theme {
+    --mat-sys-body-large: 400 1rem / 1.5rem Roboto, 'Noto Sans JP';
+    --mat-sys-body-large-font: Roboto, 'Noto Sans JP';
+    --mat-sys-body-large-line-height: 1.5rem;
+    --mat-sys-body-large-size: 1rem;
+    --mat-sys-body-large-tracking: 0.031rem;
+    --mat-sys-body-large-weight: 400;
+    --mat-sys-body-medium: 400 0.875rem / 1.25rem Roboto, 'Noto Sans JP';
+    --mat-sys-body-medium-font: Roboto, 'Noto Sans JP';
+    --mat-sys-body-medium-line-height: 1.25rem;
+    --mat-sys-body-medium-size: 0.875rem;
+    --mat-sys-body-medium-tracking: 0.016rem;
+    --mat-sys-body-medium-weight: 400;
+    --mat-sys-body-small: 400 0.75rem / 1rem Roboto, 'Noto Sans JP';
+    --mat-sys-body-small-font: Roboto, 'Noto Sans JP';
+    --mat-sys-body-small-line-height: 1rem;
+    --mat-sys-body-small-size: 0.75rem;
+    --mat-sys-body-small-tracking: 0.025rem;
+    --mat-sys-body-small-weight: 400;
+    --mat-sys-display-large: 400 3.562rem / 4rem Roboto, 'Noto Sans JP';
+    --mat-sys-display-large-font: Roboto, 'Noto Sans JP';
+    --mat-sys-display-large-line-height: 4rem;
+    --mat-sys-display-large-size: 3.562rem;
+    --mat-sys-display-large-tracking: -0.016rem;
+    --mat-sys-display-large-weight: 400;
+    --mat-sys-display-medium: 400 2.812rem / 3.25rem Roboto, 'Noto Sans JP';
+    --mat-sys-display-medium-font: Roboto, 'Noto Sans JP';
+    --mat-sys-display-medium-line-height: 3.25rem;
+    --mat-sys-display-medium-size: 2.812rem;
+    --mat-sys-display-medium-tracking: 0;
+    --mat-sys-display-medium-weight: 400;
+    --mat-sys-display-small: 400 2.25rem / 2.75rem Roboto, 'Noto Sans JP';
+    --mat-sys-display-small-font: Roboto, 'Noto Sans JP';
+    --mat-sys-display-small-line-height: 2.75rem;
+    --mat-sys-display-small-size: 2.25rem;
+    --mat-sys-display-small-tracking: 0;
+    --mat-sys-display-small-weight: 400;
+    --mat-sys-headline-large: 400 2rem / 2.5rem Roboto, 'Noto Sans JP';
+    --mat-sys-headline-large-font: Roboto, 'Noto Sans JP';
+    --mat-sys-headline-large-line-height: 2.5rem;
+    --mat-sys-headline-large-size: 2rem;
+    --mat-sys-headline-large-tracking: 0;
+    --mat-sys-headline-large-weight: 400;
+    --mat-sys-headline-medium: 400 1.75rem / 2.25rem Roboto, 'Noto Sans JP';
+    --mat-sys-headline-medium-font: Roboto, 'Noto Sans JP';
+    --mat-sys-headline-medium-line-height: 2.25rem;
+    --mat-sys-headline-medium-size: 1.75rem;
+    --mat-sys-headline-medium-tracking: 0;
+    --mat-sys-headline-medium-weight: 400;
+    --mat-sys-headline-small: 400 1.5rem / 2rem Roboto, 'Noto Sans JP';
+    --mat-sys-headline-small-font: Roboto, 'Noto Sans JP';
+    --mat-sys-headline-small-line-height: 2rem;
+    --mat-sys-headline-small-size: 1.5rem;
+    --mat-sys-headline-small-tracking: 0;
+    --mat-sys-headline-small-weight: 400;
+    --mat-sys-label-large: 500 0.875rem / 1.25rem Roboto, 'Noto Sans JP';
+    --mat-sys-label-large-font: Roboto, 'Noto Sans JP';
+    --mat-sys-label-large-line-height: 1.25rem;
+    --mat-sys-label-large-size: 0.875rem;
+    --mat-sys-label-large-tracking: 0.006rem;
+    --mat-sys-label-large-weight: 500;
+    --mat-sys-label-large-weight-prominent: 700;
+    --mat-sys-label-medium: 500 0.75rem / 1rem Roboto, 'Noto Sans JP';
+    --mat-sys-label-medium-font: Roboto, 'Noto Sans JP';
+    --mat-sys-label-medium-line-height: 1rem;
+    --mat-sys-label-medium-size: 0.75rem;
+    --mat-sys-label-medium-tracking: 0.031rem;
+    --mat-sys-label-medium-weight: 500;
+    --mat-sys-label-medium-weight-prominent: 700;
+    --mat-sys-label-small: 500 0.688rem / 1rem Roboto, 'Noto Sans JP';
+    --mat-sys-label-small-font: Roboto, 'Noto Sans JP';
+    --mat-sys-label-small-line-height: 1rem;
+    --mat-sys-label-small-size: 0.688rem;
+    --mat-sys-label-small-tracking: 0.031rem;
+    --mat-sys-label-small-weight: 500;
+    --mat-sys-title-large: 400 1.375rem / 1.75rem Roboto, 'Noto Sans JP';
+    --mat-sys-title-large-font: Roboto, 'Noto Sans JP';
+    --mat-sys-title-large-line-height: 1.75rem;
+    --mat-sys-title-large-size: 1.375rem;
+    --mat-sys-title-large-tracking: 0;
+    --mat-sys-title-large-weight: 400;
+    --mat-sys-title-medium: 500 1rem / 1.5rem Roboto, 'Noto Sans JP';
+    --mat-sys-title-medium-font: Roboto, 'Noto Sans JP';
+    --mat-sys-title-medium-line-height: 1.5rem;
+    --mat-sys-title-medium-size: 1rem;
+    --mat-sys-title-medium-tracking: 0.009rem;
+    --mat-sys-title-medium-weight: 500;
+    --mat-sys-title-small: 500 0.875rem / 1.25rem Roboto, 'Noto Sans JP';
+    --mat-sys-title-small-font: Roboto, 'Noto Sans JP';
+    --mat-sys-title-small-line-height: 1.25rem;
+    --mat-sys-title-small-size: 0.875rem;
+    --mat-sys-title-small-tracking: 0.006rem;
+    --mat-sys-title-small-weight: 500
+}
+
+html>body.dark-theme {
+    --mat-sys-corner-extra-large: 28px;
+    --mat-sys-corner-extra-large-top: 28px 28px 0 0;
+    --mat-sys-corner-extra-small: 4px;
+    --mat-sys-corner-extra-small-top: 4px 4px 0 0;
+    --mat-sys-corner-full: 9999px;
+    --mat-sys-corner-large: 16px;
+    --mat-sys-corner-large-end: 0 16px 16px 0;
+    --mat-sys-corner-large-start: 16px 0 0 16px;
+    --mat-sys-corner-large-top: 16px 16px 0 0;
+    --mat-sys-corner-medium: 12px;
+    --mat-sys-corner-none: 0;
+    --mat-sys-corner-small: 8px
+}
+
+html>body.dark-theme {
+    --mat-sys-dragged-state-layer-opacity: 0.16;
+    --mat-sys-focus-state-layer-opacity: 0.12;
+    --mat-sys-hover-state-layer-opacity: 0.08;
+    --mat-sys-pressed-state-layer-opacity: 0.12
+}

@@ -8,12 +8,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { UserSettingService } from '../../services/user-setting.service';
 import { UserService } from '../../services/user.service';
 import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
+import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 
 declare var _paq: any;
 
 @Component({
   selector: 'app-user-setting-dialog',
-  imports: [CommonModule, MatDialogModule, MatDividerModule, MatSlideToggleModule, MatButtonModule, MatRadioModule],
+  imports: [CommonModule,
+    MatDialogModule, MatDividerModule, MatSlideToggleModule, MatButtonModule, MatRadioModule, MatButtonToggleModule,
+  ],
   templateUrl: './user-setting-dialog.component.html',
   styleUrl: './user-setting-dialog.component.scss'
 })
@@ -27,10 +30,12 @@ export class UserSettingDialogComponent {
   needsReload = false;
   current = false;
 
-  enterMode!: 'Enter' | 'Ctrl+Enter';
+  theme: 'system' | 'dark' | 'light';
+  enterMode: 'Enter' | 'Ctrl+Enter';
 
   constructor() {
     this.enterMode = this.userService.enterMode;
+    this.theme = this.userService.theme;
     this.animationService.animationEnabled$.subscribe(enabled => {
       this.current = enabled;
     });
@@ -42,6 +47,12 @@ export class UserSettingDialogComponent {
     this.current = event.checked;
   }
 
+  toggleTheme(event: MatButtonToggleChange) {
+    _paq.push(['trackEvent', 'ユーザー設定', 'テーマ切替', event.value]);
+    this.theme = event.value;
+    this.userService.applyTheme(event.value);
+  }
+
   toggleEnterMode(event: MatRadioChange) {
     this.enterMode = event.value;
   }
@@ -49,7 +60,7 @@ export class UserSettingDialogComponent {
   saveAndClose() {
     if (this.needsReload) {
       if (confirm('設定を反映するにはページをリロードする必要があります。よろしいですか？')) {
-        this.userService.setEnterMode(this.enterMode).subscribe({
+        this.userService.saveSetting(this.theme, this.enterMode).subscribe({
           complete: () => {
             _paq.push(['trackEvent', 'ユーザー設定', 'アニメーション設定保存', this.current]);
             this.animationService.toggleAnimation(this.current);
@@ -58,7 +69,7 @@ export class UserSettingDialogComponent {
         });
       } else { }
     } else {
-      this.userService.setEnterMode(this.enterMode).subscribe({
+      this.userService.saveSetting(this.theme, this.enterMode).subscribe({
         complete: () => {
           this.dialogRef.close();
         }

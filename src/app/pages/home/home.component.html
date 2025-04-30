@@ -13,7 +13,7 @@
             </div>
         </div>
         @if(systemPrompt&&systemPrompt!==staticMessageList[0].systemPrompt){
-        <h4>AIへの指示</h4>
+        <h3>AIへの指示</h3>
         <div [innerHTML]="systemPrompt|newlineToBr"></div>
         }
         <div class="input-area relative">
@@ -28,12 +28,14 @@
         <a class="block text-right" href="./#/chat/">チャット画面へのリンク</a>
 
         <!-- <h1>Prompt Shortcuts</h1> -->
+        <!-- 
         <h1>定型文</h1>
         <div class="button-group">
             @for(staticMessage of staticMessageList;track $index){
             <button class="panel" (click)="setStatic(staticMessage)">{{staticMessage.label}}</button>
             }
         </div>
+        -->
 
         @for(banner of bannerList;track $index){
         <div class="banner">

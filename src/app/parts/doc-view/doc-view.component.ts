@@ -246,7 +246,7 @@ export class DocViewComponent {
       } else {
         if (mas[file.fileType]) {
           mas[file.fileType] = { isActive: file.isActive || mas[file.fileType].isActive, indeterminate: mas[file.fileType].indeterminate || (mas[file.fileType].isActive !== file.isActive), disabled: false };
-          console.log(mas[file.fileType].indeterminate);
+          // console.log(mas[file.fileType].indeterminate);
         } else {
           mas[file.fileType] = { isActive: file.isActive, indeterminate: false, disabled: false };
         }
@@ -338,7 +338,7 @@ export class DocViewComponent {
 
             // 自動エンコーディングを使う
             const detectedEncoding = detect(base64Binary);
-            console.log("Detected encoding:", detectedEncoding.encoding);
+            // console.log("Detected encoding:", detectedEncoding.encoding);
             this.encode = detectedEncoding.encoding as 'UTF-8' | 'SHIFT_JIS' | 'EUC-JP' | 'Windows-31J';
             if (detectedEncoding.encoding === 'ISO-8859-2') {
               this.encode = 'Windows-31J';
@@ -348,12 +348,12 @@ export class DocViewComponent {
             const decodedString = this.decode();
             let trg = this.label.replace(/.*\./g, '');
             trg = { cob: 'cobol', cbl: 'cobol', pco: 'cobol', htm: 'html' }[trg] || trg;
-            console.log(`${trg}:${this.label}`);
+            // console.log(`${trg}:${this.label}`);
             this.text = `\`\`\`${trg}\n${decodedString}\n\`\`\``;
             // this.inDto.args.messages.push({ role: 'user', content: [{ type: 'text', text: covered }] });
           } catch (e) {
-            console.log('--------------------');
-            console.log(e);
+            // console.log('--------------------');
+            // console.log(e);
             // this.text = this.dataUrl;
           }
         } else if (this.dataUrl.startsWith('data:audio/')) {
@@ -381,7 +381,7 @@ export class DocViewComponent {
                   this.type = 'pdf';
                   this.dataUrl = next;
                   this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.dataUrl);
-                  console.log();
+                  // console.log();
                 }
               });
             }

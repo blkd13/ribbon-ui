@@ -1,12 +1,13 @@
-@if(messageGroup() && messageGroup().messages && messageGroup().messages.length>0 && thread().inDto.args.model){
-<mat-expansion-panel class="message" #exPanel [expanded]="messageGroup().isExpanded"
+@if(viewModel(); as vm){
+@if(vm.messageGroup.messages && vm.messageGroup.messages.length>0 && modelIdMas[vm.thread.inDto.args.model]){
+<mat-expansion-panel class="message" #exPanel [expanded]="vm.messageGroup.isExpanded"
     (opened)="loadContent().subscribe()" (expandedChange)="expandedEmitter.emit($event)">
     <mat-expansion-panel-header class="message-header">
         <mat-panel-title class="message-title" style="font-weight: normal;">
             <!-- モデル選択 -->
             <!--
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
-                [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
+                [(ngModel)]="vm.thread.inDto.args.model" (change)="modelChange()">
                 <optgroup label="モデル選択" [ngClass]="[chatService.modelList[0].tag]">
                     @for(option of chatService.modelList;track $index) {
                     <option [ngClass]="[option.tag]" [value]="option.id" [disabled]="!option.isEnable">
@@ -16,10 +17,10 @@
             </select>
             -->
             <div class="flex absolute top-0 left-7 gap-3">
-                <div class="tip" [ngClass]="[modelIdMas[thread().inDto.args.model].tag]">
-                    {{modelIdMas[thread().inDto.args.model].tag}}
+                <div class="tip" [ngClass]="[modelIdMas[vm.thread.inDto.args.model].tag]">
+                    {{modelIdMas[vm.thread.inDto.args.model].tag}}
                 </div>
-                @if(thread().inDto.args.tool_choice!=='none'){
+                @if(vm.thread.inDto.args.tool_choice!=='none'){
                 @for(rec of toolGroupCheckMasRecord(toolGroupCheckMas);track $index){
                 @if(rec.checked){
                 <div class="tooltip-small-tag relative">
@@ -32,7 +33,7 @@
                 }
             </div>
             <select name="model-select" class="model-select" (click)="stopPropagation($event)"
-                [(ngModel)]="thread().inDto.args.model" (change)="modelChange()">
+                [(ngModel)]="vm.thread.inDto.args.model" (change)="modelChange()">
                 @for(modelGroupId of modelGroupIdList;track $index){
                 <optgroup [ngClass]="[modelGroupId]" [label]="modelGroupId">
                     @for(option of modelGroupMas[modelGroupId];track $index) {
@@ -43,25 +44,25 @@
                 </optgroup>
                 }
             </select>
-            @if(thread().inDto.args.model; as model){
+            @if(vm.thread.inDto.args.model; as model){
             @if(chatService.modelMap[model].isGSearch){
             <div class="flex items-center" style="width: 150px;"
                 [matTooltip]="chatService.modelMap[model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini以外では使用できません。'">
                 <img src="./image/google-icon.svg" alt="Googleアイコン" class="w-8 h-8" style="min-width: 30px;"
-                    [ngStyle]="{opacity: thread().inDto.args.isGoogleSearch ? 1 : 0.3}"
-                    (click)="thread().inDto.args.isGoogleSearch=!thread().inDto.args.isGoogleSearch;stopPropagation($event);">
+                    [ngStyle]="{opacity: vm.thread.inDto.args.isGoogleSearch ? 1 : 0.3}"
+                    (click)="vm.thread.inDto.args.isGoogleSearch=!vm.thread.inDto.args.isGoogleSearch;stopPropagation($event);">
             </div>
             }
             }
         </mat-panel-title>
         <mat-panel-description>
-            <div class="truncate">{{messageGroup().messages[0].label}}</div>
+            <div class="truncate">{{vm.messageGroup.messages[0].label}}</div>
         </mat-panel-description>
         <div class="grow"></div>
         @if(tokenObject(); as tokenObject){
         <div class="text-xs text-[#999] flex items-center mr-4">
             {{tokenObject.totalTokens|number:'1.0-0'}} /
-            {{chatService.modelMap[thread().inDto.args.model].maxInputTokens|number:'1.0-0'}} |
+            {{chatService.modelMap[vm.thread.inDto.args.model].maxInputTokens|number:'1.0-0'}} |
             ${{tokenObject.cost|number:'1.2-2'}}
         </div>
         }
@@ -75,8 +76,8 @@
                 <mat-icon>content_copy</mat-icon>
             </button>
              -->
-            <button mat-icon-button (click)="setEdit($event)" [title]="messageGroup().messages[0].editing?'保存':'編集'">
-                @if(messageGroup().messages[0].editing){
+            <button mat-icon-button (click)="setEdit($event)" [title]="vm.messageGroup.messages[0].editing?'保存':'編集'">
+                @if(vm.messageGroup.messages[0].editing){
                 <mat-icon>check_circle</mat-icon>
                 }@else{
                 <mat-icon>edit</mat-icon>
@@ -92,7 +93,7 @@
         <fieldset>
             <legend>システムプロンプト</legend>
             <div class="flex flex-col w-full">
-                @for (message of messageGroup().messages; track $index;let mIndex=$index) {
+                @for (message of vm.messageGroup.messages; track $index;let mIndex=$index) {
                 <div class="w-full relative overflow-hidden" [ngClass]="{'message-notediting': !message.editing}">
                     <!-- ファイル -->
                     @if(message.contents.length>1){
@@ -118,7 +119,7 @@
                             [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
                     </div>
                     <div class="custom-scroll" style="display: block;overflow: auto;"
-                        [ngClass]="[messageGroup().role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']"
+                        [ngClass]="[vm.messageGroup.role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']"
                         #textBodyElem>
                         <markdown [hidden]="message.editing" katex mermaid clipboard
                             [data]="brackets.pre+content.text+brackets.post">
@@ -147,7 +148,7 @@
         </fieldset>
         <fieldset>
             <legend>ツール使用設定</legend>
-            <mat-radio-group [(ngModel)]="thread().inDto.args.tool_choice" (change)="threadChange()">
+            <mat-radio-group [(ngModel)]="vm.thread.inDto.args.tool_choice" (change)="threadChange()">
 
                 @for(tool_choice of ['none', 'auto', 'required'];track $index) {
                 <mat-radio-button [value]="tool_choice" class="" color="primary">
@@ -158,19 +159,19 @@
         </fieldset>
         <fieldset>
             <legend>ツール一覧</legend>
-            <!-- <mat-checkbox [(ngModel)]="thread().inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
+            <!-- <mat-checkbox [(ngModel)]="vm.thread.inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
             <!-- @for(groupDef of this.toolCallService.tools;track $index) {
             <div>
                 <mat-checkbox [(ngModel)]="toolCheckMas[groupDef.group]"
                     (change)="toolGroupCheck($event, groupDef.tools)"
                     [(indeterminate)]="toolCheckMas[groupDef.group+':indeterminate']"
-                    [disabled]="!thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'">
+                    [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
                     {{groupDef.group}}
                 </mat-checkbox>
                 @for(tool of groupDef.tools;track $index) {
                 <div style="padding-left: 40px;">
                     <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
-                        [disabled]="!thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'">
+                        [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
                         [{{tool.info.name}}] {{tool.info.label}}
                     </mat-checkbox>
                 </div>
@@ -181,10 +182,10 @@
 
             <mat-accordion class="accordion custom-scroll"
                 style="min-width: 0;width: 330px;height: calc(100vh - 100px);overflow-y: scroll;"
-                [ngClass]="{'disabled': !thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'}">
+                [ngClass]="{'disabled': !vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'}">
                 @for(groupDef of this.toolCallService.tools;track $index) {
                 <mat-expansion-panel
-                    [disabled]="!thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'">
+                    [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
                     <mat-expansion-panel-header>
                         <mat-panel-title style="width: 100%;">
                             <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;">
@@ -205,7 +206,7 @@
                             <!-- [{{tool.info.name}}] {{tool.info.label}} -->
                             <!-- [(ngModel)]="toolCheckMas[tool.info.group+':'+tool.info.name]" -->
                             <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
-                                [disabled]="!thread().inDto.args.tool_choice||thread().inDto.args.tool_choice==='none'">
+                                [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
                                 [{{tool.info.name}}] {{tool.info.label}}
                             </mat-checkbox>
                         </div>
@@ -220,8 +221,8 @@
     </div>
 </mat-expansion-panel>
 } @else {
-{{messageGroup().messages.length}}
+{{vm.messageGroup.messages.length}}
 <!-- {{messageGroup.selectedIndex}} -->
 }
-
+}
 <!-- <div class="chat-messages"></div> -->
