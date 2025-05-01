@@ -691,6 +691,10 @@ export class ChatComponent implements OnInit {
           return of([this.chatService.defaultSystemPrompt]);
         }
       }),
+      tap(defaultSystemPromptList => {
+        // システムプロンプトを設定
+        this.defaultSystemPromptList = defaultSystemPromptList.map(systemPrompt => systemPrompt || this.chatService.defaultSystemPrompt);
+      }),
     );
   }
 
@@ -717,9 +721,7 @@ export class ChatComponent implements OnInit {
         });
       }),
       map(resDto => {
-        // システムプロンプトを設定
-        this.defaultSystemPromptList = threadIdList.map(threadId => defaultSystemPromptMap[threadId] || this.chatService.defaultSystemPrompt);
-        return this.defaultSystemPromptList;
+        return threadIdList.map(threadId => defaultSystemPromptMap[threadId]);
       }),
     );
   }
