@@ -148,7 +148,7 @@ export class ParameterSettingDialogComponent {
         this.threadGroup.threadList[index].inDto.args.max_tokens = 0;
       } else { }
     });
-    this.dialogRef.close(this.threadGroup);
+    this.dialogRef.close({ threadGroup: this.threadGroup, savedFlag });
   }
 
   cancel() {

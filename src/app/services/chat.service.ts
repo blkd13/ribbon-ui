@@ -540,7 +540,7 @@ export class ChatService {
     } else if (type === 'messageGroup') {
       query = `&id=${id}`;
     }
-    return this.http.post<CountTokensResponse>(`/user/v2/count-tokens?type=${type}${query}`, inDto);
+    return this.http.post<{ [model: string]: CountTokensResponse }[]>(`/user/v2/count-tokens?type=${type}${query}`, inDto);
   }
 
   countTokensByThread(ids: string[]): Observable<CountTokensResponse[]> {
