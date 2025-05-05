@@ -133,7 +133,7 @@ export class ParameterSettingDialogComponent {
         ).subscribe((threadGroup) => {
           this.snackBar.open('設定を保存しました。', 'Close', { duration: 2000 });
           Object.assign(this.threadGroup, threadGroup); // スレッドグループを上書きする
-          this.submit();
+          this.submit(true);
         });
       } else {
       }

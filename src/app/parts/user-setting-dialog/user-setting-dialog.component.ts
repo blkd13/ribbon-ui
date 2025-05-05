@@ -39,6 +39,14 @@ export class UserSettingDialogComponent {
     this.animationService.animationEnabled$.subscribe(enabled => {
       this.current = enabled;
     });
+
+    this.dialogRef.beforeClosed().subscribe(() => {
+      if (this.needsReload) {
+      } else {
+        // キャンセルしたときにテーマを元に戻す
+        this.userService.applyTheme(this.userService.theme);
+      }
+    });
   }
 
   toggleAnimation(event: MatSlideToggleChange) {

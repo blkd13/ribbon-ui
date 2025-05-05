@@ -209,8 +209,12 @@ export class ChatComponent implements OnInit {
         threadGroup: this.selectedThreadGroup,
       },
     }).afterClosed().pipe(
-      switchMap((result: ThreadGroup) => {
+      switchMap((result: { threadGroup: ThreadGroup, savedFlag: boolean }) => {
         if (result) {
+          if (result.savedFlag) {
+            // デフォルトスレッドグループが更新された場合は反映する。主流と分離してもよい。
+            this.loadDefaultThreadGroup().subscribe();
+          } else { }
           // switchMap(() => safeForkJoin(
           //   this.selectedThreadGroup.threadList
           //     // 既存スレッドの場合は何もしないので除外する
@@ -220,14 +224,12 @@ export class ChatComponent implements OnInit {
           // )),
           this.modelCheck();
           return safeForkJoin(
-            result.threadList
+            result.threadGroup.threadList
               // 既存スレッドの場合は何もしないので除外する
-              .filter((thread, index) => index >= result.threadList.length)
+              .filter((thread, index) => index >= result.threadGroup.threadList.length)
               // 新規スレッドの場合は元スレッドをコピー
               .map(thread => this.messageService.cloneThreadDry(this.selectedThreadGroup.threadList[0], thread.id))
-          ).pipe(map(() => {
-            return result;
-          }))
+          ).pipe(map(() => result));
         } else {
           // キャンセルされた場合
           return EMPTY;
@@ -235,11 +237,11 @@ export class ChatComponent implements OnInit {
       }),
       tap(result => {
         if (result) {
-          this.selectedThreadGroup = result;
+          this.selectedThreadGroup = result.threadGroup;
         } else { }
       }),
-      switchMap((result: ThreadGroup | undefined, index: number) => {
-        return result ? this.loadThreadGroupAsDefault(result) : EMPTY;
+      switchMap((result: { threadGroup: ThreadGroup, savedFlag: boolean }) => {
+        return result ? this.loadThreadGroupAsDefault(result.threadGroup) : EMPTY;
       }),
       tap(result => {
         if (result) {
@@ -819,7 +821,7 @@ export class ChatComponent implements OnInit {
       }
     }
     // fileGroupIdなのかlinkIdなのかは迷ったが、fileGroupIdにしておく。結局fileIdとlinkIdと名前が混在して危険になってしまった。。。
-    const file: { type: 'file', fileGroupId: string, text: string, isLoading: boolean } = { type: 'file', fileGroupId: '', text: label, isLoading: true };
+    const file: { type: 'file', fileGroupId: string, linkId: string, text: string, isLoading: boolean } = { type: 'file', fileGroupId: '', linkId: '', text: label, isLoading: true };
     this.inputArea.content.push(file);
     return this.fileManagerService
       .uploadFiles({ uploadType: 'Group', projectId: this.selectedProject.id, contents: files.map(file => ({ filePath: file.fullPath, base64Data: file.base64String, })) })
@@ -827,6 +829,7 @@ export class ChatComponent implements OnInit {
         next: next => {
           next.results.forEach(fileGroupEntity => {
             file.fileGroupId = fileGroupEntity.id;
+            file.linkId = file.fileGroupId;
             file.isLoading = false;
             // this.inputArea.content.push({ type: 'file', fileGroupId: fileGroupEntity.id, text: fileGroupEntity.label });
           });
@@ -935,9 +938,9 @@ export class ChatComponent implements OnInit {
         } else {
           // タイトルが無かったら入力分からタイトルを作る。この処理は待つ必要が無いので投げっ放し。
           threadGroup.title = ''; // 一応内容を消しておく
-          const presetText = this.messageService.messageGroupList.map(messageGroup => messageGroup.messages[0].contents.filter(content => content.type === 'text').map(content => content.text)).join('\n');
+          const presetText = this.messageService.messageGroupList.filter(messageGroup => messageGroup.role !== 'system').map(messageGroup => messageGroup.messages[0].contents.filter(content => content.type === 'text').map(content => content.text)).join('\n');
           const inputText = this.inputArea.content.filter(content => content.type === 'text').map(content => content.text).join('\n');
-          const mergeText = `SystemPrompt:${presetText.substring(0, 512)}\nUserPrompt:${inputText}`.substring(0, 1024);
+          const mergeText = `\nUserPrompt:${inputText}\n\nSystemPrompt:${presetText}`.substring(0, 1024);
           this.chatService.chatCompletionObservableStreamNew({
             args: {
               max_tokens: 40,
@@ -952,7 +955,12 @@ export class ChatComponent implements OnInit {
           }).subscribe({
             next: next => {
               next.observer.pipe(
-                tap(text => threadGroup.title += text.choices[0].delta.content || ''),
+                tap(text => {
+                  threadGroup.title += text.choices[0].delta.content || '';
+                  // リアルタイム反映させるためにはこうするしかない
+                  this.threadGroupList[this.threadGroupList.findIndex(threadGroup => threadGroup.id === threadGroup.id)] = { ...threadGroup };
+                  this.threadGroupList = [...this.threadGroupList];
+                }),
                 toArray(),
                 tap(text => document.title = `AI : ${threadGroup.title}`),
               ).subscribe({
@@ -1716,7 +1724,7 @@ export class ChatComponent implements OnInit {
                 return {
                   type: content.type,
                   text: content.text,
-                  fileId: content.linkId,
+                  linkId: content.linkId,
                 } as ChatContent;
               }),
             });
@@ -1725,7 +1733,7 @@ export class ChatComponent implements OnInit {
           tailMessageGroupId = messageGroupId;
         }
       });
-      if (this.inputArea.content[0].text) {
+      if (this.inputArea.content[0].text || this.inputArea.content.length > 1) {
         inDto.push(this.inputArea);
       } else { }
       return this.chatService.countTokensByProjectModel(inDto, 'messageGroup', tailMessageGroupId);
@@ -1734,14 +1742,16 @@ export class ChatComponent implements OnInit {
         this.tokenObjSummary = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
         this.tokenObjList = [];
         next.forEach((res, index) => {
+          const modelType = this.selectedThreadGroup.threadList[index].inDto.args.model.startsWith('gemini-') ? 'gemini-1.5-flash' : 'gpt-4o';
           const tokenObj: CountTokensResponseForView = { id: this.selectedThreadGroup.threadList[index].id, totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: this.selectedThreadGroup.threadList[index].inDto.args.model };
-          tokenObj.totalTokens += res.totalTokens;
+          const countedTokenObj = res[0][modelType];
+          tokenObj.totalTokens += countedTokenObj.totalTokens;
           tokenObj.totalBillableCharacters = tokenObj.totalBillableCharacters || 0; // undefinedの場合があるので初期化
-          tokenObj.totalBillableCharacters += res.totalBillableCharacters || 0;
-          tokenObj.text += res.text;
-          tokenObj.image += res.image;
-          tokenObj.audio += res.audio;
-          tokenObj.video += res.video;
+          tokenObj.totalBillableCharacters += countedTokenObj.totalBillableCharacters || 0;
+          tokenObj.text += countedTokenObj.text;
+          tokenObj.image += countedTokenObj.image;
+          tokenObj.audio += countedTokenObj.audio;
+          tokenObj.video += countedTokenObj.video;
           tokenObj.cost += this.calcCost(index);
           this.tokenObjList.push(tokenObj);
 

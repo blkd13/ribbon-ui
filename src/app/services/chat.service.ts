@@ -531,7 +531,7 @@ export class ChatService {
     return this.http.post<CountTokensResponse>(`/public/count-tokens`, inDto);
   }
 
-  countTokensByProjectModel(inDto: ChatInputArea[], type: 'message' | 'messageGroup', id: string = ''): Observable<CountTokensResponse> {
+  countTokensByProjectModel(inDto: ChatInputArea[], type: 'message' | 'messageGroup', id: string = ''): Observable<{ [model: string]: CountTokensResponse }[]> {
     let query = '';
     if (id.startsWith('dummy-')) {
       query = ``;
