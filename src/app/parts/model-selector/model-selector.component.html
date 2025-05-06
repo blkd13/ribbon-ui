@@ -1,0 +1,23 @@
+<div #trigger class="selector" (click)="openDropdown()">
+    <div class="selector-label">モデル</div>
+    <div class="selected">{{ selected.label }}</div>
+</div>
+
+<ng-template #dropdownTemplate>
+    <ul class="dropdown">
+        @for(model of models;track $index){
+        <li (click)="select(model)">
+            <div class="model-info">
+                <div class="model-name">{{ model.label }}</div>
+                <div class="model-desc">{{ model.description }}</div>
+            </div>
+            @if(model.value === selected.value){
+            <div class="checkmark">✔</div>
+            }
+        </li>
+        }
+
+        <li class="divider"></li>
+        <li class="other-option">他のモデル</li>
+    </ul>
+</ng-template>

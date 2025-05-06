@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { Component, effect, inject, input, output } from '@angular/core';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,14 +10,12 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MarkdownComponent } from 'ngx-markdown';
-import { MessageGroupForView, Thread } from '../../models/project-models';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { DialogComponent } from '../dialog/dialog.component';
+import { Thread } from '../../models/project-models';
+import { MatDialogModule } from '@angular/material/dialog';
 import { CountTokensResponseForView, LlmModel } from '../../services/chat.service';
 import { MatRadioModule } from '@angular/material/radio';
-import { ChatCompletionToolChoiceOption } from 'openai/resources/index.mjs';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
-import { MyToolType, ToolCallPart, ToolCallService } from '../../services/tool-call.service';
+import { MyToolType, ToolCallService } from '../../services/tool-call.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 
 @Component({

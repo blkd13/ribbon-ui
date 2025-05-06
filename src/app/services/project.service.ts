@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable, of, switchMap, tap } from 'rxjs';
 import { AuthService } from './auth.service';
-import { BaseEntity, ContentPart, ContentPartType, MessageClusterType, Message, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, Project, ProjectCreateDto, ProjectUpdateDto, Team, TeamCreateDto, TeamMember, TeamMemberAddDto, TeamMemberUpdateDto, TeamUpdateDto, Thread, ThreadGroup, ThreadGroupUpsertDto, ThreadGroupVisibility, UUID, MessageStatusType, ThreadGroupType } from '../models/project-models';
+import { BaseEntity, ContentPart, ContentPartType, MessageClusterType, Message, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, Project, ProjectCreateDto, ProjectUpdateDto, Team, TeamCreateDto, TeamMember, TeamMemberAddDto, TeamMemberUpdateDto, TeamUpdateDto, Thread, ThreadGroup, ThreadGroupUpsertDto, ThreadGroupVisibility, UUID, MessageStatusType, ThreadGroupType, ThreadGroupForView } from '../models/project-models';
 import JSZip from 'jszip'; // JSZipのインポート
 import { Utils } from '../utils';
 import { safeForkJoin } from '../utils/dom-utils';
@@ -112,8 +112,11 @@ function threadFormat(thread: Thread): Thread {
     return thread;
 }
 
-function threadGroupResponseHandler(threadGroup: ThreadGroup): ThreadGroup {
+function threadGroupResponseHandler(_threadGroup: ThreadGroup): ThreadGroupForView {
+    const threadGroup = _threadGroup as ThreadGroupForView;
     threadGroup.threadList.forEach(thread => threadFormat(thread));
+    const date = new Date(threadGroup.updatedAt);
+    threadGroup.updatedDate = date.toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
     return threadGroup;
 }
 
@@ -121,9 +124,9 @@ function threadGroupResponseHandler(threadGroup: ThreadGroup): ThreadGroup {
 export class ThreadService {
 
     private readonly http: HttpClient = inject(HttpClient);
-    private threadListMas: { [threadGroupId: string]: ThreadGroup[] } = {};
+    private threadListMas: { [threadGroupId: string]: ThreadGroupForView[] } = {};
 
-    genInitialThreadGroupEntity(projectId: string, template?: ThreadGroup): ThreadGroup {
+    genInitialThreadGroupEntity(projectId: string, template?: ThreadGroupForView): ThreadGroupForView {
         const deafultThreadGroup = template || Object.keys(this.threadListMas).map(key => this.threadListMas[key].find(threadGroup => threadGroup.type === ThreadGroupType.Default)).filter(threadGroup => threadGroup)[0];
         if (deafultThreadGroup) {
             const threadGroup = Utils.clone(deafultThreadGroup);
@@ -147,8 +150,10 @@ export class ThreadService {
                 type: ThreadGroupType.Normal,
                 visibility: ThreadGroupVisibility.Team,
                 threadList: [],
+                updatedDate: new Date().toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
                 ...genInitialBaseEntity('thread-group'),
-            } as ThreadGroup;
+            } as ThreadGroupForView;
+
             threadGroup.threadList.push(this.genInitialThreadEntity(threadGroup.id));
             return threadGroup;
         }
@@ -182,7 +187,7 @@ export class ThreadService {
         return this.http.patch<ThreadGroup>(`/user/project/${projectId}/thread-group`, threadGroup);
     }
 
-    upsertThreadGroup(projectId: string, threadGroup: ThreadGroupUpsertDto): Observable<ThreadGroup> {
+    upsertThreadGroup(projectId: string, threadGroup: ThreadGroupUpsertDto): Observable<ThreadGroupForView> {
         const inDto = Utils.clone(threadGroup);
         if (inDto.id?.startsWith('dummy-')) {
             inDto.id = undefined;
@@ -193,23 +198,26 @@ export class ThreadService {
             }
             (thread as any).inDtoJson = JSON.stringify(thread.inDto);
         });
-        return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(tap(obj => {
+        return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(map(obj => {
             threadGroup.id = obj.id;
-            obj.threadList.forEach((thread, index) => {
+            const ret = obj as ThreadGroupForView;
+            ret.threadList.forEach((thread, index) => {
                 threadGroup.threadList[index].id = thread.id;
                 threadFormat(thread);
             });
+            ret.updatedDate = new Date(ret.updatedAt).toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+            return ret;
         }));
     }
 
 
-    getThreadGroupList(projectId: string, force: boolean = false): Observable<ThreadGroup[]> {
+    getThreadGroupList(projectId: string, force: boolean = false): Observable<ThreadGroupForView[]> {
         if (force || !this.threadListMas[projectId]) {
-            return this.http.get<ThreadGroup[]>(`/user/project/${projectId}/thread-group`).pipe(tap(), tap(objList => {
+            return this.http.get<ThreadGroup[]>(`/user/project/${projectId}/thread-group`).pipe(map(objList => {
                 // キャッシュ（threadListMas）に格納
-                this.threadListMas[projectId] = objList;
+                this.threadListMas[projectId] = objList.map(threadGroupResponseHandler);
                 // threadListを整形
-                objList.forEach(threadGroupResponseHandler);
+                return this.threadListMas[projectId];
             }));
         } else {
             // キャッシュ（threadListMas）から取得
@@ -217,16 +225,16 @@ export class ThreadService {
         }
     }
 
-    getThreadGroup(threadGroupId: string): Observable<ThreadGroup> {
-        return this.http.get<ThreadGroup>(`/user/thread-group/${threadGroupId}`).pipe(tap(threadGroupResponseHandler));
+    getThreadGroup(threadGroupId: string): Observable<ThreadGroupForView> {
+        return this.http.get<ThreadGroup>(`/user/thread-group/${threadGroupId}`).pipe(map(threadGroupResponseHandler));
     }
 
-    moveThreadGroup(threadGroupId: string, projectId: string): Observable<ThreadGroup> {
-        return this.http.put<ThreadGroup>(`/user/thread-group/${threadGroupId}`, { projectId });
+    moveThreadGroup(threadGroupId: string, projectId: string): Observable<ThreadGroupForView> {
+        return this.http.put<ThreadGroupForView>(`/user/thread-group/${threadGroupId}`, { projectId });
     }
 
-    cloneThreadGroup(threadGroupId: string, options?: { type: ThreadGroupType, title: string, description: string }): Observable<ThreadGroup> {
-        return this.http.post<ThreadGroup>(`/user/thread-group/clone/${threadGroupId}`, options || {}).pipe(tap(threadGroupResponseHandler));
+    cloneThreadGroup(threadGroupId: string, options?: { type: ThreadGroupType, title: string, description: string }): Observable<ThreadGroupForView> {
+        return this.http.post<ThreadGroupForView>(`/user/thread-group/clone/${threadGroupId}`, options || {}).pipe(map(threadGroupResponseHandler));
     }
 
     // cloneThread(threadId: string): Observable<Thread> {
@@ -261,7 +269,7 @@ export class ThreadMessageService {
     //     }));
     // }
 
-    upsertThreadGroup(projectId: string, threadGroup: ThreadGroupUpsertDto): Observable<ThreadGroup> {
+    upsertThreadGroup(projectId: string, threadGroup: ThreadGroupUpsertDto): Observable<ThreadGroupForView> {
         const inDto = Utils.clone(threadGroup);
         if (inDto.id?.startsWith('dummy-')) {
             inDto.id = undefined;
@@ -272,12 +280,15 @@ export class ThreadMessageService {
             }
             (thread as any).inDtoJson = JSON.stringify(thread.inDto);
         });
-        return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(tap(obj => {
+        return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(map(obj => {
             threadGroup.id = obj.id;
-            obj.threadList.forEach((thread, index) => {
+            const ret = obj as ThreadGroupForView;
+            ret.threadList.forEach((thread, index) => {
                 threadGroup.threadList[index].id = thread.id;
                 threadFormat(thread);
             });
+            ret.updatedDate = new Date(ret.updatedAt).toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+            return ret;
         }));
     }
 }

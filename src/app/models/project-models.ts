@@ -285,6 +285,9 @@ export interface ThreadGroup extends BaseEntity {
     visibility: ThreadGroupVisibility;
     threadList: Thread[];
 }
+export interface ThreadGroupForView extends ThreadGroup {
+    updatedDate: string; // 更新日
+}
 export interface Thread extends BaseEntity {
     threadGroupId: UUID;
     status: 'Normal' | 'Deleted';

@@ -372,7 +372,11 @@ export class DocViewComponent {
         ) {
           if (this.dataUrl.startsWith('data:application/pdf')) {
             this.type = 'pdf';
-            this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.dataUrl);
+
+            // dataUrlだと大きすぎてPDF表示できないことがあるのでObjectURLに変換して表示する
+            const blob = this.dataURLtoBlob(this.dataUrl);
+            const blobUrl = window.URL.createObjectURL(blob);
+            this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(blobUrl);
           } else {
             this.type = 'other';
             if (this.fileGroup.files[index].id) {
@@ -380,7 +384,11 @@ export class DocViewComponent {
                 next: next => {
                   this.type = 'pdf';
                   this.dataUrl = next;
-                  this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.dataUrl);
+
+                  // dataUrlだと大きすぎてPDF表示できないことがあるのでObjectURLに変換して表示する
+                  const blob = this.dataURLtoBlob(this.dataUrl);
+                  const blobUrl = window.URL.createObjectURL(blob);
+                  this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(blobUrl);
                   // console.log();
                 }
               });

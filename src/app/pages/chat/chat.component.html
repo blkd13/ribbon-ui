@@ -34,20 +34,13 @@
       @if(selectedTeam.teamType!=='Alone'){
       <div class="share-tag">Share:{{selectedTeam.label}}</div>
       }
-      @if(selectedThreadGroup.id.startsWith('dummy-')) {
-      <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Create new thread" (click)="clear()">
-        <mat-icon class="mr-3">add_circle</mat-icon>
-        <div>新規チャット</div>
-      </a>
-      } @else {
       <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Create new thread" (click)="clear()"
         [routerLink]="['/chat', selectedProject.id, 'new-thread']">
         <mat-icon class="mr-3">add_circle</mat-icon>
         <div>新規チャット</div>
       </a>
-      }
       <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
-        (change)="threadGroupList=sortThreadGroup(threadGroupList)">
+        (change)="rebuildThreadGroupList(threadGroupList)">
         <mat-radio-button [value]="1">時刻順</mat-radio-button>
         <mat-radio-button [value]="2">名前順</mat-radio-button>
       </mat-radio-group>
@@ -61,30 +54,34 @@
       <div class="relative h-0 w-full grow">
         <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full"
           style="height:calc(100% - 70px);">
-          <div *cdkVirtualFor="let threadGroup of threadGroupList;let $index = index;"
-            class="relative flex items-center justify-between thread-group"
-            [ngClass]="{'selected':threadGroup.id===selectedThreadGroup.id}">
+          <div *cdkVirtualFor="let obj of threadGroupListForView;let $index = index;"
+            class="relative flex items-center justify-between group"
+            [ngClass]="{'thread-group':obj.threadGroup, 'selected':obj.threadGroup?.id===selectedThreadGroup.id}">
+            @if(obj.header) {
+            <div class="thread-group-header"> {{ obj.header }}</div>
+            }
 
+            @if(obj.threadGroup; as threadGroup) {
             @if (threadGroup.id === editNameThreadId) {
             <input [(ngModel)]="threadGroup.title" name="thread-title-{{$index}}" id="thread-title-{{$index}}"
-              class="h-7 m-1 pl-2 text-[#303030]" (change)="renameThreadGroup($event, threadGroup, false, $index)"
+              class="h-7 m-1 pl-4 text-[#303030]" (change)="renameThreadGroup($event, threadGroup, false, $index)"
               (blur)="editNameThreadId=''" />
             } @else {
             <a class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis grow unstyled-link"
-              style="padding:5px 10px;height: 35px;min-width: 0;width: 1px;"
+              style="padding:5px 0 5px 10px;height: 35px;min-width: 0;width: 1px;"
               [routerLink]="['/chat', selectedProject.id, threadGroup.id]" [title]="threadGroup.title">
               {{threadGroup.title}}
             </a>
             }
-            <div>
-              @if(isCacheLive(threadGroup)){
-              <mat-icon
-                matTooltip="コンテキストキャッシュ有効 expire:{{threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'YYYY-MM-dd HH:mm:ss'}}">cached</mat-icon>
-              }
-              <button mat-icon-button [matMenuTriggerFor]="threadMenu">
-                <mat-icon>more_vert</mat-icon>
-              </button>
-            </div>
+            @if(isCacheLive(threadGroup)){
+            <mat-icon
+              matTooltip="コンテキストキャッシュ有効 expire:{{threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'YYYY-MM-dd HH:mm:ss'}}">cached</mat-icon>
+            }
+
+            <button mat-icon-button [matMenuTriggerFor]="threadMenu" class="opacity-0 group-hover:opacity-100">
+              <mat-icon>more_horiz</mat-icon>
+            </button>
+
             <mat-menu #threadMenu="matMenu">
               <button mat-menu-item (click)="renameThreadGroup($event, threadGroup, true, $index)">
                 <mat-icon>edit</mat-icon>
@@ -130,7 +127,7 @@
               @if(team !== teamForViewList[teamForViewList.length-1]){<mat-divider></mat-divider>}
               }
             </mat-menu>
-
+            }
           </div>
         </cdk-virtual-scroll-viewport>
 

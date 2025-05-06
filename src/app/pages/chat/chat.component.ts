@@ -37,7 +37,7 @@ import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { AuthService } from '../../services/auth.service';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
-import { BaseEntity, ContentPart, ContentPartType, Message, MessageClusterType, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupType, ThreadGroupVisibility, UUID } from '../../models/project-models';
+import { BaseEntity, ContentPart, ContentPartType, Message, MessageClusterType, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupVisibility, UUID } from '../../models/project-models';
 import { GService } from '../../services/g.service';
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-run-setting/bulk-run-setting.component';
@@ -87,16 +87,16 @@ export class ChatComponent implements OnInit {
   readonly appFileDrop = viewChild(FileDropDirective);
 
   // スレッドリスト
-  threadGroupList: ThreadGroup[] = [];
+  threadGroupList: ThreadGroupForView[] = [];
   // 現在のスレッド
-  selectedThreadGroup$: BehaviorSubject<ThreadGroup> = new BehaviorSubject<ThreadGroup>(null as any as ThreadGroup);
+  selectedThreadGroup$: BehaviorSubject<ThreadGroupForView> = new BehaviorSubject<ThreadGroupForView>(null as any as ThreadGroupForView);
   // 現在のスレッド
-  selectedThreadGroup!: ThreadGroup;
+  selectedThreadGroup!: ThreadGroupForView;
   // show
   messageGroupIdListMas: { [threadId: string]: string[] } = {};
 
-  templateThreadGroupList: ThreadGroup[] = [];
-  threadGroupListAll: ThreadGroup[] = [];
+  templateThreadGroupList: ThreadGroupForView[] = [];
+  threadGroupListAll: ThreadGroupForView[] = [];
 
   // メッセージ一覧のインデックス。メッセージグループの数が最大のスレッドのメッセージグループ数を取得して、その数だけインデックスを作る。
   indexList = Array.from({ length: 0 }, (_, i) => i);
@@ -209,7 +209,7 @@ export class ChatComponent implements OnInit {
         threadGroup: this.selectedThreadGroup,
       },
     }).afterClosed().pipe(
-      switchMap((result: { threadGroup: ThreadGroup, savedFlag: boolean }) => {
+      switchMap((result: { threadGroup: ThreadGroupForView, savedFlag: boolean }) => {
         if (result) {
           if (result.savedFlag) {
             // デフォルトスレッドグループが更新された場合は反映する。主流と分離してもよい。
@@ -339,13 +339,13 @@ export class ChatComponent implements OnInit {
       this.modelCheck();
     }
 
-    this.onChange();
     this.rebuildThreadGroup();
+    this.onChange();
     setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
 
-  selectTemplateThreadGroup(_templateThreadGroup: ThreadGroup): void {
-    const templateThreadGroup = Utils.clone(_templateThreadGroup) as ThreadGroup;
+  selectTemplateThreadGroup(_templateThreadGroup: ThreadGroupForView): void {
+    const templateThreadGroup = Utils.clone(_templateThreadGroup) as ThreadGroupForView;
     // TODO : threadGroupChangeHandlerと似たようなことやってるのでほんとは共通化したい。
     this.presetLabel = templateThreadGroup.id;
     this.selectedThreadGroup = templateThreadGroup;
@@ -380,7 +380,6 @@ export class ChatComponent implements OnInit {
         this.selectedThreadGroup.threadList = resDto;
 
         // console.log(resDto);
-        this.rebuildThreadGroup();
 
         // linkChainの設定
         this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id].forEach((messageGroupId, index) => {
@@ -399,8 +398,8 @@ export class ChatComponent implements OnInit {
 
         this.isThreadGroupLoading = false;
 
-        this.onChange();
         this.rebuildThreadGroup();
+        this.onChange();
         setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
         document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
@@ -413,6 +412,38 @@ export class ChatComponent implements OnInit {
         return EMPTY;
       }),
     ).subscribe();
+  }
+
+  threadGroupListForView: { header?: string, threadGroup?: ThreadGroupForView }[] = [];
+  rebuildThreadGroupList(threadGroupList: ThreadGroupForView[]): { updatedDate?: string, threadGroup?: ThreadGroupForView }[] {
+    // threadGroupListForViewには日付が変わったらブレイクする処理を入れる
+    this.threadGroupListForView = [];
+
+    // 本来はupdatedAtでソートしたかったが、何故か時刻が更新されていないので。
+    if (this.sortType === 1) {
+      // 時刻順（新しい方が上に来る）
+      threadGroupList.sort((a, b) => new Date(b.updatedAt) < new Date(a.updatedAt) ? -1 : 1);
+    } else {
+      // 名前順（Aが上に来る）
+      threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
+    }
+
+    // threadGroupListをループして、updatedDateが変わったらブレイクする処理を入れる
+    this.threadGroupList.forEach((threadGroup, index) => {
+      if (this.sortType === 1) {
+        if (index === 0 || threadGroup.updatedDate !== this.threadGroupList[index - 1].updatedDate) {
+          this.threadGroupListForView.push({ header: threadGroup.updatedDate });
+        } else {
+        }
+      } else {
+        if (index === 0 || threadGroup.title[0] !== this.threadGroupList[index - 1].title[0]) {
+          this.threadGroupListForView.push({ header: threadGroup.title[0] });
+        } else {
+        }
+      }
+      this.threadGroupListForView.push({ threadGroup });
+    });
+    return this.threadGroupListForView;
   }
 
   modelCheck(modelList: string[] = []): void {
@@ -435,13 +466,14 @@ export class ChatComponent implements OnInit {
     }
     this.modelCheck();
     this.rebuildThreadGroup();
+    this.onChange();
     setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
 
   onChatPanelReady(messageGroup: MessageGroupForView): void {
   }
 
-  threadGroupChangeHandler(project: Project, threadGroupList: ThreadGroup[], threadGroupId: string): void {
+  threadGroupChangeHandler(project: Project, threadGroupList: ThreadGroupForView[], threadGroupId: string): void {
     let noSend = true;
     if (threadGroupId === 'new-thread') {
       this.presetLabel = '通常';
@@ -605,19 +637,19 @@ export class ChatComponent implements OnInit {
     }
   }
 
-  sortThreadGroup(threadGroupList: ThreadGroup[]): ThreadGroup[] {
-    // 本来はupdatedAtでソートしたかったが、何故か時刻が更新されていないので。
-    if (this.sortType === 1) {
-      // 時刻順（新しい方が上に来る）
-      threadGroupList.sort((a, b) => new Date(b.updatedAt) < new Date(a.updatedAt) ? -1 : 1);
-    } else {
-      // 名前順（Aが上に来る）
-      threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
-    }
-    return [...threadGroupList];
-  }
+  // sortThreadGroup(threadGroupList: ThreadGroupForView[]): ThreadGroupForView[] {
+  //   // 本来はupdatedAtでソートしたかったが、何故か時刻が更新されていないので。
+  //   if (this.sortType === 1) {
+  //     // 時刻順（新しい方が上に来る）
+  //     threadGroupList.sort((a, b) => new Date(b.updatedAt) < new Date(a.updatedAt) ? -1 : 1);
+  //   } else {
+  //     // 名前順（Aが上に来る）
+  //     threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
+  //   }
+  //   return [...threadGroupList];
+  // }
 
-  loadThreadGroups(project: Project): Observable<ThreadGroup[]> {
+  loadThreadGroups(project: Project): Observable<ThreadGroupForView[]> {
     return this.threadService.getThreadGroupList(project.id).pipe(tap(threadGroupList => {
       threadGroupList.forEach(threadGroup => {
         threadGroup.threadList.forEach(thread => {
@@ -627,7 +659,7 @@ export class ChatComponent implements OnInit {
         });
       });
       // ノーマルスレッドグループだけ持ってくる
-      const _threadGroupList = this.sortThreadGroup(threadGroupList).filter(threadGroup => threadGroup.type === ThreadGroupType.Normal);
+      const _threadGroupList = threadGroupList.filter(threadGroup => threadGroup.type === ThreadGroupType.Normal);
       this.threadGroupListAll = threadGroupList;
       this.templateThreadGroupList = threadGroupList.filter(threadGroup => threadGroup.type === ThreadGroupType.Template).sort((a, b) => a.title.localeCompare(b.title));;
       this.threadGroupList = [];
@@ -639,7 +671,7 @@ export class ChatComponent implements OnInit {
           this.threadGroupList.push(newObj);
         }
       });
-      this.threadGroupList = [...this.threadGroupList];
+      this.rebuildThreadGroupList(this.threadGroupList);
     }));
   }
 
@@ -745,8 +777,7 @@ export class ChatComponent implements OnInit {
       this.selectedThreadGroup = threadGroup;
       // this.inDto = this.selectedThreadGroup.inDto;
       this.threadGroupList.unshift(threadGroup);
-      this.threadGroupList = [...this.threadGroupList];
-      this.sortThreadGroup(this.threadGroupList);
+      this.rebuildThreadGroupList(this.threadGroupList);
     }));
   }
 
@@ -761,8 +792,7 @@ export class ChatComponent implements OnInit {
         this.threadGroupListAll.unshift(threadGroup);
         if (threadGroup.type === ThreadGroupType.Normal) {
           this.threadGroupList.unshift(threadGroup);
-          this.threadGroupList = [...this.threadGroupList];
-          this.sortThreadGroup(this.threadGroupList);
+          this.rebuildThreadGroupList(this.threadGroupList);
         } else if (threadGroup.type === ThreadGroupType.Template) {
           this.templateThreadGroupList.unshift(threadGroup);
           this.templateThreadGroupList = [...this.templateThreadGroupList].sort((a, b) => a.title.localeCompare(b.title));;
@@ -785,13 +815,13 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  saveThreadGroup(_orgThreadGroup: ThreadGroup): Observable<ThreadGroup> {
+  saveThreadGroup(_orgThreadGroup: ThreadGroup): Observable<ThreadGroupForView> {
     const orgThreadGroup = Utils.clone(_orgThreadGroup);
     // 選択中スレッドを保存
     return this.threadService.upsertThreadGroup(this.selectedProject.id, _orgThreadGroup).pipe(tap(threadGroup => {
       if (orgThreadGroup.id.startsWith('dummy-')) {
         this.threadGroupList.unshift(threadGroup);
-        this.threadGroupList = [...this.threadGroupList];
+        this.rebuildThreadGroupList(this.threadGroupList);
       } else { }
       // TODO 本当はここの反映はserviceでやりたいけど、サービスが割れてるからやりにくい。。
       threadGroup.threadList.forEach((thread, index) => {
@@ -959,7 +989,7 @@ export class ChatComponent implements OnInit {
                   threadGroup.title += text.choices[0].delta.content || '';
                   // リアルタイム反映させるためにはこうするしかない
                   this.threadGroupList[this.threadGroupList.findIndex(threadGroup => threadGroup.id === threadGroup.id)] = { ...threadGroup };
-                  this.threadGroupList = [...this.threadGroupList];
+                  this.rebuildThreadGroupList(this.threadGroupList);
                 }),
                 toArray(),
                 tap(text => document.title = `AI : ${threadGroup.title}`),
@@ -1563,6 +1593,7 @@ export class ChatComponent implements OnInit {
     this.isLock = false;
     message.status = MessageStatusType.Loaded;
     message.label = message.contents.filter(content => content.type === 'text').map(content => content.text).join('\n').substring(0, 250);
+    this.onChange();
     this.bulkNext();
     setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
   }
@@ -2198,7 +2229,7 @@ export class ChatComponent implements OnInit {
     }
   }
 
-  contentsDownload($event: MouseEvent, $index: number, threadGroup: ThreadGroup): void {
+  contentsDownload($event: MouseEvent, $index: number, threadGroup: ThreadGroupForView): void {
     this.messageService.downloadContent(threadGroup.id).subscribe({
       next: zip => {
         // ZIPファイルを生成し、ダウンロードする
@@ -2214,7 +2245,7 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  removeThreadGroup($event: MouseEvent, $index: number, threadGroup: ThreadGroup): void {
+  removeThreadGroup($event: MouseEvent, $index: number, threadGroup: ThreadGroupForView): void {
     // this.stopPropagation($event);
     this.dialog.open(DialogComponent, { data: { title: 'チャット削除', message: `このチャットを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
       next: next => {
@@ -2222,12 +2253,10 @@ export class ChatComponent implements OnInit {
           this.threadService.deleteThreadGroup(threadGroup.id).subscribe({
             next: next => {
               this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
-              this.threadGroupList = [...this.threadGroupList];
+              this.rebuildThreadGroupList(this.threadGroupList);
               if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
-              } else {
-                this.sortThreadGroup(this.threadGroupList);
-              }
+              } else { }
             }
           });
         } else { /** 削除キャンセル */ }
@@ -2235,7 +2264,7 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  sendThreadToProject(project: Project, threadGroup: ThreadGroup): void {
+  sendThreadToProject(project: Project, threadGroup: ThreadGroupForView): void {
 
     const exec = (() => {
       this.threadService.moveThreadGroup(threadGroup.id, project.id).subscribe({
@@ -2244,7 +2273,7 @@ export class ChatComponent implements OnInit {
           this.loadThreadGroups(this.selectedProject).subscribe({
             next: next => {
               this.threadGroupList.splice(this.threadGroupList.indexOf(threadGroup), 1);
-              this.threadGroupList = [...this.threadGroupList];
+              this.rebuildThreadGroupList(this.threadGroupList);
               if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
               } // 選択中のスレッドを移動した場合は選択解除
@@ -2452,7 +2481,7 @@ export class ChatComponent implements OnInit {
           }),
         );
       }
-    })() as Observable<ThreadGroup>).subscribe({
+    })() as Observable<ThreadGroupForView>).subscribe({
       next: newTemplate => {
         if (replaceIndex >= 0) {
           this.templateThreadGroupList[replaceIndex] = newTemplate;
@@ -2537,7 +2566,7 @@ export class ChatComponent implements OnInit {
    * @param $event 
    * @param threadGroup 
    */
-  removeTemplateThreadGroup($event: MouseEvent, threadGroup: ThreadGroup): void {
+  removeTemplateThreadGroup($event: MouseEvent, threadGroup: ThreadGroupForView): void {
     // this.stopPropagation($event);
     this.dialog.open(DialogComponent, { data: { title: 'モード削除', message: `このモードを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
       next: next => {

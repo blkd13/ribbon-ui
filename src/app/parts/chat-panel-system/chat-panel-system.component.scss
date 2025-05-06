@@ -119,20 +119,19 @@
     // }
 }
 
-.mat-accordion.accordion.disabled{
-  opacity: 0.5;
+.mat-accordion.accordion.disabled {
+    opacity: 0.5;
 }
 
 
 .tooltip-small-tag {
-  width: 16px;
-  height: 16px;
+    width: 16px;
+    height: 16px;
 
-  background: linear-gradient(
-    135deg,
-    #e5e5e5 0%,
-    #d5d5d5 100%);
-  padding: 1px;
-  margin: 0;
-  border-radius: 4px;
+    background: linear-gradient(135deg,
+            #e5e5e5 0%,
+            #d5d5d5 100%);
+    padding: 1px;
+    margin: 0;
+    border-radius: 4px;
 }
