@@ -150,7 +150,7 @@ export class ThreadService {
                 type: ThreadGroupType.Normal,
                 visibility: ThreadGroupVisibility.Team,
                 threadList: [],
-                updatedDate: new Date().toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+                updatedDate: new Date().toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }),
                 ...genInitialBaseEntity('thread-group'),
             } as ThreadGroupForView;
 
