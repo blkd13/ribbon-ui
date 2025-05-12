@@ -1,0 +1,51 @@
+<!-- json-editor.component.html -->
+<div class="json-editor-container">
+    <div class="editor-header">
+        <label>{{ label() }}</label>
+    </div>
+
+    <form [formGroup]="form" class="json-form">
+        <div class="items-container" formArrayName="items">
+            @for(item of items.controls;track $index){
+            <div class="json-item" [formGroupName]="$index">
+                <div class="key-value-container">
+                    <mat-form-field class="key-field">
+                        <input type="text" matInput formControlName="key" [placeholder]="placeholder()"
+                            [matAutocomplete]="auto" (blur)="onInputBlur()">
+                        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onOptionSelected($index, $event)">
+                            @for(option of filteredOptions[$index] | async;track option) {
+                            <mat-option [value]="option"> {{ option }} </mat-option>
+                            }
+                        </mat-autocomplete>
+                        @if(item.get('key')?.invalid && item.get('key')?.touched){
+                        <mat-error>Key is required</mat-error>
+                        }
+                    </mat-form-field>
+
+                    <div class="value-field-container">
+                        <mat-form-field class="value-field">
+                            <input type="text" matInput formControlName="value" placeholder="Enter value"
+                                (blur)="onInputBlur()">
+                            @if(item.get('value')?.invalid && item.get('value')?.touched){
+                            <mat-error>Value is required</mat-error>
+                            }
+                        </mat-form-field>
+                    </div>
+
+                    <button type="button" mat-icon-button color="warn" class="remove-button"
+                        (click)="removeItem($index)" [disabled]="items.length <= 1" aria-label="Remove item">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </div>
+            </div>
+            }
+        </div>
+
+        <div class="add-button-container">
+            <button type="button" mat-stroked-button color="primary" class="add-button" (click)="addItem()"
+                aria-label="Add item">
+                <mat-icon>add</mat-icon> Add Item
+            </button>
+        </div>
+    </form>
+</div>

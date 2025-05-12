@@ -146,6 +146,7 @@ export class ChatComponent implements OnInit {
   charCount: number = 0;
   tokenObjSummary: CountTokensResponseForView = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
   tokenObjList: CountTokensResponseForView[] = [];
+  tokenCounting = false;
   linkChain: boolean[] = [true]; // デフォルトはfalse
 
   readonly authService: AuthService = inject(AuthService);
@@ -380,6 +381,8 @@ export class ChatComponent implements OnInit {
         this.selectedThreadGroup.threadList = resDto;
 
         // console.log(resDto);
+        this.rebuildThreadGroup();
+        this.onChange();
 
         // linkChainの設定
         this.messageGroupIdListMas[this.selectedThreadGroup.threadList[0].id].forEach((messageGroupId, index) => {
@@ -398,8 +401,6 @@ export class ChatComponent implements OnInit {
 
         this.isThreadGroupLoading = false;
 
-        this.rebuildThreadGroup();
-        this.onChange();
         setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
         document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
@@ -835,7 +836,7 @@ export class ChatComponent implements OnInit {
 
   onFilesDropped(files: FullPathFile[]): Subscription {
     // 複数ファイルを纏めて追加したときは全部読み込み終わってからカウントする。
-    this.tokenObjSummary.totalTokens = -1;
+    this.tokenCounting = true;
     this.isLock = true;
 
     let label = '';
@@ -1176,7 +1177,7 @@ export class ChatComponent implements OnInit {
       // バリデーションエラー
       if (!args.model) {
         throw new Error('Model is not set');
-      } else if (this.tokenObjList[threadIndex].totalTokens > model.maxInputTokens) {
+      } else if (this.tokenObjList[threadIndex] && this.tokenObjList[threadIndex].totalTokens > model.maxInputTokens) {
         this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`, 'close', { duration: 3000 });
         throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`);
       } else if (args.isGoogleSearch && !this.chatService.modelMap[args.model].isGSearch) {
@@ -1716,7 +1717,7 @@ export class ChatComponent implements OnInit {
 
   onChange(): void {
     this.charCount = 0;
-    this.tokenObjSummary.totalTokens = -1;
+    this.tokenCounting = true;
 
     // 全スレッド纏めてやろうとしたけどdummyが積み重なってるパターンの考慮が出来てなくて頓死
     // const ids = this.selectedThreadGroup.threadList.filter(thread => !thread.id.startsWith('dummy-')).map(thread => thread.id);
@@ -1795,6 +1796,7 @@ export class ChatComponent implements OnInit {
           this.tokenObjSummary.cost += tokenObj.cost;
         });
         this.cost = this.tokenObjSummary.cost;
+        this.tokenCounting = false;
       },
     });
     // textareaの縦幅更新。遅延打ちにしないとvalueが更新されていない。

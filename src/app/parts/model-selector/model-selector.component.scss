@@ -1,81 +1,50 @@
-/* model-selector.component.css */
-.selector {
-    background: #1e1e1e;
-    color: white;
-    padding: 8px;
-    width: 260px;
-    border-radius: 8px;
-    border: 1px solid #333;
-    position: relative;
+/* 共通調整 */
+.mat-menu-panel {
+    min-width: 260px; // 例：1段目と2段目を同幅に
+}
+
+/* 3段目だけ余白ゼロでカードをぴったり出す */
+.no-padding .mat-menu-content {
+    padding: 0;
+}
+
+
+::ng-deep {
+    .level-3 {
+        background: transparent;
+    }
+
+    .mat-mdc-menu-panel {
+        max-width: unset;
+    }
+}
+
+.model-selector {
+    div {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+.detail-card {
     cursor: pointer;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
-.selector-label {
-    font-size: 12px;
-    color: #aaa;
-    margin-bottom: 4px;
-}
-
-.selected {
-    font-size: 14px;
-}
-
-.dropdown {
-    background: #2b2b2b;
-    border: 1px solid #444;
-    border-radius: 8px;
-    color: white;
-    padding: 8px;
-    width: 260px;
-}
-
-.dropdown-down {
-    top: 100%;
-    margin-top: 4px;
-}
-
-.dropdown-up {
-    bottom: 100%;
-    margin-bottom: 4px;
-}
-
-.dropdown li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px;
-}
-
-.dropdown li:hover {
-    background: #3a3a3a;
-}
-
-.model-info {
-    display: flex;
-    flex-direction: column;
-}
-
+/* モデルリスト内の小テキストなど */
 .model-name {
-    font-weight: bold;
+    font-weight: 500;
 }
 
 .model-desc {
-    font-size: 12px;
-    color: #aaa;
+    font-size: 11px;
+    opacity: .7;
 }
 
-.checkmark {
-    color: #4caf50;
-    margin-left: 10px;
-}
-
-.divider {
-    height: 1px;
-    background: #444;
-    margin: 4px 0;
-}
-
-.other-option {
-    padding: 8px;
-    color: #4fa;
+.preview {
+    font-size: 10px;
+    color: #f44336;
+    margin-left: 4px;
 }

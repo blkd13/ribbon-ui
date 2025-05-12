@@ -1,23 +1,46 @@
-<div #trigger class="selector" (click)="openDropdown()">
-    <div class="selector-label">モデル</div>
-    <div class="selected">{{ selected.label }}</div>
-</div>
+<button #menuTrigger="matMenuTrigger" [matMenuTriggerFor]="rootMenu" class="flex cursor-pointer model-selector">
+    <div>{{model()}}</div>
+    <mat-icon>arrow_drop_down</mat-icon>
+</button>
+<!-- 1 段目: カテゴリ -->
+<mat-menu #rootMenu="matMenu" class="level-1">
+    @for(cat of data;track $index){
+    <button mat-menu-item [matMenuTriggerFor]="menu">
+        {{ cat.label }}
+    </button>
 
-<ng-template #dropdownTemplate>
-    <ul class="dropdown">
-        @for(model of models;track $index){
-        <li (click)="select(model)">
-            <div class="model-info">
-                <div class="model-name">{{ model.label }}</div>
-                <div class="model-desc">{{ model.description }}</div>
-            </div>
-            @if(model.value === selected.value){
-            <div class="checkmark">✔</div>
-            }
-        </li>
+    <!-- 2 段目: モデル一覧 -->
+    <mat-menu #menu="matMenu" class="level-2">
+        @for(m of cat.models;track $index){
+
+        <button mat-menu-item [matMenuTriggerFor]="detail" (click)="menuTrigger.closeMenu();selectModel(m)"
+            [disabled]="m.disabled">
+            <div class="model-name">{{ m.name }}</div>
+            <div class="model-desc">{{ m.desc }}</div>
+        </button>
+
+        <!-- 3 段目: 詳細カード -->
+        <mat-menu #detail="matMenu" class="level-3">
+            <mat-card class="detail-card" appearance="outlined" (click)="selectModel(m)">
+                <mat-card-header>
+                    <mat-card-title>{{ m.name }}</mat-card-title>
+                    <mat-card-subtitle>{{ m.desc }}</mat-card-subtitle>
+                </mat-card-header>
+                <mat-divider></mat-divider>
+                <mat-card-content>
+                    <!-- <p>このモデルは、{{ m.desc }}を使用してトレーニングされました。</p>
+                    <p>トレーニングデータのサイズ: {{ m.dataSize }}</p>
+                    <p>トレーニング時間: {{ m.trainTime }}</p>
+                    <p>精度: {{ m.accuracy }}</p> -->
+                    <ul>
+                        @for(d of m.details;track $index){
+                        <li>{{ d }}</li>
+                        }
+                    </ul>
+                </mat-card-content>
+            </mat-card>
+        </mat-menu>
         }
-
-        <li class="divider"></li>
-        <li class="other-option">他のモデル</li>
-    </ul>
-</ng-template>
+    </mat-menu>
+    }
+</mat-menu>

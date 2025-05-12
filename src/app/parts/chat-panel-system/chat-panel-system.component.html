@@ -1,4 +1,5 @@
 @if(viewModel(); as vm){
+
 @if(vm.messageGroup.messages && vm.messageGroup.messages.length>0 && modelIdMas[vm.thread.inDto.args.model]){
 <mat-expansion-panel class="message" #exPanel [expanded]="vm.messageGroup.isExpanded"
     (opened)="loadContent().subscribe()" (expandedChange)="expandedEmitter.emit($event)">
@@ -32,7 +33,11 @@
                 }
                 }
             </div>
-            <select name="model-select" class="model-select" (click)="stopPropagation($event)"
+
+            <app-model-selector name="model-select" [(model)]="vm.thread.inDto.args.model"
+                (click)="stopPropagation($event)" (change)="modelChange()">
+            </app-model-selector>
+            <!-- <select name="model-select" class="model-select" (click)="stopPropagation($event)"
                 [(ngModel)]="vm.thread.inDto.args.model" (change)="modelChange()">
                 @for(modelGroupId of modelGroupIdList;track $index){
                 <optgroup [ngClass]="[modelGroupId]" [label]="modelGroupId">
@@ -43,7 +48,7 @@
                     }
                 </optgroup>
                 }
-            </select>
+            </select> -->
             @if(vm.thread.inDto.args.model; as model){
             @if(chatService.modelMap[model].isGSearch){
             <div class="flex items-center" style="width: 150px;"
@@ -58,10 +63,16 @@
         <mat-panel-description>
             <div class="truncate">{{vm.messageGroup.messages[0].label}}</div>
         </mat-panel-description>
-        <div class="grow"></div>
         @if(tokenObject(); as tokenObject){
         <div class="text-xs text-[#999] flex items-center mr-4">
-            {{tokenObject.totalTokens|number:'1.0-0'}} /
+            @if(tokenObject.totalTokens>=chatService.modelMap[vm.thread.inDto.args.model].maxInputTokens){
+            <div class="text-red-500 flex items-center gap-1 mr-1" matTooltip="Token limit exceeded">
+                <mat-icon class="text-red-500">error</mat-icon>
+                {{tokenObject.totalTokens|number:'1.0-0'}}
+            </div>
+            }@else {
+            {{tokenObject.totalTokens|number:'1.0-0'}}
+            } /
             {{chatService.modelMap[vm.thread.inDto.args.model].maxInputTokens|number:'1.0-0'}} |
             ${{tokenObject.cost|number:'1.2-2'}}
         </div>

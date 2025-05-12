@@ -17,6 +17,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MyToolType, ToolCallService } from '../../services/tool-call.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { ModelSelectorComponent } from "../model-selector/model-selector.component";
 
 @Component({
   selector: 'app-chat-panel-system',
@@ -24,7 +25,8 @@ import { ExtApiProviderService } from '../../services/ext-api-provider.service';
     CommonModule, FormsModule, DocTagComponent,
     MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
     MatDialogModule, MatRadioModule, MatCheckboxModule,
-  ],
+    ModelSelectorComponent
+],
   templateUrl: './chat-panel-system.component.html',
   styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss']
 })

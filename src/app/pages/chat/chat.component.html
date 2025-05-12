@@ -148,18 +148,18 @@
         <div class="grid-layout mr-2">
           <div class="grid-label">Tokens : </div>
           <div class="grid-item">
-            @if(tokenObjSummary.totalTokens ==-1){ wait.. } @else { {{tokenObjSummary.totalTokens||0|number}} }
+            @if(tokenCounting){ wait.. } @else { {{tokenObjSummary.totalTokens||0|number}} }
           </div> |
           <!-- <div class="grid-label">Chars :</div>
           <div class="grid-item">
-            @if(tokenObjSummary.totalTokens ==-1){ wait.. } @else {
+            @if(tokenCounting){ wait.. } @else {
             {{(this.tokenObjSummary.text + this.tokenObjSummary.image + this.tokenObjSummary.audio +
             this.tokenObjSummary.video) || this.tokenObjSummary.totalBillableCharacters |number:'1.0-0'}}
             }
           </div> | -->
           <div class="grid-label">Cost :</div>
           <div class="grid-item">
-            @if(tokenObjSummary.totalTokens ==-1){ wait.. } @else { $ {{cost|number:'1.2-2'}} }
+            @if(tokenCounting){ wait.. } @else { $ {{cost|number:'1.2-2'}} }
           </div> |
         </div>
         <button mat-icon-button color="primary" (click)="userService.toggleChatTabLayout().subscribe()"

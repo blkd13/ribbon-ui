@@ -98,10 +98,13 @@ export class ChatPanelBaseComponent implements OnInit {
     }
   });
 
-  readonly viewModel = computed(() => ({
-    messageGroup: this.messageGroup(),
-    thread: this.thread()
-  }));
+  readonly viewModel = computed(() => {
+    // console.log('viewModel');
+    return ({
+      messageGroup: this.messageGroup(),
+      thread: this.thread()
+    });
+  });
 
   readonly editEmitter = output<MessageGroupForView>({ alias: 'edit' });
 
