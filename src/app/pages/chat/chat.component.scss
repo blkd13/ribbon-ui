@@ -411,3 +411,8 @@
         min-height: calc(-100px + 100vh);
     }
 }
+
+.mat-badge-medium.mat-badge-overlap .mat-badge-content {
+    // margin: var(--mat-badge-container-overlap-offset, -12px);
+    transform: translateX(calc(50% + 0px));
+}

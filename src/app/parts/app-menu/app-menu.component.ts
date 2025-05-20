@@ -27,6 +27,9 @@ export class AppMenuComponent implements OnInit {
   groupKeys: string[] = [];
   user: User;
   isDepartmentAdmin = false;
+
+  isSystemAdmin = false;
+
   constructor() {
     this.departmentService.getDepartmentMemberList().subscribe({
       next: next => {
@@ -35,6 +38,11 @@ export class AppMenuComponent implements OnInit {
       },
     });
     this.user = this.authService.getCurrentUser();
+    this.user.roleList.find(role => {
+      if (['Admin', 'Maintainer'].includes(role.role)) {
+        this.isSystemAdmin = true;
+      }
+    });
     this.extApiProviderService.getApiProviders().subscribe({
       next: apiProviderList => {
 

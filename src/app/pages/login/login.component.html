@@ -26,7 +26,7 @@
         @let provider=apiProviderGroupedList[key][0];
         @if(apiProviderGroupedList[key].length===1){
         <a class="login-button federation"
-            href="/api/public/oauth/{{g.tenantKey}}/{{provider.type}}-{{provider.name}}/login">
+            href="/api/public/oauth/{{g.orgKey}}/{{provider.type}}-{{provider.name}}/login">
             <img src="./image/{{provider.type}}-logo.svg">[{{provider.type}}] {{provider.label}}
         </a>
         } @else {
@@ -37,7 +37,7 @@
             </mat-expansion-panel-header>
             @for(provider of apiProviderGroupedList[key];track $index){
             <a class="login-button federation"
-                href="/api/public/oauth/{{g.tenantKey}}/{{provider.type}}-{{provider.name}}/login">
+                href="/api/public/oauth/{{g.orgKey}}/{{provider.type}}-{{provider.name}}/login">
                 <img src="./image/{{provider.type}}-logo.svg">{{provider.label}}
             </a>
             }
@@ -59,13 +59,13 @@
             <mat-icon class="eye" (click)="hidePassword=!hidePassword">visibility{{hidePassword?'':'_off'}}</mat-icon>
         </div>
         <button type="submit" class="login-button" [disabled]="loginForm.invalid">{{ 'LOGIN' | translate }}</button>
-        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+        <a href="javascript:void(0)" (click)="onChangeState('sendmail')" class="forgot-password">
             {{ 'FORGOT_PASSWORD' | translate }}
         </a>
         <!-- <a href="javascript:void(0)" (click)="guestLogin()" class="forgot-password">
             {{ 'GUEST_USER' | translate }}
         </a> -->
-        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+        <a href="javascript:void(0)" (click)="onChangeState('sendmail')" class="forgot-password">
             {{ 'SIGN_UP' | translate }}
         </a>
     </form>
@@ -80,7 +80,7 @@
                 placeholder="{{ 'ENTER_EMAIL' | translate }}">
         </div>
         <button type="submit" class="login-button" [disabled]="sendMailForm.invalid">{{ 'SEND' | translate }}</button>
-        <a href="javascript:void(0)" (click)="loginState='login'" class="forgot-password">
+        <a href="javascript:void(0)" (click)="onChangeState('login')" class="forgot-password">
             {{ 'BACK' | translate }}
         </a>
     </form>
@@ -119,13 +119,13 @@
         <button type="submit" class="login-button" [disabled]="passwordResetForm.invalid">
             {{ 'RESET' | translate}}
         </button>
-        <a href="javascript:void(0)" (click)="loginState='login'" class="forgot-password">
+        <a href="javascript:void(0)" (click)="onChangeState('login')" class="forgot-password">
             {{ 'LOGIN' | translate }}
         </a>
-        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+        <a href="javascript:void(0)" (click)="onChangeState('sendmail')" class="forgot-password">
             {{ 'FORGOT_PASSWORD' | translate }}
         </a>
-        <a href="javascript:void(0)" (click)="loginState='sendmail'" class="forgot-password">
+        <a href="javascript:void(0)" (click)="onChangeState('sendmail')" class="forgot-password">
             {{ 'SIGN_UP' | translate }}
         </a>
     </form>

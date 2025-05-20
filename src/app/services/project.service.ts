@@ -107,8 +107,8 @@ function baseEntityFormat(base: BaseEntity): BaseEntity {
 }
 
 function threadFormat(thread: Thread): Thread {
-    thread.inDto = JSON.parse((thread as any).inDtoJson);
-    delete (thread as any).inDtoJson;
+    // thread.inDto = JSON.parse((thread as any).inDtoJson);
+    // delete (thread as any).inDtoJson;
     return thread;
 }
 
@@ -196,7 +196,7 @@ export class ThreadService {
             if (thread.id?.startsWith('dummy-')) {
                 thread.id = undefined;
             }
-            (thread as any).inDtoJson = JSON.stringify(thread.inDto);
+            // (thread as any).inDtoJson = JSON.stringify(thread.inDto);
         });
         return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(map(obj => {
             threadGroup.id = obj.id;

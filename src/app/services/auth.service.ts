@@ -38,7 +38,7 @@ export class AuthService {
    * @returns
    */
   login(email: string, password: string): Observable<User> {
-    const url = `/public/${this.g.tenantKey}/login`;
+    const url = `/public/${this.g.orgKey}/login`;
     return this.http.post<{ user: User, token: string }>(url, { email, password })
       .pipe(map(response => {
         // localStorage.setItem('auth_token', response.token);
@@ -105,7 +105,7 @@ export class AuthService {
    * @returns
    */
   requestForPasswordReset(email: string): Observable<{ message: any }> {
-    const url = `/public/${this.g.tenantKey}/request-for-password-reset`;
+    const url = `/public/${this.g.orgKey}/request-for-password-reset`;
     return this.http.post<{ message: any }>(url, { email }).pipe(tap(res => {
       if (typeof res.message === 'string') {
         // メッセージが文字列だったら正常。
@@ -123,7 +123,7 @@ export class AuthService {
    * @returns
    */
   onetimeLogin(type: string, token: string): Observable<string> {
-    const url = `/public/${this.g.tenantKey}/onetime`;
+    const url = `/public/${this.g.orgKey}/onetime`;
     return this.http.post<{ token: string }>(url, { type, token })
       .pipe(map(response => {
         sessionStorage.setItem(`${type}_token`, response.token);

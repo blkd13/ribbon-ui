@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { loginGuardGenerator, oAuthGuardGenerator, projectGuard, teamGuard, threadGroupGuard } from './guard/chat.guard';
-import { UserRole } from './models/models';
+import { UserRoleType } from './models/models';
 
 // console.dir(gitRoutes, { depth: null });
 export const routes: Routes = [
@@ -9,7 +9,7 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   { path: 'team/:teamId', canActivate: [teamGuard], loadComponent: () => import('./pages/team/team.component').then(m => m.TeamComponent) },
   { path: 'invite/:onetimeToken', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
-  { path: 'home', canActivate: [loginGuardGenerator(UserRole.User, 'login')], loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
+  { path: 'home', canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
   // { path: 'home', canActivate: [loginGuard], loadComponent: () => import('./pages/error/error.component').then(m => m.ErrorComponent) },
   {
     path: 'mattermost/:providerName', canActivate: [oAuthGuardGenerator('mattermost')], children: [{
@@ -42,8 +42,8 @@ export const routes: Routes = [
   },
   { path: 'oauth/mail/message/:pincode', loadComponent: () => import('./pages/oauth/oauth-mail-message/oauth-mail-message.component').then(m => m.OAuthMailMessageComponent) },
   { path: 'oauth/mail/auth/:onetimeToken', loadComponent: () => import('./pages/oauth/oauth-mail-auth/oauth-mail-auth.component').then(m => m.OAuthMailAuthComponent) },
-  { path: 'admin/ext-api-provider', canActivate: [loginGuardGenerator(UserRole.Admin, 'home')], loadComponent: () => import('./pages/ext-api-provider/ext-api-provider.component').then(m => m.ExtApiProviderComponent) },
-  { path: 'admin/department', canActivate: [loginGuardGenerator(UserRole.Admin, 'home')], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
-  { path: 'maintainer/announcements', canActivate: [loginGuardGenerator(UserRole.Maintainer, 'home')], loadComponent: () => import('./pages/announcements/announcements-list/announcements-list.component').then(m => m.AnnouncementsListComponent) },
+  { path: 'admin/ext-api-provider', canActivate: [loginGuardGenerator(UserRoleType.Admin, 'home')], loadComponent: () => import('./pages/ext-api-provider/ext-api-provider.component').then(m => m.ExtApiProviderComponent) },
+  { path: 'admin/department', canActivate: [loginGuardGenerator(UserRoleType.Admin, 'home')], loadComponent: () => import('./pages/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
+  { path: 'maintainer/announcements', canActivate: [loginGuardGenerator(UserRoleType.Maintainer, 'home')], loadComponent: () => import('./pages/announcements/announcements-list/announcements-list.component').then(m => m.AnnouncementsListComponent) },
   { path: '**', redirectTo: 'login' }, // 未定義のルートの場合はログインページにリダイレクトする
 ];

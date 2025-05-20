@@ -49,6 +49,7 @@ import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
 import { ToolCallPart, ToolCallPartBody, ToolCallPartInfoBody, ToolCallPartCallBody, ToolCallPartCommandBody, ToolCallPartResultBody, ToolCallPartType, ToolCallPartInfo, ToolCallPartCall, ToolCallPartCommand, ToolCallPartResult, ToolCallService, MyToolType, } from '../../services/tool-call.service';
 import { ChatCompletionTool } from 'openai/resources/index.mjs';
 import { SaveThreadData, SaveThreadDialogComponent } from '../../parts/save-thread-dialog/save-thread-dialog.component';
+import { MatBadgeModule } from '@angular/material/badge';
 
 declare var _paq: any;
 
@@ -59,7 +60,7 @@ declare var _paq: any;
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatSelectModule,
     MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatProgressSpinnerModule,
-    MatTabsModule, ScrollingModule,
+    MatBadgeModule, MatTabsModule, ScrollingModule,
     UserMarkComponent,
     ChatPanelMessageComponent, ChatPanelSystemComponent, AppMenuComponent,
   ],
@@ -886,18 +887,18 @@ export class ChatComponent implements OnInit {
     fileInput.click();
   }
 
-  calcCost(index: number): number {
-    const model = this.selectedThreadGroup.threadList[index].inDto.args.model;
+  calcCost(tokenObject: CountTokensResponseForView): number {
+    const model = tokenObject.model;
     if (model.startsWith('gemini-1.5')) {
-      const charCount = (this.tokenObjSummary.text + this.tokenObjSummary.image + this.tokenObjSummary.audio + this.tokenObjSummary.video) || this.tokenObjSummary.totalBillableCharacters || 0;
-      const isLarge = this.tokenObjSummary.totalTokens > 128000 ? 2 : 1;
+      const charCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalBillableCharacters || 0;
+      const isLarge = tokenObject.totalTokens > 128000 ? 2 : 1;
       return charCount / 1000 * this.chatService.modelMap[model].price[0] * isLarge;
     } else if (model.startsWith('gemini-2')) {
-      const tokenCount = (this.tokenObjSummary.text + this.tokenObjSummary.image + this.tokenObjSummary.audio + this.tokenObjSummary.video) || this.tokenObjSummary.totalTokens;
-      const isLarge = this.tokenObjSummary.totalTokens > 200000 ? 2 : 1;
+      const tokenCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalTokens;
+      const isLarge = tokenObject.totalTokens > 200000 ? 2 : 1;
       return tokenCount / 1000 * this.chatService.modelMap[model].price[0] * isLarge;
     } else {
-      const tokenCount = (this.tokenObjSummary.text + this.tokenObjSummary.image + this.tokenObjSummary.audio + this.tokenObjSummary.video) || this.tokenObjSummary.totalTokens;
+      const tokenCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalTokens;
       return tokenCount / 1000 * this.chatService.modelMap[model].price[0];
     }
   }
@@ -1784,7 +1785,7 @@ export class ChatComponent implements OnInit {
           tokenObj.image += countedTokenObj.image;
           tokenObj.audio += countedTokenObj.audio;
           tokenObj.video += countedTokenObj.video;
-          tokenObj.cost += this.calcCost(index);
+          tokenObj.cost += this.calcCost(tokenObj);
           this.tokenObjList.push(tokenObj);
 
           this.tokenObjSummary.totalTokens += tokenObj.totalTokens;

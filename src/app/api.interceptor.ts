@@ -90,12 +90,12 @@ export class ApiInterceptor implements HttpInterceptor {
             if (request.url.startsWith(`/api/user/oauth/api/`) && !request.url.includes('/logout') && !request.url.includes('/revoke')) { // logoutは除外する
               const [_0, _1, _2, _3, _4, _5, providerType, provierName] = request.url.split('/');
               // ログインページにリダイレクトする場合、リクエストURLを保存しておく
-              location.href = `/api/public/oauth/${this.g.info.user.tenantKey}/${providerType}-${provierName}/login?fromUrl=${fromUrl}`;
+              location.href = `/api/public/oauth/${this.g.info.user.orgKey}/${providerType}-${provierName}/login?fromUrl=${fromUrl}`;
               console.log(`redirect to login page: ${location.href}`);
             } else if (request.url.startsWith(`/api/user/oauth/account/`) && !request.url.includes('/logout') && !request.url.includes('/revoke')) { // logoutは除外する
               const [_0, _1, _2, _3, _4, providerType, provierName] = request.url.split('/');
               // ログインページにリダイレクトする場合、リクエストURLを保存しておく
-              location.href = `/api/public/oauth/${this.g.info.user.tenantKey}/${providerType}-${provierName}/login?fromUrl=${fromUrl}`;
+              location.href = `/api/public/oauth/${this.g.info.user.orgKey}/${providerType}-${provierName}/login?fromUrl=${fromUrl}`;
               console.log(`redirect to login page: ${location.href}`);
             } else {
               // 未認証の場合、ログインページにリダイレクト

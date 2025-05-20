@@ -33,7 +33,7 @@
 
     }
 
-    @if(['User','Admin','Maintainer'].indexOf(user.role)>0){
+    @if(isSystemAdmin){
     <a mat-menu-item [routerLink]="['/', 'admin', 'ext-api-provider']">
         <mat-icon>settings</mat-icon>
         <span>APIプロバイダー設定</span>
@@ -47,7 +47,7 @@
     </a>
     }
 
-    @if(['User','Admin','Maintainer'].indexOf(user.role)>1){
+    @if(isSystemAdmin){
     <a mat-menu-item [routerLink]="['/', 'maintainer', 'announcements']">
         <mat-icon>settings</mat-icon>
         <span>アナウンス設定</span>

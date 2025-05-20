@@ -56,7 +56,7 @@ export class ExtApiProviderFormComponent implements OnInit {
 
     // APIプロバイダーの読み込み
     loadProviders() {
-        console.log(this.g.info, this.g.tenantKey);
+        console.log(this.g.info, this.g.orgKey);
         this.extApiProviderService.getApiProviders().subscribe({
             next: (providers) => {
                 this.providers = providers;

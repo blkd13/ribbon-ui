@@ -311,7 +311,7 @@ export class ApiMattermostService {
 
     } else {
       this.isConnected = 1;
-      const baseUrl = `/user/oauth/ws/proxy/${this.g.info.user.tenantKey}/mattermost/${this.providerName}/api/v4`;
+      const baseUrl = `/user/oauth/ws/proxy/${this.g.info.user.orgKey}/mattermost/${this.providerName}/api/v4`;
       this.wsClient.initialize(`/api${baseUrl}/websocket`, '');
       this.wsClient.addMessageListener((message: WebSocketMessage) => {
         console.log(message);

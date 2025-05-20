@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import { BaseEntity } from '../models/project-models';
 
 export enum AIProviderType {
@@ -19,6 +19,106 @@ export enum AIProviderType {
   COHERE = 'cohere',
   GEMINI = 'gemini',
 }
+
+export enum ScopeType {
+  USER = 'USER', DIVISION = 'DIVISION', ORGANIZATION = 'ORGANIZATION',
+  PROJECT = 'PROJECT', TEAM = 'TEAM', GLOBAL = 'GLOBAL',
+}
+
+// Interfaces
+export interface ScopeInfo {
+  scopeType: ScopeType;
+  scopeId: string;
+}
+
+export interface CredentialMetadata {
+  apiKey?: string;
+  organizationId?: string;
+  projectId?: string;
+  location?: string;
+  credentials?: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface AIProviderEntity extends BaseEntity {
+  provider: AIProviderType;
+  scopeInfo: ScopeInfo;
+  label: string;
+  orgKey: string;
+  metadata?: CredentialMetadata;
+  isActive: boolean;
+}
+
+// Service to handle AI Provider Entity operations
+export class AIProviderManagerService {
+  private providers: AIProviderEntity[] = [];
+  private providerTypes: AIProviderType[] = Object.values(AIProviderType);
+  private scopeTypes: ScopeType[] = Object.values(ScopeType);
+  private scopeInfoTypes: ScopeInfo[] = this.scopeTypes.map(type => ({
+    scopeType: type,
+    scopeId: ''
+  }));
+  private credentialMetadataTypes: CredentialMetadata[] = this.providerTypes.map(type => ({
+    apiKey: '',
+    organizationId: '',
+    projectId: '',
+    location: '',
+    credentials: {},
+  }));
+  readonly http: HttpClient = inject(HttpClient);
+
+  getProviders() {
+    return this.http.get<AIProviderEntity[]>(`/maintainer/ai-providers`).pipe(
+      tap(res => {
+        res.forEach(provider => {
+          provider.createdAt = new Date(provider.createdAt);
+          provider.updatedAt = new Date(provider.updatedAt);
+        });
+      }),
+      tap(providers => {
+        this.providers = providers;
+      }),
+    );
+  }
+
+  getProvider(provider: AIProviderType) {
+    return this.http.get<AIProviderEntity[]>(`/maintainer/ai-providers`).pipe(
+      tap(res => {
+        res.forEach(provider => {
+          provider.createdAt = new Date(provider.createdAt);
+          provider.updatedAt = new Date(provider.updatedAt);
+        });
+      }),
+      tap(providers => {
+        this.providers = providers;
+      }),
+    );
+  }
+
+  upsertProvider(provider: AIProviderEntity) {
+    const index = this.providers.findIndex(p => p.provider === provider.provider);
+    if (index !== -1) {
+      // Update existing provider
+      this.providers[index] = { ...provider, updatedAt: new Date() };
+    } else {
+      // Add new provider
+      const newProvider = {
+        ...provider,
+        id: provider.id || Date.now().toString(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      this.providers.push(newProvider);
+    }
+    return provider;
+  }
+
+  deleteProvider(id: string) {
+    this.providers = this.providers.filter(provider => provider.id !== id);
+    return true;
+  }
+}
+
 
 export enum AIModelStatus {
   ACTIVE = 'active',
@@ -71,8 +171,8 @@ export interface AIModelEntity extends BaseEntity {
   /** 出力最大トークン数 */
   maxOutputTokens: number;
 
-  // /** 入力フォーマット（nullable） */
-  // inputFormats?: Modality[] | null;
+  /** 入力フォーマット（nullable） */
+  inputFormats?: Modality[] | null;
 
   /** 生成物のフォーマット（nullable） */
   outputFormats?: Modality[] | null;
@@ -130,8 +230,7 @@ export interface AIModelEntityForView extends AIModelEntity {
   uiOrder: number;
 }
 
-export type ModelCapability = 'tool' | 'think' | 'embedding' | 'chat' | 'image' | 'audio' | 'video' | 'text' | 'embedding' | 'embedded';
-
+export type ModelCapability = 'text' | 'pdf' | 'image' | 'audio' | 'video' | 'tool' | 'embedding' | 'embedded';
 
 @Injectable({ providedIn: 'root' })
 export class AIModelManagerService {
@@ -140,7 +239,29 @@ export class AIModelManagerService {
 
   /** 一覧取得 */
   getAIModels(): Observable<AIModelEntityForView[]> {
-    return this.http.get<AIModelEntityForView[]>(`/user/ai-models`);
+    return this.http.get<AIModelEntityForView[]>(`/user/ai-models`).pipe(
+      tap(res => res.sort((a, b) => {
+        if (!a.releaseDate && !b.releaseDate) return 0;
+        if (!a.releaseDate) return 1;
+        if (!b.releaseDate) return -1;
+        return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+      })),
+      tap(models => {
+        models.forEach(model => {
+          model.pricingHistory = model.pricingHistory.map(modelPricingFormat);
+          model.knowledgeCutoff = model.knowledgeCutoff ? new Date(model.knowledgeCutoff) : null;
+          model.releaseDate = model.releaseDate ? new Date(model.releaseDate) : null;
+          model.deprecationDate = model.deprecationDate ? new Date(model.deprecationDate) : null;
+          model.uiOrder = Number(model.uiOrder);
+        });
+        models.sort((a, b) => {
+          if (!a.releaseDate && !b.releaseDate) return 0;
+          if (!a.releaseDate) return 1;
+          if (!b.releaseDate) return -1;
+          return b.releaseDate.getTime() - a.releaseDate.getTime();
+        })
+      }),
+    );
   }
 
   /** 単一取得 */

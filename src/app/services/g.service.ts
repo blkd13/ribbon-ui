@@ -55,7 +55,7 @@ export class GService {
   ];
 
   lang: Lang;
-  tenantKey: string;
+  orgKey: string;
 
   info: { user: User } = { user: {} as User };
   public queries: { [key: string]: string } = {};
@@ -70,8 +70,8 @@ export class GService {
       this.queries[key] = value;
     });
 
-    // テナントキー
-    this.tenantKey = this.queries['tenantKey'] || environment.defaultTenantKey;
+    // 組織キー
+    this.orgKey = this.queries['orgKey'] || environment.defaultOrgKey;
 
     // 言語設定
     this.lang = this.queries['lang'] === 'en' ? 'en' : 'ja';

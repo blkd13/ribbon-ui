@@ -8,6 +8,17 @@
                 <button mat-raised-button type="button" class="btn btn-sm btn-primary"
                     (click)="createNew()">新規登録</button>
             </div>
+            <div class="source-links flex gap-2 p-4">
+                <span>Data Source:</span>
+                <a href="https://platform.openai.com/docs/models" target="_blank"
+                    class="text-blue-500 hover:underline">OpenAI</a>
+                <a href="https://docs.anthropic.com/en/docs/about-claude/models/overview" target="_blank"
+                    class="text-blue-500 hover:underline">Anthropic</a>
+                <a href="https://cloud.google.com/vertex-ai/generative-ai/docs/models" target="_blank"
+                    class="text-blue-500 hover:underline">VertexAI</a>
+                <a href="https://ai.google.dev/gemini-api/docs/models#gemini-2.0-flash" target="_blank"
+                    class="text-blue-500 hover:underline">Gemini</a>
+            </div>
 
             <table class="data-table">
                 <thead>
@@ -34,13 +45,12 @@
                             {{ model.name }}
                             <div class="text-xs text-[#888] align-right">{{ model.providerModelId }}</div>
                         </td>
-                        <td>
-                            {{ model.maxContextTokens | number }} tokens
-                            <div class="text-xs text-[#888] align-right">{{ model.maxOutputTokens | number }} tokens
-                            </div>
+                        <td class="text-right">
+                            {{ model.maxContextTokens | number }}
+                            <div class="text-xs text-[#888] align-right">{{ model.maxOutputTokens | number }}</div>
                         </td>
                         <!-- <td>{{ model.status }}</td> -->
-                        <td>
+                        <td class="text-right">
                             @if(model.pricingHistory && model.pricingHistory.length > 0){
                             <div>
                                 {{model.pricingHistory[0].inputPricePerUnit|number:'0.2-2'}} /
@@ -269,20 +279,21 @@
                     </div>
 
                     <!-- Input Formats -->
-                    <!-- <div class="form-group">
+                    <div class="form-group">
                         <label for="inputFormats">Input Formats</label>
                         <div class="checkbox-container">
                             @for (format of modalityOptions; track $index) {
                             <div class="checkbox-group">
                                 <label>
                                     <input type="checkbox" [value]="format"
+                                        [checked]="isChecked('inputFormats', format)"
                                         (change)="onCheckboxChange($event, 'inputFormats')">
                                     {{ format }}
                                 </label>
                             </div>
                             }
                         </div>
-                    </div> -->
+                    </div>
 
                     <!-- Output Formats -->
                     <div class="form-group">

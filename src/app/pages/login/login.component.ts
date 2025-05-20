@@ -60,7 +60,7 @@ export class LoginComponent {
   ngOnInit(): void {
     document.title = `Ribbon UI`;
 
-    this.extApiProviderService.getApiProvidersNonAuth(this.g.tenantKey).subscribe({
+    this.extApiProviderService.getApiProvidersNonAuth(this.g.orgKey).subscribe({
       next: (apiProviderList) => {
         this.apiProviderGroupedList = apiProviderList.filter(obj => obj.authType === ExtApiProviderAuthType.OAuth2).reduce((acc: { [type: string]: ExtApiProviderEntity[] }, apiProvider: ExtApiProviderEntity) => {
           const type = apiProvider.type;
@@ -239,12 +239,21 @@ export class LoginComponent {
     });
   }
 
+  onChangeState(state: 'login' | 'password-reset' | 'sendmail' | 'sendmailfine'): void {
+    this.loginState = state;
+    this.errorMessageList = [];
+    this.loginForm.reset();
+    this.sendMailForm.reset();
+    this.passwordResetForm.reset();
+  }
+
   onGeneratePassword(): void {
     const password = this.generatePassword();
     this.passwordResetForm.patchValue({ password: password, passwordConfirm: password, });
     this.hidePassword = false;
     this.hidePasswordConfirm = false;
   }
+
   generatePassword(): string {
     const upperCaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const lowerCaseChars = 'abcdefghijklmnopqrstuvwxyz';

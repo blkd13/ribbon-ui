@@ -134,7 +134,7 @@ export class AIModelManagementComponent implements OnInit {
       modalities: [[Modality.TEXT], Validators.required],
       maxContextTokens: [0, [Validators.required, Validators.min(0)]],
       maxOutputTokens: [0, [Validators.required, Validators.min(0)]],
-      inputFormats: [[]],
+      inputFormats: [[Modality.TEXT]],
       outputFormats: [[Modality.TEXT]],
       defaultParameters: [{}], // JSON文字列として扱う
       capabilities: [{}], // JSON文字列として扱う
@@ -234,6 +234,7 @@ export class AIModelManagementComponent implements OnInit {
       modalities: model.modalities || [],
       maxContextTokens: model.maxContextTokens,
       maxOutputTokens: model.maxOutputTokens,
+      inputFormats: model.inputFormats || [],
       outputFormats: model.outputFormats || [],
       defaultParameters: model.defaultParameters || {},
       capabilities: model.capabilities || {},
@@ -308,6 +309,7 @@ export class AIModelManagementComponent implements OnInit {
         modalities: formValue.modalities,
         maxContextTokens: formValue.maxContextTokens,
         maxOutputTokens: formValue.maxOutputTokens,
+        inputFormats: formValue.inputFormats?.length ? formValue.inputFormats : [],
         outputFormats: formValue.outputFormats?.length ? formValue.outputFormats : [],
         defaultParameters: formValue.defaultParameters,
         capabilities: formValue.capabilities,

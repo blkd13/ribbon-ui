@@ -4,7 +4,7 @@ import { CanActivateFn, Router, ActivatedRoute, ActivatedRouteSnapshot } from '@
 import { ProjectService, TeamService, ThreadService } from '../services/project.service';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
-import { UserRole } from '../models/models';
+import { UserRoleType } from '../models/models';
 import { GService } from '../services/g.service';
 
 export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanActivateFn => {
@@ -30,7 +30,7 @@ export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanA
             console.error(err);
             // 飛ばす機能をinterceptorに実装したので飛ばさない。本当にこれでいいかは再考。
             // // ログインされていなかったらOAuth2のログイン画面に飛ばす
-            // location.href = `/api/public/oauth/${g.info.user.tenantKey}/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+            // location.href = `/api/public/oauth/${g.info.user.orgKey}/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
             return of(false);
           }),
         );
@@ -38,7 +38,7 @@ export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanA
       catchError(err => {
         console.log('OAuth2ログインが必要です');
         // getOAuthAccount 自体が失敗した場合もログイン画面へ飛ばす
-        location.href = `/api/public/oauth/${g.info.user.tenantKey}/${provider}/login?fromUrl=${encodeURIComponent(location.href)}`;
+        location.href = `/api/public/oauth/${g.info.user.orgKey}/${provider}/login?fromUrl=${encodeURIComponent(location.href)}`;
         console.error(err);
         return of(false);
       }),
@@ -48,15 +48,16 @@ export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanA
   return guardFunc;
 }
 
-export const loginGuardGenerator = (role: UserRole, navigate: string): CanActivateFn => {
-  const rolePriority = [UserRole.User, UserRole.Admin, UserRole.Maintainer];
+export const loginGuardGenerator = (role: UserRoleType, navigate: string): CanActivateFn => {
+  const rolePriority = [UserRoleType.User, UserRoleType.Admin, UserRoleType.Maintainer];
   const roles = rolePriority.splice(rolePriority.indexOf(role));
   return (route, state) => {
     const authService: AuthService = inject(AuthService);
     const router = inject(Router);
     return authService.getUser().pipe(
       map(user => {
-        if (roles.includes(user.role)) {
+        const roleList = user.roleList.map(role => role.role);
+        if (roleList.find(role => roles.includes(role))) {
           return true;
         } else {
           router.navigate(['/', navigate]);

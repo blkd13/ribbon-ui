@@ -1,0 +1,198 @@
+<div class="container">
+    <h2>AI Providers</h2>
+    <div class="layout-container">
+        <!-- 左側：プロバイダー一覧 -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>Providers</h3>
+                <button mat-raised-button type="button" class="btn btn-sm btn-primary"
+                    (click)="createNew()">新規登録</button>
+            </div>
+            <div class="source-links flex gap-2 p-4">
+                <span>Provider Types:</span>
+                <a href="https://platform.openai.com/docs" target="_blank"
+                    class="text-blue-500 hover:underline">OpenAI</a>
+                <a href="https://docs.anthropic.com/" target="_blank"
+                    class="text-blue-500 hover:underline">Anthropic</a>
+                <a href="https://cloud.google.com/vertex-ai/docs" target="_blank"
+                    class="text-blue-500 hover:underline">VertexAI</a>
+                <a href="https://ai.google.dev/docs" target="_blank"
+                    class="text-blue-500 hover:underline">Gemini</a>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Provider</th>
+                        <th>Label</th>
+                        <th>Scope</th>
+                        <th>Organization Key</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (provider of providers; track $index) {
+                    <tr [class.selected]="form.value.id === provider.id" (click)="selectProvider(provider)">
+                        <td>{{ provider.provider }}</td>
+                        <td>{{ provider.label }}</td>
+                        <td>
+                            {{ provider.scopeInfo.scopeType }}
+                            <div class="text-xs text-[#888] align-right">{{ provider.scopeInfo.scopeId }}</div>
+                        </td>
+                        <td>{{ provider.orgKey }}</td>
+                        <td>
+                            <mat-icon class="status-icon">{{ provider.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+                        </td>
+                        <td class="actions-cell">
+                            <button mat-icon-button class="mr-5"
+                                (click)="selectProvider(provider); $event.stopPropagation();">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+                            <button mat-icon-button class="mr-5"
+                                (click)="deleteProvider(provider.id); $event.stopPropagation();">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 右側：編集フォーム -->
+        @if(isFormVisible){
+        <div class="form-container">
+            <div class="form-header">
+                <h3>{{ isEditMode ? 'Edit Provider' : 'New Provider' }}</h3>
+                <button mat-icon-button type="button" (click)="closeForm()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </div>
+
+            <form [formGroup]="form" (ngSubmit)="register()">
+                <div class="form-tabs">
+                    <div class="tab" [class.active]="activeTab === 'basic'" (click)="setActiveTab('basic')">Basic Info
+                    </div>
+                    <div class="tab" [class.active]="activeTab === 'scope'" (click)="setActiveTab('scope')">Scope</div>
+                    <div class="tab" [class.active]="activeTab === 'metadata'" (click)="setActiveTab('metadata')">
+                        Metadata</div>
+                </div>
+
+                <!-- Basic Info Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'basic'">
+                    <!-- Provider -->
+                    <div class="form-group">
+                        <label for="provider">Provider Type <span class="required">*</span></label>
+                        <select id="provider" formControlName="provider" class="form-control"
+                            [ngClass]="{'invalid': hasError('provider')}">
+                            <option [value]="''">Select a provider</option>
+                            @for (provider of providerOptions; track $index) {
+                            <option [value]="provider">{{ provider }}</option>
+                            }
+                        </select>
+                        @if(hasError('provider')){
+                        <div class="error-message">{{ getErrorMessage('provider') }}</div>
+                        }
+                    </div>
+
+                    <!-- Label -->
+                    <div class="form-group">
+                        <label for="label">Label <span class="required">*</span></label>
+                        <input id="label" type="text" formControlName="label" class="form-control"
+                            [ngClass]="{'invalid': hasError('label')}">
+                        @if(hasError('label')){
+                        <div class="error-message">{{ getErrorMessage('label') }}</div>
+                        }
+                    </div>
+
+                    <!-- Organization Key -->
+                    <div class="form-group">
+                        <label for="orgKey">Organization Key <span class="required">*</span></label>
+                        <input id="orgKey" type="text" formControlName="orgKey" class="form-control"
+                            [ngClass]="{'invalid': hasError('orgKey')}">
+                        @if(hasError('orgKey')){
+                        <div class="error-message">{{ getErrorMessage('orgKey') }}</div>
+                        }
+                    </div>
+
+                    <!-- Is Active -->
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" formControlName="isActive">
+                            Active
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Scope Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'scope'">
+                    <div formGroupName="scopeInfo">
+                        <!-- Scope Type -->
+                        <div class="form-group">
+                            <label for="scopeType">Scope Type <span class="required">*</span></label>
+                            <select id="scopeType" formControlName="scopeType" class="form-control"
+                                [ngClass]="{'invalid': hasNestedError('scopeInfo.scopeType')}">
+                                <option [value]="''">Select a scope type</option>
+                                @for (scopeType of scopeTypeOptions; track $index) {
+                                <option [value]="scopeType">{{ scopeType }}</option>
+                                }
+                            </select>
+                            @if(hasNestedError('scopeInfo.scopeType')){
+                            <div class="error-message">{{ getNestedErrorMessage('scopeInfo.scopeType') }}</div>
+                            }
+                        </div>
+
+                        <!-- Scope ID -->
+                        <div class="form-group">
+                            <label for="scopeId">Scope ID <span class="required">*</span></label>
+                            <input id="scopeId" type="text" formControlName="scopeId" class="form-control"
+                                [ngClass]="{'invalid': hasNestedError('scopeInfo.scopeId')}">
+                            @if(hasNestedError('scopeInfo.scopeId')){
+                            <div class="error-message">{{ getNestedErrorMessage('scopeInfo.scopeId') }}</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metadata Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'metadata'">
+                    <!-- Metadata -->
+                    <app-json-editor formControlName="metadata" 
+                        [suggestions]="['apiKey', 'organizationId', 'region']" 
+                        label="Credential Metadata" 
+                        placeholder="Metadata field">
+                    </app-json-editor>
+
+                    <div class="metadata-helper">
+                        <h4>Provider-specific fields</h4>
+                        <div class="provider-fields">
+                            <div class="provider-field">
+                                <strong>OpenAI:</strong> apiKey, organizationId
+                            </div>
+                            <div class="provider-field">
+                                <strong>Anthropic:</strong> apiKey
+                            </div>
+                            <div class="provider-field">
+                                <strong>VertexAI:</strong> projectId, location, credentials
+                            </div>
+                            <div class="provider-field">
+                                <strong>Gemini:</strong> apiKey
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary" mat-raised-button>
+                        {{ isEditMode ? 'Update' : 'Register' }}
+                    </button>
+                    <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+        }
+    </div>
+</div>

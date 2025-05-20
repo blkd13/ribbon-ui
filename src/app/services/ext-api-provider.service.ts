@@ -12,8 +12,8 @@ export class ExtApiProviderService {
   private stockedApiProviders: ExtApiProviderEntity[] = [];
   private stockedApiProviderTemplates: ExtApiProviderTemplateEntity[] = [];
 
-  getApiProvidersNonAuth(tenantKey: string): Observable<ExtApiProviderEntity[]> {
-    return this.http.get<ExtApiProviderEntity[]>(`/public/${tenantKey}/ext-api-providers`);
+  getApiProvidersNonAuth(orgKey: string): Observable<ExtApiProviderEntity[]> {
+    return this.http.get<ExtApiProviderEntity[]>(`/public/${orgKey}/ext-api-providers`);
   }
 
   getApiProviders(): Observable<ExtApiProviderEntity[]> {

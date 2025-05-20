@@ -1,9 +1,8 @@
 import { Component, ElementRef, inject, viewChild } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { ToolCallPart, ToolCallPartCall, ToolCallPartResult, ToolCallService, ToolCallSet } from '../../services/tool-call.service';
+import { ToolCallService, ToolCallSet } from '../../services/tool-call.service';
 import { MarkdownModule } from 'ngx-markdown';
 import { CommonModule } from '@angular/common';
-import { Utils } from '../../utils';
 import { MatTabsModule } from '@angular/material/tabs';
 import { DomSanitizer, SafeHtml, SafeUrl } from '@angular/platform-browser';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -143,6 +142,7 @@ export class ToolCallCallResultDialogComponent {
       snippet: string;
       body: string;
       faviconUrl: SafeUrl;
+      domainName: string;
     }[]
   } = { items: [] }; // Changed from {} to [] to initialize as an array
   buildWebSearchDto(content: string): SafeUrl {
@@ -150,7 +150,9 @@ export class ToolCallCallResultDialogComponent {
       JSON.parse(content).forEach((item: { title: string, link: string, snippet: string, body?: string, favicon?: string }) => {
         const faviconUrlRaw = item.favicon ? item.favicon : `https://${new URL(item.link).hostname}/favicon.ico`;
         const faviconUrl = this.sanitizer.bypassSecurityTrustUrl(faviconUrlRaw);
-        this.webSearchDto.items.push({ title: item.title, link: item.link, snippet: item.snippet, body: item.body || '', faviconUrl });
+        const domain = new URL(item.link).hostname;
+        const domainName = domain.replace(/^www\./, '');
+        this.webSearchDto.items.push({ title: item.title, link: item.link, snippet: item.snippet, body: item.body || '', faviconUrl, domainName });
       });
     } catch (e) {
       console.error(e);

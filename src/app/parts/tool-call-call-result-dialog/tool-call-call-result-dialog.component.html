@@ -62,7 +62,10 @@
         <mat-expansion-panel class="mb-4">
             <mat-expansion-panel-header style="height: 80px;">
                 <mat-panel-title>
-                    <img [src]="item.faviconUrl" class="w-6 h-6 inline-block mr-1" alt="" />
+                    <div class="p-2 bg-white flex items-center rounded-lg shadow-md justify-center">
+                        <img [src]="item.faviconUrl" class="w-6 h-6" alt="no image"
+                            onerror="this.onerror=null; this.src='./image/fallback-globe.svg';" />
+                    </div>
                 </mat-panel-title>
                 <div class="flex flex-col">
                     {{item.title}}
@@ -70,7 +73,7 @@
                 </div>
             </mat-expansion-panel-header>
             <div class="p-4 rounded-lg shadow-md">
-                リンク：<a [href]="item.link" target="_blank" class="text-blue-500 hover:underline">
+                リンク：<a [href]="item.link" [title]="item.link" target="_blank" class="text-blue-500 hover:underline">
                     {{item.title}}
                 </a>
                 <div>
@@ -83,10 +86,17 @@
     } @else {
     @for(item of webSearchDto.items;track $index){
     <mat-card class="mb-2 p-4 shadow-md">
-        <a [href]="item.link" target="_blank" class="text-blue-500 hover:underline">
-            <img [src]="item.faviconUrl" class="w-4 h-4 inline-block mr-1" alt="" />
-            {{item.title}}
-        </a>
+        <div class="flex items-center gap-3 mb-3">
+            <div class="p-2 bg-white flex items-center rounded-lg shadow-md justify-center">
+                <img [src]="item.faviconUrl" class="w-6 h-6" alt="no image"
+                    onerror="this.onerror=null; this.src='./image/fallback-globe.svg';" />
+            </div>
+            <div class="flex flex-col">
+                <div class="text-xs">{{item.domainName}}</div>
+                <a [href]="item.link" [title]="item.link" target="_blank"
+                    class="text-blue-500 hover:underline">{{item.title}}</a>
+            </div>
+        </div>
         <p class="text-sm">{{item.snippet}}</p>
         <p>{{item.body}}</p>
     </mat-card>
@@ -101,7 +111,7 @@
                 {{(item.title||'(no title)' | slice:0:20) + '...'}}
             </ng-template>
             リンク： <h1 style="font-size:32px;display: inline-block;">
-                <a [href]="item.url" target="_blank" class="hover:underline">{{item.title}}</a>
+                <a [href]="item.url" [title]="item.url" target="_blank" class="hover:underline">{{item.title}}</a>
             </h1>
             @if(arguments.loadContentType==='MARKDOWN' || arguments.loadContentType==='TEXT'){
             <markdown clipboard [data]="item.body" class="prose prose-invert"></markdown>

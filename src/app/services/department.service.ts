@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { inject, Injectable } from '@angular/core';
 import { Observable, of, tap } from 'rxjs';
-import { User, UserRole, UserStatus } from '../models/models';
+import { User, UserRoleType, UserStatus } from '../models/models';
 
 @Injectable({ providedIn: 'root' })
 export class DepartmentService {
@@ -22,7 +22,7 @@ export class DepartmentService {
     return this.http.get<{ departmentList: { department: DepartmentForView, cost: { [key: string]: Cost }, members: DepartmentMember[] }[] }>('/admin/department');
   }
 
-  departmentMemberManagement(departmentId: string, inDto: { userName: string, role?: UserRole, status?: UserStatus }): Observable<{ success: boolean }> {
+  departmentMemberManagement(departmentId: string, inDto: { userName: string, role?: UserRoleType, status?: UserStatus }): Observable<{ success: boolean }> {
     return this.http.patch<{ success: boolean }>(`/admin/department/${departmentId}`, inDto);
   }
 

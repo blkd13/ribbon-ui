@@ -219,6 +219,18 @@ html>body {
         overflow-x: auto;
         transition: all 0.3s 0s ease;
 
+        &--thin {
+            scrollbar-width: thin;
+
+            &::-webkit-scrollbar {
+                width: 5px;
+            }
+        }
+    }
+
+    html,
+    body,
+    div {
         scrollbar-color: rgb(26, 54, 61) rgb(11, 18, 20);
         scrollbar-color: var(--mat-sys-on-primary) var(--mat-sys-background);
 
@@ -259,14 +271,6 @@ html>body {
                 background-color: var(--mat-sys-on-primary-fixed);
             }
         }
-
-        &--thin {
-            scrollbar-width: thin;
-
-            &::-webkit-scrollbar {
-                width: 5px;
-            }
-        }
     }
 
     // ローディングのクルクルだけはアニメーションOFFにしても利くようにする
@@ -297,6 +301,10 @@ html>body {
     .mat-mdc-progress-spinner._mat-animation-noopable .mdc-circular-progress__indeterminate-container circle {
         stroke-dasharray: 282.743px !important;
     }
+
+    @include mat.badge-overrides((background-color: var(--mat-sys-tertiary-container),
+            text-color: var(--plain-color),
+        ));
 }
 
 .mat-typography markdown {

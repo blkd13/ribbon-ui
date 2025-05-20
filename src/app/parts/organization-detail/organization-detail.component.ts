@@ -1,30 +1,30 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TenantService } from '../../services/tenant.service';
-import { TenantEntity, ExtApiProviderEntity } from '../../models/models';
+import { OrganizationService } from '../../services/organization.service';
+import { OrganizationEntity, ExtApiProviderEntity } from '../../models/models';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { CommonModule } from '@angular/common';
 import { GService } from '../../services/g.service';
 
 @Component({
-  selector: 'app-tenant-detail',
+  selector: 'app-organization-detail',
   imports: [CommonModule],
-  templateUrl: './tenant-detail.component.html',
-  styleUrl: './tenant-detail.component.scss'
+  templateUrl: './organization-detail.component.html',
+  styleUrl: './organization-detail.component.scss'
 })
-export class TenantDetailComponent implements OnInit {
+export class OrganizationDetailComponent implements OnInit {
 
   readonly g: GService = inject(GService);
 
-  tenant: TenantEntity | null = null;
+  organization: OrganizationEntity | null = null;
   apiProviders: ExtApiProviderEntity[] = [];
   isLoading = false;
   isLoadingProviders = false;
   error: string | null = null;
-  tenantResources: any = {};
+  organizationResources: any = {};
 
   constructor(
-    private tenantService: TenantService,
+    private organizationService: OrganizationService,
     private extApiProviderService: ExtApiProviderService,
     private route: ActivatedRoute,
     private router: Router
@@ -35,7 +35,7 @@ export class TenantDetailComponent implements OnInit {
       next: params => {
         const id = params.get('id');
         if (id) {
-          this.loadTenant(id);
+          this.loadOrganization(id);
           this.loadApiProviders();
         }
       },
@@ -45,17 +45,17 @@ export class TenantDetailComponent implements OnInit {
     });
   }
 
-  private loadTenant(id: string): void {
+  private loadOrganization(id: string): void {
     this.isLoading = true;
     this.error = null;
 
-    this.tenantService.getTenantById(id).subscribe({
-      next: tenant => {
-        this.tenant = tenant;
+    this.organizationService.getOrganizationById(id).subscribe({
+      next: organization => {
+        this.organization = organization;
         this.isLoading = false;
       },
       error: error => {
-        this.error = 'テナント情報の取得に失敗しました';
+        this.error = '組織情報の取得に失敗しました';
         this.isLoading = false;
         console.error(error);
       }
@@ -77,23 +77,23 @@ export class TenantDetailComponent implements OnInit {
     });
   }
 
-  toggleTenantActive(): void {
-    if (!this.tenant) return;
+  toggleOrganizationActive(): void {
+    if (!this.organization) return;
 
-    const newState = !this.tenant.isActive;
-    this.tenantService.toggleTenantActive(this.tenant.id, newState).subscribe({
-      next: updatedTenant => {
-        this.tenant = updatedTenant;
+    const newState = !this.organization.isActive;
+    this.organizationService.toggleOrganizationActive(this.organization.id, newState).subscribe({
+      next: updatedOrganization => {
+        this.organization = updatedOrganization;
       },
       error: error => {
-        console.error('テナントのステータス変更に失敗しました', error);
+        console.error('組織のステータス変更に失敗しました', error);
       }
     });
   }
 
   navigateToEdit(): void {
-    if (!this.tenant) return;
-    this.router.navigate(['/tenants/edit', this.tenant.id]);
+    if (!this.organization) return;
+    this.router.navigate(['/organizations/edit', this.organization.id]);
   }
 
   navigateToApiProviderEdit(provider: ExtApiProviderEntity): void {
@@ -101,29 +101,29 @@ export class TenantDetailComponent implements OnInit {
   }
 
   navigateToNewApiProvider(): void {
-    if (!this.tenant) return;
-    // テナントIDをクエリパラメータで渡す
+    if (!this.organization) return;
+    // 組織IDをクエリパラメータで渡す
     this.router.navigate(['/api-providers/new'], {
-      queryParams: { tenantKey: this.tenant.id }
+      queryParams: { orgKey: this.organization.id }
     });
   }
 
   goBack(): void {
-    this.router.navigate(['/tenants']);
+    this.router.navigate(['/organizations']);
   }
 
   confirmDelete(): void {
-    if (!this.tenant) return;
+    if (!this.organization) return;
 
-    if (confirm(`テナント "${this.tenant.name}" を削除してもよろしいですか？この操作は元に戻せません。`)) {
-      this.tenantService.deleteTenant(this.tenant.id).subscribe({
+    if (confirm(`組織 "${this.organization.name}" を削除してもよろしいですか？この操作は元に戻せません。`)) {
+      this.organizationService.deleteOrganization(this.organization.id).subscribe({
         next: () => {
-          alert('テナントが削除されました。');
-          this.router.navigate(['/tenants']);
+          alert('組織が削除されました。');
+          this.router.navigate(['/organizations']);
         },
         error: error => {
-          console.error('テナントの削除に失敗しました', error);
-          alert('テナントの削除に失敗しました。');
+          console.error('組織の削除に失敗しました', error);
+          alert('組織の削除に失敗しました。');
         }
       }
       );

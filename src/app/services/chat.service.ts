@@ -749,6 +749,8 @@ export interface CountTokensResponseForView extends CountTokensResponse {
 
 export interface PresetDef {
   label: string;
+  tooltip?: string;
+  badge?: string;
   modelSelection?: string[];
   tool_choice?: 'auto' | 'none' | 'required';
   tool_names?: string[];

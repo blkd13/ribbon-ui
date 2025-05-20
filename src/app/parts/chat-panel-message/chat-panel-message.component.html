@@ -88,7 +88,7 @@
       } @else if(content.type==='error') {
       <div class="text-red-500 overflow-auto">
         <div>ERROR</div>
-        {{content.id}}
+        <!-- {{content.id}} -->
         <markdown katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post"></markdown>
       </div>
       } @else if(content.type==='file') {

@@ -2,6 +2,7 @@
 
 import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions';
 import { BaseEntity } from './project-models';
+import { ScopeInfo } from '../services/model-manager.service';
 
 export enum UserStatus {
     // アクティブ系
@@ -18,7 +19,7 @@ export enum UserStatus {
     Archived = "Archived",            // アーカイブ済み
 }
 
-export enum UserRole {
+export enum UserRoleType {
     Maintainer = 'Maintainer', // メンテナ
     User = 'User', // ユーザー
 
@@ -29,13 +30,19 @@ export enum UserRole {
     Guest = 'Guest', // ゲスト（スレッドの閲覧のみ）
 }
 
+export interface UserRole {
+    scopeInfo: ScopeInfo;
+    role: UserRoleType;
+}
+
 export interface User {
     id: string;
     name: string;
     email: string;
-    role: UserRole;
+    roleList: UserRole[];
     status: UserStatus;
-    tenantKey: string;
+    orgKey: string;
+
     // public profilePictureUrl: string
 }
 export interface TwoFactorAuthDetails {
@@ -164,8 +171,22 @@ export interface ExtApiProviderEntity extends ExtApiProviderTemplateEntity {
     sortSeq: number;
 }
 
-export interface TenantEntity extends BaseEntity {
-    name: string;
+export interface OrganizationSiteConfig {
+    theme?: string;
+    logoUrl?: string;
+    contactEmail?: string;
+    supportUrl?: string;
+    privacyPolicyUrl?: string;
+    termsOfServiceUrl?: string;
+    oauth2RedirectUriList?: string[];
+    pathTop?: string;
+}
+
+export interface OrganizationEntity extends BaseEntity {
+    partentId?: string;
+    key: string;
+    label: string;
     description?: string;
+    siteConfig: OrganizationSiteConfig;
     isActive: boolean;
 }
