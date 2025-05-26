@@ -102,7 +102,13 @@
     </mat-expansion-panel-header>
     <div class="flex flex-col gap-10">
         <fieldset>
-            <legend>システムプロンプト</legend>
+            <legend class="flex items-center gap-2 justify-between w-full">
+                <h4>システムプロンプト</h4>
+                <!-- トグルボタン（上部） -->
+                <button class="toggle-button" (click)="showFullPrompt = !showFullPrompt">
+                    {{ showFullPrompt ? '折りたたむ' : '全て表示' }}
+                </button>
+            </legend>
             <div class="flex flex-col w-full">
                 @for (message of vm.messageGroup.messages; track $index;let mIndex=$index) {
                 <div class="w-full relative overflow-hidden" [ngClass]="{'message-notediting': !message.editing}">
@@ -129,13 +135,22 @@
                             (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}"
                             [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
                     </div>
-                    <div class="custom-scroll" style="display: block;overflow: auto;"
+                    <div class="custom-scroll system-prompt-container" [class.expanded]="showFullPrompt" #textBodyElem>
+                        <markdown [hidden]="message.editing" katex mermaid clipboard
+                            [data]="brackets.pre+content.text+brackets.post">
+                        </markdown>
+                    </div>
+                    <!-- <button class="toggle-button" (click)="showFullPrompt = !showFullPrompt">
+                        {{ showFullPrompt ? '折りたたむ' : '全て表示' }}
+                    </button> -->
+
+                    <!-- <div class="custom-scroll" style="display: block;overflow: auto;"
                         [ngClass]="[vm.messageGroup.role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']"
                         #textBodyElem>
                         <markdown [hidden]="message.editing" katex mermaid clipboard
                             [data]="brackets.pre+content.text+brackets.post">
                         </markdown>
-                    </div>
+                    </div> -->
                     }@else if(content.type==='error'){
                     <div class="text-red-500 overflow-auto">
                         <div>ERROR</div>

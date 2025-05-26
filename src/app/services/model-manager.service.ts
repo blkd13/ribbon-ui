@@ -6,18 +6,18 @@ import { BaseEntity } from '../models/project-models';
 export enum AIProviderType {
   OPENAI = 'openai',
   AZURE_OPENAI = 'azure_openai',
-  // AZURE = 'azure',
-  GROQ = 'groq',
-  MISTRAL = 'mistral',
   ANTHROPIC = 'anthropic',
   DEEPSEEK = 'deepseek',
-  LOCAL = 'local',
   VERTEXAI = 'vertexai',
   ANTHROPIC_VERTEXAI = 'anthropic_vertexai',
   OPENAPI_VERTEXAI = 'openapi_vertexai',
-  CEREBRAS = 'cerebras',
   COHERE = 'cohere',
   GEMINI = 'gemini',
+
+  GROQ = 'groq',
+  MISTRAL = 'mistral',
+  LOCAL = 'local',
+  CEREBRAS = 'cerebras',
 }
 
 export enum ScopeType {
@@ -40,11 +40,20 @@ export interface CredentialMetadata {
   [key: string]: any;
 }
 
+export interface AIProviderTemplateEntity extends BaseEntity {
+  provider: AIProviderType;
+  scopeInfo: ScopeInfo;
+  label: string;
+  metadata?: CredentialMetadata;
+  description?: string;
+  templateDefinition?: TemplateDefinition;
+  isActive: boolean;
+}
+
 export interface AIProviderEntity extends BaseEntity {
   provider: AIProviderType;
   scopeInfo: ScopeInfo;
   label: string;
-  orgKey: string;
   metadata?: CredentialMetadata;
   isActive: boolean;
 }
@@ -67,12 +76,21 @@ export class AIProviderManagerService {
   }));
   readonly http: HttpClient = inject(HttpClient);
 
-  getProviders() {
-    return this.http.get<AIProviderEntity[]>(`/maintainer/ai-providers`).pipe(
+  getProviderTemplates() {
+    return this.http.get<AIProviderTemplateEntity[]>(`/maintainer/ai-provider-templates`).pipe(
       tap(res => {
         res.forEach(provider => {
           provider.createdAt = new Date(provider.createdAt);
           provider.updatedAt = new Date(provider.updatedAt);
+        });
+        res.sort((a, b) => a.label.localeCompare(b.label));
+        res.forEach(provider => {
+          provider.scopeInfo = {
+            scopeType: provider.scopeInfo.scopeType,
+            scopeId: provider.scopeInfo.scopeId || '',
+          };
+          provider.metadata = provider.metadata || {};
+          provider.isActive = provider.isActive ?? true;
         });
       }),
       tap(providers => {
@@ -81,12 +99,42 @@ export class AIProviderManagerService {
     );
   }
 
-  getProvider(provider: AIProviderType) {
+  upsertProviderTemplate(provider: AIProviderTemplateEntity) {
+    this.http.post<AIProviderTemplateEntity>(`/maintainer/ai-provider-template`, provider).subscribe({
+      next: (res) => {
+        res.createdAt = new Date(res.createdAt);
+        res.updatedAt = new Date(res.updatedAt);
+        this.providers.push(res);
+      },
+      error: (err) => {
+        console.error('Error upserting provider:', err);
+      }
+    });
+    return provider;
+  }
+
+  deleteProviderTemplate(id: string) {
+    this.providers = this.providers.filter(provider => provider.id !== id);
+    return true;
+  }
+
+
+
+  getProviders() {
     return this.http.get<AIProviderEntity[]>(`/maintainer/ai-providers`).pipe(
       tap(res => {
         res.forEach(provider => {
           provider.createdAt = new Date(provider.createdAt);
           provider.updatedAt = new Date(provider.updatedAt);
+        });
+        res.sort((a, b) => a.label.localeCompare(b.label));
+        res.forEach(provider => {
+          provider.scopeInfo = {
+            scopeType: provider.scopeInfo.scopeType,
+            scopeId: provider.scopeInfo.scopeId || '',
+          };
+          provider.metadata = provider.metadata || {};
+          provider.isActive = provider.isActive ?? true;
         });
       }),
       tap(providers => {
@@ -96,26 +144,146 @@ export class AIProviderManagerService {
   }
 
   upsertProvider(provider: AIProviderEntity) {
-    const index = this.providers.findIndex(p => p.provider === provider.provider);
-    if (index !== -1) {
-      // Update existing provider
-      this.providers[index] = { ...provider, updatedAt: new Date() };
-    } else {
-      // Add new provider
-      const newProvider = {
-        ...provider,
-        id: provider.id || Date.now().toString(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      this.providers.push(newProvider);
-    }
+    this.http.post<AIProviderEntity>(`/maintainer/ai-provider`, provider).subscribe({
+      next: (res) => {
+        res.createdAt = new Date(res.createdAt);
+        res.updatedAt = new Date(res.updatedAt);
+        this.providers.push(res);
+      },
+      error: (err) => {
+        console.error('Error upserting provider:', err);
+      }
+    });
     return provider;
   }
 
   deleteProvider(id: string) {
     this.providers = this.providers.filter(provider => provider.id !== id);
     return true;
+  }
+}
+
+export interface RequiredField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'json';
+  label: string;
+  description?: string;
+  placeholder?: string;
+  validation?: {
+    required?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+  };
+}
+
+export interface OptionalField extends RequiredField {
+  defaultValue?: any;
+}
+
+export interface TemplateDefinition {
+  authType: 'API_KEY' | 'OAUTH2' | 'SERVICE_ACCOUNT';
+  requiredFields: RequiredField[];
+  optionalFields: OptionalField[];
+  endpointTemplate?: string;
+  documentationUrl?: string;
+}
+
+// export interface AIProviderTemplateEntity {
+//   id: string;
+//   orgKey: string;
+//   provider: string;
+//   label: string;
+//   description?: string;
+//   templateDefinition: TemplateDefinition;
+//   isActive: boolean;
+//   createdAt: Date;
+//   updatedAt: Date;
+//   createdBy: string;
+//   updatedBy: string;
+//   createdIp: string;
+//   updatedIp: string;
+// }
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AIProviderTemplateManagerService {
+  private apiUrl = `/maintainer/ai-provider-template`;
+
+  constructor(private http: HttpClient) { }
+
+  // Get all provider templates
+  getProviderTemplates(filters?: {
+    provider?: string;
+    isActive?: boolean;
+  }): Observable<AIProviderTemplateEntity[]> {
+    let params: any = {};
+    if (filters?.provider) params.provider = filters.provider;
+    if (filters?.isActive !== undefined) params.isActive = filters.isActive;
+
+    return this.http.get<AIProviderTemplateEntity[]>(`${this.apiUrl}s`, { params });
+  }
+
+  // Get single provider template
+  getProviderTemplate(id: string): Observable<AIProviderTemplateEntity> {
+    return this.http.get<AIProviderTemplateEntity>(`${this.apiUrl}/${id}`);
+  }
+
+  // Create or update provider template
+  upsertProviderTemplate(template: Partial<AIProviderTemplateEntity>): Observable<AIProviderTemplateEntity> {
+    if (template.id) {
+      return this.http.put<AIProviderTemplateEntity>(`${this.apiUrl}/${template.id}`, template);
+    } else {
+      return this.http.post<AIProviderTemplateEntity>(this.apiUrl, template);
+    }
+  }
+
+  // Delete provider template
+  deleteProviderTemplate(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  // Validate template definition
+  validateTemplateDefinition(definition: TemplateDefinition): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // Validate required fields
+    if (!definition.requiredFields || definition.requiredFields.length === 0) {
+      errors.push('At least one required field must be defined');
+    } else {
+      definition.requiredFields.forEach((field, index) => {
+        if (!field.name?.trim()) {
+          errors.push(`Required field ${index + 1}: Field name is required`);
+        }
+        if (!field.label?.trim()) {
+          errors.push(`Required field ${index + 1}: Display label is required`);
+        }
+        if (!field.type) {
+          errors.push(`Required field ${index + 1}: Field type is required`);
+        }
+      });
+    }
+
+    // Validate optional fields
+    definition.optionalFields?.forEach((field, index) => {
+      if (field.name && !field.label?.trim()) {
+        errors.push(`Optional field ${index + 1}: Display label is required when field name is specified`);
+      }
+    });
+
+    // Check for duplicate field names
+    const allFields = [...definition.requiredFields, ...(definition.optionalFields || [])];
+    const fieldNames = allFields.map(f => f.name).filter(name => name?.trim());
+    const duplicates = fieldNames.filter((name, index) => fieldNames.indexOf(name) !== index);
+    if (duplicates.length > 0) {
+      errors.push(`Duplicate field names: ${duplicates.join(', ')}`);
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 }
 

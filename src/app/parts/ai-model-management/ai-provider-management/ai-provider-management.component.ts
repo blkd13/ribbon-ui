@@ -49,7 +49,7 @@ export class AIProviderManagementComponent implements OnInit {
 
   // Load all providers
   loadProviders() {
-    this.providerService.getProviders().subscribe(providers => {
+    this.providerService.getProviderTemplates().subscribe(providers => {
       this.providers = providers;
     });
   }
@@ -60,7 +60,6 @@ export class AIProviderManagementComponent implements OnInit {
       id: [''],
       provider: ['', Validators.required],
       label: ['', Validators.required],
-      orgKey: ['', Validators.required],
       isActive: [true],
       scopeInfo: this.fb.group({
         scopeType: ['', Validators.required],
@@ -95,7 +94,6 @@ export class AIProviderManagementComponent implements OnInit {
       id: provider.id,
       provider: provider.provider,
       label: provider.label,
-      orgKey: provider.orgKey,
       isActive: provider.isActive,
       scopeInfo: {
         scopeType: provider.scopeInfo.scopeType,
@@ -128,7 +126,6 @@ export class AIProviderManagementComponent implements OnInit {
         id: formValue.id || Date.now().toString(),
         provider: formValue.provider,
         label: formValue.label,
-        orgKey: formValue.orgKey,
         isActive: formValue.isActive,
         scopeInfo: {
           scopeType: formValue.scopeInfo.scopeType,
@@ -181,7 +178,7 @@ export class AIProviderManagementComponent implements OnInit {
   // Activate tab with validation errors
   activateTabWithErrors() {
     const tabFields = {
-      'basic': ['provider', 'label', 'orgKey', 'isActive'],
+      'basic': ['provider', 'label', 'isActive'],
       'scope': ['scopeInfo.scopeType', 'scopeInfo.scopeId'],
       'metadata': ['metadata']
     };

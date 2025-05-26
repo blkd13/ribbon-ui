@@ -457,7 +457,9 @@
               -->
             </div>
 
-            <div style="min-height: 200px;"></div>
+            <!-- 最後のメッセージグループの後ろに空のdivを入れておく -->
+            @if(indexList.length-1===pIndex){<div style="min-height: 200px;"></div>}
+
             }
 
           </div>

@@ -1,0 +1,322 @@
+<div class="container">
+    <h2>AIプロバイダー テンプレート管理</h2>
+    <div class="layout-container">
+        <!-- 左側：テンプレート一覧 -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>テンプレート一覧</h3>
+                <button mat-raised-button type="button" class="btn btn-sm btn-primary"
+                    (click)="createNew()">新規作成</button>
+            </div>
+            <div class="source-links flex gap-2 p-4">
+                <span>Supported Providers:</span>
+                <a href="https://platform.openai.com/docs" target="_blank"
+                    class="text-blue-500 hover:underline">OpenAI</a>
+                <a href="https://docs.anthropic.com/" target="_blank"
+                    class="text-blue-500 hover:underline">Anthropic</a>
+                <a href="https://cloud.google.com/vertex-ai/docs" target="_blank"
+                    class="text-blue-500 hover:underline">VertexAI</a>
+                <a href="https://ai.google.dev/docs" target="_blank" class="text-blue-500 hover:underline">Gemini</a>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Provider</th>
+                        <th>Label</th>
+                        <th>Auth Type</th>
+                        <th>Fields</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (template of templates; track template.id) {
+                    <tr [class.selected]="form.value.id === template.id" (click)="selectTemplate(template)">
+                        <td>{{ getProviderLabel(template.provider) }}</td>
+                        <td>{{ template.label }}</td>
+                        <td>{{ template.templateDefinition?.authType || 'API_KEY' }}</td>
+                        <td>
+                            <div class="field-count">
+                                Required: {{ template.templateDefinition?.requiredFields?.length || 0 }}
+                                <br>
+                                <span class="text-xs text-[#888]">
+                                    Optional: {{ template.templateDefinition?.optionalFields?.length || 0 }}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <mat-icon class="status-icon">{{ template.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+                        </td>
+                        <td class="actions-cell">
+                            <button mat-icon-button class="mr-5"
+                                (click)="selectTemplate(template); $event.stopPropagation();">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+                            <button mat-icon-button class="mr-5"
+                                (click)="deleteTemplate(template.id); $event.stopPropagation();">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 右側：編集フォーム -->
+        @if(isFormVisible){
+        <div class="form-container">
+            <div class="form-header">
+                <h3>{{ isEditMode ? 'テンプレート編集' : '新規テンプレート' }}</h3>
+                <button mat-icon-button type="button" (click)="closeForm()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </div>
+
+            <form [formGroup]="form" (ngSubmit)="saveTemplate()">
+                <div class="form-tabs">
+                    <div class="tab" [class.active]="activeTab === 'basic'" (click)="setActiveTab('basic')">
+                        Basic Info
+                    </div>
+                    <div class="tab" [class.active]="activeTab === 'fields'" (click)="setActiveTab('fields')">
+                        Field Definition
+                    </div>
+                    <div class="tab" [class.active]="activeTab === 'advanced'" (click)="setActiveTab('advanced')">
+                        Advanced
+                    </div>
+                </div>
+
+                <!-- Basic Info Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'basic'">
+                    <!-- Provider -->
+                    <div class="form-group">
+                        <label for="provider">Provider Type <span class="required">*</span></label>
+                        <select id="provider" formControlName="provider" class="form-control"
+                            [ngClass]="{'invalid': hasError('provider')}">
+                            <option [value]="''">Select a provider</option>
+                            @for (provider of providerOptions; track provider) {
+                            <option [value]="provider">{{ getProviderLabel(provider) }}</option>
+                            }
+                        </select>
+                        @if(hasError('provider')){
+                        <div class="error-message">{{ getErrorMessage('provider') }}</div>
+                        }
+                    </div>
+
+                    <!-- Label -->
+                    <div class="form-group">
+                        <label for="label">Template Label <span class="required">*</span></label>
+                        <input id="label" type="text" formControlName="label" class="form-control"
+                            [ngClass]="{'invalid': hasError('label')}">
+                        @if(hasError('label')){
+                        <div class="error-message">{{ getErrorMessage('label') }}</div>
+                        }
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" formControlName="description" class="form-control"
+                            rows="3"></textarea>
+                    </div>
+
+                    <!-- Auth Type -->
+                    <div formGroupName="templateDefinition">
+                        <div class="form-group">
+                            <label for="authType">Authentication Type <span class="required">*</span></label>
+                            <select id="authType" formControlName="authType" class="form-control">
+                                @for (authType of authTypeOptions; track authType.value) {
+                                <option [value]="authType.value">{{ authType.label }}</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Is Active -->
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" formControlName="isActive">
+                            Active
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Field Definition Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'fields'">
+                    <div formGroupName="templateDefinition">
+                        <!-- Required Fields -->
+                        <div class="field-section">
+                            <div class="section-header">
+                                <h4>Required Fields</h4>
+                                <button type="button" class="btn btn-sm btn-secondary" (click)="addRequiredField()">
+                                    <mat-icon>add</mat-icon> Add Field
+                                </button>
+                            </div>
+
+                            @for (field of requiredFields; track $index; let i = $index) {
+                            <div class="field-editor">
+                                <div class="field-header">
+                                    <h5>Required Field {{ i + 1 }}</h5>
+                                    <button type="button" class="btn btn-sm" style="background: #f44336; color: white;"
+                                        (click)="removeRequiredField(i)">
+                                        <mat-icon>delete</mat-icon>
+                                    </button>
+                                </div>
+
+                                <div class="field-form-grid">
+                                    <div class="form-group">
+                                        <label>Field Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" [value]="field.name"
+                                            (input)="updateRequiredField(i, 'name', $any($event.target).value)"
+                                            placeholder="e.g., apiKey">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Field Type <span class="required">*</span></label>
+                                        <select class="form-control" [value]="field.type"
+                                            (change)="updateRequiredField(i, 'type', $any($event.target).value)">
+                                            @for (type of fieldTypeOptions; track type.value) {
+                                            <option [value]="type.value">{{ type.label }}</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Display Label <span class="required">*</span></label>
+                                        <input type="text" class="form-control" [value]="field.label"
+                                            (input)="updateRequiredField(i, 'label', $any($event.target).value)"
+                                            placeholder="e.g., API Key">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Placeholder</label>
+                                        <input type="text" class="form-control" [value]="field.placeholder"
+                                            (input)="updateRequiredField(i, 'placeholder', $any($event.target).value)"
+                                            placeholder="e.g., sk-...">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label>Description</label>
+                                        <textarea class="form-control" [value]="field.description"
+                                            (input)="updateRequiredField(i, 'description', $any($event.target).value)"
+                                            rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            }
+
+                            @if (requiredFields.length === 0) {
+                            <div class="empty-state">
+                                <p>No required fields defined. Click "Add Field" to create one.</p>
+                            </div>
+                            }
+                        </div>
+
+                        <!-- Optional Fields -->
+                        <div class="field-section">
+                            <div class="section-header">
+                                <h4>Optional Fields</h4>
+                                <button type="button" class="btn btn-sm btn-secondary" (click)="addOptionalField()">
+                                    <mat-icon>add</mat-icon> Add Field
+                                </button>
+                            </div>
+
+                            @for (field of optionalFields; track $index; let i = $index) {
+                            <div class="field-editor">
+                                <div class="field-header">
+                                    <h5>Optional Field {{ i + 1 }}</h5>
+                                    <button type="button" class="btn btn-sm" style="background: #f44336; color: white;"
+                                        (click)="removeOptionalField(i)">
+                                        <mat-icon>delete</mat-icon>
+                                    </button>
+                                </div>
+
+                                <div class="field-form-grid">
+                                    <div class="form-group">
+                                        <label>Field Name</label>
+                                        <input type="text" class="form-control" [value]="field.name"
+                                            (input)="updateOptionalField(i, 'name', $any($event.target).value)"
+                                            placeholder="e.g., organizationId">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Field Type</label>
+                                        <select class="form-control" [value]="field.type"
+                                            (change)="updateOptionalField(i, 'type', $any($event.target).value)">
+                                            @for (type of fieldTypeOptions; track type.value) {
+                                            <option [value]="type.value">{{ type.label }}</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Display Label</label>
+                                        <input type="text" class="form-control" [value]="field.label"
+                                            (input)="updateOptionalField(i, 'label', $any($event.target).value)"
+                                            placeholder="e.g., Organization ID">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Default Value</label>
+                                        <input type="text" class="form-control" [value]="field.defaultValue"
+                                            (input)="updateOptionalField(i, 'defaultValue', $any($event.target).value)">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label>Description</label>
+                                        <textarea class="form-control" [value]="field.description"
+                                            (input)="updateOptionalField(i, 'description', $any($event.target).value)"
+                                            rows="2"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            }
+
+                            @if (optionalFields.length === 0) {
+                            <div class="empty-state">
+                                <p>No optional fields defined.</p>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'advanced'">
+                    <div formGroupName="templateDefinition">
+                        <!-- Endpoint Template -->
+                        <div class="form-group">
+                            <label for="endpointTemplate">API Endpoint Template</label>
+                            <input id="endpointTemplate" type="text" formControlName="endpointTemplate"
+                                class="form-control" placeholder="https://api.example.com/v1">
+                            <div class="field-help">
+                                Base URL for API requests. Leave empty if not applicable.
+                            </div>
+                        </div>
+
+                        <!-- Documentation URL -->
+                        <div class="form-group">
+                            <label for="documentationUrl">Documentation URL</label>
+                            <input id="documentationUrl" type="url" formControlName="documentationUrl"
+                                class="form-control" placeholder="https://docs.example.com">
+                            <div class="field-help">
+                                Link to provider's API documentation.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary" mat-raised-button>
+                        {{ isEditMode ? 'Update Template' : 'Create Template' }}
+                    </button>
+                    <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+        }
+    </div>
+</div>

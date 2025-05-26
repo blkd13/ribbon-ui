@@ -97,12 +97,16 @@
                             <mat-icon class="status-icon">{{ model.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
                         </td>
                         <td class="actions-cell">
-                            <button mat-icon-button class="mr-5"
-                                (click)="selectModel(model); $event.stopPropagation();">
+                            <button mat-icon-button class="mr-5" (click)="selectModel(model); $event.stopPropagation();"
+                                matTooltip="Edit">
                                 <mat-icon>edit</mat-icon>
                             </button>
+                            <button mat-icon-button class="mr-5" (click)="duplicateModel(model, $event);"
+                                matTooltip="Duplicate">
+                                <mat-icon>content_copy</mat-icon>
+                            </button>
                             <button mat-icon-button class="mr-5"
-                                (click)="deleteModel(model.id); $event.stopPropagation();">
+                                (click)="deleteModel(model.id); $event.stopPropagation();" matTooltip="Delete">
                                 <mat-icon>delete</mat-icon>
                             </button>
                         </td>
@@ -116,7 +120,7 @@
         @if(isFormVisible){
         <div class="form-container">
             <div class="form-header">
-                <h3>{{ isEditMode ? 'Edit Model' : 'New Model' }}</h3>
+                <h3>{{ getFormTitle() }}</h3>
                 <button mat-icon-button type="button" (click)="closeForm()">
                     <mat-icon>close</mat-icon>
                 </button>

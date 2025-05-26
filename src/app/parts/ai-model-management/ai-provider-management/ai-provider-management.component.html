@@ -26,7 +26,6 @@
                         <th>Provider</th>
                         <th>Label</th>
                         <th>Scope</th>
-                        <th>Organization Key</th>
                         <th>Active</th>
                         <th>Actions</th>
                     </tr>
@@ -40,7 +39,6 @@
                             {{ provider.scopeInfo.scopeType }}
                             <div class="text-xs text-[#888] align-right">{{ provider.scopeInfo.scopeId }}</div>
                         </td>
-                        <td>{{ provider.orgKey }}</td>
                         <td>
                             <mat-icon class="status-icon">{{ provider.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
                         </td>
@@ -103,16 +101,6 @@
                             [ngClass]="{'invalid': hasError('label')}">
                         @if(hasError('label')){
                         <div class="error-message">{{ getErrorMessage('label') }}</div>
-                        }
-                    </div>
-
-                    <!-- Organization Key -->
-                    <div class="form-group">
-                        <label for="orgKey">Organization Key <span class="required">*</span></label>
-                        <input id="orgKey" type="text" formControlName="orgKey" class="form-control"
-                            [ngClass]="{'invalid': hasError('orgKey')}">
-                        @if(hasError('orgKey')){
-                        <div class="error-message">{{ getErrorMessage('orgKey') }}</div>
                         }
                     </div>
 

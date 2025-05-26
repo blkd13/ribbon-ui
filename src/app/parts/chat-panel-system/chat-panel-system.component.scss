@@ -136,3 +136,53 @@
     margin: 0;
     border-radius: 4px;
 }
+
+.system-prompt-container {
+    max-height: 200px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease;
+    position: relative;
+
+    &.expanded {
+        max-height: none;
+    }
+}
+
+.toggle-button {
+    margin-bottom: 0.5rem;
+    background: transparent;
+    border: none;
+    color: var(--link-color);
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.9rem;
+    padding: 0;
+
+    &:hover {
+        text-decoration: none;
+    }
+}
+
+.system-prompt-container {
+    max-height: 200px;
+    overflow-y: auto;
+    position: relative;
+
+    &.expanded {
+        max-height: none;
+    }
+
+    .toggle-button {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 4px 8px;
+        border-top: 1px solid #ddd;
+        width: 100%;
+        text-align: left;
+        font-size: 0.9rem;
+        color: var(--link-color);
+        cursor: pointer;
+        z-index: 10;
+    }
+}

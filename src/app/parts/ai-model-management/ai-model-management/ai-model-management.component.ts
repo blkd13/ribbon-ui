@@ -15,6 +15,7 @@ import { TrimTrailingZerosPipe } from '../../../pipe/trim-trailing-zeros.pipe';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatAutocompleteActivatedEvent, MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface ModelPricingMap {
   [modelId: string]: ModelPricing[];
@@ -31,6 +32,7 @@ interface ModelPricingMap {
     MatSnackBarModule,
     MatFormFieldModule,
     MatChipsModule,
+    MatTooltipModule,
     JsonEditorComponent,
     TrimTrailingZerosPipe,
   ],
@@ -54,6 +56,7 @@ export class AIModelManagementComponent implements OnInit {
   // 表示状態管理
   isFormVisible = false;
   isEditMode = false;
+  isDuplicateMode = false; // 複製モードフラグを追加
   activeTab = 'basic'; // basic, capabilities, pricing, advanced
 
   // 価格情報管理
@@ -66,9 +69,12 @@ export class AIModelManagementComponent implements OnInit {
   statusOptions = Object.values(AIModelStatus);
   modalityOptions = Object.values(Modality);
 
+  // 価格情報の選択モード管理
+  pricingSelectionMode: 'new' | 'edit' = 'new';
+  selectedPricingId: string | undefined = undefined;
+
   constructor() {
     this.loadData();
-    this.announcer.announce(`hello`, 'assertive');
   }
 
   ngOnInit() {
@@ -159,11 +165,54 @@ export class AIModelManagementComponent implements OnInit {
         validFrom: [today, Validators.required]
       })
     });
+  }
 
-    // // JSONフィールドにカスタムバリデータを設定
-    // this.form.get('defaultParameters')?.setValidators([jsonValidator]);
-    // this.form.get('capabilities')?.setValidators([jsonValidator]);
-    // this.form.get('metadata')?.setValidators([jsonValidator]);
+  // 完全なフォームリセット
+  resetForm() {
+    this.form.reset({
+      id: '',
+      provider: '',
+      providerModelId: '',
+      name: '',
+      aliases: [],
+      shortName: '',
+      throttleKey: '',
+      status: AIModelStatus.ACTIVE,
+      description: '',
+      modalities: [Modality.TEXT],
+      maxContextTokens: 0,
+      maxOutputTokens: 0,
+      inputFormats: [Modality.TEXT],
+      outputFormats: [Modality.TEXT],
+      defaultParameters: {},
+      capabilities: {},
+      metadata: {},
+      endpointTemplate: '',
+      documentationUrl: '',
+      licenseType: '',
+      knowledgeCutoff: '',
+      releaseDate: '',
+      deprecationDate: '',
+      tags: [],
+      uiOrder: 0,
+      isStream: true,
+      isActive: true,
+      pricing: {
+        id: '',
+        modelId: '',
+        inputPricePerUnit: 0.00,
+        outputPricePerUnit: 0.00,
+        unit: 'USD/1Mtokens',
+        validFrom: this.formatDateForInput(new Date())
+      }
+    });
+
+    // 価格情報関連の状態をリセット
+    this.currentPricing = null;
+    this.pricingHistory = [];
+    this.hasExistingPricing = false;
+    this.pricingSelectionMode = 'new';
+    this.selectedPricingId = undefined;
   }
 
   // タブの切り替え
@@ -172,48 +221,112 @@ export class AIModelManagementComponent implements OnInit {
   }
 
   // 新規作成モードを開始
-  // createNew メソッドを修正
   createNew() {
     this.isEditMode = false;
-    // this.form.reset();
-    this.initForm();
-    this.form.patchValue({ isActive: true }); // デフォルトでアクティブに設定
+    this.isDuplicateMode = false;
 
-    // 価格情報をリセット
+    // フォームを完全にリセット
+    this.resetForm();
+
+    this.isFormVisible = true;
+    this.setActiveTab('basic'); // 初期タブを設定
+  }
+
+  // 既存モデルを複製して新規作成
+  duplicateModel(model: AIModelEntityForView, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    this.isEditMode = false;
+    this.isDuplicateMode = true;
+    this.isFormVisible = true;
+    this.setActiveTab('basic');
+
+    // モデルデータをコピー（IDはクリア）
+    const knowledgeCutoff = model.knowledgeCutoff ? this.formatDateForInput(model.knowledgeCutoff) : '';
+    const releaseDate = model.releaseDate ? this.formatDateForInput(model.releaseDate) : '';
+    const deprecationDate = model.deprecationDate ? this.formatDateForInput(model.deprecationDate) : '';
+
+    this.form.patchValue({
+      id: '', // IDはクリア
+      provider: model.provider,
+      providerModelId: model.providerModelId + '_copy', // 識別のため_copyを付加
+      name: model.name + ' (Copy)',
+      aliases: [...(model.aliases || [])],
+      shortName: model.shortName,
+      throttleKey: model.throttleKey,
+      status: model.status,
+      description: model.description || '',
+      modalities: [...(model.modalities || [])],
+      maxContextTokens: model.maxContextTokens,
+      maxOutputTokens: model.maxOutputTokens,
+      inputFormats: [...(model.inputFormats || [])],
+      outputFormats: [...(model.outputFormats || [])],
+      defaultParameters: { ...(model.defaultParameters || {}) },
+      capabilities: { ...(model.capabilities || {}) },
+      metadata: { ...(model.metadata || {}) },
+      endpointTemplate: model.endpointTemplate || '',
+      documentationUrl: model.documentationUrl || '',
+      licenseType: model.licenseType || '',
+      knowledgeCutoff: knowledgeCutoff,
+      releaseDate: releaseDate,
+      deprecationDate: deprecationDate,
+      tags: [...(model.tags || [])],
+      uiOrder: model.uiOrder || 0,
+      isStream: model.isStream || false,
+      isActive: true, // 新規作成時はアクティブに
+    });
+
+    // 価格情報は最新のものをコピー（新規作成扱い）
+    if (model.pricingHistory && model.pricingHistory.length > 0) {
+      const latestPricing = model.pricingHistory[0];
+      this.form.get('pricing')?.patchValue({
+        id: '', // IDはクリア
+        modelId: '', // モデルIDもクリア
+        inputPricePerUnit: latestPricing.inputPricePerUnit,
+        outputPricePerUnit: latestPricing.outputPricePerUnit,
+        unit: latestPricing.unit,
+        validFrom: this.formatDateForInput(new Date()) // 今日の日付
+      });
+    }
+
+    // 価格情報の状態を新規作成モードに
     this.currentPricing = null;
     this.pricingHistory = [];
     this.hasExistingPricing = false;
     this.pricingSelectionMode = 'new';
     this.selectedPricingId = undefined;
 
-    this.isFormVisible = true;
-    // this.setActiveTab('basic'); // 初期タブを設定
+    // チェックボックスの状態を更新
+    this.updateCheckboxes();
   }
 
-  // 既存モデルの選択
+  // 既存モデルの選択（編集モード）
   selectModel(model: AIModelEntityForView) {
     this.isEditMode = true;
+    this.isDuplicateMode = false;
     this.isFormVisible = true;
-    // this.setActiveTab('basic'); // 初期タブを設定
+    this.setActiveTab('basic'); // 初期タブを設定
 
     // モデルの価格情報を取得
-    this.hasExistingPricing = model.pricingHistory.length > 0;
+    this.hasExistingPricing = model.pricingHistory && model.pricingHistory.length > 0;
     if (this.hasExistingPricing) {
       // 最新の価格情報を取得
       const latestPricing = model.pricingHistory[0];
       this.currentPricing = latestPricing;
       this.selectedPricingId = latestPricing.id;
-      this.pricingHistory = model.pricingHistory;
+      this.pricingHistory = [...model.pricingHistory];
       this.pricingHistory.sort((a, b) => new Date(b.validFrom).getTime() - new Date(a.validFrom).getTime());
-      this.setPricingSelectionMode('edit');
+
+      // 最新の価格情報をフォームに設定
+      this.selectExistingPricing(latestPricing);
     } else {
       this.currentPricing = null;
       this.selectedPricingId = undefined;
       this.pricingHistory = [];
       this.setPricingSelectionMode('new');
     }
-
-    // フォームをリセットや再初期化せず、既存のフォームコントロールを維持したまま値を更新
 
     // 日付のフォーマット
     const knowledgeCutoff = model.knowledgeCutoff ? this.formatDateForInput(model.knowledgeCutoff) : '';
@@ -255,9 +368,10 @@ export class AIModelManagementComponent implements OnInit {
     this.updateCheckboxes();
   }
 
-  // register メソッドを修正
+  // 登録/更新処理
   register() {
     if (this.form.invalid) {
+      // バリデーションエラーの詳細をログ出力
       Object.keys(this.form.controls).forEach(key => {
         const controlErrors = this.form.get(key)?.errors;
         if (controlErrors) {
@@ -266,6 +380,16 @@ export class AIModelManagementComponent implements OnInit {
         }
       });
 
+      // 価格情報のバリデーションエラーもチェック
+      const pricingGroup = this.form.get('pricing') as FormGroup;
+      if (pricingGroup) {
+        Object.keys(pricingGroup.controls).forEach(key => {
+          const controlErrors = pricingGroup.get(key)?.errors;
+          if (controlErrors) {
+            console.log('価格情報のエラー:', key, controlErrors);
+          }
+        });
+      }
 
       // バリデーションエラーのあるタブをアクティブにする
       this.activateTabWithErrors();
@@ -273,11 +397,7 @@ export class AIModelManagementComponent implements OnInit {
       // Mark all fields as touched to show validation errors
       this.markFormGroupTouched(this.form);
 
-      // フォームのエラーメッセージを表示
-      this.announcer.announce('Please fix the validation errors', 'assertive');
-      // エラー内容を表示
-      console.error('Form validation errors:', this.form.errors);
-      // スナックバーでエラーメッセージを表示
+      // エラーメッセージを表示
       this.snackBar.open('Please fix the validation errors', 'Close', {
         duration: 3000,
         panelClass: 'error-snackbar'
@@ -297,7 +417,7 @@ export class AIModelManagementComponent implements OnInit {
       // モデルデータの構築
       const modelData: AIModelEntity & { aliases: string[] } = {
         ...genInitialBaseEntity(),
-        id: formValue.id,
+        id: this.isEditMode ? formValue.id : undefined, // 新規作成時はIDを設定しない
         provider: formValue.provider,
         providerModelId: formValue.providerModelId,
         name: formValue.name,
@@ -329,84 +449,56 @@ export class AIModelManagementComponent implements OnInit {
       // 価格情報の構築
       const pricingData: Partial<ModelPricing> = {
         id: this.pricingSelectionMode === 'new' ? undefined : formValue.pricing?.id,
-        modelId: formValue.id, // モデルIDを設定
-        inputPricePerUnit: formValue.pricing?.inputPricePerUnit,
-        outputPricePerUnit: formValue.pricing?.outputPricePerUnit,
-        unit: formValue.pricing?.unit,
+        modelId: formValue.id, // 一時的にフォームのIDを設定（後で更新される）
+        inputPricePerUnit: formValue.pricing?.inputPricePerUnit || 0,
+        outputPricePerUnit: formValue.pricing?.outputPricePerUnit || 0,
+        unit: formValue.pricing?.unit || 'USD/1Mtokens',
         validFrom: formValue.pricing?.validFrom ? new Date(formValue.pricing.validFrom) : new Date(),
       };
 
-      if (this.isEditMode) {
-        // モデル更新処理
-        this.aiModelService.upsertAIModel(modelData).pipe(
-          switchMap(updatedModel => {
-            // モデルの更新が成功したら、価格情報も更新または作成
-            if (updatedModel) {
-              // 価格情報に最新のモデルIDを設定
-              pricingData.modelId = updatedModel.id;
+      const operationType = this.isEditMode ? 'update' : 'create';
 
-              // pricingSelectionModeに基づいて処理を分岐
-              if (this.pricingSelectionMode === 'new') {
-                // 新規価格情報の作成
-                return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
-              } else {
-                // 既存価格情報の更新（変更があれば）
-                if (this.isPricingChanged(pricingData)) {
-                  return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
-                } else {
-                  // 変更がなければ何もしない
-                  return of(null);
-                }
-              }
-            } else {
-              return of(null);
-            }
-          })
-        ).subscribe({
-          next: () => {
-            this.snackBar.open('Model and pricing updated successfully', 'Close', {
-              duration: 3000
-            });
-            this.loadData();
-            this.closeForm();
-          },
-          error: (error) => {
-            console.error('Error updating model or pricing:', error);
-            this.snackBar.open('Error updating data', 'Close', {
-              duration: 3000,
-              panelClass: 'error-snackbar'
-            });
-          }
-        });
-      } else {
-        // 新規登録処理
-        this.aiModelService.upsertAIModel(modelData).pipe(
-          switchMap(newModel => {
-            if (newModel) {
-              // 新しいモデルIDを価格情報に設定
-              pricingData.modelId = newModel.id;
+      // モデルの作成または更新
+      this.aiModelService.upsertAIModel(modelData).pipe(
+        switchMap(savedModel => {
+          if (savedModel) {
+            // 保存されたモデルIDを価格情報に設定
+            pricingData.modelId = savedModel.id;
+
+            // 価格情報の処理
+            if (this.pricingSelectionMode === 'new' || !this.isEditMode) {
+              // 新規価格情報の作成
+              return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
+            } else if (this.pricingSelectionMode === 'edit' && this.isPricingChanged(pricingData)) {
+              // 既存価格情報の更新（変更がある場合のみ）
               return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
             } else {
+              // 変更がなければ何もしない
               return of(null);
             }
-          })
-        ).subscribe({
-          next: () => {
-            this.snackBar.open('Model and pricing created successfully', 'Close', {
-              duration: 3000
-            });
-            this.loadData();
-            this.closeForm();
-          },
-          error: (error) => {
-            console.error('Error creating model or pricing:', error);
-            this.snackBar.open('Error creating data', 'Close', {
-              duration: 3000,
-              panelClass: 'error-snackbar'
-            });
+          } else {
+            return of(null);
           }
-        });
-      }
+        })
+      ).subscribe({
+        next: () => {
+          const message = operationType === 'create'
+            ? 'Model and pricing created successfully'
+            : 'Model and pricing updated successfully';
+          this.snackBar.open(message, 'Close', {
+            duration: 3000
+          });
+          this.loadData();
+          this.closeForm();
+        },
+        error: (error) => {
+          console.error(`Error ${operationType}ing model or pricing:`, error);
+          this.snackBar.open(`Error ${operationType}ing data`, 'Close', {
+            duration: 3000,
+            panelClass: 'error-snackbar'
+          });
+        }
+      });
     } catch (error) {
       console.error('Error processing form data:', error);
       this.snackBar.open('Error processing form data', 'Close', {
@@ -417,7 +509,6 @@ export class AIModelManagementComponent implements OnInit {
   }
 
   // 価格情報が変更されたかチェック
-  // isPricingChanged メソッドを修正
   isPricingChanged(newPricing: Partial<ModelPricing>): boolean {
     // 編集中の価格情報IDに基づいて該当する価格情報を取得
     const selectedPricing = this.pricingHistory.find(p => p.id === this.selectedPricingId);
@@ -465,15 +556,11 @@ export class AIModelManagementComponent implements OnInit {
   }
 
   // フォームを閉じる
-  // closeForm メソッドを修正
   closeForm() {
     this.isFormVisible = false;
-    this.form.reset();
-    this.currentPricing = null;
-    this.pricingHistory = [];
-    this.hasExistingPricing = false;
-    this.pricingSelectionMode = 'new';
-    this.selectedPricingId = undefined;
+    this.isEditMode = false;
+    this.isDuplicateMode = false;
+    this.resetForm();
   }
 
   // チェックボックスの変更処理（汎用）
@@ -507,6 +594,7 @@ export class AIModelManagementComponent implements OnInit {
       this.updateCheckboxField('outputFormats');
     });
   }
+
   isChecked(fieldName: string, value: string): boolean {
     const values = this.form.get(fieldName)?.value as string[] || [];
     return values.includes(value);
@@ -653,13 +741,7 @@ export class AIModelManagementComponent implements OnInit {
     return !!control?.invalid && !!control?.touched;
   }
 
-  // Add these new properties to the BaseModelComponent class
-
-  // 価格情報の選択モード管理
-  pricingSelectionMode: 'new' | 'edit' = 'new';
-  selectedPricingId: string | undefined = undefined;
-
-  // このメソッドを追加：新規作成モードに設定
+  // 新規作成モードに設定
   setPricingSelectionMode(mode: 'new' | 'edit') {
     this.pricingSelectionMode = mode;
 
@@ -697,7 +779,7 @@ export class AIModelManagementComponent implements OnInit {
     }
   }
 
-  // このメソッドを追加：既存の価格情報を選択
+  // 既存の価格情報を選択
   selectExistingPricing(pricing: ModelPricing) {
     this.pricingSelectionMode = 'edit';
     this.selectedPricingId = pricing.id;
@@ -716,10 +798,21 @@ export class AIModelManagementComponent implements OnInit {
     }
   }
 
-  // このメソッドを追加：現在適用中の価格情報かどうかを判定
+  // 現在適用中の価格情報かどうかを判定
   isCurrentPricing(pricing: ModelPricing): boolean {
     if (!this.currentPricing) return false;
     return pricing.id === this.currentPricing.id;
+  }
+
+  // フォームのタイトルを取得
+  getFormTitle(): string {
+    if (this.isDuplicateMode) {
+      return 'Duplicate Model';
+    } else if (this.isEditMode) {
+      return 'Edit Model';
+    } else {
+      return 'New Model';
+    }
   }
 
   autocompleteSelect(keyword: string, event: MatAutocompleteActivatedEvent): void {
@@ -729,6 +822,7 @@ export class AIModelManagementComponent implements OnInit {
       this.form.get(keyword)?.setValue([...currentValues, value]);
     }
   }
+
   removeReactiveKeyword(keyword: string, value: string) {
     this.form.get(keyword)?.setValue(
       this.form.get(keyword)?.value.filter((k: string) => k !== value)

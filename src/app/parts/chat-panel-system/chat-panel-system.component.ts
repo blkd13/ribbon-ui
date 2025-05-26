@@ -45,6 +45,7 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
 
+  showFullPrompt: boolean = false;
   modelIdMas: { [modelId: string]: LlmModel } = {};
   modelGroupMas: { [modelId: string]: LlmModel[] } = {};
   modelGroupIdList: string[] = [];

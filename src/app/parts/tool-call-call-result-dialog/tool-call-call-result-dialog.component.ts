@@ -53,7 +53,7 @@ export class ToolCallCallResultDialogComponent {
               } else { }
 
               // web_searchの結果を表示するために、JSONをパースしてDTOに変換
-              if (this.toolCallSetList[this.index].info.name === 'web_search') {
+              if (['web_search', 'web_search_and_get_summary'].includes(this.toolCallSetList[this.index].info.name)) {
                 this.buildWebSearchDto(result.content);
               } else if (this.toolCallSetList[this.index].info.name === 'get_web_page_contents') {
                 this.buildWebContentDto(result.content);
