@@ -101,14 +101,14 @@
         </div>
     </mat-expansion-panel-header>
     <div class="flex flex-col gap-10">
-        <fieldset>
-            <legend class="flex items-center gap-2 justify-between w-full">
+        <section>
+            <div class="flex items-center gap-2 justify-between w-full">
                 <h4>システムプロンプト</h4>
                 <!-- トグルボタン（上部） -->
                 <button class="toggle-button" (click)="showFullPrompt = !showFullPrompt">
                     {{ showFullPrompt ? '折りたたむ' : '全て表示' }}
                 </button>
-            </legend>
+            </div>
             <div class="flex flex-col w-full">
                 @for (message of vm.messageGroup.messages; track $index;let mIndex=$index) {
                 <div class="w-full relative overflow-hidden" [ngClass]="{'message-notediting': !message.editing}">
@@ -171,7 +171,7 @@
                 </div>
                 }
             </div>
-        </fieldset>
+        </section>
         <fieldset>
             <legend>ツール使用設定</legend>
             <mat-radio-group [(ngModel)]="vm.thread.inDto.args.tool_choice" (change)="threadChange()">

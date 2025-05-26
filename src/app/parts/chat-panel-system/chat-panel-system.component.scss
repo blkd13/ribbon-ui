@@ -137,17 +137,6 @@
     border-radius: 4px;
 }
 
-.system-prompt-container {
-    max-height: 200px;
-    overflow-y: auto;
-    transition: max-height 0.3s ease;
-    position: relative;
-
-    &.expanded {
-        max-height: none;
-    }
-}
-
 .toggle-button {
     margin-bottom: 0.5rem;
     background: transparent;
@@ -165,8 +154,9 @@
 
 .system-prompt-container {
     max-height: 200px;
-    overflow-y: auto;
+    overflow: auto;
     position: relative;
+    transition: max-height 0.3s ease;
 
     &.expanded {
         max-height: none;

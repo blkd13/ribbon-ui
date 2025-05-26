@@ -196,60 +196,31 @@ export class ChatComponent implements OnInit {
   }
 
   openModelSetting() {
-    // const settings = {
-    //   model: this.selectedModel,
-    //   temperature: this.temperature,
-    //   maxTokens: this.maxTokens,
-    //   topP: this.topP,
-    //   frequencyPenalty: this.frequencyPenalty,
-    //   presencePenalty: this.presencePenalty
-    // };
-    // console.log('モデル設定:', settings);
     // ここで、モデルを起動する処理を実行（APIコールなど）
     this.dialog.open(ParameterSettingDialogComponent, {
       data: {
         threadGroup: this.selectedThreadGroup,
       },
     }).afterClosed().pipe(
-      switchMap((result: { threadGroup: ThreadGroupForView, savedFlag: boolean }) => {
-        if (result) {
-          if (result.savedFlag) {
-            // デフォルトスレッドグループが更新された場合は反映する。主流と分離してもよい。
-            this.loadDefaultThreadGroup().subscribe();
-          } else { }
-          // switchMap(() => safeForkJoin(
-          //   this.selectedThreadGroup.threadList
-          //     // 既存スレッドの場合は何もしないので除外する
-          //     .filter(thread => !this.messageService.messageGroupList.find(messageGroup => messageGroup.threadId === thread.id))
-          //     // 新規スレッドの場合は元スレッドをコピー
-          //     .map(thread => this.messageService.cloneThreadDry(this.selectedThreadGroup.threadList[0], thread.id))
-          // )),
-          this.modelCheck();
-          return safeForkJoin(
-            result.threadGroup.threadList
-              // 既存スレッドの場合は何もしないので除外する
-              .filter((thread, index) => index >= result.threadGroup.threadList.length)
-              // 新規スレッドの場合は元スレッドをコピー
-              .map(thread => this.messageService.cloneThreadDry(this.selectedThreadGroup.threadList[0], thread.id))
-          ).pipe(map(() => result));
-        } else {
-          // キャンセルされた場合
-          return EMPTY;
-        }
+      // saveFlagがtrueのときのみ、スレッドグループを更新する
+      filter((result: { threadGroup: ThreadGroupForView, savedFlag: boolean }) => !!result && result.savedFlag),
+      // デフォルトスレッドグループが更新された場合は反映する。
+      switchMap(result => this.loadDefaultThreadGroup(true).pipe(map(() => result))),
+      // 新規スレッドがある場合は、元スレッドをコピーする
+      switchMap(result => {
+        return safeForkJoin(
+          result.threadGroup.threadList
+            // 既存スレッドの場合は何もしないので除外する
+            .filter((thread, index) => index >= result.threadGroup.threadList.length)
+            // 新規スレッドの場合は元スレッドをコピー
+            .map(thread => this.messageService.cloneThreadDry(this.selectedThreadGroup.threadList[0], thread.id))
+        ).pipe(map(() => result));
       }),
+      // tap(result => this.selectedThreadGroup = result.threadGroup),
       tap(result => {
-        if (result) {
-          this.selectedThreadGroup = result.threadGroup;
-        } else { }
-      }),
-      switchMap((result: { threadGroup: ThreadGroup, savedFlag: boolean }) => {
-        return result ? this.loadThreadGroupAsDefault(result.threadGroup) : EMPTY;
-      }),
-      tap(result => {
-        if (result) {
-          this.rebuildThreadGroup();
-          this.onChange();
-        } else { }
+        this.modelCheck();
+        this.rebuildThreadGroup();
+        this.onChange();
       }),
     ).subscribe();
   }
@@ -495,9 +466,10 @@ export class ChatComponent implements OnInit {
         this.messageService.cloneThreadDry(baseThread),
         this.messageService.cloneThreadDry(baseThread),
         this.messageService.cloneThreadDry(baseThread),
+        this.messageService.cloneThreadDry(baseThread),
       ]).subscribe({
         next: next => {
-          (['gpt-4o', 'claude-3-7-sonnet-20250219', 'gemini-2.0-flash-exp'] as GPTModels[]).forEach((model, index) => {
+          (['gpt-4.1', 'claude-sonnet-4-20250514', 'gemini-2.5-flash-thinking-preview-05-20'] as GPTModels[]).forEach((model, index) => {
             next[index].inDto.args.model = model;
           });
           this.presetThreadList = next;
@@ -711,10 +683,14 @@ export class ChatComponent implements OnInit {
   }
 
   defaultSystemPromptList: string[] = [];
-  loadDefaultThreadGroup(): Observable<string[]> {
+  /**
+   * デフォルトスレッドグループを取得するところ
+   * @returns 
+   */
+  loadDefaultThreadGroup(isForce: boolean = false): Observable<string[]> {
     return of(0).pipe(
       switchMap(() => {
-        return (this.selectedProject && this.defaultProject.id === this.selectedProject.id
+        return (isForce || this.selectedProject && this.defaultProject.id === this.selectedProject.id
           ? of(this.threadGroupListAll)
           : this.threadService.getThreadGroupList(this.defaultProject.id)
         )
@@ -722,7 +698,7 @@ export class ChatComponent implements OnInit {
       switchMap(threadGroupList => {
         const deafultThreadGroup = threadGroupList.filter(threadGroup => threadGroup.type === ThreadGroupType.Default);
         if (deafultThreadGroup && deafultThreadGroup.length > 0) {
-          return this.loadThreadGroupAsDefault(deafultThreadGroup[0]);
+          return this.setDefaultSystemPromptMap(deafultThreadGroup[0]);
         } else {
           return of([this.chatService.defaultSystemPrompt]);
         }
@@ -734,12 +710,18 @@ export class ChatComponent implements OnInit {
     );
   }
 
-  loadThreadGroupAsDefault(deafultThreadGroup: ThreadGroup): Observable<string[]> {
-    const threadIdList = deafultThreadGroup.threadList.map(thread => thread.id);
+  /**
+   * 引数で指定されたスレッドグループをデフォルトのシステムプロンプトにセットする。
+   * @param defaultThreadGroup
+   * @returns Observable<string[]>
+   * @description
+   */
+  setDefaultSystemPromptMap(defaultThreadGroup: ThreadGroup): Observable<string[]> {
+    const threadIdList = defaultThreadGroup.threadList.map(thread => thread.id);
     const defaultSystemPromptMap: { [threadId: string]: string } = {};
     return of(0).pipe(
       // メッセージグループを取得する
-      switchMap(() => this.messageService.getMessageGroupList(deafultThreadGroup.id)),
+      switchMap(() => this.messageService.getMessageGroupList(defaultThreadGroup.id)),
       switchMap(resDto => {
         // コンテンツパーツが取得できていないかもしれないので取り直し。
         const loadTargetMessageList = resDto.messageGroups.map(messageGroup => messageGroup.messages.filter(message => !message.contents)).flat();
@@ -747,13 +729,15 @@ export class ChatComponent implements OnInit {
       }),
       tap(resDto => {
         resDto.messageGroups.forEach(messageGroup => {
+          if (messageGroup.role !== 'system') {
+            // システムプロンプト以外は無視
+            // TODO 本来はシステムプロンプトが入っていること自体がおかしいので。load
+            return;
+          }
           defaultSystemPromptMap[messageGroup.threadId] = defaultSystemPromptMap[messageGroup.threadId] || '';
-          defaultSystemPromptMap[messageGroup.threadId] += messageGroup.messages.map(message => {
-            return message.contents.map(content => {
-              return content.type === ContentPartType.TEXT ? content.text : ''
-            }).join('');
-          }).join('');
-          return defaultSystemPromptMap[messageGroup.threadId];
+          defaultSystemPromptMap[messageGroup.threadId] += messageGroup.messages.map(message =>
+            message.contents.map(content => content.type === ContentPartType.TEXT ? content.text : '').join('')
+          ).join('');
         });
       }),
       map(resDto => {
@@ -1319,22 +1303,25 @@ export class ChatComponent implements OnInit {
                     resDto.messageGroupList.forEach(messageGroup => {
                       const message = messageGroup.messages[0]; // 先頭のメッセージを取得
                       const threadIndex = this.selectedThreadGroup.threadList.map(thread => thread.id).indexOf(this.messageService.messageGroupMas[message.messageGroupId].threadId);
-                      let containerIndex = 0;
                       let anchorIndex = 0;
                       if (this.userService.chatTabLayout === 'tabs') {
-                        // タブ表示の場合はスレッド分岐しているので、スレッドのindexを取得する。
-                        containerIndex = threadIndex;
+                        // タブ表示の場合はスレッド分岐しているので、anchorIndexを全部カウントアップしていかないといけない。
                         anchorIndex = 0;
-                        // アンカーはカウントアップしていかないといけない。
                         for (let iThread = 0; iThread <= threadIndex; iThread++) {
                           anchorIndex += this.messageGroupIdListMas[this.selectedThreadGroup.threadList[iThread].id].length - 1; // systemの分1を引く
                         }
                         anchorIndex--; // 末尾を取りたいので-1する。
                       } else {
-                        // タブ表示じゃない場合はスレッド分岐してないので0にする。
-                        containerIndex = 0;
+                        // タブ表示じゃない場合はスレッド分岐してないので、anchorIndexはそのままメッセージグループのインデックスを使う。
                         anchorIndex = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[threadIndex].id].indexOf(message.messageGroupId);
                       }
+
+                      // 履歴を閉じていくバージョン
+                      if (false && this.messageService.messageGroupMas[messageGroup.previousMessageGroupId || '']) {
+                        this.messageService.messageGroupMas[messageGroup.previousMessageGroupId || ''].isExpanded = false; // メッセージグループを閉じる
+                        anchorIndex--; // さらに1つ前のメッセージを取りたいので-1する。
+                      }
+
                       // console.log(`threadIndex=${threadIndex} containerIndex=${containerIndex} anchorIndex=${anchorIndex}`);
                       const anchorElem = this.anchor().at(anchorIndex);
                       if (anchorElem && !isScrollFired) {

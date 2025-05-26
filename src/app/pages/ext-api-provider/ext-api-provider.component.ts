@@ -3,10 +3,11 @@ import { ExtApiProviderTemplateFormComponent } from "../../parts/ext-api-provide
 import { ExtApiProviderFormComponent } from "../../parts/ext-api-provider-form/ext-api-provider-form.component";
 import { AIModelManagementComponent } from "../../parts/ai-model-management/ai-model-management/ai-model-management.component";
 import { AIProviderManagementComponent } from "../../parts/ai-model-management/ai-provider-management/ai-provider-management.component";
+import { AIProviderTemplateManagementComponent } from "../../parts/ai-model-management/ai-provider-template-management/ai-provider-template-management.component";
 
 @Component({
   selector: 'app-ext-api-provider',
-  imports: [ExtApiProviderTemplateFormComponent, ExtApiProviderFormComponent, AIModelManagementComponent, AIProviderManagementComponent],
+  imports: [ExtApiProviderTemplateFormComponent, ExtApiProviderFormComponent, AIModelManagementComponent, AIProviderManagementComponent, AIProviderTemplateManagementComponent],
   templateUrl: './ext-api-provider.component.html',
   styleUrl: './ext-api-provider.component.scss'
 })
