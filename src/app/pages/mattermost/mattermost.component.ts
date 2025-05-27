@@ -135,6 +135,7 @@ export class MattermostComponent implements OnInit, OnDestroy {
 
     const targetUpdate = (targetTeamId: string, targetChannelId: string) => {
       const selectedTeam = this.mmTeamList[Math.max(this.mmTeamList.findIndex(mmTeam => mmTeam.id === targetTeamId), 0)];
+      this.isLoading = true;
       if (targetChannelId === 'default') {
         // default の場合はnextのIDを持ってきてルーティング
         this.selectTeam(selectedTeam).subscribe({

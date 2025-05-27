@@ -199,7 +199,7 @@
       <div class="w-full flex justify-center items-center gap-5 flex-wrap">
         @for(preset of chatService.presetDefs;track $index){
         <div class="course-panel text-center" (click)="selectPreset(preset)" [innerHTML]="preset.label"
-          [matTooltip]="preset.tooltip" [matBadge]="preset.badge" matBadgePosition="before"
+          [matTooltip]="preset.tooltip||''" [matBadge]="preset.badge" matBadgePosition="before"
           [ngClass]="{selected:presetLabel===preset.label}" style="line-height: 1.5;"></div>
         }
       </div>

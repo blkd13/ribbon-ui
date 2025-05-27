@@ -308,13 +308,16 @@ export class ChatComponent implements OnInit {
     });
     this.inputArea.content[0].text = preset.userPrompt || '';
     this.placeholder = preset.placeholder || this.defaultPlaceholder;
+    let modelCheckOK = true;
     if (isModelChange) {
-      this.modelCheck();
+      modelCheckOK = this.modelCheck();
     }
 
     this.rebuildThreadGroup();
     this.onChange();
-    setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+    if (modelCheckOK) {
+      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+    } else { /* モデルチェックエラーが出ているのでフォーカスはしない。 */ }
   }
 
   selectTemplateThreadGroup(_templateThreadGroup: ThreadGroupForView): void {
@@ -419,15 +422,16 @@ export class ChatComponent implements OnInit {
     return this.threadGroupListForView;
   }
 
-  modelCheck(modelList: string[] = []): void {
+  modelCheck(modelList: string[] = []): boolean {
     console.log(modelList);
     // 空配列だったらスレッドグループ全体をチェック
     modelList = modelList.length === 0 ? this.selectedThreadGroup.threadList.map(thread => thread.inDto.args.model as string).filter(model => model) : modelList;
     const mess = this.chatService.validateModelAttributes(modelList);
     if (mess.message.length > 0) {
       this.dialog.open(DialogComponent, { data: { title: 'Alert', message: mess.message, options: ['Close'] } });
+      return false; // アラートを出して終了
     } else {
-      // アラート不用
+      return true; // アラート不要
     }
   }
 
@@ -437,10 +441,12 @@ export class ChatComponent implements OnInit {
     while (this.selectedThreadGroup.threadList.length < index) {
       this.selectedThreadGroup.threadList.push(this.presetThreadList[this.selectedThreadGroup.threadList.length - 1])
     }
-    this.modelCheck();
+    const modelCheckOK = this.modelCheck();
     this.rebuildThreadGroup();
     this.onChange();
-    setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+    if (modelCheckOK) {
+      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+    } else { /* モデルチェックエラーが出ているのでフォーカスはしない。 */ }
   }
 
   onChatPanelReady(messageGroup: MessageGroupForView): void {
