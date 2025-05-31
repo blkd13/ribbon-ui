@@ -189,6 +189,12 @@ html>body {
         text-decoration: underline;
     }
 
+    input::placeholder,
+    textarea::placeholder {
+        color: var(--mat-sys-on-surface);
+        opacity: 0.6;
+    }
+
     .unstyled-link {
         text-decoration: none;
         color: inherit;

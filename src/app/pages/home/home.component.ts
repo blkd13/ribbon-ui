@@ -42,7 +42,8 @@ import { ApiGiteaService } from '../../services/api-gitea.service';
 import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
 import { UserService } from '../../services/user.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
-import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
+import { ChatCompletionCreateParamsWithoutMessages, ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
+import { ModelSelectorComponent } from "../../parts/model-selector/model-selector.component";
 
 declare var _paq: any;
 @Component({
@@ -55,6 +56,7 @@ declare var _paq: any;
     MarkdownModule,
     NewlineToBrPipe, RelativeTimePipe,
     UserMarkComponent,
+    ModelSelectorComponent
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
@@ -91,7 +93,7 @@ export class HomeComponent implements OnInit {
   projectList: Project[] = [];
   projectWithoutDefaultList: Project[] = [];
 
-  model: string = 'gemini-1.5-pro-002';
+  args = { model: 'gemini-1.5-pro-002', providerName: 'vertexai' };
 
   placeholder: string = '';
   inputText: string = '';
@@ -171,7 +173,7 @@ export class HomeComponent implements OnInit {
     this.staticMessageList.forEach(staticMessage => staticMessage.placeholder = staticMessage.placeholder.replace('Ctrl+Enter', this.userService.enterMode));
 
     if (JSON.parse(localStorage.getItem('settings-v1.0') || '{}')['model']) {
-      this.model = JSON.parse(localStorage.getItem('settings-v1.0') || '{}')['model'];
+      this.args.model = JSON.parse(localStorage.getItem('settings-v1.0') || '{}')['model'];
     } else { }
 
     // 定型文無しを選択
@@ -304,9 +306,10 @@ export class HomeComponent implements OnInit {
     }
   }
 
-  changeModel(): void {
-    if (this.model) {
-      const mess = this.chatService.validateModelAttributes([this.model]);
+  changeModel(args: ChatCompletionCreateParamsWithoutMessages): void {
+    this.args = args;
+    if (args.model) {
+      const mess = this.chatService.validateModelAttributes([args]);
       if (mess.message.length > 0) {
         this.dialog.open(DialogComponent, { data: { title: 'Alert', message: mess.message, options: ['Close'] } });
       } else {
@@ -316,13 +319,13 @@ export class HomeComponent implements OnInit {
   }
 
   submit(): void {
-    this.g.share['home->chat'] = { static: this.staticMessageList[0], userPrompt: this.inputText, model: this.model };
+    this.g.share['home->chat'] = { static: this.staticMessageList[0], userPrompt: this.inputText, model: this.args.model, providerName: this.args.providerName };
     this.router.navigate(['chat', this.defaultProject.id]);
-    _paq.push(['trackEvent', 'home', 'メッセージ送信', this.model]);
+    _paq.push(['trackEvent', 'home', 'メッセージ送信', this.args.model]);
   }
 
   setStatic(staticMessage: { label: string, systemPrompt: string, placeholder: string }): void {
-    this.g.share['home->chat'] = { static: staticMessage, model: this.model };
+    this.g.share['home->chat'] = { static: staticMessage, model: this.args.model, providerName: this.args.providerName };
     this.router.navigate(['chat', this.defaultProject.id]);
     _paq.push(['trackEvent', 'home', 'setStatic', staticMessage.label]);
   }
@@ -330,7 +333,7 @@ export class HomeComponent implements OnInit {
   // ドラッグアンドドロップの部。
   // TODO ダサいのでdirectiveに統合したい。いやどうだろう。
   onFilesDropped(files: FullPathFile[]) {
-    this.g.share['home->chat'] = { static: this.staticMessageList[0], userPrompt: this.inputText, files, model: this.model };
+    this.g.share['home->chat'] = { static: this.staticMessageList[0], userPrompt: this.inputText, files, model: this.args.model, providerName: this.args.providerName };
     this.router.navigate(['chat', this.defaultProject.id]);
   }
 

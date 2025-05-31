@@ -4,12 +4,15 @@
         <div class="flex justify-between items-center w-full">
             <h1 style="margin-top:0;">{{'START_CHAT'|translate}}</h1>
             <div class="flex flex-col justify-between gap-3 items-end">
-                <select [(ngModel)]="model" class="model-select" (change)="changeModel()">
+                <app-model-selector name="model-select" [args]="args"
+                    (argsChange)="changeModel($event)">
+                </app-model-selector>
+                <!-- <select [(ngModel)]="model" class="model-select" (change)="changeModel()">
                     @for(option of chatService.modelList;track $index){
                     <option [ngClass]="[option.tag]" [value]="option.id" [disabled]="!option.isEnable">
                         {{option.tag}}：{{option.id}}</option>
                     }
-                </select>
+                </select> -->
             </div>
         </div>
         @if(systemPrompt&&systemPrompt!==staticMessageList[0].systemPrompt){

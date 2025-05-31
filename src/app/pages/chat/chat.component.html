@@ -281,7 +281,7 @@
             <app-chat-panel-system class="top-0" style="z-index:3;" [messageGroup]="messageGroup"
               [selectedIndex]="messageGroup.selectedIndex" [bitCounter]="messageGroupBitCounter[messageGroup.id]"
               [thread]="thread" [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
-              (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
+              (edit)="editChat($event)" (removeThread)="removeThread($event)" (argsChange)="modelCheck([$event])"
               (threadChange)="editSystem($event)" [tokenObject]="tokenObjList[tIndex]">
             </app-chat-panel-system>
             }
@@ -374,7 +374,7 @@
         <app-chat-panel-system class="w-0 flex-1" [messageGroup]="messageGroup"
           [bitCounter]="messageGroupBitCounter[messageGroup.id]" [thread]="thread"
           [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
-          (edit)="editChat($event)" (removeThread)="removeThread($event)" (modelChange)="modelCheck([$event])"
+          (edit)="editChat($event)" (removeThread)="removeThread($event)" (argsChange)="changeModel(tIndex,$event)"
           (threadChange)="editSystem($event)" (fileSelectionUpdateEmitter)="onChange()"
           (expanded)="expanded($event, 0, tIndex, messageGroup)" [tokenObject]="tokenObjList[tIndex]">
         </app-chat-panel-system>

@@ -28,7 +28,7 @@ import { saveAs } from 'file-saver';
 import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
 import { genDummyId, genInitialBaseEntity, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
-import { CachedContent, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
+import { CachedContent, ChatCompletionCreateParamsWithoutMessages, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
 import { ChatContent, ChatInputArea, ChatService, CountTokensResponse, CountTokensResponseForView, PresetDef } from '../../services/chat.service';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
@@ -47,7 +47,7 @@ import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-pan
 import { UserService } from '../../services/user.service';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
 import { ToolCallPart, ToolCallPartBody, ToolCallPartInfoBody, ToolCallPartCallBody, ToolCallPartCommandBody, ToolCallPartResultBody, ToolCallPartType, ToolCallPartInfo, ToolCallPartCall, ToolCallPartCommand, ToolCallPartResult, ToolCallService, MyToolType, } from '../../services/tool-call.service';
-import { ChatCompletionTool } from 'openai/resources/index.mjs';
+import { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/index.mjs';
 import { SaveThreadData, SaveThreadDialogComponent } from '../../parts/save-thread-dialog/save-thread-dialog.component';
 import { MatBadgeModule } from '@angular/material/badge';
 
@@ -188,7 +188,11 @@ export class ChatComponent implements OnInit {
     }, 1000);
   }
 
-  // changeModel(index: number): void { }
+  changeModel(tIndex: number, args: ChatCompletionCreateParamsWithoutMessages): void {
+    this.selectedThreadGroup.threadList[tIndex].inDto.args = args;
+    this.modelCheck([args]);
+  }
+
   // editChat(resDto: MessageGroup): void { }
 
   generateInitalInputArea(): ChatInputArea {
@@ -422,11 +426,11 @@ export class ChatComponent implements OnInit {
     return this.threadGroupListForView;
   }
 
-  modelCheck(modelList: string[] = []): boolean {
-    console.log(modelList);
+  modelCheck(argList: ChatCompletionCreateParamsWithoutMessages[] = []): boolean {
+    console.log(argList.map(arg => arg.model));
     // 空配列だったらスレッドグループ全体をチェック
-    modelList = modelList.length === 0 ? this.selectedThreadGroup.threadList.map(thread => thread.inDto.args.model as string).filter(model => model) : modelList;
-    const mess = this.chatService.validateModelAttributes(modelList);
+    argList = argList.length === 0 ? this.selectedThreadGroup.threadList.map(thread => thread.inDto.args).filter(args => args) : argList;
+    const mess = this.chatService.validateModelAttributes(argList);
     if (mess.message.length > 0) {
       this.dialog.open(DialogComponent, { data: { title: 'Alert', message: mess.message, options: ['Close'] } });
       return false; // アラートを出して終了
@@ -971,8 +975,9 @@ export class ChatComponent implements OnInit {
                 {
                   role: 'user',
                   content: `この書き出しで始まるチャットにタイトルをつけてください。短く適当でいいです。タイトルだけを返してください。タイトル以外の説明などはつけてはいけません。\n\n\`\`\`markdown\n\n${mergeText}\n\`\`\``
-                } as any
+                }
               ],
+              stream: true,
             },
           }).subscribe({
             next: next => {

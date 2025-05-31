@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, Subject, Subscriber, defer, finalize, first, forkJoin, from, map, switchMap, tap } from 'rxjs';
 import { OpenAI } from 'openai';
+import { ChatCompletionCreateParamsStreaming } from 'openai/resources';
 
 import { CachedContent, ChatCompletionCreateParamsWithoutMessages, ChatCompletionStreamInDto, GenerateContentRequestForCache } from '../models/models';
 import { AuthService } from './auth.service';
@@ -170,11 +171,12 @@ export class ChatService {
 
   checkOkModels = new Set<string>();
 
-  validateModelAttributes(modelList: string[]): { isNotPdf?: string[], isNotDomestic?: string[], message: string } {
+  validateModelAttributes(argsList: ChatCompletionCreateParamsWithoutMessages[]): { isNotPdf?: string[], isNotDomestic?: string[], message: string } {
     const ret: { isNotPdf?: string[], isNotDomestic?: string[], message: string } = { message: '' };
     const modelMas = Object.fromEntries(this.modelList.map(model => [model.id, model]));
 
-    modelList.forEach(model => {
+    argsList.forEach(args => {
+      const model = args.model;
       // if (this.checkOkModels.has(model)) {
       //   // 既にアラート出したことのあるモデルは除外。
       //   return;
@@ -386,7 +388,7 @@ export class ChatService {
    * @param taskId
    * @returns
    */
-  chatCompletionObservableStreamNew(inDto: ChatCompletionStreamInDto): Observable<{
+  chatCompletionObservableStreamNew(inDto: { args: ChatCompletionCreateParamsStreaming }): Observable<{
     connectionId: string,
     streamId: string,
     meta: { message?: Message, status: string },

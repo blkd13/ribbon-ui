@@ -18,6 +18,8 @@ import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox
 import { MyToolType, ToolCallService } from '../../services/tool-call.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { ModelSelectorComponent } from "../model-selector/model-selector.component";
+import { AIModelEntityForView } from '../../services/model-manager.service';
+import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
 
 @Component({
   selector: 'app-chat-panel-system',
@@ -26,7 +28,7 @@ import { ModelSelectorComponent } from "../model-selector/model-selector.compone
     MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
     MatDialogModule, MatRadioModule, MatCheckboxModule,
     ModelSelectorComponent
-],
+  ],
   templateUrl: './chat-panel-system.component.html',
   styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss']
 })
@@ -37,7 +39,7 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   readonly removeThreadEmitter = output<Thread>({ alias: 'removeThread' });
 
-  readonly modelChangeEmitter = output<string>({ alias: 'modelChange' });
+  readonly argsChangeEmitter = output<ChatCompletionCreateParamsWithoutMessages>({ alias: 'argsChange' });
 
   readonly threadChangeEmitter = output<Thread>({ alias: 'threadChange' });
 
@@ -46,8 +48,8 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
   readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
 
   showFullPrompt: boolean = false;
-  modelIdMas: { [modelId: string]: LlmModel } = {};
-  modelGroupMas: { [modelId: string]: LlmModel[] } = {};
+  // modelIdMas: { [modelId: string]: LlmModel } = {};
+  // modelGroupMas: { [modelId: string]: LlmModel[] } = {};
   modelGroupIdList: string[] = [];
 
   toolChoiceMapper: { [tool_choice: string]: { name: string, label: string } } = {
@@ -77,19 +79,19 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   override ngOnInit(): void {
     super.ngOnInit();
-    this.modelIdMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel }, model) => {
-      acc[model.id] = model;
-      return acc;
-    }, {});
-    this.modelGroupMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel[] }, model) => {
-      const tag = model.tag;
-      if (!acc[tag]) {
-        this.modelGroupIdList.push(tag);
-        acc[tag] = [];
-      }
-      acc[tag].push(model);
-      return acc;
-    }, {});
+    // this.modelIdMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel }, model) => {
+    //   acc[model.id] = model;
+    //   return acc;
+    // }, {});
+    // this.modelGroupMas = this.chatService.modelList.reduce((acc: { [key: string]: LlmModel[] }, model) => {
+    //   const tag = model.tag;
+    //   if (!acc[tag]) {
+    //     this.modelGroupIdList.push(tag);
+    //     acc[tag] = [];
+    //   }
+    //   acc[tag].push(model);
+    //   return acc;
+    // }, {});
 
     // // ツールの初期選択状態を設定
     // this.initializeToolSelection();
@@ -113,11 +115,10 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     this.removeThreadEmitter.emit(this.thread());
   }
 
-  modelChange(): void {
-    const thread = this.thread();
-    this.modelChangeEmitter.emit(thread.inDto.args.model || '');
+  modelChange($event: ChatCompletionCreateParamsWithoutMessages): void {
+    this.argsChangeEmitter.emit($event);
     // console.log(`Change---------------${this.thread.inDto.args.model}`);
-    this.modelCheck([thread.inDto.args.model || '']);
+    this.modelCheck([$event.model || '']);
   }
 
   threadChange(): void {

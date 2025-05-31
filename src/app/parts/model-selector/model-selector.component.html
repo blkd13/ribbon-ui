@@ -1,5 +1,5 @@
 <button #menuTrigger="matMenuTrigger" [matMenuTriggerFor]="rootMenu" class="flex cursor-pointer model-selector">
-    <div>{{model()}}</div>
+    <div>{{args().model}}</div>
     <mat-icon>arrow_drop_down</mat-icon>
 </button>
 <!-- 1 段目: カテゴリ -->

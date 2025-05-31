@@ -163,7 +163,7 @@ export class ThreadService {
         return {
             threadGroupId,
             inDto: {
-                args: this.getInitialArgs() as ChatCompletionCreateParamsBase,
+                args: this.getInitialArgs() as ChatCompletionCreateParamsBase & { providerName: string },
             },
             status: 'Normal',
             ...genInitialBaseEntity('thread'),
@@ -173,6 +173,7 @@ export class ThreadService {
     getInitialArgs(): ChatCompletionCreateParamsWithoutMessages {
         return {
             model: 'gemini-1.5-pro-002',
+            providerName: 'vertexai',
             temperature: 1.0,
             max_tokens: 0,
             stream: true,
@@ -196,7 +197,6 @@ export class ThreadService {
             if (thread.id?.startsWith('dummy-')) {
                 thread.id = undefined;
             }
-            // (thread as any).inDtoJson = JSON.stringify(thread.inDto);
         });
         return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(map(obj => {
             threadGroup.id = obj.id;
@@ -268,29 +268,28 @@ export class ThreadMessageService {
     //         this.rebuildThreadGroup();
     //     }));
     // }
-
-    upsertThreadGroup(projectId: string, threadGroup: ThreadGroupUpsertDto): Observable<ThreadGroupForView> {
-        const inDto = Utils.clone(threadGroup);
-        if (inDto.id?.startsWith('dummy-')) {
-            inDto.id = undefined;
-        }
-        inDto.threadList.forEach(thread => {
-            if (thread.id?.startsWith('dummy-')) {
-                thread.id = undefined;
-            }
-            (thread as any).inDtoJson = JSON.stringify(thread.inDto);
-        });
-        return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(map(obj => {
-            threadGroup.id = obj.id;
-            const ret = obj as ThreadGroupForView;
-            ret.threadList.forEach((thread, index) => {
-                threadGroup.threadList[index].id = thread.id;
-                threadFormat(thread);
-            });
-            ret.updatedDate = new Date(ret.updatedAt).toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
-            return ret;
-        }));
-    }
+    // upsertThreadGroup(projectId: string, threadGroup: ThreadGroupUpsertDto): Observable<ThreadGroupForView> {
+    //     const inDto = Utils.clone(threadGroup);
+    //     if (inDto.id?.startsWith('dummy-')) {
+    //         inDto.id = undefined;
+    //     }
+    //     inDto.threadList.forEach(thread => {
+    //         if (thread.id?.startsWith('dummy-')) {
+    //             thread.id = undefined;
+    //         }
+    //         (thread as any).inDtoJson = JSON.stringify(thread.inDto);
+    //     });
+    //     return this.http.post<ThreadGroup>(`/user/project/${projectId}/thread-group`, inDto).pipe(map(obj => {
+    //         threadGroup.id = obj.id;
+    //         const ret = obj as ThreadGroupForView;
+    //         ret.threadList.forEach((thread, index) => {
+    //             threadGroup.threadList[index].id = thread.id;
+    //             threadFormat(thread);
+    //         });
+    //         ret.updatedDate = new Date(ret.updatedAt).toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+    //         return ret;
+    //     }));
+    // }
 }
 
 @Injectable({ providedIn: 'root' })

@@ -82,18 +82,10 @@ export interface CachedContent {
     expireTime: string;
 }
 
-export type ChatCompletionCreateParamsWithoutMessages = Omit<ChatCompletionCreateParamsBase, 'messages'>;
+export type ChatCompletionCreateParamsWithoutMessages = Omit<ChatCompletionCreateParamsBase, 'messages'> & { providerName: string, isGoogleSearch?: boolean, cachedContent?: CachedContent, safetySettings?: SafetyRating[] };
 export interface ChatCompletionStreamInDto {
-    args: ChatCompletionCreateParamsBase & { isGoogleSearch?: boolean, cachedContent?: CachedContent, safetySettings?: SafetyRating[] };
-    options?: {
-        idempotencyKey: string
-    };
-}
-export interface ChatCompletionWithoutMessagesStreamInDto {
     args: ChatCompletionCreateParamsWithoutMessages;
-    options?: {
-        idempotencyKey: string
-    };
+    options?: {};
 }
 
 export type SafetyRatingCategory = 'HARM_CATEGORY_HATE_SPEECH' | 'HARM_CATEGORY_DANGEROUS_CONTENT' | 'HARM_CATEGORY_HARASSMENT' | 'HARM_CATEGORY_SEXUALLY_EXPLICIT';
