@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
 import { Utils } from '../utils';
 import { ToolCallPartCommand, ToolCallPartCommandBody, ToolCallService } from './tool-call.service';
+import { AIProviderType } from './model-manager.service';
 
 export interface ChatInputArea {
   role: OpenAI.ChatCompletionRole;
@@ -641,7 +642,12 @@ export class ChatService {
       tool_names: [],
       tool_groups: ['mattermost'],
       tool_clear: true,
-      modelSelection: ['claude-3-7-sonnet@20250219', 'gemini-2.0-pro-exp-02-05', 'gpt-4o', 'gemini-1.5-pro-002'],
+      modelSelection: [
+        { model: 'claude-sonnet-4@20250514', provider: AIProviderType.ANTHROPIC_VERTEXAI },
+        { model: 'gemini-2.0-pro-exp-02-05', provider: AIProviderType.VERTEXAI },
+        { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
+        { model: 'gemini-1.5-pro-002', provider: AIProviderType.VERTEXAI },
+      ],
       systemLabel: `Mattermost`,
       systemPrompt: Utils.trimLines(`
         エージェントAI。
@@ -663,7 +669,12 @@ export class ChatService {
       tool_names: [],
       tool_groups: ['box'],
       tool_clear: true, // ツール選択状態をクリアしたうえで再設定するかどうか。
-      modelSelection: ['claude-3-7-sonnet@20250219', 'gemini-2.0-pro-exp-02-05', 'gpt-4o', 'gemini-1.5-pro-002'],
+      modelSelection: [
+        { model: 'claude-sonnet-4@20250514', provider: AIProviderType.ANTHROPIC_VERTEXAI },
+        { model: 'gemini-2.0-pro-exp-02-05', provider: AIProviderType.VERTEXAI },
+        { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
+        { model: 'gemini-1.5-pro-002', provider: AIProviderType.VERTEXAI },
+      ],
       systemLabel: `Box`,
       systemPrompt: Utils.trimLines(`
         エージェントAI。
@@ -679,7 +690,12 @@ export class ChatService {
       label: `通訳`,
       placeholder: '翻訳の指示は要りません。英文／和文をそのまま貼ってください。',
       systemLabel: `通訳AI`,
-      modelSelection: ['gemini-1.5-flash-002', 'gemini-2.0-flash-lite-001', 'gemini-2.0-flash-001', 'gpt-4o'],
+      modelSelection: [
+        { model: 'gemini-1.5-flash-002', provider: AIProviderType.VERTEXAI },
+        { model: 'gemini-2.0-flash-lite-001', provider: AIProviderType.VERTEXAI },
+        { model: 'gemini-2.0-flash-001', provider: AIProviderType.VERTEXAI },
+        { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
+      ],
       systemPrompt: Utils.trimLines(`
         あなたは **通訳** としてふるまい、次のルールに従って翻訳を行います。
 
@@ -770,7 +786,7 @@ export interface PresetDef {
   label: string;
   tooltip?: string;
   badge?: string;
-  modelSelection?: string[];
+  modelSelection?: { model: string, provider: AIProviderType }[];
   tool_choice?: 'auto' | 'none' | 'required';
   tool_names?: string[];
   tool_groups?: string[];

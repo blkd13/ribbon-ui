@@ -274,7 +274,8 @@ export class ChatComponent implements OnInit {
     let isModelChange = false;
     this.selectedThreadGroup.threadList.forEach((thread, tIndex) => {
       if (preset.modelSelection && preset.modelSelection[tIndex]) {
-        thread.inDto.args.model = preset.modelSelection[tIndex];
+        thread.inDto.args.model = preset.modelSelection[tIndex].model;
+        thread.inDto.args.providerName = preset.modelSelection[tIndex].provider;
         isModelChange = true;
       } else { }
       const messageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][0]];
