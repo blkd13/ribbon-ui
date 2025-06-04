@@ -1,0 +1,33 @@
+<div class="h-screen text-gray-100 flex" style="background-color: var(--plain-background, #1a1a1a);">
+    <!-- サイドバー -->
+    <div class="border-r left-pane"
+        style="background-color: var(--plain-background-area, #1f1f1f); border-color: var(--plain-border-color, #333);">
+        <!-- ヘッダー -->
+        <div class=" p-6 border-b" style="border-color: var(--plain-border-color, #333);">
+            <h1 class="text-xl font-semibold" style="color: var(--plain-color, #f3f4f6);">設定</h1>
+        </div>
+
+        <!-- メニューリスト -->
+        <nav class="p-4">
+            <ul class="space-y-2">
+                <li *ngFor="let item of menuItems">
+                    <a [routerLink]="item.link"
+                        class="block text-gray-300 hover:text-white transition-colors duration-200">
+                        <button (click)="setActiveSection(item.key)" [ngClass]="{
+                'settings-menu-selected': activeSection === item.key,
+                'settings-menu-item': true
+            }" class="w-full text-left px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-3">
+                            <mat-icon class="text-sm">{{ item.icon }}</mat-icon>
+                            <span>{{ item.label }}</span>
+                        </button>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div class="flex-1 overflow-auto" style="background-color: var(--plain-background, #1a1a1a);">
+        <router-outlet></router-outlet>
+    </div>
+</div>

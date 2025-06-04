@@ -52,6 +52,7 @@
                 }
             </select> -->
             @if(vm.thread.inDto.args.model; as model){
+            <!--                 
             @if(chatService.modelMap[model].isGSearch){
             <div class="flex items-center" style="width: 150px;"
                 [matTooltip]="chatService.modelMap[model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini以外では使用できません。'">
@@ -60,6 +61,7 @@
                     (click)="vm.thread.inDto.args.isGoogleSearch=!vm.thread.inDto.args.isGoogleSearch;stopPropagation($event);">
             </div>
             }
+            -->
             }
         </mat-panel-title>
         <mat-panel-description>

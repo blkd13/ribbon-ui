@@ -23,7 +23,7 @@ export class ToolCallService {
   }
 
   getFunctionDefinitions(): Observable<MyToolType[]> {
-    return this.http.get<MyToolType[]>('/public/function-definitions').pipe(
+    return this.http.get<MyToolType[]>('/user/function-definitions').pipe(
       tap(res => {
         res.forEach(tool => {
           const group = tool.info.group;

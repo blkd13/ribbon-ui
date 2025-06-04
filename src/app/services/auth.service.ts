@@ -2,14 +2,23 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
-import { User, TwoFactorAuthDetails } from '../models/models';
+import { User, TwoFactorAuthDetails, UserRoleType } from '../models/models';
 import { PredictTransaction } from './department.service';
 import { GService } from './g.service';
+import { ScopeType } from './model-manager.service';
 
 export type OAuthAccount = { id: string, userInfo: string, provider: string, providerUserId: string, providerEmail: string };
 // export type OAuthProvider = { providerType: string, name: string, label: string };
 export type ExtApiProviderType = string;
 export type ExtApiClient = { type: string, provider: string, label: string, description: string, };
+
+// export type ScopeLabelsResponse = Record<ScopeType, { id: string, label: string }[]>;
+export interface ScopeLabelsResponse {
+  [ScopeType.ORGANIZATION]: { id: string, label: string, }[];
+  [ScopeType.DIVISION]: { id: string, label: string }[];
+  [ScopeType.PROJECT]: { id: string, label: string }[];
+  [ScopeType.TEAM]: { id: string, label: string }[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -264,6 +273,11 @@ export class AuthService {
   }
 
   // ----
+
+  getScopeLabels(): Observable<ScopeLabelsResponse> {
+    const url = `/user/scope-labels`;
+    return this.http.get<ScopeLabelsResponse>(url);
+  }
 
   getPredictHistory(): Observable<{ predictHistory: PredictTransaction[] }> {
     const url = `/user/predict-history`;

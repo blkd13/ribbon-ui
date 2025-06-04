@@ -13,6 +13,7 @@ export enum AIProviderType {
   OPENAPI_VERTEXAI = 'openapi_vertexai',
   COHERE = 'cohere',
   GEMINI = 'gemini',
+  OPENAI_COMPATIBLE = 'openai_compatible',
 
   GROQ = 'groq',
   MISTRAL = 'mistral',
@@ -51,14 +52,17 @@ export interface AIProviderTemplateEntity extends BaseEntity {
 }
 
 export interface AIProviderEntity extends BaseEntity {
-  provider: AIProviderType;
+  type: AIProviderType;
+  name: string;
   scopeInfo: ScopeInfo;
   label: string;
-  metadata?: CredentialMetadata;
+  description?: string;
+  config: CredentialMetadata[]; // 複数ある時はラウンドロビン
   isActive: boolean;
 }
 
 // Service to handle AI Provider Entity operations
+@Injectable({ providedIn: 'root' })
 export class AIProviderManagerService {
   private providers: AIProviderEntity[] = [];
   private providerTypes: AIProviderType[] = Object.values(AIProviderType);
@@ -94,7 +98,7 @@ export class AIProviderManagerService {
         });
       }),
       tap(providers => {
-        this.providers = providers;
+        // this.providers = providers;
       }),
     );
   }
@@ -104,7 +108,7 @@ export class AIProviderManagerService {
       next: (res) => {
         res.createdAt = new Date(res.createdAt);
         res.updatedAt = new Date(res.updatedAt);
-        this.providers.push(res);
+        // this.providers.push(res);
       },
       error: (err) => {
         console.error('Error upserting provider:', err);
@@ -133,7 +137,7 @@ export class AIProviderManagerService {
             scopeType: provider.scopeInfo.scopeType,
             scopeId: provider.scopeInfo.scopeId || '',
           };
-          provider.metadata = provider.metadata || {};
+          provider.config = provider.config || {};
           provider.isActive = provider.isActive ?? true;
         });
       }),
@@ -144,7 +148,10 @@ export class AIProviderManagerService {
   }
 
   upsertProvider(provider: AIProviderEntity) {
-    this.http.post<AIProviderEntity>(`/maintainer/ai-provider`, provider).subscribe({
+    (provider.id
+      ? this.http.put<AIProviderEntity>(`/maintainer/ai-provider/${provider.id}`, provider)
+      : this.http.post<AIProviderEntity>(`/maintainer/ai-provider`, provider)
+    ).subscribe({
       next: (res) => {
         res.createdAt = new Date(res.createdAt);
         res.updatedAt = new Date(res.updatedAt);
@@ -205,9 +212,7 @@ export interface TemplateDefinition {
 //   updatedIp: string;
 // }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AIProviderTemplateManagerService {
   private apiUrl = `/maintainer/ai-provider-template`;
 

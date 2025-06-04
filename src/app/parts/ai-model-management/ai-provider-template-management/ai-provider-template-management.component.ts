@@ -260,7 +260,7 @@ export class AIProviderTemplateManagementComponent implements OnInit {
     try {
       const formValue = this.form.value;
       const templateData: AIProviderTemplateEntity = {
-        ...genInitialBaseEntity(),
+        ...genInitialBaseEntity('ai-provider-template'),
         id: formValue.id || undefined,
         provider: formValue.provider,
         label: formValue.label,
@@ -441,7 +441,8 @@ export class AIProviderTemplateManagementComponent implements OnInit {
       [AIProviderType.GROQ]: 'Groq',
       [AIProviderType.MISTRAL]: 'Mistral',
       [AIProviderType.DEEPSEEK]: 'DeepSeek',
-      [AIProviderType.LOCAL]: 'Local'
+      [AIProviderType.OPENAI_COMPATIBLE]: 'OpenAI Compatible',
+      [AIProviderType.COHERE]: 'Cohere',
     };
     return labels[provider] || provider;
   }

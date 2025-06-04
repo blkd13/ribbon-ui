@@ -1,13 +1,16 @@
 <div class="container">
     <h2>AI Providers</h2>
     <div class="layout-container">
+
         <!-- 左側：プロバイダー一覧 -->
         <div class="table-container">
             <div class="table-header">
                 <h3>Providers</h3>
-                <button mat-raised-button type="button" class="btn btn-sm btn-primary"
-                    (click)="createNew()">新規登録</button>
+                <button mat-raised-button type="button" class="btn btn-sm btn-primary" (click)="createNew()">
+                    新規登録
+                </button>
             </div>
+
             <div class="source-links flex gap-2 p-4">
                 <span>Provider Types:</span>
                 <a href="https://platform.openai.com/docs" target="_blank"
@@ -16,8 +19,7 @@
                     class="text-blue-500 hover:underline">Anthropic</a>
                 <a href="https://cloud.google.com/vertex-ai/docs" target="_blank"
                     class="text-blue-500 hover:underline">VertexAI</a>
-                <a href="https://ai.google.dev/docs" target="_blank"
-                    class="text-blue-500 hover:underline">Gemini</a>
+                <a href="https://ai.google.dev/docs" target="_blank" class="text-blue-500 hover:underline">Gemini</a>
             </div>
 
             <table class="data-table">
@@ -33,11 +35,14 @@
                 <tbody>
                     @for (provider of providers; track $index) {
                     <tr [class.selected]="form.value.id === provider.id" (click)="selectProvider(provider)">
-                        <td>{{ provider.provider }}</td>
+                        <td>
+                            {{ provider.name }}
+                            <div class="text-xs text-[#888] align-right">{{ provider.type }}</div>
+                        </td>
                         <td>{{ provider.label }}</td>
                         <td>
-                            {{ provider.scopeInfo.scopeType }}
-                            <div class="text-xs text-[#888] align-right">{{ provider.scopeInfo.scopeId }}</div>
+                            {{ scopeLabelsMap[`${provider.scopeInfo.scopeType}:${provider.scopeInfo.scopeId}`] }}
+                            <div class="text-xs text-[#888] align-right">{{ provider.scopeInfo.scopeType }}</div>
                         </td>
                         <td>
                             <mat-icon class="status-icon">{{ provider.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
@@ -59,7 +64,7 @@
         </div>
 
         <!-- 右側：編集フォーム -->
-        @if(isFormVisible){
+        @if (isFormVisible) {
         <div class="form-container">
             <div class="form-header">
                 <h3>{{ isEditMode ? 'Edit Provider' : 'New Provider' }}</h3>
@@ -69,108 +74,227 @@
             </div>
 
             <form [formGroup]="form" (ngSubmit)="register()">
-                <div class="form-tabs">
-                    <div class="tab" [class.active]="activeTab === 'basic'" (click)="setActiveTab('basic')">Basic Info
-                    </div>
-                    <div class="tab" [class.active]="activeTab === 'scope'" (click)="setActiveTab('scope')">Scope</div>
-                    <div class="tab" [class.active]="activeTab === 'metadata'" (click)="setActiveTab('metadata')">
-                        Metadata</div>
-                </div>
 
-                <!-- Basic Info Tab -->
-                <div class="tab-content" [class.active]="activeTab === 'basic'">
-                    <!-- Provider -->
-                    <div class="form-group">
-                        <label for="provider">Provider Type <span class="required">*</span></label>
-                        <select id="provider" formControlName="provider" class="form-control"
-                            [ngClass]="{'invalid': hasError('provider')}">
-                            <option [value]="''">Select a provider</option>
-                            @for (provider of providerOptions; track $index) {
-                            <option [value]="provider">{{ provider }}</option>
+                <!-- 基本情報 -->
+                <div class="form-section">
+                    <h4>Basic Information</h4>
+
+                    <div formGroupName="basicInfo">
+                        <!-- Provider Type -->
+                        <div class="form-group">
+                            <label for="type">Provider Type <span class="required">*</span></label>
+                            <select id="type" formControlName="type" class="form-control"
+                                [ngClass]="{'invalid': hasError('basicInfo.type')}">
+                                <option value="">Select a provider</option>
+                                @for (provider of providerOptions; track $index) {
+                                <option [value]="provider">{{ provider }}</option>
+                                }
+                            </select>
+                            @if (hasError('basicInfo.type')) {
+                            <div class="error-message">{{ getErrorMessage('basicInfo.type') }}</div>
                             }
-                        </select>
-                        @if(hasError('provider')){
-                        <div class="error-message">{{ getErrorMessage('provider') }}</div>
-                        }
-                    </div>
+                        </div>
 
-                    <!-- Label -->
-                    <div class="form-group">
-                        <label for="label">Label <span class="required">*</span></label>
-                        <input id="label" type="text" formControlName="label" class="form-control"
-                            [ngClass]="{'invalid': hasError('label')}">
-                        @if(hasError('label')){
-                        <div class="error-message">{{ getErrorMessage('label') }}</div>
-                        }
-                    </div>
+                        <!-- Name -->
+                        <div class="form-group">
+                            <label for="name">Name <span class="required">*</span></label>
+                            <input id="name" type="text" formControlName="name" class="form-control"
+                                [ngClass]="{'invalid': hasError('basicInfo.name')}">
+                            @if (hasError('basicInfo.name')) {
+                            <div class="error-message">{{ getErrorMessage('basicInfo.name') }}</div>
+                            }
+                        </div>
 
-                    <!-- Is Active -->
-                    <div class="form-group checkbox-group">
-                        <label>
-                            <input type="checkbox" formControlName="isActive">
-                            Active
-                        </label>
+                        <!-- Label -->
+                        <div class="form-group">
+                            <label for="label">Label <span class="required">*</span></label>
+                            <input id="label" type="text" formControlName="label" class="form-control"
+                                [ngClass]="{'invalid': hasError('basicInfo.label')}">
+                            @if (hasError('basicInfo.label')) {
+                            <div class="error-message">{{ getErrorMessage('basicInfo.label') }}</div>
+                            }
+                        </div>
+
+                        <!-- Description -->
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <input id="description" type="text" formControlName="description" class="form-control"
+                                [ngClass]="{'invalid': hasError('basicInfo.description')}">
+                            @if (hasError('basicInfo.description')) {
+                            <div class="error-message">{{ getErrorMessage('basicInfo.description') }}</div>
+                            }
+                        </div>
+
+                        <!-- Active checkbox -->
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" formControlName="isActive">
+                                Active
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Scope Tab -->
-                <div class="tab-content" [class.active]="activeTab === 'scope'">
+                <!-- スコープ情報 -->
+                <div class="form-section">
+                    <h4>Scope Information</h4>
+
                     <div formGroupName="scopeInfo">
                         <!-- Scope Type -->
                         <div class="form-group">
                             <label for="scopeType">Scope Type <span class="required">*</span></label>
                             <select id="scopeType" formControlName="scopeType" class="form-control"
-                                [ngClass]="{'invalid': hasNestedError('scopeInfo.scopeType')}">
-                                <option [value]="''">Select a scope type</option>
+                                [ngClass]="{'invalid': hasError('scopeInfo.scopeType')}">
+                                <option value="">Select a scope type</option>
                                 @for (scopeType of scopeTypeOptions; track $index) {
-                                <option [value]="scopeType">{{ scopeType }}</option>
+                                <option [value]="scopeType.value">{{ scopeType.label }}</option>
                                 }
                             </select>
-                            @if(hasNestedError('scopeInfo.scopeType')){
-                            <div class="error-message">{{ getNestedErrorMessage('scopeInfo.scopeType') }}</div>
+                            @if (hasError('scopeInfo.scopeType')) {
+                            <div class="error-message">{{ getErrorMessage('scopeInfo.scopeType') }}</div>
                             }
                         </div>
 
                         <!-- Scope ID -->
                         <div class="form-group">
-                            <label for="scopeId">Scope ID <span class="required">*</span></label>
-                            <input id="scopeId" type="text" formControlName="scopeId" class="form-control"
-                                [ngClass]="{'invalid': hasNestedError('scopeInfo.scopeId')}">
-                            @if(hasNestedError('scopeInfo.scopeId')){
-                            <div class="error-message">{{ getNestedErrorMessage('scopeInfo.scopeId') }}</div>
+                            <label for="scopeId">Scope <span class="required">*</span></label>
+                            <select id="scopeId" formControlName="scopeId" class="form-control"
+                                [ngClass]="{'invalid': hasError('scopeInfo.scopeId')}">
+                                <option value="">Select a scope</option>
+                                @for (scope of scopeLabelsList(form.get('scopeInfo')?.value.scopeType); track $index) {
+                                <option [value]="scope.id">{{ scope.label }}</option>
+                                }
+                            </select>
+                            @if (hasError('scopeInfo.scopeId')) {
+                            <div class="error-message">{{ getErrorMessage('scopeInfo.scopeId') }}</div>
                             }
                         </div>
                     </div>
                 </div>
 
-                <!-- Metadata Tab -->
-                <div class="tab-content" [class.active]="activeTab === 'metadata'">
-                    <!-- Metadata -->
-                    <app-json-editor formControlName="metadata" 
-                        [suggestions]="['apiKey', 'organizationId', 'region']" 
-                        label="Credential Metadata" 
-                        placeholder="Metadata field">
-                    </app-json-editor>
+                {{form.get('config')?.value| json}}
+                <!-- プロバイダー設定 -->
+                @if (form.get('basicInfo.type')?.value) {
+                <div class="form-section">
+                    <h4>{{ Utils.toPascalCase(form.get('basicInfo.type')?.value) }} Configuration</h4>
 
-                    <div class="metadata-helper">
-                        <h4>Provider-specific fields</h4>
-                        <div class="provider-fields">
-                            <div class="provider-field">
-                                <strong>OpenAI:</strong> apiKey, organizationId
+                    <div formGroupName="config">
+                        @for (field of currentProviderFields; track field.key) {
+                        <div class="form-group">
+
+                            @if (field.type === 'array') {
+                            <!-- 配列フィールド -->
+                            <div class="array-header">
+                                <label>{{ field.label }} @if (field.required) {<span class="required">*</span>}</label>
+                                <button type="button" class="btn btn-sm btn-primary" (click)="addArrayItem(field.key)">
+                                    <mat-icon>add</mat-icon> Add {{ field.label.slice(0, -1) }}
+                                </button>
                             </div>
-                            <div class="provider-field">
-                                <strong>Anthropic:</strong> apiKey
+
+                            @for (control of getArrayControls(field.key); track $index) {
+                            <div class="array-item-simple">
+                                <input type="text" [formControl]="control" class="form-control"
+                                    [placeholder]="field.placeholder || ''">
+                                <button type="button" class="btn btn-sm btn-danger"
+                                    (click)="removeArrayItem(field.key, $index)"
+                                    [disabled]="getArrayControls(field.key).length <= 1">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
                             </div>
-                            <div class="provider-field">
-                                <strong>VertexAI:</strong> projectId, location, credentials
+                            }
+
+                            } @else if (field.type === 'object_array') {
+                            <!-- オブジェクト配列フィールド -->
+                            <div class="array-header">
+                                <label>{{ field.label }} @if (field.required) {<span class="required">*</span>}</label>
+                                <button type="button" class="btn btn-sm btn-primary"
+                                    (click)="addObjectArrayItem(field.key)">
+                                    <mat-icon>add</mat-icon> Add {{ getSingularLabel(field.label) }}
+                                </button>
                             </div>
-                            <div class="provider-field">
-                                <strong>Gemini:</strong> apiKey
+
+                            @if (getObjectArrayControls(field.key).length > 0) {
+                            <div formArrayName="{{ field.key }}">
+                                @for (objectControl of getObjectArrayControls(field.key); track $index) {
+                                <div class="array-item" [formGroupName]="$index">
+                                    <div class="array-item-header">
+                                        <h5>{{ getSingularLabel(field.label) }} {{ $index + 1 }}</h5>
+                                        <button type="button" class="btn btn-sm btn-danger"
+                                            (click)="removeObjectArrayItem(field.key, $index)"
+                                            [disabled]="getObjectArrayControls(field.key).length <= 1">
+                                            <mat-icon>delete</mat-icon>
+                                        </button>
+                                    </div>
+
+                                    @for (objectField of getObjectFieldsForArray(field.key); track objectField.key) {
+                                    <div class="form-group">
+                                        @if (objectField.type === 'json') {
+                                        <!-- JSON Editor -->
+                                        <label> {{ objectField.label }}
+                                            @if (objectField.required) {<span class="required">*</span>}
+                                        </label>
+                                        <app-json-editor [formControlName]="objectField.key"
+                                            [suggestions]="['organizationId', 'projectId']" [label]="objectField.label"
+                                            [placeholder]="objectField.placeholder || 'name'">
+                                        </app-json-editor>
+                                        @if (hasObjectArrayError(field.key, $index, objectField.key)) {
+                                        <div class="error-message">
+                                            {{ getObjectArrayErrorMessage(field.key, $index, objectField.key) }}
+                                        </div>
+                                        }
+                                        } @else {
+                                        <!-- 通常のフィールド -->
+                                        <label [for]="objectField.key + '_' + $index">
+                                            {{ objectField.label }} @if (objectField.required) {<span
+                                                class="required">*</span>}
+                                        </label>
+                                        <input [id]="objectField.key + '_' + $index" [type]="objectField.type"
+                                            [formControlName]="objectField.key" class="form-control"
+                                            [placeholder]="objectField.placeholder || ''"
+                                            [ngClass]="{'invalid': hasObjectArrayError(field.key, $index, objectField.key)}">
+                                        @if (hasObjectArrayError(field.key, $index, objectField.key)) {
+                                        <div class="error-message">
+                                            {{ getObjectArrayErrorMessage(field.key, $index,objectField.key) }}
+                                        </div>
+                                        }
+                                        }
+                                    </div>
+                                    }
+                                </div>
+                                }
                             </div>
+                            }
+
+                            } @else if (field.type === 'json') {
+                            <!-- JSON Editor -->
+                            <label>{{ field.label }} @if (field.required) {<span class="required">*</span>}</label>
+                            <app-json-editor [formControlName]="field.key"
+                                [suggestions]="['organizationId', 'projectId']" [label]="field.label"
+                                [placeholder]="field.placeholder || 'name'">
+                            </app-json-editor>
+                            @if (hasError('config.' + field.key)) {
+                            <div class="error-message">{{ getErrorMessage('config.' + field.key) }}</div>
+                            }
+
+                            } @else {
+                            <!-- 通常のフィールド -->
+                            <label [for]="field.key">
+                                {{ field.label }} @if (field.required) {<span class="required">*</span>}
+                            </label>
+                            <input [id]="field.key" [type]="field.type" [formControlName]="field.key"
+                                class="form-control" [placeholder]="field.placeholder || ''"
+                                [ngClass]="{'invalid': hasError('config.' + field.key)}">
+                            @if (hasError('config.' + field.key)) {
+                            <div class="error-message">{{ getErrorMessage('config.' + field.key) }}</div>
+                            }
+                            }
                         </div>
+                        }
                     </div>
                 </div>
+                }
 
+                <!-- ボタン -->
                 <div class="button-group">
                     <button type="submit" class="btn btn-primary" mat-raised-button>
                         {{ isEditMode ? 'Update' : 'Register' }}
