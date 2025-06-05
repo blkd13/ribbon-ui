@@ -65,11 +65,12 @@
             }
         </mat-panel-title>
         <mat-panel-description>
-            <div class="truncate">{{vm.messageGroup.messages[0].label}}</div>
+            <!-- <div class="truncate">{{vm.messageGroup.messages[0].label}}</div> -->
         </mat-panel-description>
         @if(tokenObject(); as tokenObject){
+        @if(aiModelManagerService.modelMap[vm.thread.inDto.args.model]){
         <div class="text-xs text-[#999] flex items-center mr-4">
-            @if(tokenObject.totalTokens>=chatService.modelMap[vm.thread.inDto.args.model].maxInputTokens){
+            @if(tokenObject.totalTokens>=aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens){
             <div class="text-red-500 flex items-center gap-1 mr-1" matTooltip="Token limit exceeded">
                 <mat-icon class="text-red-500">error</mat-icon>
                 {{tokenObject.totalTokens|number:'1.0-0'}}
@@ -77,9 +78,10 @@
             }@else {
             {{tokenObject.totalTokens|number:'1.0-0'}}
             } /
-            {{chatService.modelMap[vm.thread.inDto.args.model].maxInputTokens|number:'1.0-0'}} |
+            {{aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens|number:'1.0-0'}} |
             ${{tokenObject.cost|number:'1.2-2'}}
         </div>
+        }@else{<div class="text-xs text-[#996] flex items-center mr-4">deprecated</div>}
         }
         <div class="right-0 top-0 flex gap-2">
             <!-- <div style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"> -->

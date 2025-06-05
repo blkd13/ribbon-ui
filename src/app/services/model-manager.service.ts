@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable, tap } from 'rxjs';
+import { map, Observable, of, tap } from 'rxjs';
 import { BaseEntity } from '../models/project-models';
+import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
 
 export enum AIProviderType {
   OPENAI = 'openai',
@@ -309,7 +310,10 @@ export enum Modality {
 }
 export interface AIModelEntity extends BaseEntity {
   /** AI プロバイダー種別 */
-  provider: AIProviderType;
+  providerType: AIProviderType;
+
+  /** AI プロバイダーの名前 */
+  providerName: string;
 
   /** プロバイダー内モデルの一意 ID */
   providerModelId: string;
@@ -401,6 +405,8 @@ export interface AIModelEntityForView extends AIModelEntity {
   pricingHistory: ModelPricing[];
 
   uiOrder: number;
+
+  isGSearch: boolean;
 }
 
 export type ModelCapability = 'text' | 'pdf' | 'image' | 'audio' | 'video' | 'tool' | 'embedding' | 'embedded';
@@ -409,23 +415,45 @@ export type ModelCapability = 'text' | 'pdf' | 'image' | 'audio' | 'video' | 'to
 export class AIModelManagerService {
 
   readonly http: HttpClient = inject(HttpClient);
+  /** AI モデルの一覧を取得するためのキャッシュ */
+  private stockedModels: AIModelEntityForView[] = [];
+  modelList: AIModelEntityForView[] = [];
+  modelMap: Record<string, AIModelEntityForView> = {};
 
   /** 一覧取得 */
-  getAIModels(): Observable<AIModelEntityForView[]> {
+  getAIModels(force: boolean = false): Observable<AIModelEntityForView[]> {
+    if (this.stockedModels.length > 0 && !force) {
+      return of(this.stockedModels);
+    }
     return this.http.get<AIModelEntityForView[]>(`/user/ai-models`).pipe(
-      tap(res => res.sort((a, b) => {
-        if (!a.releaseDate && !b.releaseDate) return 0;
-        if (!a.releaseDate) return 1;
-        if (!b.releaseDate) return -1;
-        return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
-      })),
       tap(models => {
+        this.stockedModels = models;
+        this.modelList = models;
+        this.modelMap = {};
         models.forEach(model => {
+          this.modelMap[model.name] = model;
+          model.aliases = model.aliases || [];
+          model.pricingHistory = model.pricingHistory || [];
           model.pricingHistory = model.pricingHistory.map(modelPricingFormat);
+          model.tags = model.tags || [];
+          model.details = model.details || [];
+          model.description = model.description || '';
+          model.name = model.name || '';
+          model.providerModelId = model.providerModelId || '';
           model.knowledgeCutoff = model.knowledgeCutoff ? new Date(model.knowledgeCutoff) : null;
           model.releaseDate = model.releaseDate ? new Date(model.releaseDate) : null;
           model.deprecationDate = model.deprecationDate ? new Date(model.deprecationDate) : null;
-          model.uiOrder = Number(model.uiOrder);
+          model.uiOrder = Number(model.uiOrder) || 0;
+          // TODO ここでGSearchのフラグを設定するのはおかしい。metaddataに設定するべき
+          model.isGSearch = (model.name.startsWith('gemini') && !model.name.includes('flash-lite'));
+          if (model.defaultParameters) {
+            try {
+              JSON.stringify(model.defaultParameters);
+            } catch (e) {
+              console.warn(`Invalid defaultParameters for ${model.providerModelId}`, e);
+              model.defaultParameters = {};
+            }
+          }
         });
         models.sort((a, b) => {
           if (!a.releaseDate && !b.releaseDate) return 0;
@@ -452,6 +480,58 @@ export class AIModelManagerService {
   /** 削除 */
   deleteAIModel(id: string): Observable<void> {
     return this.http.delete<void>(`/maintainer/ai-model/${id}`);
+  }
+
+  checkOkModels = new Set<string>();
+
+  validateModelAttributes(argsList: ChatCompletionCreateParamsWithoutMessages[]): { isNotPdf?: string[], isNotDomestic?: string[], message: string } {
+    const ret: { isNotPdf?: string[], isNotDomestic?: string[], message: string } = { message: '' };
+    const modelMas = Object.fromEntries(this.modelList.map(model => [model.id, model]));
+
+    argsList.forEach(args => {
+      const model = args.model;
+      // if (this.checkOkModels.has(model)) {
+      //   // 既にアラート出したことのあるモデルは除外。
+      //   return;
+      // } else { }
+      if (modelMas[model]) {
+        // Check if the model is not a PDF
+        if (!modelMas[model].modalities.includes(Modality.PDF)) {
+          if (!ret.isNotPdf) {
+            ret.isNotPdf = []; // Initialize the array if not already done
+          } else { }
+          ret.isNotPdf.push(model); // Add the model to isNotPdf
+        } else { }
+
+        // Check if the model is not domestic
+        if (modelMas[model].tags?.includes('海外')) {
+          if (!ret.isNotDomestic) {
+            ret.isNotDomestic = []; // Initialize the array if not already done
+          } else { }
+          ret.isNotDomestic.push(model); // Add the model to isNotDomestic
+        } else { }
+        this.checkOkModels.add(model);
+      } else { }
+    });
+
+
+    if (Object.keys(ret).length > 0) {
+      let message = '';
+      // if (ret.isNotDomestic) {
+      //   const modelList = ret.isNotDomestic.map(model => `・${model}`).join('\n');
+      //   message += `以下のモデルは海外リージョンを利用します。\n個人情報は絶対に入力しないでください。\n${modelList}\n\n`;
+      // } else { }
+      // if (ret.isNotPdf) {
+      //   const modelList = ret.isNotPdf.map(model => `・${model}`).join('\n');
+      //   message += `以下のモデルはPDF/Word/PowerPointが未対応です。\nもし入れた場合は無視されますのでご認識ください。\nテキスト（各種ソースコード等）、画像(png/jpg/etc...）は利用できます。\n${modelList}\n\n`;
+      // } else { }
+      ret.message = message;
+    } else {
+      // アラート不用
+    }
+
+    return ret; // Return the result object
+    // return { message: '' }; // Placeholder return value
   }
 }
 

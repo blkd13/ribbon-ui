@@ -12,12 +12,14 @@ export class ExtApiProviderService {
   private stockedApiProviders: ExtApiProviderEntity[] = [];
   private stockedApiProviderTemplates: ExtApiProviderTemplateEntity[] = [];
 
+  providerMas: { [provider: string]: { type: string, name: string, label: string } } = {};
+
   getApiProvidersNonAuth(orgKey: string): Observable<ExtApiProviderEntity[]> {
     return this.http.get<ExtApiProviderEntity[]>(`/public/${orgKey}/ext-api-providers`);
   }
 
-  getApiProviders(): Observable<ExtApiProviderEntity[]> {
-    if (this.stockedApiProviders.length) {
+  getApiProviders(force: boolean = false): Observable<ExtApiProviderEntity[]> {
+    if (this.stockedApiProviders.length && !force) {
       return new Observable<ExtApiProviderEntity[]>(observer => {
         observer.next(this.stockedApiProviders);
         observer.complete();
@@ -26,7 +28,11 @@ export class ExtApiProviderService {
       return this.http.get<ExtApiProviderEntity[]>(`/user/ext-api-providers`).pipe(
         tap((apiProviders: ExtApiProviderEntity[]) => {
           this.stockedApiProviders = apiProviders;
-        })
+          this.providerMas = apiProviders.reduce((acc: { [provider: string]: { type: string, name: string, label: string } }, provider) => {
+            acc[`${provider.type}-${provider.name}`] = { type: provider.type, name: provider.name, label: provider.label };
+            return acc;
+          }, {});
+        }),
       );
     }
   }

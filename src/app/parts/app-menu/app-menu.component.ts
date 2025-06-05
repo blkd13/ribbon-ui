@@ -43,7 +43,7 @@ export class AppMenuComponent implements OnInit {
         this.isSystemAdmin = true;
       }
     });
-    this.extApiProviderService.getApiProviders().subscribe({
+    this.extApiProviderService.getApiProviders(true).subscribe({
       next: apiProviderList => {
 
         this.apiProviderGroupedList = apiProviderList.filter(obj => obj.authType === ExtApiProviderAuthType.OAuth2).reduce((acc: { [type: string]: ExtApiProviderEntity[] }, apiProvider: ExtApiProviderEntity) => {

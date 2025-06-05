@@ -22,7 +22,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 
-import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty, catchError, throwError, EMPTY } from 'rxjs';
+import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty, catchError, throwError, EMPTY, forkJoin } from 'rxjs';
 import { saveAs } from 'file-saver';
 
 import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
@@ -50,6 +50,8 @@ import { ToolCallPart, ToolCallPartBody, ToolCallPartInfoBody, ToolCallPartCallB
 import { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/index.mjs';
 import { SaveThreadData, SaveThreadDialogComponent } from '../../parts/save-thread-dialog/save-thread-dialog.component';
 import { MatBadgeModule } from '@angular/material/badge';
+import { AIModelManagerService } from '../../services/model-manager.service';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 
 declare var _paq: any;
 
@@ -152,12 +154,17 @@ export class ChatComponent implements OnInit {
 
   readonly authService: AuthService = inject(AuthService);
   readonly chatService: ChatService = inject(ChatService);
+
+  readonly aiModelManagerService = inject(AIModelManagerService);
+  readonly extApiProviderService = inject(ExtApiProviderService);
+
   readonly projectService: ProjectService = inject(ProjectService);
   readonly teamService: TeamService = inject(TeamService);
   readonly threadService: ThreadService = inject(ThreadService);
   readonly messageService: MessageService = inject(MessageService);
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
   readonly userService: UserService = inject(UserService);
+
   readonly dbService: NgxIndexedDBService = inject(NgxIndexedDBService);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly router: Router = inject(Router);
@@ -172,7 +179,7 @@ export class ChatComponent implements OnInit {
     this.defaultPlaceholder = `メッセージを入力...。Shift+Enterで改行。${this.userService.enterMode}で送信。Drag＆Drop、ファイル貼り付け。`;
     document.title = `AI`;
     of(0).pipe(
-      switchMap(() => this.loadTeams()),
+      switchMap(() => forkJoin([this.loadTeams(), this.aiModelManagerService.getAIModels(), this.extApiProviderService.getApiProviders()])),
       switchMap(() => this.loadProjects()),
       switchMap(() => this.loadDefaultThreadGroup()),
     ).subscribe(ret => {
@@ -431,7 +438,7 @@ export class ChatComponent implements OnInit {
     console.log(argList.map(arg => arg.model));
     // 空配列だったらスレッドグループ全体をチェック
     argList = argList.length === 0 ? this.selectedThreadGroup.threadList.map(thread => thread.inDto.args).filter(args => args) : argList;
-    const mess = this.chatService.validateModelAttributes(argList);
+    const mess = this.aiModelManagerService.validateModelAttributes(argList);
     if (mess.message.length > 0) {
       this.dialog.open(DialogComponent, { data: { title: 'Alert', message: mess.message, options: ['Close'] } });
       return false; // アラートを出して終了
@@ -884,17 +891,22 @@ export class ChatComponent implements OnInit {
 
   calcCost(tokenObject: CountTokensResponseForView): number {
     const model = tokenObject.model;
+    if (this.aiModelManagerService.modelMap[model]) {
+    } else {
+      console.warn(`Model ${model} not found in modelMap.`);
+      return 0; // モデルが見つからない場合はコストを0にする
+    }
     if (model.startsWith('gemini-1.5')) {
       const charCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalBillableCharacters || 0;
       const isLarge = tokenObject.totalTokens > 128000 ? 2 : 1;
-      return charCount / 1000 * this.chatService.modelMap[model].price[0] * isLarge;
+      return charCount / 1000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit * isLarge;
     } else if (model.startsWith('gemini-2')) {
       const tokenCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalTokens;
       const isLarge = tokenObject.totalTokens > 200000 ? 2 : 1;
-      return tokenCount / 1000 * this.chatService.modelMap[model].price[0] * isLarge;
+      return tokenCount / 1000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit * isLarge;
     } else {
       const tokenCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalTokens;
-      return tokenCount / 1000 * this.chatService.modelMap[model].price[0];
+      return tokenCount / 1000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit;
     }
   }
 
@@ -1168,16 +1180,16 @@ export class ChatComponent implements OnInit {
     for (const thread of threadList) {
       const tailMessageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id].at(-1)!];
       const modelName = thread.inDto.args.model ?? '';
-      const model = this.chatService.modelMap[modelName];
+      const model = this.aiModelManagerService.modelMap[modelName];
       const args = thread.inDto.args;
 
       // バリデーションエラー
       if (!args.model) {
         throw new Error('Model is not set');
-      } else if (this.tokenObjList[threadIndex] && this.tokenObjList[threadIndex].totalTokens > model.maxInputTokens) {
-        this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`, 'close', { duration: 3000 });
-        throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxInputTokens}以下にしてください。`);
-      } else if (args.isGoogleSearch && !this.chatService.modelMap[args.model].isGSearch) {
+      } else if (this.tokenObjList[threadIndex] && this.tokenObjList[threadIndex].totalTokens > model.maxContextTokens) {
+        this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxContextTokens}以下にしてください。`, 'close', { duration: 3000 });
+        throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxContextTokens}以下にしてください。`);
+      } else if (args.isGoogleSearch && !this.aiModelManagerService.modelMap[args.model].isGSearch) {
         this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
@@ -1838,7 +1850,8 @@ export class ChatComponent implements OnInit {
     for (const thread of threadGroup.threadList) {
       // threadGroup.threadList
       if (thread.inDto.args.model) {
-        if (this.chatService.modelMap[thread.inDto.args.model].isEnable) {
+        if (this.aiModelManagerService.modelMap[thread.inDto.args.model].isActive) {
+          // 
         } else {
           disabledModels.push(thread.inDto.args.model);
         }

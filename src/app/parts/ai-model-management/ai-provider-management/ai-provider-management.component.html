@@ -49,11 +49,15 @@
                         </td>
                         <td class="actions-cell">
                             <button mat-icon-button class="mr-5"
-                                (click)="selectProvider(provider); $event.stopPropagation();">
+                                (click)="selectProvider(provider); $event.stopPropagation();" matTooltip="Edit">
                                 <mat-icon>edit</mat-icon>
                             </button>
+                            <button mat-icon-button class="mr-5" (click)="duplicateProvider(provider, $event);"
+                                matTooltip="Duplicate">
+                                <mat-icon>content_copy</mat-icon>
+                            </button>
                             <button mat-icon-button class="mr-5"
-                                (click)="deleteProvider(provider.id); $event.stopPropagation();">
+                                (click)="deleteProvider(provider.id); $event.stopPropagation();" matTooltip="Delete">
                                 <mat-icon>delete</mat-icon>
                             </button>
                         </td>
@@ -67,7 +71,7 @@
         @if (isFormVisible) {
         <div class="form-container">
             <div class="form-header">
-                <h3>{{ isEditMode ? 'Edit Provider' : 'New Provider' }}</h3>
+                <h3>{{ getFormTitle() }}</h3>
                 <button mat-icon-button type="button" (click)="closeForm()">
                     <mat-icon>close</mat-icon>
                 </button>

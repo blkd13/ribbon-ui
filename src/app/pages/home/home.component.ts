@@ -44,6 +44,7 @@ import { UserService } from '../../services/user.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { ChatCompletionCreateParamsWithoutMessages, ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
 import { ModelSelectorComponent } from "../../parts/model-selector/model-selector.component";
+import { AIModelManagerService } from '../../services/model-manager.service';
 
 declare var _paq: any;
 @Component({
@@ -65,6 +66,7 @@ export class HomeComponent implements OnInit {
 
   readonly authService: AuthService = inject(AuthService);
   readonly chatService: ChatService = inject(ChatService);
+  readonly aiModelManagerService: AIModelManagerService = inject(AIModelManagerService);
   readonly projectService: ProjectService = inject(ProjectService);
   readonly teamService: TeamService = inject(TeamService);
   readonly threadService: ThreadService = inject(ThreadService);
@@ -309,7 +311,7 @@ export class HomeComponent implements OnInit {
   changeModel(args: ChatCompletionCreateParamsWithoutMessages): void {
     this.args = args;
     if (args.model) {
-      const mess = this.chatService.validateModelAttributes([args]);
+      const mess = this.aiModelManagerService.validateModelAttributes([args]);
       if (mess.message.length > 0) {
         this.dialog.open(DialogComponent, { data: { title: 'Alert', message: mess.message, options: ['Close'] } });
       } else {

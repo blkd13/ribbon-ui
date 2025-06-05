@@ -6,9 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
-import { AIModelManagerService, AIModelPricingService, ModelPricing, AIModelEntity, AIModelStatus, AIProviderType, Modality, AIModelEntityForView } from '../../../services/model-manager.service';
+import { AIModelManagerService, AIModelPricingService, ModelPricing, AIModelEntity, AIModelStatus, AIProviderType, Modality, AIModelEntityForView, AIProviderManagerService, AIProviderEntity } from '../../../services/model-manager.service';
 import { forkJoin, of } from 'rxjs';
-import { map, catchError, switchMap } from 'rxjs/operators';
+import { map, catchError, switchMap, tap } from 'rxjs/operators';
 import { genInitialBaseEntity } from '../../../services/project.service';
 import { JsonEditorComponent } from "../../json-editor/json-editor.component";
 import { TrimTrailingZerosPipe } from '../../../pipe/trim-trailing-zeros.pipe';
@@ -16,10 +16,6 @@ import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatAutocompleteActivatedEvent, MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
-
-interface ModelPricingMap {
-  [modelId: string]: ModelPricing[];
-}
 
 @Component({
   selector: 'app-ai-model-management',
@@ -47,11 +43,11 @@ export class AIModelManagementComponent implements OnInit {
 
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
 
+  readonly aiProviderService: AIProviderManagerService = inject(AIProviderManagerService);
   readonly aiModelService: AIModelManagerService = inject(AIModelManagerService);
   readonly aiModelPricingService: AIModelPricingService = inject(AIModelPricingService);
 
   models: AIModelEntityForView[] = [];
-  modelPricingMap: ModelPricingMap = {};
 
   // 表示状態管理
   isFormVisible = false;
@@ -65,7 +61,7 @@ export class AIModelManagementComponent implements OnInit {
   hasExistingPricing = false;
 
   // ドロップダウンオプション
-  providerOptions = Object.values(AIProviderType);
+  providerOptions: AIProviderEntity[] = [];
   statusOptions = Object.values(AIModelStatus);
   modalityOptions = Object.values(Modality);
 
@@ -83,34 +79,25 @@ export class AIModelManagementComponent implements OnInit {
 
   // データの読み込み（モデルと価格情報）
   loadData() {
+    this.aiProviderService.getProviders().pipe().subscribe({
+      next: (providers) => {
+        this.providerOptions = providers;
+      },
+      error: (err) => {
+        console.error('Error fetching provider names:', err);
+        this.snackBar.open('Error loading provider names', 'Close', {
+          duration: 3000,
+          panelClass: 'error-snackbar'
+        });
+      }
+    });
     // モデルと各モデルの最新価格情報を取得
-    this.aiModelService.getAIModels().pipe(
-      switchMap(models => {
+    this.aiModelService.getAIModels(true).pipe(
+      tap(models => {
         this.models = models;
-
-        // モデルがない場合は空の配列を返す
-        if (models.length === 0) {
-          return of([]);
-        }
-
-        // 各モデルの最新価格情報を取得
-        const requests = models.map(model =>
-          this.aiModelPricingService.getPricings(model.id).pipe(
-            catchError(() => of(null))
-          )
-        );
-
-        return forkJoin(requests);
-      })
+      }),
     ).subscribe({
       next: (pricingResults) => {
-        // 価格情報をマップに設定
-        this.modelPricingMap = {};
-        pricingResults.forEach((pricing, index) => {
-          if (pricing && pricing.length > 0) {
-            this.modelPricingMap[this.models[index].id] = pricing;
-          }
-        });
       },
       error: (err) => {
         console.error('Error fetching data:', err);
@@ -129,7 +116,7 @@ export class AIModelManagementComponent implements OnInit {
 
     this.form = this.fb.group({
       id: [''],
-      provider: ['', Validators.required],
+      providerId: ['', Validators.required],
       providerModelId: ['', Validators.required],
       name: ['', Validators.required],
       aliases: [[]],
@@ -171,7 +158,7 @@ export class AIModelManagementComponent implements OnInit {
   resetForm() {
     this.form.reset({
       id: '',
-      provider: '',
+      providerId: '',
       providerModelId: '',
       name: '',
       aliases: [],
@@ -248,9 +235,11 @@ export class AIModelManagementComponent implements OnInit {
     const releaseDate = model.releaseDate ? this.formatDateForInput(model.releaseDate) : '';
     const deprecationDate = model.deprecationDate ? this.formatDateForInput(model.deprecationDate) : '';
 
+    const provider = this.providerOptions.find(provider => provider.type === model.providerType && provider.name === model.providerName);
+
     this.form.patchValue({
       id: '', // IDはクリア
-      provider: model.provider,
+      providerId: provider ? provider.id : '', // プロバイダIDを設定
       providerModelId: model.providerModelId + '_copy', // 識別のため_copyを付加
       name: model.name + ' (Copy)',
       aliases: [...(model.aliases || [])],
@@ -307,7 +296,7 @@ export class AIModelManagementComponent implements OnInit {
     this.isEditMode = true;
     this.isDuplicateMode = false;
     this.isFormVisible = true;
-    this.setActiveTab('basic'); // 初期タブを設定
+    // this.setActiveTab('basic'); // 初期タブを設定
 
     // モデルの価格情報を取得
     this.hasExistingPricing = model.pricingHistory && model.pricingHistory.length > 0;
@@ -333,10 +322,12 @@ export class AIModelManagementComponent implements OnInit {
     const releaseDate = model.releaseDate ? this.formatDateForInput(model.releaseDate) : '';
     const deprecationDate = model.deprecationDate ? this.formatDateForInput(model.deprecationDate) : '';
 
+    const provider = this.providerOptions.find(provider => provider.type === model.providerType && provider.name === model.providerName);
+
     // モデルデータをフォームに設定
     this.form.patchValue({
       id: model.id,
-      provider: model.provider,
+      providerId: provider ? provider.id : '', // プロバイダIDを設定
       providerModelId: model.providerModelId,
       name: model.name,
       aliases: model.aliases || [],
@@ -414,11 +405,21 @@ export class AIModelManagementComponent implements OnInit {
       const releaseDate = formValue.releaseDate ? new Date(formValue.releaseDate) : null;
       const deprecationDate = formValue.deprecationDate ? new Date(formValue.deprecationDate) : null;
 
+      const provider = this.providerOptions.find(provider => provider.id === formValue.providerId);
+      if (!provider) {
+        this.snackBar.open('Selected provider is invalid', 'Close', {
+          duration: 3000,
+          panelClass: 'error-snackbar'
+        });
+        return;
+      }
+
       // モデルデータの構築
       const modelData: AIModelEntity & { aliases: string[] } = {
         ...genInitialBaseEntity(),
         id: this.isEditMode ? formValue.id : undefined, // 新規作成時はIDを設定しない
-        provider: formValue.provider,
+        providerType: provider.type,
+        providerName: provider.name,
         providerModelId: formValue.providerModelId,
         name: formValue.name,
         aliases: formValue.aliases || [],
@@ -630,7 +631,7 @@ export class AIModelManagementComponent implements OnInit {
   activateTabWithErrors() {
     // 各タブに関連するフィールドのグループを定義
     const tabFields = {
-      'basic': ['provider', 'providerModelId', 'name', 'aliases', 'shortName', 'throttleKey', 'status', 'description', 'isStream', 'isActive'],
+      'basic': ['providerId', 'providerModelId', 'name', 'aliases', 'shortName', 'throttleKey', 'status', 'description', 'isStream', 'isActive'],
       'capabilities': ['modalities', 'maxContextTokens', 'maxOutputTokens', 'inputFormats', 'outputFormats', 'defaultParameters', 'capabilities'],
       'pricing': ['pricing.inputPricePerUnit', 'pricing.outputPricePerUnit', 'pricing.unit', 'pricing.validFrom'],
       'advanced': ['endpointTemplate', 'documentationUrl', 'licenseType', 'releaseDate', 'knowledgeCutoff', 'deprecationDate', 'tags', 'uiOrder', 'metadata']

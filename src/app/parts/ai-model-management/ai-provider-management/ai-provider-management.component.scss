@@ -505,3 +505,9 @@ textarea.form-control {
         flex-wrap: wrap;
     }
 }
+
+.actions-cell {
+    width: 160px; // 120pxから160pxに変更（3つのボタンに対応）
+    text-align: right;
+    white-space: nowrap;
+}

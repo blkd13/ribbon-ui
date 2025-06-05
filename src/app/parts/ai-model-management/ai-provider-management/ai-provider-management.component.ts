@@ -36,9 +36,9 @@ export class ProviderConfigService {
       title: 'OpenAI Configuration',
       fields: [
         {
-          key: 'credentials',
+          key: 'endpoints',
           type: 'object_array',
-          label: 'Credentials',
+          label: 'Endpoints',
           required: true,
           objectFields: [
             { key: 'apiKey', type: 'password', label: 'API Key', required: true },
@@ -106,9 +106,9 @@ export class ProviderConfigService {
       title: `${Utils.toPascalCase(providerType)} Configuration`,
       fields: [
         {
-          key: 'credentials',
+          key: 'endpoints',
           type: 'object_array',
-          label: 'Credentials',
+          label: 'Endpoints',
           required: true,
           objectFields: [
             { key: 'apiKey', type: 'password', label: 'API Key', required: true }
@@ -396,6 +396,7 @@ export class AIProviderManagementComponent implements OnInit {
   providers: AIProviderEntity[] = [];
   isFormVisible = false;
   isEditMode = false;
+  isDuplicateMode = false; // 複製モードフラグを追加
   currentProviderFields: any[] = [];
 
   // Enum references
@@ -406,7 +407,6 @@ export class AIProviderManagementComponent implements OnInit {
     { value: ScopeType.DIVISION, label: 'Division' },
   ];
   Utils = Utils;
-
 
   // Scope management
   scopeLabels: ScopeLabelsResponse = {
@@ -449,6 +449,7 @@ export class AIProviderManagementComponent implements OnInit {
     });
   }
 
+  // initFormメソッドのvalueChanges部分も修正
   private initForm() {
     this.form = this.fb.group({
       id: [''],
@@ -467,14 +468,23 @@ export class AIProviderManagementComponent implements OnInit {
     });
 
     this.form.get('basicInfo.type')?.valueChanges.subscribe(type => {
-      this.updateConfigForm(type);
+      // 編集モード中でない場合のみ新しいフォームを作成
+      if (!this.isEditMode && !this.isDuplicateMode) {
+        this.updateConfigForm(type);
+      }
     });
   }
 
-  private updateConfigForm(providerType: string) {
+  private updateConfigForm(providerType: string, existingConfig?: any) {
     const configDefinition = this.providerConfigService.getConfigDefinition(providerType);
     this.currentProviderFields = configDefinition.fields;
     const newConfigForm = this.providerConfigService.createConfigForm(providerType);
+
+    // 既存の設定値がある場合はパッチする
+    if (existingConfig) {
+      this.providerConfigService.patchConfigForm(newConfigForm, existingConfig, providerType);
+    }
+
     this.form.setControl('config', newConfigForm);
   }
 
@@ -549,6 +559,7 @@ export class AIProviderManagementComponent implements OnInit {
   // フォーム操作
   createNew() {
     this.isEditMode = false;
+    this.isDuplicateMode = false;
     this.initForm();
     this.currentProviderFields = [];
     this.form.patchValue({
@@ -557,14 +568,54 @@ export class AIProviderManagementComponent implements OnInit {
     this.isFormVisible = true;
   }
 
-  selectProvider(provider: AIProviderEntity) {
-    this.isEditMode = true;
+  // 既存プロバイダーを複製して新規作成
+  duplicateProvider(provider: AIProviderEntity, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    this.isEditMode = false;
+    this.isDuplicateMode = true;
     this.isFormVisible = true;
 
+    // valueChangesイベントを発火させずにtypeを設定
+    this.form.get('basicInfo.type')?.setValue(provider.type, { emitEvent: false });
+
+    // configフォームを既存の値込みで手動更新
+    this.updateConfigForm(provider.type, provider.config);
+
+    // プロバイダーデータをコピー（IDはクリア）
+    this.form.patchValue({
+      id: '', // IDはクリア
+      basicInfo: {
+        name: provider.name + '_copy', // 識別のため_copyを付加
+        label: provider.label + ' (Copy)',
+        description: provider.description,
+        isActive: true, // 新規作成時はアクティブに
+      },
+      scopeInfo: {
+        scopeType: provider.scopeInfo.scopeType,
+        scopeId: provider.scopeInfo.scopeId
+      }
+    });
+  }
+
+  // selectProviderメソッドを修正
+  selectProvider(provider: AIProviderEntity) {
+    this.isEditMode = true;
+    this.isDuplicateMode = false;
+    this.isFormVisible = true;
+
+    // valueChangesイベントを発火させずにtypeを設定
+    this.form.get('basicInfo.type')?.setValue(provider.type, { emitEvent: false });
+
+    // configフォームを既存の値込みで手動更新
+    this.updateConfigForm(provider.type, provider.config);
+
+    // 残りの値をパッチ
     this.form.patchValue({
       id: provider.id,
       basicInfo: {
-        type: provider.type,
         name: provider.name,
         label: provider.label,
         description: provider.description,
@@ -572,18 +623,6 @@ export class AIProviderManagementComponent implements OnInit {
       },
       scopeInfo: provider.scopeInfo
     });
-
-    setTimeout(() => {
-      if (provider.config) {
-        this.patchConfigValues(provider.config);
-      }
-    });
-  }
-
-  private patchConfigValues(config: any) {
-    const configForm = this.form.get('config') as FormGroup;
-    const providerType = this.form.get('basicInfo.type')?.value;
-    this.providerConfigService.patchConfigForm(configForm, config, providerType);
   }
 
   register() {
@@ -636,8 +675,21 @@ export class AIProviderManagementComponent implements OnInit {
 
   closeForm() {
     this.isFormVisible = false;
+    this.isEditMode = false;
+    this.isDuplicateMode = false;
     this.form.reset();
     this.currentProviderFields = [];
+  }
+
+  // フォームのタイトルを取得
+  getFormTitle(): string {
+    if (this.isDuplicateMode) {
+      return 'Duplicate Provider';
+    } else if (this.isEditMode) {
+      return 'Edit Provider';
+    } else {
+      return 'New Provider';
+    }
   }
 
   // バリデーション関連

@@ -17,6 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DialogComponent } from '../dialog/dialog.component';
 import { map, switchMap, tap } from 'rxjs';
 import { safeForkJoin } from '../../utils/dom-utils';
+import { AIModelManagerService } from '../../services/model-manager.service';
 
 declare const _paq: any;
 
@@ -33,6 +34,7 @@ declare const _paq: any;
 export class ParameterSettingDialogComponent {
 
   readonly chatService: ChatService = inject(ChatService);
+  readonly aIModelManagerService: AIModelManagerService = inject(AIModelManagerService);
   readonly projectService: ProjectService = inject(ProjectService);
   readonly threadService: ThreadService = inject(ThreadService);
   readonly messageService: MessageService = inject(MessageService);

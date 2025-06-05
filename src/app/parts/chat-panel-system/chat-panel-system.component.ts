@@ -18,7 +18,7 @@ import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox
 import { MyToolType, ToolCallService } from '../../services/tool-call.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { ModelSelectorComponent } from "../model-selector/model-selector.component";
-import { AIModelEntityForView } from '../../services/model-manager.service';
+import { AIModelEntityForView, AIModelManagerService } from '../../services/model-manager.service';
 import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
 
 @Component({
@@ -43,9 +43,9 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   readonly threadChangeEmitter = output<Thread>({ alias: 'threadChange' });
 
-  readonly toolCallService: ToolCallService = inject(ToolCallService);
-
-  readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
+  readonly toolCallService = inject(ToolCallService);
+  readonly aiModelManagerService = inject(AIModelManagerService);
+  readonly extApiProviderService = inject(ExtApiProviderService);
 
   showFullPrompt: boolean = false;
   // modelIdMas: { [modelId: string]: LlmModel } = {};

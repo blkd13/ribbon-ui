@@ -42,20 +42,22 @@
         <mat-form-field appearance="fill" class="w-0 grow">
           <mat-label>モデル選択</mat-label>
           <mat-select [(ngModel)]="args.model">
-            @for(option of chatService.modelList;track $index){
-            <mat-option [value]="option.id" [disabled]="!option.isEnable">{{option.tag}}：{{option.id}}</mat-option>
+            @for(option of aIModelManagerService.modelList;track $index){
+            <mat-option [value]="option.name" [disabled]="!option.isActive">{{option.name}}</mat-option>
             }
             <!-- <mat-optgroup label="Gemini-1.5"></mat-optgroup> -->
           </mat-select>
         </mat-form-field>
+        @if(aIModelManagerService.modelMap[args.model]){
         <div class="flex items-center" style="width: 150px;"
-          [matTooltip]="chatService.modelMap[args.model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini-1.5以外では使用できません。'"
-          [ngStyle]="{opacity: chatService.modelMap[args.model].isGSearch?1:0.5}">
+          [matTooltip]="aIModelManagerService.modelMap[args.model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini-1.5以外では使用できません。'"
+          [ngStyle]="{opacity: aIModelManagerService.modelMap[args.model].isGSearch?1:0.5}">
           <img src="./image/google-icon.svg" alt="Googleアイコン" class="w-8 h-8"
             [ngStyle]="{opacity: args.isGoogleSearch ? 1 : 0.3}">
           <mat-checkbox [(ngModel)]="args.isGoogleSearch" color="primary"
-            [disabled]="!chatService.modelMap[args.model].isGSearch">Google<br />検索統合</mat-checkbox>
+            [disabled]="!aIModelManagerService.modelMap[args.model].isGSearch">Google<br />検索統合</mat-checkbox>
         </div>
+        }
       </div>
 
       <div class="flex gap-4 justify-between">

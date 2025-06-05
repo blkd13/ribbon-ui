@@ -39,7 +39,10 @@
                 <tbody>
                     @for (model of models; track $index) {
                     <tr [class.selected]="form.value.id === model.id" (click)="selectModel(model)">
-                        <td>{{ model.provider }}</td>
+                        <td>
+                            {{ model.providerName }}
+                            <div class="text-xs text-[#888]">{{model.providerType}}</div>
+                        </td>
                         <!-- <td>{{ model.providerModelId }}</td> -->
                         <td>
                             {{ model.name }}
@@ -142,16 +145,20 @@
                 <div class="tab-content" [class.active]="activeTab === 'basic'">
                     <!-- Provider -->
                     <div class="form-group">
-                        <label for="provider">Provider <span class="required">*</span></label>
-                        <select id="provider" formControlName="provider" class="form-control"
-                            [ngClass]="{'invalid': hasError('provider')}">
+                        <label for="provider">Provider<span class="required">*</span></label>
+                        <select id="provider" formControlName="providerId" class="form-control"
+                            [ngClass]="{'invalid': hasError('providerId')}">
                             <option [value]="''">Select a provider</option>
                             @for (provider of providerOptions; track $index) {
-                            <option [value]="provider">{{ provider }}</option>
+                            <option [value]="provider.id">
+                                {{ provider.type === provider.name ? provider.name : '[' + provider.type + ']' +
+                                provider.name
+                                }}
+                            </option>
                             }
                         </select>
-                        @if(hasError('provider')){
-                        <div class="error-message">{{ getErrorMessage('provider') }}</div>
+                        @if(hasError('providerId')){
+                        <div class="error-message">{{ getErrorMessage('providerId') }}</div>
                         }
                     </div>
 

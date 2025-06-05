@@ -53,7 +53,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
       label: ['', Validators.required]
     });
 
-    this.extApiProviderService.getApiProviders().subscribe({
+    this.extApiProviderService.getApiProviders(true).subscribe({
       next: (apiProviderList) => {
         this.apiProviderMap = apiProviderList.reduce((acc: { [key: string]: ExtApiProviderEntity }, apiProvider: ExtApiProviderEntity) => {
           acc[`${apiProvider.type}-${apiProvider.name}`] = apiProvider;
