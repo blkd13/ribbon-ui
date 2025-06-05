@@ -101,7 +101,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
       next: next => {
         this.apiKeys = next.oauthAccounts;
         this.apiKeys.forEach(key => {
-          (key as any).label = this.apiProviderMap[key.provider] ? this.apiProviderMap[key.provider].label : key.provider;
+          key.label = key.label || this.apiProviderMap[key.provider] ? this.apiProviderMap[key.provider].label : key.provider;
         });
       },
       error: error => {
@@ -110,11 +110,30 @@ export class ApiKeyManagerDialogComponent implements OnInit {
     });
   }
 
+  labelFormat(element: OAuthAccount): string {
+    if (element.provider.startsWith('local-')) {
+      return `ribbon-ui(${element.label})`;
+    } else {
+      return element.label || element.provider;
+    }
+  }
+
   genAPIKey(): void {
+    if (this.apiLabelForm.invalid || !this.apiLabelForm.value.label) {
+      this.snackBar.open('ラベルを入力してください', '閉じる', { duration: 3000 });
+      return;
+    }
+    if (this.apiKeys.find(key => key.provider === `local-${this.apiLabelForm.value.label}`)) {
+      this.snackBar.open(`${this.apiLabelForm.value.label}\n既に同名のAPI鍵が存在します。別のラベルを入力してください。`, '閉じる', { duration: 3000 });
+      return;
+    } else { }
     this.authServices.genApiKey(this.apiLabelForm.value.label).subscribe({
       next: next => {
         this.dialog.open(ApiKeyDialogComponent, { data: { apiKey: next.apiToken } });
         this.loadApiKeys();
+      },
+      error: error => {
+        this.snackBar.open('API鍵の生成に失敗しました', '閉じる', { duration: 3000 });
       },
     });
   }

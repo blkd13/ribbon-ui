@@ -7,7 +7,7 @@ import { PredictTransaction } from './department.service';
 import { GService } from './g.service';
 import { ScopeType } from './model-manager.service';
 
-export type OAuthAccount = { id: string, userInfo: string, provider: string, providerUserId: string, providerEmail: string };
+export type OAuthAccount = { id: string, userInfo: string, provider: string, providerUserId: string, providerEmail: string, label: string };
 // export type OAuthProvider = { providerType: string, name: string, label: string };
 export type ExtApiProviderType = string;
 export type ExtApiClient = { type: string, provider: string, label: string, description: string, };
