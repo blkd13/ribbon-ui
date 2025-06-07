@@ -47,6 +47,7 @@ export class Utils {
      * @private
      */
     private static toAscii(str: string, isCamel: boolean = true): string {
+        if (!str) return str;
         // 空白やアンダースコアを区切り文字として分割します
         const words = str.split(/[-\s_]+/);
         // 分割された単語をCamelCaseに変換します
@@ -81,6 +82,7 @@ export class Utils {
      * @returns 大文字に変換された文字列
      */
     static capitalize(str: string) {
+        if (!str) return str;
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
@@ -90,6 +92,7 @@ export class Utils {
      * @returns 小文字に変換された文字列
      */
     static decapitalize(str: string) {
+        if (!str) return str;
         return str.charAt(0).toLowerCase() + str.slice(1);
     }
 

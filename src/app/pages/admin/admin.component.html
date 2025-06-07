@@ -1,27 +1,48 @@
+@if(this.selectedScope){
 <div class="h-screen text-gray-100 flex" style="background-color: var(--plain-background, #1a1a1a);">
     <!-- サイドバー -->
     <div class="border-r left-pane"
         style="background-color: var(--plain-background-area, #1f1f1f); border-color: var(--plain-border-color, #333);">
         <!-- ヘッダー -->
-        <div class=" p-6 border-b" style="border-color: var(--plain-border-color, #333);">
-            <h1 class="text-xl font-semibold" style="color: var(--plain-color, #f3f4f6);">設定</h1>
+        <div class="p-6 border-b" style="border-color: var(--plain-border-color, #333);">
+            <h1 class="text-xl font-semibold mb-4" style="color: var(--plain-color, #f3f4f6);">設定</h1>
+
+            <!-- スコープ選択 -->
+
+            <div class="scope-selector">
+                <label class="block text-sm font-medium mb-2" style="color: var(--plain-color, #f3f4f6);">
+                    スコープ
+                </label>
+                <mat-form-field appearance="outline" class="w-full scope-select-field">
+                    <mat-select [(value)]="selectedScope" (selectionChange)="onScopeChange()" placeholder="スコープを選択"
+                        [compareWith]="compareScopeInfo">
+
+                        @for (group of availableScopes | groupBy: 'scopeType'; track group.key) {
+                        <mat-optgroup [label]="group.key">
+                            @for (scope of group.values; track scope.scopeId) {
+                            <mat-option [value]="scope">{{scope.label}}</mat-option>
+                            }
+                        </mat-optgroup>
+                        }
+
+                    </mat-select>
+                </mat-form-field>
+            </div>
         </div>
 
         <!-- メニューリスト -->
         <nav class="p-4">
             <ul class="space-y-2">
-                <li *ngFor="let item of menuItems">
-                    <a [routerLink]="item.link"
-                        class="block text-gray-300 hover:text-white transition-colors duration-200">
-                        <button (click)="setActiveSection(item.key)" [ngClass]="{
-                'settings-menu-selected': activeSection === item.key,
-                'settings-menu-item': true
-            }" class="w-full text-left px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-3">
-                            <mat-icon class="text-sm">{{ item.icon }}</mat-icon>
-                            <span>{{ item.label }}</span>
-                        </button>
+                @for(item of menuItems; track item.key) {
+                <li>
+                    <a [routerLink]="item.link" [routerLinkActive]="'settings-menu-selected'"
+                        [routerLinkActiveOptions]="{ exact: true }"
+                        class="settings-menu-item w-full text-left px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-3">
+                        <mat-icon class="text-sm">{{ item.icon }}</mat-icon>
+                        <span>{{ item.label }}</span>
                     </a>
                 </li>
+                }
             </ul>
         </nav>
     </div>
@@ -31,3 +52,4 @@
         <router-outlet></router-outlet>
     </div>
 </div>
+}

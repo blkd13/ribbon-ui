@@ -1,0 +1,126 @@
+.dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+        color: var(--primary-color, #007acc);
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 500;
+        color: var(--text-color, #333);
+    }
+}
+
+.dialog-content {
+    min-width: 500px;
+    max-width: 600px;
+    padding: 0 24px 16px;
+
+    .full-width {
+        width: 100%;
+        margin-bottom: 16px;
+    }
+
+    .user-option {
+        display: flex;
+        flex-direction: column;
+        padding: 4px 0;
+
+        .user-name {
+            font-weight: 500;
+            color: var(--text-color, #333);
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: var(--text-color-secondary, #666);
+        }
+    }
+
+    .info-message {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 12px;
+        background-color: var(--info-background, #e3f2fd);
+        border-left: 4px solid var(--info-color, #2196f3);
+        border-radius: 4px;
+        margin-top: 16px;
+
+        .info-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+            color: var(--info-color, #2196f3);
+            margin-top: 2px;
+        }
+
+        span {
+            font-size: 14px;
+            color: var(--text-color, #333);
+            line-height: 1.4;
+        }
+    }
+}
+
+.dialog-actions {
+    padding: 16px 24px;
+    gap: 12px;
+
+    button {
+        min-width: 100px;
+
+        mat-icon {
+            margin-right: 8px;
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+    }
+}
+
+/* Dark theme support */
+[data-theme="dark"] {
+    .dialog-header h2 {
+        color: var(--text-color-dark, #f5f5f5);
+    }
+
+    .user-option {
+        .user-name {
+            color: var(--text-color-dark, #f5f5f5);
+        }
+
+        .user-email {
+            color: var(--text-color-secondary-dark, #bbb);
+        }
+    }
+
+    .info-message {
+        background-color: var(--info-background-dark, #1e3a8a);
+
+        span {
+            color: var(--text-color-dark, #f5f5f5);
+        }
+    }
+}
+
+/* Form validation styles */
+.mat-mdc-form-field.mat-form-field-invalid {
+    .mat-mdc-text-field-wrapper {
+        border-color: var(--error-color, #f44336);
+    }
+}
+
+/* Loading state */
+button[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

@@ -1,0 +1,568 @@
+<div class="container">
+    <h2>AI Models</h2>
+    <div class="layout-container">
+        <!-- 左側：モデル一覧 -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>Models</h3>
+                @if (selectedScope) {
+                <div class="scope-context">
+                    <small class="text-muted">Filtered by scope: <strong>{{ getScopeDisplayName(selectedScope)
+                            }}</strong></small>
+                </div>
+                }
+                <button mat-raised-button type="button" class="btn btn-sm btn-primary"
+                    (click)="createNew()">新規登録</button>
+            </div>
+            <div class="source-links flex gap-2 p-4">
+                <span>Data Source:</span>
+                <a href="https://platform.openai.com/docs/models" target="_blank"
+                    class="text-blue-500 hover:underline">OpenAI</a>
+                <a href="https://docs.anthropic.com/en/docs/about-claude/models/overview" target="_blank"
+                    class="text-blue-500 hover:underline">Anthropic</a>
+                <a href="https://cloud.google.com/vertex-ai/generative-ai/docs/models" target="_blank"
+                    class="text-blue-500 hover:underline">VertexAI</a>
+                <a href="https://ai.google.dev/gemini-api/docs/models#gemini-2.0-flash" target="_blank"
+                    class="text-blue-500 hover:underline">Gemini</a>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Provider</th>
+                        <!-- <th>Model ID</th> -->
+                        <th>Name</th>
+                        <th>Context</th>
+                        <!-- <th>Status</th> -->
+                        <th>Price<span class="text-xs text-[#888] align-right">(in/out)</span></th>
+                        <th>Knowledge</th>
+                        <th>Modalities</th>
+                        <th>Tags</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (model of models; track $index) {
+                    <tr [class.selected]="form.value.id === model.id" (click)="selectModel(model)">
+                        <td>
+                            {{ model.providerName }}
+                            <div class="text-xs text-[#888]">{{model.providerType}}</div>
+                        </td>
+                        <!-- <td>{{ model.providerModelId }}</td> -->
+                        <td>
+                            {{ model.name }}
+                            <div class="text-xs text-[#888] align-right">{{ model.providerModelId }}</div>
+                        </td>
+                        <td class="text-right">
+                            {{ model.maxContextTokens | number }}
+                            <div class="text-xs text-[#888] align-right">{{ model.maxOutputTokens | number }}</div>
+                        </td>
+                        <!-- <td>{{ model.status }}</td> -->
+                        <td class="text-right">
+                            @if(model.pricingHistory && model.pricingHistory.length > 0){
+                            <div>
+                                {{model.pricingHistory[0].inputPricePerUnit|number:'0.2-2'}} /
+                                {{model.pricingHistory[0].outputPricePerUnit|number:'0.2-2'}}
+                            </div>
+                            <div class="text-xs text-[#888] align-right">{{model.pricingHistory[0].unit}}</div>
+                            } @else {--}
+                        </td>
+                        <td>
+                            @if(model.knowledgeCutoff){
+                            {{ model.knowledgeCutoff | date: 'yyyy/MM/dd' }}
+                            } @else {
+                            <div class="text-xs text-[#888] align-right">N/A</div>
+                            }
+                        </td>
+                        <style>
+                            .tag {
+                                display: inline-block;
+                                padding: 2px 4px;
+                                /* background-color: #e0e0e0; */
+                                border-radius: 4px;
+                                font-size: 12px;
+                            }
+                        </style>
+                        <td>
+                            @if(model.modalities && model.modalities.length > 0){
+                            @for(modality of model.modalities;track $index){
+                            <div class="tag">{{ modality }}</div>
+                            }
+                            } @else {
+                            <div class="text-xs text-[#888] align-right">N/A</div>
+                            }
+                        </td>
+                        <td>
+                            @if(model.tags && model.tags.length > 0){
+                            @for(tag of model.tags;track $index){
+                            <div class="tag">{{ tag }}</div>
+                            }
+                            } @else {
+                            <div class="text-xs text-[#888] align-right">N/A</div>
+                            }
+                        </td>
+                        <td>
+                            <mat-icon class="status-icon">{{ model.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+                        </td>
+                        <td class="actions-cell">
+                            <button mat-icon-button class="mr-5" (click)="selectModel(model); $event.stopPropagation();"
+                                [matTooltip]="canUserEditModel(model) ? 'Edit' : 'View'">
+                                <mat-icon>{{ canUserEditModel(model) ? 'edit' : 'visibility' }}</mat-icon>
+                            </button>
+                            <button mat-icon-button class="mr-5" (click)="duplicateModel(model, $event);"
+                                matTooltip="Duplicate">
+                                <mat-icon>content_copy</mat-icon>
+                            </button>
+                            <button mat-icon-button class="mr-5"
+                                [ngStyle]="{'visibility': canUserEditModel(model) ? 'visible' : 'hidden'}"
+                                (click)="deleteModel(model.id); $event.stopPropagation();" matTooltip="Delete">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 右側：編集フォーム -->
+        @if(isFormVisible){
+        <div class="form-container">
+            <div class="form-header">
+                <h3>{{ getFormTitle() }}</h3>
+                <button mat-icon-button type="button" (click)="closeForm()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </div>
+
+            <form [formGroup]="form" (ngSubmit)="register()">
+                <div class="form-tabs">
+                    <div class="tab" [class.active]="activeTab === 'basic'" (click)="setActiveTab('basic')">Basic Info
+                    </div>
+                    <div class="tab" [class.active]="activeTab === 'capabilities'"
+                        (click)="setActiveTab('capabilities')">Capabilities</div>
+                    <div class="tab" [class.active]="activeTab === 'pricing'" (click)="setActiveTab('pricing')">Pricing
+                    </div>
+                    <div class="tab" [class.active]="activeTab === 'advanced'" (click)="setActiveTab('advanced')">
+                        Advanced</div>
+                </div>
+
+                <!-- Basic Info Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'basic'">
+                    <!-- Provider -->
+                    <div class="form-group">
+                        <label for="provider">Provider<span class="required">*</span></label>
+                        <select id="provider" formControlName="providerId" class="form-control"
+                            [ngClass]="{'invalid': hasError('providerId')}">
+                            <option [value]="''">Select a provider</option>
+                            @for (provider of providerOptions; track $index) {
+                            <option [value]="provider.id">
+                                {{ provider.type === provider.name ? provider.name : '[' + provider.type + ']' +
+                                provider.name
+                                }}
+                            </option>
+                            }
+                        </select>
+                        @if(hasError('providerId')){
+                        <div class="error-message">{{ getErrorMessage('providerId') }}</div>
+                        }
+                    </div>
+
+                    <!-- Provider Model ID -->
+                    <div class="form-group">
+                        <label for="providerModelId">Provider Model ID <span class="required">*</span></label>
+                        <input id="providerModelId" type="text" formControlName="providerModelId" class="form-control"
+                            [ngClass]="{'invalid': hasError('providerModelId')}">
+                        @if(hasError('providerModelId')){
+                        <div class="error-message">{{ getErrorMessage('providerModelId') }}</div>
+                        }
+                    </div>
+
+                    <!-- Name -->
+                    <div class="form-group">
+                        <label for="name">Name <span class="required">*</span></label>
+                        <input id="name" type="text" formControlName="name" class="form-control"
+                            [ngClass]="{'invalid': hasError('name')}">
+                        @if(hasError('name')){
+                        <div class="error-message">{{ getErrorMessage('name') }}</div>
+                        }
+                    </div>
+
+                    <!-- Aliases -->
+                    <!--
+                    <div class="form-group">
+                        <label for="aliases">Aliases <span class="required">*</span></label>
+                        <input id="aliases" type="text" formControlName="aliases" class="form-control"
+                            [ngClass]="{'invalid': hasError('aliases')}">
+                        @if(hasError('aliases')){
+                        <div class="error-message">{{ getErrorMessage('aliases') }}</div>
+                        }
+                    </div>
+                    -->
+                    <mat-form-field class="example-form-field">
+                        <mat-label>Aliases</mat-label>
+                        <mat-chip-grid #aliasChipGrid aria-label="Enter reactive form aliases"
+                            formControlName="aliases">
+                            @for (alias of form.get('aliases')?.value; track alias) {
+                            <mat-chip-row (removed)="removeReactiveKeyword('aliases',alias)">
+                                {{alias}}
+                                <button matChipRemove [attr.aria-label]="'remove reactive form' + alias">
+                                    <mat-icon>cancel</mat-icon>
+                                </button>
+                            </mat-chip-row>
+                            }
+                        </mat-chip-grid>
+                        <input placeholder="New alias..." [matChipInputFor]="aliasChipGrid"
+                            (matChipInputTokenEnd)="addReactiveKeyword('aliases',$event)" />
+                    </mat-form-field>
+
+                    <!-- Short Name -->
+                    <div class="form-group">
+                        <label for="shortName">Short Name <span class="required">*</span></label>
+                        <input id="shortName" type="text" formControlName="shortName" class="form-control"
+                            [ngClass]="{'invalid': hasError('shortName')}" maxlength="8">
+                        @if(hasError('shortName')){
+                        <div class="error-message">{{ getErrorMessage('shortName') }}</div>
+                        }
+                    </div>
+
+                    <!-- Throttle Key -->
+                    <div class="form-group">
+                        <label for="throttleKey">Throttle Key <span class="required">*</span></label>
+                        <input id="throttleKey" type="text" formControlName="throttleKey" class="form-control"
+                            [ngClass]="{'invalid': hasError('throttleKey')}">
+                        @if(hasError('throttleKey')){
+                        <div class="error-message">{{ getErrorMessage('throttleKey') }}</div>
+                        }
+                    </div>
+
+                    <!-- Description (Optional) -->
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" formControlName="description" class="form-control"></textarea>
+                    </div>
+
+                    <!-- Is Active -->
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" formControlName="isActive">
+                            Active
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Capabilities Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'capabilities'">
+                    <!-- Max Context Tokens -->
+                    <div class="form-group">
+                        <label for="maxContextTokens">Max Context Tokens <span class="required">*</span></label>
+                        <input id="maxContextTokens" type="number" formControlName="maxContextTokens"
+                            class="form-control" [ngClass]="{'invalid': hasError('maxContextTokens')}">
+                        @if(hasError('maxContextTokens')){
+                        <div class="error-message">{{ getErrorMessage('maxContextTokens') }}</div>
+                        }
+                    </div>
+
+                    <!-- Max Output Tokens -->
+                    <div class="form-group">
+                        <label for="maxOutputTokens">Max Output Tokens <span class="required">*</span></label>
+                        <input id="maxOutputTokens" type="number" formControlName="maxOutputTokens" class="form-control"
+                            [ngClass]="{'invalid': hasError('maxOutputTokens')}">
+                        @if(hasError('maxOutputTokens')){
+                        <div class="error-message">{{ getErrorMessage('maxOutputTokens') }}</div>
+                        }
+                    </div>
+
+                    <!-- Modalities -->
+                    <div class="form-group">
+                        <label for="modalities">Modalities <span class="required">*</span></label>
+                        <div class="checkbox-container">
+                            @for (modality of modalityOptions; track $index) {
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" [value]="modality"
+                                        [checked]="isChecked('modalities', modality)"
+                                        (change)="onCheckboxChange($event, 'modalities')">
+                                    <!-- <input type="checkbox" [value]="modality"
+                                        (change)="onCheckboxChange($event, 'modalities')"> -->
+                                    {{ modality }}
+                                </label>
+                            </div>
+                            }
+                        </div>
+                        @if(hasError('modalities')){
+                        <div class="error-message">{{ getErrorMessage('modalities') }}</div>
+                        }
+                    </div>
+
+                    <!-- Input Formats -->
+                    <div class="form-group">
+                        <label for="inputFormats">Input Formats</label>
+                        <div class="checkbox-container">
+                            @for (format of modalityOptions; track $index) {
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" [value]="format"
+                                        [checked]="isChecked('inputFormats', format)"
+                                        (change)="onCheckboxChange($event, 'inputFormats')">
+                                    {{ format }}
+                                </label>
+                            </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Output Formats -->
+                    <div class="form-group">
+                        <label for="outputFormats">Output Formats</label>
+                        <div class="checkbox-container">
+                            @for (format of modalityOptions; track $index) {
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" [value]="format"
+                                        [checked]="isChecked('outputFormats', format)"
+                                        (change)="onCheckboxChange($event, 'outputFormats')">
+                                    {{ format }}
+                                </label>
+                            </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Default Parameters -->
+                    <app-json-editor formControlName="defaultParameters"
+                        [suggestions]="['temperature', 'max_tokens', 'top_p']" label="Default Parameters"
+                        placeholder="Parameter name">
+                    </app-json-editor>
+                    <!-- Capabilities -->
+                    <app-json-editor formControlName="capabilities" [suggestions]="['streaming', 'tool_call']"
+                        label="Capabilities" placeholder="Parameter name">
+                    </app-json-editor>
+                </div>
+
+                <!-- Pricing Tab (新しいタブ) -->
+                <div class="tab-content" [class.active]="activeTab === 'pricing'">
+                    <div formGroupName="pricing">
+                        <div class="pricing-header">
+                            <h4>Model Pricing Information</h4>
+                        </div>
+
+                        <!-- 価格履歴と選択UI -->
+                        <div class="pricing-selection">
+                            <div class="selection-header">
+                                <h5>Select Pricing to Edit or Create New</h5>
+                            </div>
+
+                            <!-- 価格履歴の選択用ラジオボタン -->
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <label>
+                                        <input type="radio" name="pricingSelection" [value]="'new'"
+                                            [checked]="pricingSelectionMode === 'new'"
+                                            (change)="setPricingSelectionMode('new')">
+                                        Create New Pricing
+                                    </label>
+                                </div>
+
+                                @if(pricingHistory && pricingHistory.length > 0){
+                                @for(pricing of pricingHistory; track $index) {
+                                <div class="radio-option">
+                                    <label>
+                                        <input type="radio" name="pricingSelection" [value]="pricing.id"
+                                            [checked]="pricingSelectionMode === 'edit' && selectedPricingId === pricing.id"
+                                            (change)="selectExistingPricing(pricing)">
+                                        Valid from {{ formatDate(pricing.validFrom) }} -
+                                        {{pricing.inputPricePerUnit|trimTrailingZeros}}/
+                                        {{pricing.outputPricePerUnit|trimTrailingZeros}}
+                                        {{pricing.unit}}
+                                    </label>
+                                </div>
+                                }
+                                }
+                            </div>
+                        </div>
+
+                        <!-- 価格情報入力フォーム -->
+                        <div class="pricing-form">
+                            <h5>{{ pricingSelectionMode === 'new' ? 'New Pricing Details' : 'Edit Selected Pricing' }}
+                            </h5>
+
+                            <!-- Input Price -->
+                            <div class="form-group">
+                                <label for="inputPricePerUnit">Input Price per Unit <span
+                                        class="required">*</span></label>
+                                <input id="inputPricePerUnit" type="number" step="0.00001"
+                                    formControlName="inputPricePerUnit" class="form-control"
+                                    [ngClass]="{'invalid': hasNestedError('pricing.inputPricePerUnit')}">
+                                @if(hasNestedError('pricing.inputPricePerUnit')){
+                                <div class="error-message">{{ getNestedErrorMessage('pricing.inputPricePerUnit') }}
+                                </div>
+                                }
+                            </div>
+
+                            <!-- Output Price -->
+                            <div class="form-group">
+                                <label for="outputPricePerUnit">Output Price per Unit <span
+                                        class="required">*</span></label>
+                                <input id="outputPricePerUnit" type="number" step="0.00001"
+                                    formControlName="outputPricePerUnit" class="form-control"
+                                    [ngClass]="{'invalid': hasNestedError('pricing.outputPricePerUnit')}">
+                                @if(hasNestedError('pricing.outputPricePerUnit')){
+                                <div class="error-message">{{ getNestedErrorMessage('pricing.outputPricePerUnit') }}
+                                </div>
+                                }
+                            </div>
+
+                            <!-- Unit -->
+                            <div class="form-group">
+                                <label for="unit">Price Unit <span class="required">*</span></label>
+                                <input id="unit" type="text" formControlName="unit" class="form-control"
+                                    [ngClass]="{'invalid': hasNestedError('pricing.unit')}">
+                                @if(hasNestedError('pricing.unit')){
+                                <div class="error-message">{{ getNestedErrorMessage('pricing.unit') }}</div>
+                                }
+                            </div>
+
+                            <!-- Valid From -->
+                            <div class="form-group">
+                                <label for="validFrom">Valid From <span class="required">*</span></label>
+                                <input id="validFrom" type="date" formControlName="validFrom" class="form-control"
+                                    [ngClass]="{'invalid': hasNestedError('pricing.validFrom')}">
+                                @if(hasNestedError('pricing.validFrom')){
+                                <div class="error-message">{{ getNestedErrorMessage('pricing.validFrom') }}</div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- 価格履歴テーブル表示 -->
+                        @if(pricingHistory && pricingHistory.length > 0){
+                        <div class="pricing-history">
+                            <h5>All Pricing History</h5>
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Valid From</th>
+                                        <th>Input Price</th>
+                                        <th>Output Price</th>
+                                        <th>Unit</th>
+                                        <th>Current</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (pricing of pricingHistory; track $index) {
+                                    <tr [class.highlighted]="selectedPricingId === pricing.id">
+                                        <td>{{ formatDate(pricing.validFrom) }}</td>
+                                        <td>{{ pricing.inputPricePerUnit }}</td>
+                                        <td>{{ pricing.outputPricePerUnit }}</td>
+                                        <td>{{ pricing.unit }}</td>
+                                        <td>
+                                            <mat-icon class="status-icon" [class.current]="isCurrentPricing(pricing)">
+                                                {{ isCurrentPricing(pricing) ? 'check_circle' : '' }}
+                                            </mat-icon>
+                                        </td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        }
+                    </div>
+                </div>
+                <!-- Advanced Tab -->
+                <div class="tab-content" [class.active]="activeTab === 'advanced'">
+                    <!-- Endpoint Template -->
+                    <div class="form-group">
+                        <label for="endpointTemplate">Endpoint Template URL</label>
+                        <input id="endpointTemplate" type="text" formControlName="endpointTemplate"
+                            class="form-control">
+                    </div>
+
+                    <!-- Documentation URL -->
+                    <div class="form-group">
+                        <label for="documentationUrl">Documentation URL</label>
+                        <input id="documentationUrl" type="text" formControlName="documentationUrl"
+                            class="form-control">
+                    </div>
+
+                    <!-- License Type -->
+                    <div class="form-group">
+                        <label for="licenseType">License Type</label>
+                        <input id="licenseType" type="text" formControlName="licenseType" class="form-control">
+                    </div>
+
+                    <!-- Knowledge Cutoff -->
+                    <div class="form-group">
+                        <label for="knowledgeCutoff">Knowledge Cutoff</label>
+                        <input id="knowledgeCutoff" type="date" formControlName="knowledgeCutoff" class="form-control">
+                    </div>
+
+                    <!-- Release Date -->
+                    <div class="form-group">
+                        <label for="releaseDate">Release Date</label>
+                        <input id="releaseDate" type="date" formControlName="releaseDate" class="form-control">
+                    </div>
+
+                    <!-- Deprecation Date -->
+                    <div class="form-group">
+                        <label for="deprecationDate">Deprecation Date</label>
+                        <input id="deprecationDate" type="date" formControlName="deprecationDate" class="form-control">
+                    </div>
+
+                    <!-- Tags -->
+                    <!-- <div class="form-group">
+                        <label for="tags">Tags (comma separated)</label>
+                        <input id="tags" type="text" formControlName="tags" class="form-control"
+                            placeholder="tag1, tag2, tag3">
+                    </div> -->
+
+                    <mat-form-field class="example-form-field">
+                        <mat-label>Tags</mat-label>
+                        <mat-chip-grid #tagsChipGrid aria-label="Enter reactive form tags" formControlName="tags">
+                            @for (tag of form.get('tags')?.value; track tag) {
+                            <mat-chip-row (removed)="removeReactiveKeyword('tags',tag)">
+                                {{tag}}
+                                <button matChipRemove [attr.aria-label]="'remove reactive form' + tag">
+                                    <mat-icon>cancel</mat-icon>
+                                </button>
+                            </mat-chip-row>
+                            }
+                        </mat-chip-grid>
+                        <input placeholder="New keyword..." [matChipInputFor]="tagsChipGrid"
+                            [matChipInputSeparatorKeyCodes]="separatorKeysCodes" [matAutocomplete]="auto"
+                            (matChipInputTokenEnd)="addReactiveKeyword('tags',$event)" />
+                        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="autocompleteSelect('tags', $event)">
+                            @for (fruit of ['thinking', '長大', 'バランス','ローカル']; track fruit) {
+                            <mat-option [value]="fruit">{{fruit}}</mat-option>
+                            }
+                        </mat-autocomplete>
+                    </mat-form-field>
+
+
+                    <!-- UI Order -->
+                    <div class="form-group">
+                        <label for="uiOrder">UI Order</label>
+                        <input id="uiOrder" type="number" formControlName="uiOrder" class="form-control">
+                    </div>
+
+                    <!-- Metadata -->
+                    <div class="form-group">
+                        <label for="metadata">Metadata (JSON)</label>
+                        <textarea id="metadata" formControlName="metadata" class="form-control code-editor"></textarea>
+                    </div>
+                </div>
+                <div class="button-group">
+                    @if (isEditMode || !form.get('id')?.value) {
+                    <button type="submit" class="btn btn-primary" mat-raised-button>
+                        {{ isEditMode ? 'Update' : 'Register' }}
+                    </button>
+                    }
+                    <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
+                        {{ (!isEditMode && form.get('id')?.value) ? 'Close' : 'Cancel' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+        }
+    </div>
+</div>

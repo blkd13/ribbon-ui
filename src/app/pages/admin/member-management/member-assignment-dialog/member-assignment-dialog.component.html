@@ -1,0 +1,84 @@
+<div mat-dialog-title class="dialog-header">
+    <mat-icon>person_add</mat-icon>
+    <h2>メンバー割り当て</h2>
+</div>
+
+<mat-dialog-content class="dialog-content">
+    <form [formGroup]="assignmentForm" (ngSubmit)="onSubmit()">
+        <!-- User Selection -->
+        <mat-form-field appearance="outline" class="full-width">
+            <mat-label>ユーザー</mat-label>
+            <input type="text" matInput formControlName="selectedUser" placeholder="ユーザーを検索..."
+                [matAutocomplete]="userAuto">
+            <mat-autocomplete #userAuto="matAutocomplete" [displayWith]="displayUser">
+                @for(user of filteredUsers | async; track user.id) {
+                <mat-option [value]="user" (onSelectionChange)="onUserSelected(user)">
+                    <div class="user-option">
+                        <div class="user-name">{{ user.name }}</div>
+                        <div class="user-email">{{ user.email }}</div>
+                    </div>
+                </mat-option>
+                }
+            </mat-autocomplete>
+            @if(assignmentForm.get('selectedUser')?.hasError('required')){
+            <mat-error>ユーザーを選択してください</mat-error>
+            }
+        </mat-form-field>
+
+        <!-- Division Selection -->
+        <!--
+        <mat-form-field appearance="outline" class="full-width">
+            <mat-label>部署</mat-label>
+            <mat-select formControlName="divisionId">
+                @for(division of data.divisions; track division.id) {
+                <mat-option [value]="division.id">
+                    {{ division.name }}
+                </mat-option>
+                }
+            </mat-select>
+            @if(assignmentForm.get('divisionId')?.hasError('required')){
+            <mat-error>部署を選択してください</mat-error>
+            }
+        </mat-form-field>
+        -->
+
+        <!-- Role Selection -->
+        <mat-form-field appearance="outline" class="full-width">
+            <mat-label>ロール</mat-label>
+            <mat-select formControlName="role">
+                @for(role of availableRoles; track role) {
+                @if(UserRoleType.Admin===role||UserRoleType.User===role) {
+                <mat-option [value]="role">{{ getRoleDisplayName(role) }}</mat-option>
+                }
+                }
+            </mat-select>
+            @if(assignmentForm.get('role')?.hasError('required')){
+            <mat-error>ロールを選択してください</mat-error>
+            }
+        </mat-form-field> <!-- Info Message -->
+        <div class="info-message">
+            <mat-icon class="info-icon">info</mat-icon>
+            <span>選択したユーザーが指定した部署に指定されたロールで割り当てられます。</span>
+        </div>
+
+        <!-- Permission Warning -->
+        <!-- 
+        @if(assignmentForm.get('divisionId')?.value && !canAssignToSelectedDivision()) {
+        <div class="warning-message">
+            <mat-icon class="warning-icon">warning</mat-icon>
+            <span>選択した部署にメンバーを割り当てる権限がありません。</span>
+        </div>
+        }
+        -->
+    </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+    <button mat-button type="button" (click)="onCancel()">
+        キャンセル
+    </button> <button mat-raised-button color="primary" type="submit" (click)="onSubmit()"
+        [disabled]="!assignmentForm.valid || isLoading">
+        <mat-icon>{{isLoading?'hourglass_empty':'person_add'}}</mat-icon>
+        {{ isLoading ? '処理中...' : '割り当て' }}
+    </button>
+</mat-dialog-actions>

@@ -10,13 +10,12 @@ export class DepartmentService {
   private readonly authService: AuthService = inject(AuthService);
   private readonly http: HttpClient = inject(HttpClient);
 
-  getDepartmentList(): Observable<{ departmentList: Department[] }> {
-    return this.http.get<{ departmentList: Department[] }>('/user/department');
-  }
-
-  getDepartmentMemberList(): Observable<{ departmentMemberList: DepartmentMember[] }> {
-    return this.http.get<{ departmentMemberList: DepartmentMember[] }>('/user/department-member');
-  }
+  // getDepartmentList(): Observable<{ departmentList: Department[] }> {
+  //   return this.http.get<{ departmentList: Department[] }>('/user/department');
+  // }
+  // getDepartmentMemberList(): Observable<{ departmentMemberList: DepartmentMember[] }> {
+  //   return this.http.get<{ departmentMemberList: DepartmentMember[] }>('/user/department-member');
+  // }
 
   getDepartment(): Observable<{ departmentList: { department: DepartmentForView, cost: { [key: string]: Cost }, members: DepartmentMember[] }[] }> {
     return this.http.get<{ departmentList: { department: DepartmentForView, cost: { [key: string]: Cost }, members: DepartmentMember[] }[] }>('/admin/department');

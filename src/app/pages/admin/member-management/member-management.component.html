@@ -1,0 +1,316 @@
+<div class="container">
+    <h2>Member Management</h2>
+    <div class="layout-container">
+        <!-- 左側：メンバー一覧 -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>Members & Divisions</h3>
+                @if (selectedScope) {
+                <div class="scope-context">
+                    <small class="text-muted">Filtered by scope: <strong>{{ selectedScope.scopeType }}: {{
+                            selectedScope.scopeId }}</strong></small>
+                </div>
+                } <div class="action-buttons">
+                    <button mat-raised-button type="button" class="btn btn-sm btn-secondary" (click)="createDivision()"
+                        [disabled]="!canCreateDivision()">
+                        <mat-icon>domain</mat-icon>
+                        Create Division
+                    </button>
+                    <button mat-raised-button type="button" class="btn btn-sm btn-primary"
+                        (click)="openAssignmentDialog()" [disabled]="!selectedScope || !canAssignMembers()">
+                        <mat-icon>person_add</mat-icon>
+                        Add Member
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search and Filter Controls -->
+            <div class="filters-section">
+                <div class="filters-form" [formGroup]="filterForm">
+                    <!-- Search -->
+                    <mat-form-field appearance="outline" class="search-field">
+                        <mat-label>Search</mat-label>
+                        <input matInput [formControl]="searchControl" placeholder="Search by name or email">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </mat-form-field>
+
+                    <!-- Division Filter -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-label>Division</mat-label>
+                        <mat-select formControlName="divisionId">
+                            <mat-option value="">All</mat-option>
+                            <mat-option *ngFor="let division of divisions" [value]="division.id">
+                                {{ division.name }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Role Filter -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-label>Role</mat-label>
+                        <mat-select formControlName="role">
+                            <mat-option value="">All</mat-option>
+                            <mat-option *ngFor="let role of availableRoles" [value]="role">
+                                {{ getRoleDisplayName(role) }}
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Active Filter -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-label>Status</mat-label>
+                        <mat-select formControlName="isActive">
+                            <mat-option [value]="true">Active</mat-option>
+                            <mat-option [value]="false">Inactive</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+            </div> <!-- Bulk Actions -->
+            <div class="bulk-actions" *ngIf="selectedMembers.size > 0 && canManageUserRoles()">
+                <span class="selection-count">{{ selectedMembers.size }} selected</span>
+                <button mat-button color="warn" (click)="bulkRemoveMembers()" [disabled]="isLoading">
+                    <mat-icon>delete</mat-icon>
+                    Bulk Remove
+                </button>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <mat-checkbox [checked]="isAllSelected()" [indeterminate]="isSomeSelected()"
+                                (change)="toggleAllSelection()">
+                            </mat-checkbox>
+                        </th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Roles</th>
+                        <th>Division</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (member of filteredMembers; track member.id) {
+                    <tr [class.selected]="selectedMember?.id === member.id" (click)="selectMember(member)">
+                        <td>
+                            <mat-checkbox [checked]="selectedMembers.has(member.id)"
+                                (change)="toggleMemberSelection(member.id)" (click)="$event.stopPropagation()">
+                            </mat-checkbox>
+                        </td>
+                        <td>
+                            {{ member.user.name }}
+                            <div class="text-xs text-[#888]">{{ member.user.id }}</div>
+                        </td>
+                        <td>{{ member.user.email }}</td>
+                        <td>
+                            <div class="roles-container">
+                                @for (role of member.roles; track role) {
+                                <div class="tag role-tag">{{ getRoleDisplayName(role) }}</div>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <div class="tag">{{ member.divisionName }}</div>
+                        </td>
+                        <td>
+                            <mat-icon class="status-icon">{{ member.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
+                        </td>
+                        <td class="actions-cell">
+                            <button mat-icon-button class="mr-5"
+                                (click)="selectMember(member); $event.stopPropagation();" matTooltip="Edit"
+                                [disabled]="!canEditMember(member)">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+                            <button mat-icon-button color="warn" matTooltip="Remove"
+                                (click)="removeMember(member); $event.stopPropagation()"
+                                [disabled]="!canRemoveMember(member) || isLoading">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="7" class="no-data">
+                            @if(isLoading) {
+                            <div class="loading-container">
+                                <mat-icon class="loading-icon">hourglass_empty</mat-icon>
+                                <span>Loading...</span>
+                            </div>
+                            } @else {
+                            <div class="empty-state">
+                                <mat-icon>people_outline</mat-icon>
+                                <p>No members found</p>
+                                @if (!selectedScope) {
+                                <p>Please select a scope</p>
+                                } @else if (searchControl.value) {
+                                <p>Try adjusting your search criteria</p>
+                                } @else {
+                                <p>Add members to get started</p>
+                                }
+                            </div>
+                            }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 右側：編集フォーム -->
+        @if(isFormVisible){
+        <div class="form-container">
+            <div class="form-header">
+                <h3>{{ getFormTitle() }}</h3>
+                <button mat-icon-button type="button" (click)="closeForm()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </div>
+
+            <form [formGroup]="form" (ngSubmit)="submitForm()">
+                @if(formType === 'division') {
+                <!-- Division Form -->
+                <div class="form-section">
+                    <h4>Basic Information</h4>
+
+                    <!-- Division Name -->
+                    <div class="form-group">
+                        <label for="name">Division Name<span class="required">*</span></label>
+                        <input id="name" type="text" formControlName="name" class="form-control"
+                            [ngClass]="{'invalid': hasError('name')}">
+                        @if(hasError('name')){
+                        <div class="error-message">{{ getErrorMessage('name') }}</div>
+                        }
+                    </div>
+
+                    <!-- Division Label -->
+                    <div class="form-group">
+                        <label for="label">Display Label<span class="required">*</span></label>
+                        <input id="label" type="text" formControlName="label" class="form-control"
+                            [ngClass]="{'invalid': hasError('label')}">
+                        @if(hasError('label')){
+                        <div class="error-message">{{ getErrorMessage('label') }}</div>
+                        }
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" formControlName="description" class="form-control"
+                            rows="3"></textarea>
+                    </div>
+
+                    <!-- Is Active -->
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" formControlName="isActive">
+                            Active
+                        </label>
+                    </div>
+                </div>
+
+                @if(isEditMode && selectedDivision) {
+                <!-- Division Statistics -->
+                <div class="form-section">
+                    <h4>Statistics & Settings</h4>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Members</span>
+                            <span class="stat-value">{{ divisionStats?.totalMembers || 0 }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Active Members</span>
+                            <span class="stat-value">{{ divisionStats?.activeMembers || 0 }}</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Created</label>
+                        <div class="readonly-field">{{ selectedDivision.createdAt | date:'yyyy/MM/dd HH:mm' }}</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Last Updated</label>
+                        <div class="readonly-field">{{ selectedDivision.updatedAt | date:'yyyy/MM/dd HH:mm' }}</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Division ID</label>
+                        <div class="readonly-field">{{ selectedDivision.id }}</div>
+                    </div>
+                </div>
+                }
+
+                } @else {
+                <!-- Member Form -->
+                <div class="form-section">
+                    <h4>Member Information</h4>
+
+                    <!-- Member Basic Info (Read-only) -->
+                    <div class="form-group">
+                        <label>Name</label>
+                        <div class="readonly-field">{{ selectedMember?.user?.name || '' }}</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email</label>
+                        <div class="readonly-field">{{ selectedMember?.user?.email || '' }}</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>User ID</label>
+                        <div class="readonly-field">{{ selectedMember?.user?.id || '' }}</div>
+                    </div>
+
+                    <!-- Current Division (Read-only) -->
+                    <div class="form-group">
+                        <label>Current Division</label>
+                        <div class="readonly-field">{{ selectedMember?.divisionName || '' }}</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>Role Assignment</h4>
+
+                    <!-- Roles (Multiple Selection) -->
+                    <div class="form-group">
+                        <label for="roles">Roles<span class="required">*</span></label>
+                        <mat-form-field appearance="outline" class="full-width">
+                            <mat-label>Select Roles</mat-label>
+                            <mat-select formControlName="roles" multiple [ngClass]="{'invalid': hasError('roles')}">
+                                @for (role of availableRoles; track role) {
+                                <mat-option [value]="role">{{ getRoleDisplayName(role) }}</mat-option>
+                                }
+                            </mat-select>
+                        </mat-form-field>
+                        @if(hasError('roles')){
+                        <div class="error-message">{{ getErrorMessage('roles') }}</div>
+                        }
+                    </div>
+
+                    <!-- Is Active -->
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" formControlName="isActive">
+                            Active Member
+                        </label>
+                    </div>
+                </div>
+                } <!-- Form Actions -->
+                <div class="form-actions">
+                    <button mat-raised-button type="button" color="secondary" (click)="closeForm()">
+                        Cancel
+                    </button>
+                    <button mat-raised-button type="submit" color="primary" [disabled]="form.invalid || isLoading || 
+                            (formType === 'division' && isEditMode && !canUpdateDivision()) ||
+                            (formType === 'division' && !isEditMode && !canCreateDivision()) ||
+                            (formType === 'member' && !canManageUserRoles())">
+                        {{ isEditMode ? 'Update' : 'Create' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+        }
+    </div>
+</div>

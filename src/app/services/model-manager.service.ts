@@ -33,6 +33,10 @@ export interface ScopeInfo {
   scopeId: string;
 }
 
+export interface ScopeInfoForView extends ScopeInfo {
+  label: string;
+}
+
 export interface CredentialMetadata {
   apiKey?: string;
   organizationId?: string;

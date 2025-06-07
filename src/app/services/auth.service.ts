@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
-import { User, TwoFactorAuthDetails, UserRoleType } from '../models/models';
+import { User, TwoFactorAuthDetails, UserRoleType, UserRole } from '../models/models';
 import { PredictTransaction } from './department.service';
 import { GService } from './g.service';
 import { ScopeType } from './model-manager.service';
@@ -13,11 +13,16 @@ export type ExtApiProviderType = string;
 export type ExtApiClient = { type: string, provider: string, label: string, description: string, };
 
 // export type ScopeLabelsResponse = Record<ScopeType, { id: string, label: string }[]>;
+export type ScopeLabelsResponseItem = { id: string, label: string };
+export type ScopeLabels = {
+  [ScopeType.ORGANIZATION]: ScopeLabelsResponseItem[];
+  [ScopeType.DIVISION]: ScopeLabelsResponseItem[];
+  [ScopeType.PROJECT]: ScopeLabelsResponseItem[];
+  [ScopeType.TEAM]: ScopeLabelsResponseItem[];
+};
 export interface ScopeLabelsResponse {
-  [ScopeType.ORGANIZATION]: { id: string, label: string, }[];
-  [ScopeType.DIVISION]: { id: string, label: string }[];
-  [ScopeType.PROJECT]: { id: string, label: string }[];
-  [ScopeType.TEAM]: { id: string, label: string }[];
+  scopeLabels: ScopeLabels,
+  roleList: UserRole[];
 }
 
 @Injectable({ providedIn: 'root' })

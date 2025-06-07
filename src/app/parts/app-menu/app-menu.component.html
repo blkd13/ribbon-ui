@@ -33,27 +33,12 @@
 
     }
 
-    @if(isSystemAdmin){
+    @if(isAdmin){
     <a mat-menu-item [routerLink]="['/', 'admin']">
         <mat-icon>settings</mat-icon>
-        <span>APIプロバイダー設定</span>
+        <span>管理者メニュー</span>
     </a>
     }
-
-    @if(isDepartmentAdmin){
-    <a mat-menu-item [routerLink]="['/', 'admin', 'department']">
-        <mat-icon>settings</mat-icon>
-        <span>利用状況一覧</span>
-    </a>
-    }
-
-    @if(isSystemAdmin){
-    <a mat-menu-item [routerLink]="['/', 'maintainer', 'announcements']">
-        <mat-icon>settings</mat-icon>
-        <span>アナウンス設定</span>
-    </a>
-    }
-
 </mat-menu>
 <mat-menu #gitMenu="matMenu">
     @for (apiProvider of apiProviderGroupedList['git']; track $index) {

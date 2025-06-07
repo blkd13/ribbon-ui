@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterModule } from '@angular/router';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
-import { ExtApiProviderAuthType, ExtApiProviderEntity, User } from '../../models/models';
+import { ExtApiProviderAuthType, ExtApiProviderEntity, User, UserRoleType } from '../../models/models';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { DepartmentService } from '../../services/department.service';
@@ -26,23 +26,12 @@ export class AppMenuComponent implements OnInit {
   apiProviderGroupedList: { [type: string]: ExtApiProviderEntity[] } = {};
   groupKeys: string[] = [];
   user: User;
-  isDepartmentAdmin = false;
-
-  isSystemAdmin = false;
+  isAdmin = false;
 
   constructor() {
-    this.departmentService.getDepartmentMemberList().subscribe({
-      next: next => {
-        // console.log('Department List:', departmentList);
-        this.isDepartmentAdmin = next.departmentMemberList.some(member => member.departmentRole === 'Admin');
-      },
-    });
     this.user = this.authService.getCurrentUser();
-    this.user.roleList.find(role => {
-      if (['Admin', 'Maintainer'].includes(role.role)) {
-        this.isSystemAdmin = true;
-      }
-    });
+    this.isAdmin = !!this.user.roleList.find(role => [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role));
+
     this.extApiProviderService.getApiProviders(true).subscribe({
       next: apiProviderList => {
 

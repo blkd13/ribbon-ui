@@ -1,0 +1,367 @@
+/* Member Management Component Styles */
+
+:host {
+    display: block;
+}
+
+.container {
+    padding: 20px;
+    margin: 0 auto;
+    color: #e0e0e0;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+h2 {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+
+h3 {
+    color: #e0e0e0;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+}
+
+h4 {
+    color: #ccc;
+    font-size: 15px;
+    font-weight: 500;
+    margin: 15px 0 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #333;
+}
+
+h5 {
+    color: #aaa;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 15px 0 10px;
+}
+
+/* Scope context display */
+.scope-context {
+    margin: 4px 0;
+
+    small {
+        color: #888;
+        font-size: 12px;
+
+        strong {
+            color: #a0a0a0;
+            font-weight: 500;
+        }
+    }
+}
+
+/* Layout */
+.layout-container {
+    display: flex;
+    gap: 20px;
+}
+
+.table-container {
+    flex: 1;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    padding: 0;
+    border: 1px solid #3a3a3a;
+    overflow: hidden;
+}
+
+.form-container {
+    flex: 0 0 40%;
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    border: 1px solid #3a3a3a;
+    overflow: hidden;
+    overflow-y: auto;
+}
+
+/* Table header */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #2c2c2c;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+/* Table styles */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 12px 15px;
+    background-color: #2c2c2c;
+    font-weight: 500;
+    color: #ccc;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.data-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid #333;
+    color: #e0e0e0;
+}
+
+.data-table tr:hover {
+    background-color: #333;
+    cursor: pointer;
+}
+
+.data-table tr.selected {
+    background-color: #2c3e50;
+}
+
+.actions-cell {
+    width: 160px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* Form header */
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #2c2c2c;
+    border-bottom: 1px solid #3a3a3a;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Form Tabs */
+.form-tabs {
+    display: flex;
+    margin-bottom: 15px;
+    background-color: #2c2c2c;
+    border-radius: 4px;
+    overflow: hidden;
+    position: sticky;
+    top: 51px;
+    z-index: 9;
+}
+
+.tab {
+    padding: 10px 15px;
+    cursor: pointer;
+    flex: 1;
+    text-align: center;
+    color: #ccc;
+    transition: background-color 0.3s, color 0.3s;
+    border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+    background-color: #333;
+    color: #fff;
+}
+
+.tab.active {
+    background-color: #333;
+    color: #64b5f6;
+    border-bottom: 2px solid #64b5f6;
+}
+
+.tab-content {
+    display: none;
+    padding: 10px 0;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Form styles */
+form {
+    padding: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #ccc;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.readonly-field {
+    padding: 8px 12px;
+    background-color: #2c2c2c;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 14px;
+    min-height: 20px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    position: sticky;
+    bottom: 0;
+    background-color: #2a2a2a;
+    padding: 15px 0;
+    z-index: 8;
+}
+
+/* Required field indicator */
+.required {
+    color: #e74c3c;
+    margin-left: 3px;
+}
+
+/* Invalid input styling */
+.form-control.invalid {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+/* Error message styling */
+.error-message {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+    min-height: 16px;
+}
+
+/* Status Icon Styling */
+.status-icon {
+    vertical-align: middle;
+}
+
+.status-icon.check_circle {
+    color: #4caf50;
+}
+
+.status-icon.cancel {
+    color: #e74c3c;
+}
+
+/* Tag styles for roles */
+.tag {
+    display: inline-block;
+    padding: 4px 8px;
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Search and filter controls */
+.filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+    max-width: 300px;
+}
+
+/* Responsive design */
+@media (max-width: 992px) {
+    .layout-container {
+        flex-direction: column;
+    }
+
+    .form-container {
+        flex: none;
+        width: 100%;
+        max-height: none;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-input {
+        max-width: none;
+    }
+
+    .actions-cell {
+        width: auto;
+    }
+}
+
+.roles-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.role-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background-color: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #bbdefb;
+}
+
+.full-width {
+    width: 100%;
+}
+
+.form-section {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.form-section h4 {
+    margin: 0 0 16px 0;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 500;
+}

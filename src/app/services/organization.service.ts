@@ -107,7 +107,7 @@ export class OrganizationService {
 
         const lowerQuery = query.toLowerCase();
         return organizations.filter(organization =>
-          organization.name.toLowerCase().includes(lowerQuery) ||
+          organization.label.includes(lowerQuery) ||
           (organization.description && organization.description.toLowerCase().includes(lowerQuery))
         );
       }),
