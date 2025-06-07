@@ -758,10 +758,21 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
 
   deleteProvider(id: string) {
     if (confirm('Are you sure you want to delete this provider?')) {
-      this.providerService.deleteProvider(id);
-      this.showSuccessMessage('Provider deleted successfully');
-      this.loadProviders();
+      this.providerService.deleteProvider(id).subscribe({
+        next: () => {
+          this.showSuccessMessage('Provider deleted successfully');
+          this.loadProviders();
 
+          // Close form if the deleted provider was the current one
+          if (this.form.value.id === id) {
+            this.closeForm();
+          }
+        },
+        error: (error) => {
+          console.error('Error deleting provider:', error);
+          this.showErrorMessage('Failed to delete provider');
+        }
+      });
       if (this.form.value.id === id) {
         this.closeForm();
       }
