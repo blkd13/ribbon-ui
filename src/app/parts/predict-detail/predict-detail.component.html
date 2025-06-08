@@ -1,0 +1,107 @@
+<div class="predict-detail-dialog">
+    <div class="dialog-header">
+        <h2>予測詳細データ</h2>
+        <button mat-icon-button (click)="close()" class="close-button">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+
+    <!-- 基本情報 -->
+    <div class="basic-info" *ngIf="predict">
+        <div class="info-row">
+            <span class="label">時刻:</span>
+            <span class="value">{{ predict.created_at | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">モデル:</span>
+            <span class="value">{{ predict.model }}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">コスト:</span>
+            <span class="value">{{ predict.cost * 150 | number:'0.2-2' }} 円</span>
+        </div>
+        <div class="info-row">
+            <span class="label">ステータス:</span>
+            <span class="value status" [class]="predict.status">{{ predict.status }}</span>
+        </div>
+    </div>
+
+    <!-- タブコンテンツ -->
+    <div class="tab-container">
+        <mat-tab-group [(selectedIndex)]="selectedTabIndex" animationDuration="200ms">
+
+            <!-- Request タブ -->
+            <mat-tab label="Request">
+                <div class="tab-content">
+                    <div class="tab-header">
+                        <h3>リクエストデータ (JSON)</h3>
+                        <button mat-stroked-button
+                            (click)="copyToClipboard(formatJson(predictDetail?.request), 'Request')"
+                            [disabled]="!predictDetail?.request">
+                            <mat-icon>content_copy</mat-icon>
+                            コピー
+                        </button>
+                    </div>
+                    <div class="code-container">
+                        @if(predictDetail){
+                        <markdown [data]="formatJson(predictDetail.request)"></markdown>
+                        } @else {
+                        <div class="no-data">データがありません</div>
+                        }
+                    </div>
+                </div>
+            </mat-tab>
+
+            <!-- Stream タブ -->
+            <mat-tab label="Stream">
+                <div class="tab-content">
+                    <div class="tab-header">
+                        <h3>ストリームデータ (JSONL)</h3>
+                        <button mat-stroked-button
+                            (click)="copyToClipboard(formatJsonl(predictDetail?.stream), 'Stream')"
+                            [disabled]="!predictDetail?.stream">
+                            <mat-icon>content_copy</mat-icon>
+                            コピー
+                        </button>
+                    </div>
+                    <div class="code-container">
+                        @if(predictDetail){
+                        <markdown [data]="formatJsonl(predictDetail.stream)"></markdown>
+                        } @else {
+                        <div class="no-data">データがありません</div>
+                        }
+                    </div>
+                </div>
+            </mat-tab>
+
+            <!-- Response タブ -->
+            <mat-tab label="Response">
+                <div class="tab-content">
+                    <div class="tab-header">
+                        <h3>レスポンスデータ (JSON)</h3>
+                        <button mat-stroked-button
+                            (click)="copyToClipboard(formatJson(predictDetail?.response), 'Response')"
+                            [disabled]="!predictDetail?.response">
+                            <mat-icon>content_copy</mat-icon>
+                            コピー
+                        </button>
+                    </div>
+                    <div class="code-container">
+                        @if(predictDetail){
+                        <markdown [data]="formatJson(predictDetail.response)"></markdown>
+                        } @else {
+                        <div class="no-data">データがありません</div>
+                        }
+                    </div>
+                </div>
+            </mat-tab>
+
+        </mat-tab-group>
+    </div>
+
+    <!-- ローディング -->
+    <div class="loading-overlay" *ngIf="isLoading">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span>データを読み込み中...</span>
+    </div>
+</div>

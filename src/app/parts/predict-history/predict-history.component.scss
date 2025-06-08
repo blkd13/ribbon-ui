@@ -15,6 +15,15 @@ table {
         background-color: var(--plain-background);
     }
 
+    .clickable-row {
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+
+        &:hover {
+            background-color: var(--plain-background-hover);
+        }
+    }
+
     td {
         padding: 5px 10px;
     }

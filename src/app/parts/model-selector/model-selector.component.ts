@@ -138,7 +138,7 @@ export class ModelSelectorComponent {
     this.argsChangeEmitter.emit({
       ...this.args(),
       model: model.key,
-      providerName: model.object.providerName,
+      providerName: model.object.providerNameList[0],
     });
   }
 }

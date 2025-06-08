@@ -152,7 +152,8 @@ export class AdminScopeService {
         });
 
         return effectiveItems;
-    }    /**
+    }
+    /**
      * ユーザーがスコープで編集権限を持っているかチェック
      * 
      * 権限ルール:

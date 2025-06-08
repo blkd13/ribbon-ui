@@ -46,8 +46,8 @@
                     @for (model of models; track $index) {
                     <tr [class.selected]="form.value.id === model.id" (click)="selectModel(model)">
                         <td>
-                            {{ model.providerName }}
-                            <div class="text-xs text-[#888]">{{model.providerType}}</div>
+                            {{ model.providerNameList.join(', ') }}
+                            <!-- <div class="text-xs text-[#888]">{{ model.providerType }}</div> -->
                         </td>
                         <!-- <td>{{ model.providerModelId }}</td> -->
                         <td>
@@ -150,22 +150,20 @@
 
                 <!-- Basic Info Tab -->
                 <div class="tab-content" [class.active]="activeTab === 'basic'">
-                    <!-- Provider -->
+                    <!-- Provider (Multiple Selection) -->
                     <div class="form-group">
-                        <label for="provider">Provider<span class="required">*</span></label>
-                        <select id="provider" formControlName="providerId" class="form-control"
-                            [ngClass]="{'invalid': hasError('providerId')}">
-                            <option [value]="''">Select a provider</option>
-                            @for (provider of providerOptions; track $index) {
-                            <option [value]="provider.id">
-                                {{ provider.type === provider.name ? provider.name : '[' + provider.type + ']' +
-                                provider.name
-                                }}
-                            </option>
-                            }
-                        </select>
-                        @if(hasError('providerId')){
-                        <div class="error-message">{{ getErrorMessage('providerId') }}</div>
+                        <label for="roles">Roles<span class="required">*</span></label>
+                        <mat-form-field appearance="outline" class="w-full">
+                            <mat-label>Select Providers</mat-label>
+                            <mat-select formControlName="providerNameList" multiple
+                                [ngClass]="{'invalid': hasError('providerNameList')}">
+                                @for (provider of providerOptions; track provider) {
+                                <mat-option [value]="provider.name">{{provider.name }}</mat-option>
+                                }
+                            </mat-select>
+                        </mat-form-field>
+                        @if(hasError('providerNameList')){
+                        <div class="error-message">{{ getErrorMessage('providerNameList') }}</div>
                         }
                     </div>
 
@@ -200,9 +198,9 @@
                         }
                     </div>
                     -->
-                    <mat-form-field class="example-form-field">
+                    <mat-form-field class="form-group w-full">
                         <mat-label>Aliases</mat-label>
-                        <mat-chip-grid #aliasChipGrid aria-label="Enter reactive form aliases"
+                        <mat-chip-grid #aliasChipGrid aria-label="Enter reactive form aliases" class="w-full"
                             formControlName="aliases">
                             @for (alias of form.get('aliases')?.value; track alias) {
                             <mat-chip-row (removed)="removeReactiveKeyword('aliases',alias)">
@@ -214,7 +212,7 @@
                             }
                         </mat-chip-grid>
                         <input placeholder="New alias..." [matChipInputFor]="aliasChipGrid"
-                            (matChipInputTokenEnd)="addReactiveKeyword('aliases',$event)" />
+                            (matChipInputTokenEnd)="addReactiveKeyword('aliases',$event)" class="w-full" />
                     </mat-form-field>
 
                     <!-- Short Name -->
@@ -516,7 +514,7 @@
                             placeholder="tag1, tag2, tag3">
                     </div> -->
 
-                    <mat-form-field class="example-form-field">
+                    <mat-form-field class="form-group w-full">
                         <mat-label>Tags</mat-label>
                         <mat-chip-grid #tagsChipGrid aria-label="Enter reactive form tags" formControlName="tags">
                             @for (tag of form.get('tags')?.value; track tag) {

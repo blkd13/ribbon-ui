@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { User, TwoFactorAuthDetails, UserRoleType, UserRole } from '../models/models';
@@ -284,9 +284,12 @@ export class AuthService {
     return this.http.get<ScopeLabelsResponse>(url);
   }
 
-  getPredictHistory(): Observable<{ predictHistory: PredictTransaction[] }> {
+  getPredictHistory(offset: number = 0, limit: number = 100): Observable<{ predictHistory: PredictTransaction[], totalCount: number }> {
+    const params = new HttpParams()
+      .set('offset', offset.toString())
+      .set('limit', limit.toString());
     const url = `/user/predict-history`;
-    return this.http.get<{ predictHistory: PredictTransaction[] }>(url);
+    return this.http.get<{ predictHistory: PredictTransaction[], totalCount: number }>(url, { params });
   }
 
   setupTwoFactorAuth(userId: number): Observable<TwoFactorAuthDetails> {

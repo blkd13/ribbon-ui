@@ -32,6 +32,7 @@ export interface Division {
     id: string;
     name: string;
     label: string;
+    description?: string;
     isActive: boolean;
     userRole: UserRoleType;
     userPriority: number;

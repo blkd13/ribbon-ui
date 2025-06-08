@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { inject, Injectable } from '@angular/core';
 import { Observable, of, tap } from 'rxjs';
@@ -25,8 +25,21 @@ export class DepartmentService {
     return this.http.patch<{ success: boolean }>(`/admin/department/${departmentId}`, inDto);
   }
 
-  predictHistory(userId: string): Observable<{ predictHistory: PredictTransaction[] }> {
-    return this.http.get<{ predictHistory: PredictTransaction[] }>(`/admin/predict-history/${userId}`);
+  predictHistory(userId: string, offset: number = 0, limit: number = 100): Observable<{ predictHistory: PredictTransaction[], totalCount: number }> {
+    const params = new HttpParams()
+      .set('offset', offset.toString())
+      .set('limit', limit.toString());
+    return this.http.get<{ predictHistory: PredictTransaction[], totalCount: number }>(`/admin/predict-history/${userId}`, { params });
+  }
+
+  // 月次集計用の全データ取得メソッド（または別途集計API）
+  getPredictHistorySummary(): Observable<any> {
+    return this.http.get<any>('/user/predict-history/summary');
+  }
+
+  // 月次集計用の全データ取得メソッド（または別途集計API）
+  getPredictJournal(idempotency_key: string, args_hash: string, type: 'request' | 'response' | 'stream'): Observable<any> {
+    return this.http.get<any>(`/user/predict-journal/${idempotency_key}/${args_hash}/${type}`);
   }
 
   private userList!: User[];
@@ -94,5 +107,7 @@ export interface PredictTransaction {
   cost: number;
   req_token: number;
   res_token: number;
+  idempotency_key: string;
+  args_hash: string;
   status: string;
 }

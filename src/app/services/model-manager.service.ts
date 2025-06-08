@@ -170,8 +170,12 @@ export class AIProviderManagerService {
   }
 
   deleteProvider(id: string) {
-    this.providers = this.providers.filter(provider => provider.id !== id);
-    return true;
+    return this.http.delete<void>(`/maintainer/ai-provider/${id}`).pipe(
+      tap(() => {
+        console.log(`Provider with ID ${id} deleted successfully.`);
+        this.providers = this.providers.filter(provider => provider.id !== id);
+      }),
+    );
   }
 }
 
@@ -314,10 +318,7 @@ export enum Modality {
 }
 export interface AIModelEntity extends BaseEntity {
   /** AI プロバイダー種別 */
-  providerType: AIProviderType;
-
-  /** AI プロバイダーの名前 */
-  providerName: string;
+  providerNameList: string[];
 
   /** プロバイダー内モデルの一意 ID */
   providerModelId: string;

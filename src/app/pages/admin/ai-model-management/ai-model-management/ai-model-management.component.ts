@@ -18,6 +18,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatAutocompleteActivatedEvent, MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AdminScopeService } from '../../../../services/admin-scope.service';
+import { MatSelectModule } from '@angular/material/select';
 
 @Component({
   selector: 'app-ai-model-management',
@@ -31,6 +32,7 @@ import { AdminScopeService } from '../../../../services/admin-scope.service';
     MatFormFieldModule,
     MatChipsModule,
     MatTooltipModule,
+    MatSelectModule,
     JsonEditorComponent,
     TrimTrailingZerosPipe,
   ],
@@ -90,18 +92,19 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       this.filterProvidersByScope();
     });
     this.subscriptions.add(scopeSubscription);
-  } ngOnDestroy() {
+  }
+  ngOnDestroy() {
     this.subscriptions.unsubscribe();
   }
   private filterProvidersByScope() {
-    if (this.selectedScope) {
-      // Filter providers to only show those that match the selected scope
-      this.providerOptions = this.providerOptions.filter(provider =>
-        provider.scopeInfo?.scopeType === this.selectedScope?.scopeType &&
-        provider.scopeInfo?.scopeId === this.selectedScope?.scopeId
-      );
-    }
-    // If no scope is selected, show all providers (handled by loadData)
+    // if (this.selectedScope) {
+    //   // Filter providers to only show those that match the selected scope
+    //   this.providerOptions = this.providerOptions.filter(provider =>
+    //     provider.scopeInfo.scopeType === this.selectedScope?.scopeType &&
+    //     provider.scopeInfo.scopeId === this.selectedScope.scopeId
+    //   );
+    // }
+    // // If no scope is selected, show all providers (handled by loadData)
   }
 
   getScopeDisplayName(scope: ScopeInfo): string {
@@ -176,7 +179,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
     this.form = this.fb.group({
       id: [''],
-      providerId: ['', Validators.required],
+      providerNameList: [[], Validators.required],
       providerModelId: ['', Validators.required],
       name: ['', Validators.required],
       aliases: [[]],
@@ -218,7 +221,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   resetForm() {
     this.form.reset({
       id: '',
-      providerId: '',
+      providerNameList: [],
       providerModelId: '',
       name: '',
       aliases: [],
@@ -297,11 +300,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     const releaseDate = model.releaseDate ? this.formatDateForInput(model.releaseDate) : '';
     const deprecationDate = model.deprecationDate ? this.formatDateForInput(model.deprecationDate) : '';
 
-    const provider = this.providerOptions.find(provider => provider.type === model.providerType && provider.name === model.providerName);
-
     this.form.patchValue({
       id: '', // IDはクリア
-      providerId: provider ? provider.id : '', // プロバイダIDを設定
+      providerNameList: model.providerNameList.filter(name => this.providerOptions.find(provider => provider.name === name)), // 選択されたプロバイダーのみ
       providerModelId: model.providerModelId + '_copy', // 識別のため_copyを付加
       name: model.name + ' (Copy)',
       aliases: [...(model.aliases || [])],
@@ -356,10 +357,11 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   // 既存モデルの選択（編集モード）
   selectModel(model: AIModelEntityForView) {
     // Check if user has edit permission for this model's provider scope
-    const provider = this.providerOptions.find(provider => provider.type === model.providerType && provider.name === model.providerName);
-    const canEdit = provider ? this.adminScopeService.canEditScope(
-      provider.scopeInfo.scopeType,
-      provider.scopeInfo.scopeId
+    // TODO モデルの権限があればよいのでプロバイダーの権限をチェックする必要は無いのでは？
+    const providerList = this.providerOptions.filter(provider => model.providerNameList.includes(provider.name));
+    const canEdit = providerList.length > 0 ? this.adminScopeService.canEditScope(
+      providerList[0].scopeInfo.scopeType,
+      providerList[0].scopeInfo.scopeId
     ) : false;
 
     this.isEditMode = canEdit;
@@ -394,7 +396,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     // モデルデータをフォームに設定
     this.form.patchValue({
       id: model.id,
-      providerId: provider ? provider.id : '', // プロバイダIDを設定
+      providerNameList: model.providerNameList.filter(name => this.providerOptions.find(provider => provider.name === name)), // 選択されたプロバイダーのみ
       providerModelId: model.providerModelId,
       name: model.name,
       aliases: model.aliases || [],
@@ -477,8 +479,8 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       const releaseDate = formValue.releaseDate ? new Date(formValue.releaseDate) : null;
       const deprecationDate = formValue.deprecationDate ? new Date(formValue.deprecationDate) : null;
 
-      const provider = this.providerOptions.find(provider => provider.id === formValue.providerId);
-      if (!provider) {
+      const invalidProviderName = (formValue.providerNameList as string[]).find(providerName => !this.providerOptions.find(provider => provider.name === providerName));
+      if (invalidProviderName) {
         this.snackBar.open('Selected provider is invalid', 'Close', {
           duration: 3000,
           panelClass: 'error-snackbar'
@@ -490,8 +492,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       const modelData: AIModelEntity & { aliases: string[] } = {
         ...genInitialBaseEntity(),
         id: this.isEditMode ? formValue.id : undefined, // 新規作成時はIDを設定しない
-        providerType: provider.type,
-        providerName: provider.name,
+        providerNameList: formValue.providerNameList,
         providerModelId: formValue.providerModelId,
         name: formValue.name,
         aliases: formValue.aliases || [],
@@ -703,7 +704,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   activateTabWithErrors() {
     // 各タブに関連するフィールドのグループを定義
     const tabFields = {
-      'basic': ['providerId', 'providerModelId', 'name', 'aliases', 'shortName', 'throttleKey', 'status', 'description', 'isStream', 'isActive'],
+      'basic': ['providerNameList', 'providerModelId', 'name', 'aliases', 'shortName', 'throttleKey', 'status', 'description', 'isStream', 'isActive'],
       'capabilities': ['modalities', 'maxContextTokens', 'maxOutputTokens', 'inputFormats', 'outputFormats', 'defaultParameters', 'capabilities'],
       'pricing': ['pricing.inputPricePerUnit', 'pricing.outputPricePerUnit', 'pricing.unit', 'pricing.validFrom'],
       'advanced': ['endpointTemplate', 'documentationUrl', 'licenseType', 'releaseDate', 'knowledgeCutoff', 'deprecationDate', 'tags', 'uiOrder', 'metadata']
@@ -892,13 +893,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
    * Check if user can edit a specific model based on its provider scope
    */
   canUserEditModel(model: AIModelEntityForView): boolean {
-    const provider = this.providerOptions.find(provider =>
-      provider.type === model.providerType && provider.name === model.providerName
-    );
-    return provider ? this.adminScopeService.canEditScope(
-      provider.scopeInfo.scopeType,
-      provider.scopeInfo.scopeId
-    ) : false;
+    // const providerNameList = this.providerOptions.filter(provider => model.providerNameList.includes(provider.name));
+    // return providerNameList.length > 0 ? this.adminScopeService.canEditScope(
+    //   providerNameList[0].scopeInfo.scopeType,
+    //   providerNameList[0].scopeInfo.scopeId
+    // ) : false;
+    // TODO モデルの権限があればよいのでプロバイダーの権限をチェックする必要は無いのでは？
+    return true;
   }
 
   /**

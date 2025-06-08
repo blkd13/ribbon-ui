@@ -24,8 +24,16 @@
         </table>
     </div>
     <div class="scroll-container custom-scroll flex-grow h-0">
-        <h1>詳細履歴</h1>
-        <table>
+        <div class="history-header">
+            <h1>詳細履歴</h1>
+            <div class="total-count">
+                総件数: {{totalCount}} 件
+            </div>
+        </div>
+        <div class="history-note">
+            <small>※ 行をクリックすると詳細データを表示します</small>
+        </div>
+        <table class="history-table">
             <tr class="sticky top-0">
                 <th>No.</th>
                 <th>時刻</th>
@@ -37,18 +45,28 @@
             </tr>
             <tbody>
                 @for(predict of predictHistory;track $index){
-                <tr>
-                    <td style="text-align: right;">{{$index+1}}</td>
+                <tr class="clickable-row" (click)="openPredictDetail(predict)"
+                    [title]="'クリックして詳細を表示: ' + predict.idempotency_key">
+                    <td style="text-align: right;">{{currentPage * pageSize + $index + 1}}</td>
                     <td>{{predict.created_at|date:'YYYY-MM-dd HH:mm:ss'}}</td>
                     <td>{{predict.model}}</td>
                     <td style="text-align: right;">{{predict.cost*150|number:'0.2-2'}}</td>
                     <td style="text-align: right;">{{predict.req_token|number}}</td>
                     <td style="text-align: right;">{{predict.res_token|number}}</td>
-                    <td>{{predict.status}}</td>
+                    <td>
+                        <span class="status-badge" [class]="predict.status">
+                            {{predict.status}}
+                        </span>
+                    </td>
                 </tr>
                 }
             </tbody>
         </table>
+        <div class="paginator-container">
+            <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
+                [pageIndex]="currentPage" (page)="onPageChange($event)" showFirstLastButtons>
+            </mat-paginator>
+        </div>
     </div>
 </div>
 <!-- ローディング -->

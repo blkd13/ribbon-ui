@@ -10,14 +10,15 @@
                     <small class="text-muted">Filtered by scope: <strong>{{ selectedScope.scopeType }}: {{
                             selectedScope.scopeId }}</strong></small>
                 </div>
-                } <div class="action-buttons">
+                }
+                <div class="action-buttons">
                     <button mat-raised-button type="button" class="btn btn-sm btn-secondary" (click)="createDivision()"
                         [disabled]="!canCreateDivision()">
                         <mat-icon>domain</mat-icon>
                         Create Division
                     </button>
-                    <button mat-raised-button type="button" class="btn btn-sm btn-primary"
-                        (click)="openAssignmentDialog()" [disabled]="!selectedScope || !canAssignMembers()">
+                    <button mat-raised-button type="button" class="btn btn-sm btn-primary" (click)="openAddMemberForm()"
+                        [disabled]="!selectedScope || !canAssignMembers()">
                         <mat-icon>person_add</mat-icon>
                         Add Member
                     </button>
@@ -39,9 +40,9 @@
                         <mat-label>Division</mat-label>
                         <mat-select formControlName="divisionId">
                             <mat-option value="">All</mat-option>
-                            <mat-option *ngFor="let division of divisions" [value]="division.id">
-                                {{ division.name }}
-                            </mat-option>
+                            @for (division of divisions; track division.id) {
+                            <mat-option [value]="division.id">{{ division.name }}</mat-option>
+                            }
                         </mat-select>
                     </mat-form-field>
 
@@ -50,9 +51,9 @@
                         <mat-label>Role</mat-label>
                         <mat-select formControlName="role">
                             <mat-option value="">All</mat-option>
-                            <mat-option *ngFor="let role of availableRoles" [value]="role">
-                                {{ getRoleDisplayName(role) }}
-                            </mat-option>
+                            @for (role of availableRoles; track role) {
+                            <mat-option [value]="role">{{ role }}</mat-option>
+                            }
                         </mat-select>
                     </mat-form-field>
 
@@ -65,14 +66,18 @@
                         </mat-select>
                     </mat-form-field>
                 </div>
-            </div> <!-- Bulk Actions -->
-            <div class="bulk-actions" *ngIf="selectedMembers.size > 0 && canManageUserRoles()">
+            </div>
+
+            <!-- Bulk Actions -->
+            @if(selectedMembers.size > 0 && canManageUserRoles()) {
+            <div class="bulk-actions">
                 <span class="selection-count">{{ selectedMembers.size }} selected</span>
                 <button mat-button color="warn" (click)="bulkRemoveMembers()" [disabled]="isLoading">
                     <mat-icon>delete</mat-icon>
                     Bulk Remove
                 </button>
             </div>
+            }
 
             <table class="data-table">
                 <thead>
@@ -85,7 +90,6 @@
                         <th>Name</th>
                         <th>Email</th>
                         <th>Roles</th>
-                        <th>Division</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -106,12 +110,9 @@
                         <td>
                             <div class="roles-container">
                                 @for (role of member.roles; track role) {
-                                <div class="tag role-tag">{{ getRoleDisplayName(role) }}</div>
+                                <div class="tag role-tag">{{ role }}</div>
                                 }
                             </div>
-                        </td>
-                        <td>
-                            <div class="tag">{{ member.divisionName }}</div>
                         </td>
                         <td>
                             <mat-icon class="status-icon">{{ member.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
@@ -167,9 +168,9 @@
                 </button>
             </div>
 
-            <form [formGroup]="form" (ngSubmit)="submitForm()">
-                @if(formType === 'division') {
-                <!-- Division Form -->
+            <!-- Division Form -->
+            @if(formType === 'division') {
+            <form [formGroup]="divisionForm" (ngSubmit)="submitForm()">
                 <div class="form-section">
                     <h4>Basic Information</h4>
 
@@ -177,9 +178,9 @@
                     <div class="form-group">
                         <label for="name">Division Name<span class="required">*</span></label>
                         <input id="name" type="text" formControlName="name" class="form-control"
-                            [ngClass]="{'invalid': hasError('name')}">
-                        @if(hasError('name')){
-                        <div class="error-message">{{ getErrorMessage('name') }}</div>
+                            [ngClass]="{'invalid': hasFormError('name')}">
+                        @if(hasFormError('name')){
+                        <div class="error-message">{{ getFormErrorMessage('name') }}</div>
                         }
                     </div>
 
@@ -187,9 +188,9 @@
                     <div class="form-group">
                         <label for="label">Display Label<span class="required">*</span></label>
                         <input id="label" type="text" formControlName="label" class="form-control"
-                            [ngClass]="{'invalid': hasError('label')}">
-                        @if(hasError('label')){
-                        <div class="error-message">{{ getErrorMessage('label') }}</div>
+                            [ngClass]="{'invalid': hasFormError('label')}">
+                        @if(hasFormError('label')){
+                        <div class="error-message">{{ getFormErrorMessage('label') }}</div>
                         }
                     </div>
 
@@ -242,8 +243,92 @@
                 </div>
                 }
 
-                } @else {
-                <!-- Member Form -->
+                <!-- Division Form Actions -->
+                <div class="form-actions">
+                    <button mat-raised-button type="button" color="secondary" (click)="closeForm()">
+                        Cancel
+                    </button>
+                    <button mat-raised-button type="submit" color="primary" [disabled]="divisionForm.invalid || isLoading || 
+                                (isEditMode && !canUpdateDivision()) ||
+                                (!isEditMode && !canCreateDivision())">
+                        {{ isEditMode ? 'Update' : 'Create' }}
+                    </button>
+                </div>
+            </form>
+            }
+
+            <!-- Member Add Form -->
+            @else if(formType === 'member-add') {
+            <form [formGroup]="memberAddForm" (ngSubmit)="submitForm()">
+                <div class="form-section">
+                    <h4>User Selection</h4>
+
+                    <!-- User Search/Select -->
+                    <div class="form-group">
+                        <label for="selectedUser">User<span class="required">*</span></label>
+                        <mat-form-field appearance="outline" class="full-width">
+                            <mat-label>Search User</mat-label>
+                            <input type="text" matInput formControlName="selectedUser"
+                                placeholder="Search by name or email..." [matAutocomplete]="userAuto"
+                                [ngClass]="{'invalid': hasFormError('selectedUser')}">
+                            <mat-autocomplete #userAuto="matAutocomplete" [displayWith]="displayUser">
+                                @for(user of filteredUsers | async; track user.id) {
+                                <mat-option [value]="user" (onSelectionChange)="onUserSelected(user)">
+                                    <div class="user-option">
+                                        <div class="user-name">{{ user.name }}</div>
+                                        <div class="user-email">{{ user.email }}</div>
+                                    </div>
+                                </mat-option>
+                                }
+                            </mat-autocomplete>
+                        </mat-form-field>
+                        @if(hasFormError('selectedUser')){
+                        <div class="error-message">{{ getFormErrorMessage('selectedUser') }}</div>
+                        }
+                    </div>
+
+                    <!-- Role Selection -->
+                    <div class="form-group">
+                        <label for="role">Role<span class="required">*</span></label>
+                        <mat-form-field appearance="outline" class="full-width">
+                            <mat-label>Select Role</mat-label>
+                            <mat-select formControlName="role" [ngClass]="{'invalid': hasFormError('role')}">
+                                @for(role of availableRoles; track role) {
+                                @if(UserRoleType.Admin === role || UserRoleType.User === role) {
+                                <mat-option [value]="role">{{ role }}</mat-option>
+                                }
+                                }
+                            </mat-select>
+                        </mat-form-field>
+                        @if(hasFormError('role')){
+                        <div class="error-message">{{ getFormErrorMessage('role') }}</div>
+                        }
+                    </div>
+
+                    <!-- Info Message -->
+                    <div class="info-message">
+                        <mat-icon class="info-icon">info</mat-icon>
+                        <span>選択したユーザーが現在のディビジョンに指定されたロールで追加されます。</span>
+                    </div>
+                </div>
+
+                <!-- Member Add Form Actions -->
+                <div class="form-actions">
+                    <button mat-raised-button type="button" color="secondary" (click)="closeForm()">
+                        Cancel
+                    </button>
+                    <button mat-raised-button type="submit" color="primary"
+                        [disabled]="memberAddForm.invalid || isLoading || !canAssignMembers()">
+                        <mat-icon>{{ isLoading ? 'hourglass_empty' : 'person_add' }}</mat-icon>
+                        {{ isLoading ? 'Adding...' : 'Add Member' }}
+                    </button>
+                </div>
+            </form>
+            }
+
+            <!-- Member Edit Form -->
+            @else {
+            <form [formGroup]="memberForm" (ngSubmit)="submitForm()">
                 <div class="form-section">
                     <h4>Member Information</h4>
 
@@ -278,14 +363,14 @@
                         <label for="roles">Roles<span class="required">*</span></label>
                         <mat-form-field appearance="outline" class="full-width">
                             <mat-label>Select Roles</mat-label>
-                            <mat-select formControlName="roles" multiple [ngClass]="{'invalid': hasError('roles')}">
+                            <mat-select formControlName="roles" multiple [ngClass]="{'invalid': hasFormError('roles')}">
                                 @for (role of availableRoles; track role) {
-                                <mat-option [value]="role">{{ getRoleDisplayName(role) }}</mat-option>
+                                <mat-option [value]="role">{{ role }}</mat-option>
                                 }
                             </mat-select>
                         </mat-form-field>
-                        @if(hasError('roles')){
-                        <div class="error-message">{{ getErrorMessage('roles') }}</div>
+                        @if(hasFormError('roles')){
+                        <div class="error-message">{{ getFormErrorMessage('roles') }}</div>
                         }
                     </div>
 
@@ -297,19 +382,19 @@
                         </label>
                     </div>
                 </div>
-                } <!-- Form Actions -->
+
+                <!-- Member Form Actions -->
                 <div class="form-actions">
                     <button mat-raised-button type="button" color="secondary" (click)="closeForm()">
                         Cancel
                     </button>
-                    <button mat-raised-button type="submit" color="primary" [disabled]="form.invalid || isLoading || 
-                            (formType === 'division' && isEditMode && !canUpdateDivision()) ||
-                            (formType === 'division' && !isEditMode && !canCreateDivision()) ||
-                            (formType === 'member' && !canManageUserRoles())">
-                        {{ isEditMode ? 'Update' : 'Create' }}
+                    <button mat-raised-button type="submit" color="primary"
+                        [disabled]="memberForm.invalid || isLoading || !canManageUserRoles()">
+                        Update
                     </button>
                 </div>
             </form>
+            }
         </div>
         }
     </div>
