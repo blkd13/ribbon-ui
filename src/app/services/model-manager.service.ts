@@ -427,6 +427,34 @@ export class AIModelManagerService {
   modelList: AIModelEntityForView[] = [];
   modelMap: Record<string, AIModelEntityForView> = {};
 
+  /**
+   * AIモデルのソートロジック（共通関数）
+   * 優先順位: リリース日（新しい順） → uiOrder → 名前（アルファベット順）
+   */
+  sortModels<T extends Pick<AIModelEntity, 'releaseDate' | 'uiOrder' | 'name'>>(models: T[]): T[] {
+    return models.sort((a, b) => {
+      // First priority: Release date (newest first)
+      if (!a.releaseDate && !b.releaseDate) {
+        // Both have no release date, continue to uiOrder comparison
+      } else if (!a.releaseDate) {
+        return 1; // Models without release date go to the end
+      } else if (!b.releaseDate) {
+        return -1; // Models without release date go to the end
+      } else {
+        const dateComparison = b.releaseDate.getTime() - a.releaseDate.getTime();
+        if (dateComparison !== 0) return dateComparison;
+      }
+
+      // Second priority: UI Order
+      const aOrder = (a.uiOrder as number) || 0;
+      const bOrder = (b.uiOrder as number) || 0;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+
+      // Third priority: Name (alphabetical order)
+      return a.name.localeCompare(b.name);
+    });
+  }
+
   /** 一覧取得 */
   getAIModels(force: boolean = false): Observable<AIModelEntityForView[]> {
     if (this.stockedModels.length > 0 && !force) {
@@ -462,12 +490,8 @@ export class AIModelManagerService {
             }
           }
         });
-        models.sort((a, b) => {
-          if (!a.releaseDate && !b.releaseDate) return 0;
-          if (!a.releaseDate) return 1;
-          if (!b.releaseDate) return -1;
-          return b.releaseDate.getTime() - a.releaseDate.getTime();
-        })
+        // Use the common sort function
+        this.sortModels(models);
       }),
     );
   }

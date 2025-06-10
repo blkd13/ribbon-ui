@@ -78,15 +78,8 @@ export class ModelSelectorComponent {
       model.description = model.description || '';
       model.name = model.name || '';
       model.providerModelId = model.providerModelId || '';
-    });
-
-    // Sort models by uiOrder, then by providerModelId
-    models.sort((a, b) => {
-      if (a.uiOrder !== b.uiOrder) {
-        return a.uiOrder - b.uiOrder;
-      }
-      return a.providerModelId.localeCompare(b.providerModelId);
-    });
+    });    // Sort models using the common sort function
+    this.aiModelService.sortModels(models);
 
     // Check for override tags
     const overrideTags = tags.filter(tag => tag.overrideOthers && tag.isActive);

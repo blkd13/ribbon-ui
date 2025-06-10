@@ -81,6 +81,13 @@
                             } @else {
                             <div class="text-xs text-[#888] align-right">N/A</div>
                             }
+                            <div class="text-xs text-[#888] align-right">
+                                @if(model.releaseDate){
+                                {{ model.releaseDate | date: 'yyyy/MM/dd' }}
+                                } @else {
+                                N/A
+                                }
+                            </div>
                         </td>
                         <style>
                             .tag {

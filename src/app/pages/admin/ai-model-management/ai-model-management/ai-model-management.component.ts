@@ -225,21 +225,11 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
             modelGroups.set(key, []);
           }
           modelGroups.get(key)!.push(model);
-        });
+        });        // For each group, select the most recent or active model
 
-        // For each group, select the most recent or active model
         this.models = Array.from(modelGroups.values()).map(group => {
-          // Sort by creation date (if available) or use the first one
-          return group.sort((a, b) => {
-            // Prioritize active models
-            if (a.isActive && !b.isActive) return -1;
-            if (!a.isActive && b.isActive) return 1;
-
-            // Then by UI order
-            const aOrder = a.uiOrder || 0;
-            const bOrder = b.uiOrder || 0;
-            return aOrder - bOrder;
-          })[0];
+          // Sort by priority: isActive -> release date (newest first) -> uiOrder -> name
+          return this.aiModelService.sortModels(group)[0];
         });
       }),
     ).subscribe({
