@@ -1,13 +1,9 @@
 /* 共通調整 */
 .mat-menu-panel {
-    min-width: 260px; // 例：1段目と2段目を同幅に
+    min-width: 280px;
+    max-height: 70vh;
+    overflow-y: auto;
 }
-
-/* 3段目だけ余白ゼロでカードをぴったり出す */
-.no-padding .mat-menu-content {
-    padding: 0;
-}
-
 
 ::ng-deep {
     .level-3 {
@@ -33,18 +29,214 @@
     overflow-y: auto;
 }
 
-/* モデルリスト内の小テキストなど */
-.model-name {
-    font-weight: 500;
+/* カテゴリヘッダー - シンプルに */
+.category-header {
+    padding: 8px 16px !important;
+    cursor: default !important;
+
+    .category-name {
+        color: var(--plain-color) !important;
+        // font-weight: 600;
+    }
+
+    .total-count {
+        font-size: 12px;
+        // color: #6c757d;
+        font-weight: normal;
+    }
+
+    &:hover {
+        // background-color: #f8f9fa !important;
+    }
 }
 
-.model-desc {
-    font-size: 11px;
-    opacity: .7;
+/* タグボタン - シンプルに */
+.tag-item {
+    padding: 10px 16px 10px 24px !important;
+
+    .tag-name {
+        font-size: 14px;
+        // color: #212529;
+    }
+
+    .model-count {
+        font-size: 12px;
+        // color: #6c757d;
+    }
+
+    .tag-description {
+        font-size: 12px;
+        color: var(--plain-color-area);
+        margin-top: 2px;
+    }
+
+    &:hover {
+        // background-color: #f1f3f4;
+    }
 }
 
-.preview {
-    font-size: 10px;
-    color: #f44336;
-    margin-left: 4px;
+/* モデルアイテム - シンプルに */
+.model-item {
+    padding: 12px 16px !important;
+
+    .model-name {
+        font-size: 14px;
+        font-weight: 500;
+        // color: #212529;
+        color: var(--plain-color);
+        line-height: 1.3;
+    }
+
+    .model-desc {
+        font-size: 12px;
+        color: var(--plain-color-area);
+        margin-top: 2px;
+        line-height: 1.3;
+    }
+
+    &:hover {
+        // background-color: #f8f9fa;
+    }
+}
+
+/* 区切り線 - シンプルに */
+.category-divider {
+    border: none;
+    height: 1px;
+    // background-color: #dee2e6;
+    margin: 4px 0;
+}
+
+/* ダークモード - シンプルに */
+@media (prefers-color-scheme: dark) {
+    ::ng-deep .flat-menu {
+        .category-header {
+            &:hover {
+                // background-color: #343a40 !important;
+            }
+        }
+
+        .tag-item {
+            &:hover {
+                // background-color: #495057;
+            }
+        }
+
+        .model-item {
+
+            &:hover {
+                // background-color: #495057;
+            }
+        }
+    }
+}
+
+.model-card {
+    margin: 8px;
+    cursor: pointer;
+
+    .field-label {
+        // font-weight: 600;
+        // color: #555;
+        color: var(--plain-color-area);
+    }
+
+    .field-description {
+        font-size: 10px;
+        color: var(--plain-color-area);
+    }
+
+    .detail-row {
+        display: flex;
+        gap: 48px;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--plain-border-color);
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        .field-value {
+            // color: #222;
+            text-align: right;
+            max-width: 60%;
+            word-break: break-word;
+        }
+    }
+}
+
+.detail-pair {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+
+    .detail-block {
+        flex: 1;
+
+        .field-label {
+            // font-weight: 600;
+            // color: #555;
+            font-size: 0.85rem;
+        }
+
+        .field-value {
+            font-size: 0.95rem;
+            // color: #222;
+            word-break: break-word;
+        }
+    }
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-top: 1px solid var(--plain-border-color);
+
+    .field-label {
+        // font-weight: 600;
+        // color: #555;
+    }
+
+    .field-value {
+        // color: #222;
+        text-align: right;
+        max-width: 60%;
+        word-break: break-word;
+    }
+}
+
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .mat-menu-panel {
+        min-width: 260px;
+    }
+
+    .model-item {
+        padding: 10px 12px !important;
+    }
+
+    .category-header,
+    .tag-item {
+        padding: 8px 12px !important;
+    }
+}
+
+
+// メニューアイテムの基本スタイル
+.mat-mdc-menu-item {
+
+    // 選択されている状態
+    &.selected {
+        background-color: var(--mat-sys-primary-container);
+        font-weight: 500;
+
+        &:hover {
+            background-color: var(--mat-sys-primary-container);
+            color: var(--mat-sys-primary);
+        }
+    }
 }

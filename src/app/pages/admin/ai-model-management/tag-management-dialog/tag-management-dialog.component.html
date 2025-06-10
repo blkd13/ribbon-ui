@@ -1,0 +1,245 @@
+<div class="tag-management-dialog">
+    <h2 mat-dialog-title>
+        <mat-icon>local_offer</mat-icon>
+        Tag Management
+    </h2>
+
+    <mat-dialog-content class="dialog-content">
+        <!-- タグ作成・編集フォーム -->
+        <div class="tag-form-section">
+            <h3>{{ editingTag ? 'Edit Tag' : 'Create New Tag' }}</h3>
+
+            <form [formGroup]="tagForm" (ngSubmit)="saveTag()" class="tag-form">
+                <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field">
+                        <mat-label>Tag Name *</mat-label>
+                        <input matInput formControlName="name" placeholder="tag-name" maxlength="50">
+                        @if(tagForm.get('name')?.hasError('required')) {
+                        <mat-error>Tag name is required</mat-error>
+                        }
+                        @if(tagForm.get('name')?.hasError('pattern')){
+                        <mat-error>Only lowercase letters, numbers, and hyphens allowed</mat-error>
+                        }
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="form-field">
+                        <mat-label>Display Label</mat-label>
+                        <input matInput formControlName="label" placeholder="Display Name" maxlength="100">
+                    </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field">
+                        <mat-label>Category</mat-label>
+                        <input matInput formControlName="category" placeholder="e.g., Content, System, User"
+                            maxlength="50" [matAutocomplete]="categoryAuto">
+                        <mat-autocomplete #categoryAuto="matAutocomplete">
+                            @for(category of filteredCategories | async; track category) {
+                            <mat-option [value]="category">{{ category }}</mat-option>
+                            }
+                        </mat-autocomplete>
+                        <mat-hint>Group tags by category for better organization</mat-hint>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="form-field">
+                        <mat-label>Sort Order</mat-label>
+                        <input matInput type="number" formControlName="sortOrder" placeholder="0" min="0" step="1">
+                        <mat-hint>Lower numbers appear first</mat-hint>
+                        @if(tagForm.get('sortOrder')?.hasError('min')) {
+                        <mat-error>Sort order must be 0 or greater</mat-error>
+                        }
+                    </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field-full">
+                        <mat-label>Description</mat-label>
+                        <textarea matInput formControlName="description"
+                            placeholder="Describe what this tag represents..." rows="2" maxlength="500"></textarea>
+                    </mat-form-field>
+                </div>
+
+                <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field">
+                        <mat-label>Color</mat-label>
+                        <input matInput type="color" formControlName="color" class="color-input">
+                    </mat-form-field>
+
+                    <div class="form-field checkbox-field">
+                        <mat-checkbox formControlName="isActive">Active</mat-checkbox>
+                    </div>
+
+                    <div class="form-field checkbox-field">
+                        <mat-checkbox formControlName="overrideOthers" (change)="onOverrideOthersChange()">
+                            Override other tags
+                        </mat-checkbox>
+                        @if(tagForm.get('overrideOthers')?.value) {
+                        <div class="checkbox-hint">
+                            <mat-icon class="warning-icon">warning</mat-icon>
+                            <span>When enabled, this tag will disable all other tags when applied</span>
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button mat-raised-button type="submit" color="primary" [disabled]="tagForm.invalid || isLoading">
+                        <mat-icon>{{ editingTag ? 'save' : 'add' }}</mat-icon>
+                        {{ editingTag ? 'Update' : 'Create' }}
+                    </button>
+
+                    @if(editingTag) {
+                    <button mat-button type="button" (click)="cancelEdit()">
+                        Cancel
+                    </button>
+                    }
+                </div>
+            </form>
+        </div>
+
+        <!-- タグ一覧 -->
+        <div class="tags-list-section">
+            <h3>Existing Tags ({{ tags.length }})</h3>
+
+            <div class="tags-table-container">
+                <table mat-table [dataSource]="displayTags" class="tags-table">
+
+                    <!-- Category Header Row Definition -->
+                    <ng-container matColumnDef="categoryHeader">
+                        <td mat-cell *matCellDef="let item" class="category-header-cell"
+                            [attr.colspan]="displayedColumns.length">
+                            <div class="category-header">
+                                <div class="category-left">
+                                    <mat-checkbox [checked]="item.categoryActiveState === 'all'"
+                                        [indeterminate]="item.categoryActiveState === 'partial'"
+                                        (change)="toggleCategoryActive(item.category!, item.categoryActiveState!)"
+                                        [disabled]="isLoading" class="category-checkbox"
+                                        [matTooltip]="getCategoryTooltip(item.categoryActiveState!)">
+                                    </mat-checkbox>
+                                    <span class="category-title">{{ item.category }}</span>
+                                </div>
+                                <span class="category-count">({{ item.tagCount }} tags)</span>
+                            </div>
+                        </td>
+                    </ng-container>
+
+                    <!-- Tag Column -->
+                    <ng-container matColumnDef="tag">
+                        <th mat-header-cell *matHeaderCellDef>Tag</th>
+                        <td mat-cell *matCellDef="let item" class="tag-cell">
+                            @if(item.type === 'tag') {
+                            <div class="tag-display">
+                                <div class="tag-info">
+                                    <span class="tag-name">{{ item.tag?.label || item.tag?.name }}</span>
+                                    @if(item.tag?.label) {
+                                    <span class="tag-code">({{ item.tag?.name }})</span>
+                                    }
+                                </div>
+                                @if(item.tag?.color) {
+                                <div class="tag-color" [style.background-color]="item.tag?.color"
+                                    [matTooltip]="item.tag?.color">
+                                </div>
+                                }
+                            </div>
+                            }
+                        </td>
+                    </ng-container>
+
+                    <!-- Description Column -->
+                    <ng-container matColumnDef="description">
+                        <th mat-header-cell *matHeaderCellDef>Description</th>
+                        <td mat-cell *matCellDef="let item" class="description-cell">
+                            @if(item.type === 'tag') {
+                            <span class="description-text">
+                                {{ item.tag?.description || '-' }}
+                            </span>
+                            }
+                        </td>
+                    </ng-container>
+
+                    <!-- Sort Order Column -->
+                    <ng-container matColumnDef="sortOrder">
+                        <th mat-header-cell *matHeaderCellDef>Order</th>
+                        <td mat-cell *matCellDef="let item" class="sort-order-cell">
+                            @if(item.type === 'tag') {
+                            <span class="sort-order-badge">
+                                {{ item.tag?.sortOrder || 0 }}
+                            </span>
+                            }
+                        </td>
+                    </ng-container>
+
+                    <!-- Override Others Column -->
+                    <ng-container matColumnDef="overrideOthers">
+                        <th mat-header-cell *matHeaderCellDef>Override</th>
+                        <td mat-cell *matCellDef="let item" class="override-cell">
+                            @if(item.type === 'tag') {
+                            <mat-icon class="override-icon" [class.override-enabled]="item.tag?.overrideOthers"
+                                [class.override-disabled]="!item.tag?.overrideOthers"
+                                [matTooltip]="item.tag?.overrideOthers ? 'This tag overrides others' : 'Normal tag'">
+                                {{ item.tag?.overrideOthers ? 'shield' : 'shield_outlined' }}
+                            </mat-icon>
+                            }
+                        </td>
+                    </ng-container>
+
+                    <!-- Usage Column -->
+                    <ng-container matColumnDef="usage">
+                        <th mat-header-cell *matHeaderCellDef>Usage</th>
+                        <td mat-cell *matCellDef="let item" class="usage-cell">
+                            @if(item.type === 'tag') {
+                            <span class="usage-count">{{ item.tag?.usageCount }}</span>
+                            }
+                        </td>
+                    </ng-container>
+
+                    <!-- Status Column -->
+                    <ng-container matColumnDef="status">
+                        <th mat-header-cell *matHeaderCellDef>Status</th>
+                        <td mat-cell *matCellDef="let item" class="status-cell">
+                            @if(item.type === 'tag') {
+                            <mat-icon class="status-icon" [class.active]="item.tag?.isActive"
+                                [class.inactive]="!item.tag?.isActive">
+                                {{ item.tag?.isActive ? 'check_circle' : 'cancel' }}
+                            </mat-icon>
+                            }
+                        </td>
+                    </ng-container>
+
+                    <!-- Actions Column -->
+                    <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <td mat-cell *matCellDef="let item" class="actions-cell">
+                            @if(item.type === 'tag') {
+                            <ng-container>
+                                <button mat-icon-button (click)="editTag(item.tag!)" matTooltip="Edit">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
+                                <button mat-icon-button (click)="deleteTag(item.tag!)" matTooltip="Delete"
+                                    [disabled]="item.tag!.usageCount > 0" class="delete-button">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                            </ng-container>
+                            }
+                        </td>
+                    </ng-container>
+
+                    <!-- Header and Row definitions -->
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+
+                    <!-- Category Header Row -->
+                    <tr mat-row *matRowDef="let row; columns: ['categoryHeader']; when: isCategoryRow"
+                        class="category-header-row"></tr>
+
+                    <!-- Tag Data Row -->
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns; when: isTagRow"
+                        [class.editing]="editingTag?.id === row.tag?.id" class="tag-row"></tr>
+                </table>
+            </div>
+        </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+        <button mat-button (click)="close()">Close</button>
+    </mat-dialog-actions>
+</div>

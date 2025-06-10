@@ -11,8 +11,15 @@
                             }}</strong></small>
                 </div>
                 }
-                <button mat-raised-button type="button" class="btn btn-sm btn-primary"
-                    (click)="createNew()">新規登録</button>
+                <div class="header-buttons">
+                    <button mat-raised-button type="button" class="btn btn-sm btn-secondary mr-2"
+                        (click)="openTagManagement()" matTooltip="Manage Tags">
+                        <mat-icon>local_offer</mat-icon>
+                        Tags
+                    </button>
+                    <button mat-raised-button type="button" class="btn btn-sm btn-primary"
+                        (click)="createNew()">新規登録</button>
+                </div>
             </div>
             <div class="source-links flex gap-2 p-4">
                 <span>Data Source:</span>
@@ -95,8 +102,12 @@
                         </td>
                         <td>
                             @if(model.tags && model.tags.length > 0){
-                            @for(tag of model.tags;track $index){
-                            <div class="tag">{{ tag }}</div>
+                            @for(tagName of model.tags;track $index){
+                            <div class="tag" [style.background-color]="getTagColor(tagName)"
+                                [style.color]="getTagColor(tagName) ? 'white' : 'inherit'"
+                                [matTooltip]="getTagDisplayName(tagName)">
+                                {{ getTagDisplayName(tagName) }}
+                            </div>
                             }
                             } @else {
                             <div class="text-xs text-[#888] align-right">N/A</div>
@@ -188,16 +199,6 @@
                     </div>
 
                     <!-- Aliases -->
-                    <!--
-                    <div class="form-group">
-                        <label for="aliases">Aliases <span class="required">*</span></label>
-                        <input id="aliases" type="text" formControlName="aliases" class="form-control"
-                            [ngClass]="{'invalid': hasError('aliases')}">
-                        @if(hasError('aliases')){
-                        <div class="error-message">{{ getErrorMessage('aliases') }}</div>
-                        }
-                    </div>
-                    -->
                     <mat-form-field class="form-group w-full">
                         <mat-label>Aliases</mat-label>
                         <mat-chip-grid #aliasChipGrid aria-label="Enter reactive form aliases" class="w-full"
@@ -282,8 +283,6 @@
                                     <input type="checkbox" [value]="modality"
                                         [checked]="isChecked('modalities', modality)"
                                         (change)="onCheckboxChange($event, 'modalities')">
-                                    <!-- <input type="checkbox" [value]="modality"
-                                        (change)="onCheckboxChange($event, 'modalities')"> -->
                                     {{ modality }}
                                 </label>
                             </div>
@@ -507,35 +506,47 @@
                         <input id="deprecationDate" type="date" formControlName="deprecationDate" class="form-control">
                     </div>
 
-                    <!-- Tags -->
-                    <!-- <div class="form-group">
-                        <label for="tags">Tags (comma separated)</label>
-                        <input id="tags" type="text" formControlName="tags" class="form-control"
-                            placeholder="tag1, tag2, tag3">
-                    </div> -->
-
+                    <!-- Tags - 改良版 -->
                     <mat-form-field class="form-group w-full">
                         <mat-label>Tags</mat-label>
-                        <mat-chip-grid #tagsChipGrid aria-label="Enter reactive form tags" formControlName="tags">
-                            @for (tag of form.get('tags')?.value; track tag) {
-                            <mat-chip-row (removed)="removeReactiveKeyword('tags',tag)">
-                                {{tag}}
-                                <button matChipRemove [attr.aria-label]="'remove reactive form' + tag">
+                        <mat-chip-grid #tagsChipGrid aria-label="Enter tags" formControlName="tags">
+                            @for (tagName of form.get('tags')?.value; track tagName) {
+                            <mat-chip-row (removed)="removeReactiveKeyword('tags', tagName)"
+                                [style.background-color]="getTagColor(tagName)"
+                                [style.color]="getTagColor(tagName) ? 'white' : 'inherit'">
+                                {{ getTagDisplayName(tagName) }}
+                                <button matChipRemove [attr.aria-label]="'remove tag ' + tagName">
                                     <mat-icon>cancel</mat-icon>
                                 </button>
                             </mat-chip-row>
                             }
                         </mat-chip-grid>
-                        <input placeholder="New keyword..." [matChipInputFor]="tagsChipGrid"
-                            [matChipInputSeparatorKeyCodes]="separatorKeysCodes" [matAutocomplete]="auto"
-                            (matChipInputTokenEnd)="addReactiveKeyword('tags',$event)" />
-                        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="autocompleteSelect('tags', $event)">
-                            @for (fruit of ['thinking', '長大', 'バランス','ローカル']; track fruit) {
-                            <mat-option [value]="fruit">{{fruit}}</mat-option>
+                        <input placeholder="New tag..." [matChipInputFor]="tagsChipGrid"
+                            [matChipInputSeparatorKeyCodes]="separatorKeysCodes" [matAutocomplete]="tagAuto"
+                            (matChipInputTokenEnd)="addReactiveKeyword('tags',$event)"
+                            (input)="filteredTags = filterTags($any($event.target).value)" />
+                        <mat-autocomplete #tagAuto="matAutocomplete"
+                            (optionSelected)="autocompleteSelect('tags', $event)">
+                            @for (tag of filteredTags; track tag.id) {
+                            <mat-option [value]="tag.name">
+                                <div class="tag-option">
+                                    <div class="tag-main">
+                                        <span class="tag-name">{{ tag.label || tag.name }}</span>
+                                        @if (tag.label && tag.name !== tag.label) {
+                                        <span class="tag-subtitle">({{ tag.name }})</span>
+                                        }
+                                    </div>
+                                    @if (tag.description) {
+                                    <div class="tag-description">{{ tag.description }}</div>
+                                    }
+                                    @if (tag.color) {
+                                    <div class="tag-color-preview" [style.background-color]="tag.color"></div>
+                                    }
+                                </div>
+                            </mat-option>
                             }
                         </mat-autocomplete>
                     </mat-form-field>
-
 
                     <!-- UI Order -->
                     <div class="form-group">

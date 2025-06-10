@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable, of, tap } from 'rxjs';
+import { BehaviorSubject, map, Observable, of, tap } from 'rxjs';
 import { BaseEntity } from '../models/project-models';
 import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
 
@@ -130,7 +130,7 @@ export class AIProviderManagerService {
 
 
   getProviders() {
-    return this.http.get<AIProviderEntity[]>(`/maintainer/ai-providers`).pipe(
+    return this.http.get<AIProviderEntity[]>(`/admin/ai-providers`).pipe(
       tap(res => {
         res.forEach(provider => {
           provider.createdAt = new Date(provider.createdAt);
@@ -154,8 +154,8 @@ export class AIProviderManagerService {
 
   upsertProvider(provider: AIProviderEntity) {
     (provider.id
-      ? this.http.put<AIProviderEntity>(`/maintainer/ai-provider/${provider.id}`, provider)
-      : this.http.post<AIProviderEntity>(`/maintainer/ai-provider`, provider)
+      ? this.http.put<AIProviderEntity>(`/admin/ai-provider/${provider.id}`, provider)
+      : this.http.post<AIProviderEntity>(`/admin/ai-provider`, provider)
     ).subscribe({
       next: (res) => {
         res.createdAt = new Date(res.createdAt);
@@ -170,7 +170,7 @@ export class AIProviderManagerService {
   }
 
   deleteProvider(id: string) {
-    return this.http.delete<void>(`/maintainer/ai-provider/${id}`).pipe(
+    return this.http.delete<void>(`/admin/ai-provider/${id}`).pipe(
       tap(() => {
         console.log(`Provider with ID ${id} deleted successfully.`);
         this.providers = this.providers.filter(provider => provider.id !== id);
@@ -420,6 +420,8 @@ export type ModelCapability = 'text' | 'pdf' | 'image' | 'audio' | 'video' | 'to
 export class AIModelManagerService {
 
   readonly http: HttpClient = inject(HttpClient);
+  readonly tagService: TagService = inject(TagService);
+
   /** AI モデルの一覧を取得するためのキャッシュ */
   private stockedModels: AIModelEntityForView[] = [];
   modelList: AIModelEntityForView[] = [];
@@ -470,21 +472,27 @@ export class AIModelManagerService {
     );
   }
 
-  /** 単一取得 */
-  getAIModel(id: string): Observable<AIModelEntityForView> {
-    return this.http.get<AIModelEntityForView>(`/user/ai-model/${id}`);
-  }
+  // /** 単一取得 */
+  // getAIModel(id: string): Observable<AIModelEntityForView> {
+  //   return this.http.get<AIModelEntityForView>(`/user/ai-model/${id}`);
+  // }
 
   /** 更新 */
   upsertAIModel(model: AIModelEntity): Observable<AIModelEntity> {
-    return !model.id
-      ? this.http.post<AIModelEntity>(`/maintainer/ai-model`, model)
-      : this.http.put<AIModelEntity>(`/maintainer/ai-model/${model.id}`, model);
+    return (!model.id
+      ? this.http.post<AIModelEntity>(`/admin/ai-model`, model)
+      : this.http.put<AIModelEntity>(`/admin/ai-model/${model.id}`, model)).pipe(
+        map(response => {
+          // モデルのタグを更新
+          this.tagService.refreshTags();
+          return response;
+        })
+      );
   }
 
   /** 削除 */
   deleteAIModel(id: string): Observable<void> {
-    return this.http.delete<void>(`/maintainer/ai-model/${id}`);
+    return this.http.delete<void>(`/admin/ai-model/${id}`);
   }
 
   checkOkModels = new Set<string>();
@@ -557,7 +565,7 @@ export class AIModelPricingService {
   }
 
   upsertPricing(pricing: ModelPricing): Observable<ModelPricing> {
-    return this.http.post<ModelPricing>(`/maintainer/ai-model/${pricing.modelId}/pricing`, pricing).pipe(
+    return this.http.post<ModelPricing>(`/admin/ai-model/${pricing.modelId}/pricing`, pricing).pipe(
       map(modelPricingFormat),
     );
   }
@@ -569,7 +577,7 @@ export class AIModelPricingService {
   // }
 
   deletePricingByModelId(id: string): Observable<void> {
-    return this.http.delete<void>(`/maintainer/ai-model/${id}`);
+    return this.http.delete<void>(`/admin/ai-model/${id}`);
   }
 }
 
@@ -581,4 +589,117 @@ export interface ModelPricing {
   inputPricePerUnit: number;
   outputPricePerUnit: number;
   unit: string;
+}
+
+
+// =================================
+// Tag Types & Interfaces
+// =================================
+export interface TagEntity extends BaseEntity {
+  id: string;
+  name: string;
+  label?: string;
+  description?: string;
+  color?: string;
+  category?: string; // タグのカテゴリ（オプション）
+  sortOrder?: number;
+  overrideOthers?: boolean;
+  usageCount: number;
+  isActive: boolean;
+}
+
+export interface TagCreateRequest {
+  name: string;
+  label?: string;
+  description?: string;
+  category?: string; // タグのカテゴリ（オプション）
+  color?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+  overrideOthers?: boolean;
+}
+
+export interface TagUpdateRequest extends TagCreateRequest {
+  // 更新用は同じフィールド
+}
+
+// =================================
+// Tag Service
+// =================================
+
+@Injectable({ providedIn: 'root' })
+export class TagService {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = `/admin/tag`;
+
+  // タグ一覧のキャッシュ
+  private tagsSubject = new BehaviorSubject<TagEntity[]>([]);
+  public tags$ = this.tagsSubject.asObservable();
+
+  /**
+   * 全タグ一覧取得
+   */
+  getTags(): Observable<TagEntity[]> {
+    return this.http.get<TagEntity[]>(`/user/tags`).pipe(
+      tap(tags => this.tagsSubject.next(tags))
+    );
+  }
+
+  /**
+   * タグ作成
+   */
+  createTag(tag: TagCreateRequest): Observable<TagEntity> {
+    return this.http.post<TagEntity>(this.baseUrl, tag).pipe(
+      tap(() => this.refreshTags())
+    );
+  }
+
+  /**
+   * タグ更新
+   */
+  updateTag(id: string, tag: TagUpdateRequest): Observable<TagEntity> {
+    return this.http.put<TagEntity>(`${this.baseUrl}/${id}`, tag).pipe(
+      tap(() => this.refreshTags())
+    );
+  }
+
+  /**
+   * タグ削除
+   */
+  deleteTag(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
+      tap(() => this.refreshTags())
+    );
+  }
+
+  /**
+   * タグ一覧を再取得してキャッシュを更新
+   */
+  refreshTags(): void {
+    this.getTags().subscribe();
+  }
+
+  /**
+   * 現在のタグ一覧を取得（同期）
+   */
+  getCurrentTags(): TagEntity[] {
+    return this.tagsSubject.value;
+  }
+
+  /**
+   * 名前でタグを検索
+   */
+  findTagByName(name: string): TagEntity | undefined {
+    return this.getCurrentTags().find(tag => tag.name === name);
+  }
+
+  /**
+   * 複数の名前でタグを検索
+   */
+  findTagsByNames(names: string[]): TagEntity[] {
+    const currentTags = this.getCurrentTags();
+    return names.map(name =>
+      currentTags.find(tag => tag.name === name)
+    ).filter(tag => tag !== undefined) as TagEntity[];
+  }
 }

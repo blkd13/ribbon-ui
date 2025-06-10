@@ -19,6 +19,9 @@ import { MatAutocompleteActivatedEvent, MatAutocompleteModule } from '@angular/m
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AdminScopeService } from '../../../../services/admin-scope.service';
 import { MatSelectModule } from '@angular/material/select';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { TagService, TagEntity } from '../../../../services/model-manager.service';
+import { TagManagementDialogComponent } from '../tag-management-dialog/tag-management-dialog.component';
 
 @Component({
   selector: 'app-ai-model-management',
@@ -33,6 +36,7 @@ import { MatSelectModule } from '@angular/material/select';
     MatChipsModule,
     MatTooltipModule,
     MatSelectModule,
+    MatDialogModule,
     JsonEditorComponent,
     TrimTrailingZerosPipe,
   ],
@@ -45,12 +49,14 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   private snackBar: MatSnackBar = inject(MatSnackBar);
   private readonly adminScopeService = inject(AdminScopeService);
   readonly announcer = inject(LiveAnnouncer);
+  readonly dialog = inject(MatDialog);
 
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
 
   readonly aiProviderService: AIProviderManagerService = inject(AIProviderManagerService);
   readonly aiModelService: AIModelManagerService = inject(AIModelManagerService);
   readonly aiModelPricingService: AIModelPricingService = inject(AIModelPricingService);
+  readonly tagService = inject(TagService);
 
   models: AIModelEntityForView[] = [];
 
@@ -80,11 +86,17 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   pricingSelectionMode: 'new' | 'edit' = 'new';
   selectedPricingId: string | undefined = undefined;
 
+  // タグ関連
+  availableTags: TagEntity[] = [];
+  filteredTags: TagEntity[] = [];
+
   constructor() {
     this.loadData();
   }
+
   ngOnInit() {
     this.initForm();
+    this.loadTags();
 
     // Subscribe to selected scope changes
     const scopeSubscription = this.adminScopeService.selectedScope$.subscribe(scope => {
@@ -93,9 +105,11 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     });
     this.subscriptions.add(scopeSubscription);
   }
+
   ngOnDestroy() {
     this.subscriptions.unsubscribe();
   }
+
   private filterProvidersByScope() {
     // if (this.selectedScope) {
     //   // Filter providers to only show those that match the selected scope
@@ -111,7 +125,77 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     // You can customize this method to display a more user-friendly scope name
     // For now, just show the scope type and ID
     return `${scope.scopeType}: ${scope.scopeId}`;
-  }  // データの読み込み（モデルと価格情報）
+  }
+
+  /**
+   * タグ一覧を読み込み
+   */
+  private loadTags() {
+    const tagSubscription = this.tagService.getTags().subscribe({
+      next: (tags) => {
+        this.availableTags = tags;
+        this.filteredTags = tags;
+      },
+      error: (err) => {
+        console.error('Error loading tags:', err);
+        this.snackBar.open('Error loading tags', 'Close', {
+          duration: 3000,
+          panelClass: 'error-snackbar'
+        });
+      }
+    });
+    this.subscriptions.add(tagSubscription);
+  }
+
+  /**
+   * タグ管理ダイアログを開く
+   */
+  openTagManagement() {
+    const dialogRef = this.dialog.open(TagManagementDialogComponent, {
+      width: '800px',
+      maxHeight: '80vh',
+      data: { tags: this.availableTags }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // タグが更新された場合、一覧を再読み込み
+        this.loadTags();
+      }
+    });
+  }
+
+  /**
+   * タグのオートコンプリート用フィルタリング
+   */
+  filterTags(query: string): TagEntity[] {
+    if (!query) {
+      return this.availableTags;
+    }
+    const filterValue = query.toLowerCase();
+    return this.availableTags.filter(tag =>
+      tag.name.toLowerCase().includes(filterValue) ||
+      (tag.label && tag.label.toLowerCase().includes(filterValue))
+    );
+  }
+
+  /**
+   * タグの表示名を取得（labelがあればlabel、なければname）
+   */
+  getTagDisplayName(tagName: string): string {
+    const tag = this.availableTags.find(t => t.name === tagName);
+    return tag?.label || tagName;
+  }
+
+  /**
+   * タグの色を取得
+   */
+  getTagColor(tagName: string): string | undefined {
+    const tag = this.availableTags.find(t => t.name === tagName);
+    return tag?.color;
+  }
+
+  // データの読み込み（モデルと価格情報）
   loadData() {
     this.aiProviderService.getProviders().pipe().subscribe({
       next: (providers) => {
@@ -211,7 +295,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         modelId: [''],
         inputPricePerUnit: [0.00, [Validators.required, Validators.min(0)]],
         outputPricePerUnit: [0.00, [Validators.required, Validators.min(0)]],
-        unit: ['USD/1Mtokens', Validators.required],
+        unit: ['USD/1M tokens', Validators.required],
         validFrom: [today, Validators.required]
       })
     });
@@ -252,7 +336,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         modelId: '',
         inputPricePerUnit: 0.00,
         outputPricePerUnit: 0.00,
-        unit: 'USD/1Mtokens',
+        unit: 'USD/1M tokens',
         validFrom: this.formatDateForInput(new Date())
       }
     });
@@ -526,7 +610,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         modelId: formValue.id, // 一時的にフォームのIDを設定（後で更新される）
         inputPricePerUnit: formValue.pricing?.inputPricePerUnit || 0,
         outputPricePerUnit: formValue.pricing?.outputPricePerUnit || 0,
-        unit: formValue.pricing?.unit || 'USD/1Mtokens',
+        unit: formValue.pricing?.unit || 'USD/1M tokens',
         validFrom: formValue.pricing?.validFrom ? new Date(formValue.pricing.validFrom) : new Date(),
       };
 
@@ -829,7 +913,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
           modelId: this.form.get('id')?.value || '',
           inputPricePerUnit: 0.00,
           outputPricePerUnit: 0.00,
-          unit: 'USD/1Mtokens',
+          unit: 'USD/1M tokens',
           validFrom: today
         });
       }
@@ -927,7 +1011,10 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       const control = this.form.get(fieldName);
       if (control) {
         const currentArray = control.value || [];
-        control.setValue([...currentArray, value]);
+        // 重複チェック
+        if (!currentArray.includes(value)) {
+          control.setValue([...currentArray, value]);
+        }
       }
     }
     event.chipInput!.clear();
@@ -952,12 +1039,12 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
    * Handle autocomplete selection for chip inputs
    */
   autocompleteSelect(fieldName: string, event: any): void {
-    const value = event.option.value;
+    const tagName = event.option.value;
     const control = this.form.get(fieldName);
-    if (control && value) {
+    if (control && tagName) {
       const currentArray = control.value || [];
-      if (!currentArray.includes(value)) {
-        control.setValue([...currentArray, value]);
+      if (!currentArray.includes(tagName)) {
+        control.setValue([...currentArray, tagName]);
       }
     }
   }
