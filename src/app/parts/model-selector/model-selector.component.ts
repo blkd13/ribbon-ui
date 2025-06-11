@@ -82,8 +82,7 @@ export class ModelSelectorComponent {
     this.aiModelService.sortModels(models);
 
     // Check for override tags
-    const overrideTags = tags.filter(tag => tag.overrideOthers && tag.isActive);
-    const effectiveTags = overrideTags.length > 0 ? overrideTags : tags.filter(tag => tag.isActive);
+    const effectiveTags = tags.filter(tag => tag.isActive);
 
     // Create tag lookup map
     const tagMap = new Map<string, TagEntity>();
@@ -106,7 +105,11 @@ export class ModelSelectorComponent {
       };
 
       // Get model's active tags (filtered by effective tags)
-      const modelActiveTags = model.tags?.filter(tagName => tagMap.has(tagName)) || [];
+      model.tags = model.tags || [];
+      const overrideTags = (model.tags as string[]).filter(tagName => tagMap.get(tagName)?.overrideOthers);
+      const effectiveTags = overrideTags.length > 0 ? overrideTags : model.tags;
+
+      const modelActiveTags = model.tags?.filter(tagName => effectiveTags.includes(tagName)) || [];
 
       if (modelActiveTags.length === 0) {
         // Model has no active tags, add to "Uncategorized"
