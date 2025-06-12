@@ -52,7 +52,7 @@
 
 /* タグボタン - シンプルに */
 .tag-item {
-    padding: 10px 16px 10px 24px !important;
+    padding: 0 24px;
 
     .tag-name {
         font-size: 14px;
@@ -133,6 +133,8 @@
 
 .model-card {
     margin: 8px;
+    margin: -8px 0;
+    border-radius: 0;
     cursor: pointer;
 
     .field-label {
@@ -230,9 +232,16 @@
 .mat-mdc-menu-item {
 
     // 選択されている状態
-    &.selected {
+    &.selected::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        height: 100%;
+        width: 36px;
         background-color: var(--mat-sys-primary-container);
-        font-weight: 500;
+        filter: opacity(0.5);
 
         &:hover {
             background-color: var(--mat-sys-primary-container);
