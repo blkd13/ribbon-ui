@@ -276,12 +276,102 @@ export class ChatComponent implements OnInit {
 
   readonly toolCallService: ToolCallService = inject(ToolCallService);
   presetLabel = '通常';
-
   // ツールグループ管理用
   toolGroupStates: { [groupName: string]: boolean } = {};
+
+  // ツールグループと外部プロバイダーのマッピング
+  private readonly toolGroupProviderMapping: { [groupName: string]: string } = {
+    'mattermost': 'mattermost',
+    'box': 'box',
+    'gitlab': 'gitlab',
+    'gitea': 'gitea',
+    'web': '', // No external provider required
+    'tool': '', // No external provider required
+    'jira': 'API_KEY', // No external provider required
+    'confluence': 'API_KEY' // No external provider required
+  };
+
+  // 外部プロバイダーの接続性チェック
+  private async checkProviderConnectivity(providerType: string): Promise<boolean> {
+    try {
+      // プロバイダーが必要ない場合は常にtrue
+      if (!providerType) {
+        return true;
+      }
+
+      // 利用可能なプロバイダーを取得
+      const availableProviders = await this.extApiProviderService.getApiProviders().toPromise();
+      if (!availableProviders) {
+        return false;
+      }
+
+      // 該当するプロバイダータイプのプロバイダーを検索
+      const matchingProviders = availableProviders.filter(provider =>
+        provider.type === providerType && provider.name
+      );
+
+      if (matchingProviders.length === 0) {
+        return false;
+      }
+
+      // 最初に見つかったプロバイダーで接続性をチェック
+      const firstProvider = matchingProviders[0];
+
+      // OAuth2接続確認API呼び出し
+      const result = await this.authService.isOAuth2Connected(
+        firstProvider.type,
+        firstProvider.name,
+        'user-info'
+      ).toPromise();
+
+      return result !== null && result !== undefined;
+    } catch (error) {
+      console.error('Provider connectivity check failed:', error);
+      return false;
+    }
+  }
+
+  // ユーザーに接続促進メッセージを表示
+  private showConnectionPrompt(groupName: string, providerType: string): void {
+    const message = `${groupName}ツールを使用するには${providerType}の連携が必要です。右上のメニューからAPI連携を設定してください。`;
+
+    // MatSnackBarまたは適切な通知機能を使用
+    // この例では単純にconsole.logを使用（実際の実装では適切な通知UIを使用）
+    console.warn(message);
+
+    this.snackBar.open(message, '閉じる', {
+      duration: 5000,
+      panelClass: ['mat-toolbar', 'mat-warn'],
+      horizontalPosition: 'center',
+      verticalPosition: 'top'
+    });
+  }
+
   // ツールグループの状態を切り替える
-  toggleToolGroup(groupName: string): void {
-    this.toolGroupStates[groupName] = !this.toolGroupStates[groupName];
+  async toggleToolGroup(groupName: string): Promise<void> {
+    const newState = !this.toolGroupStates[groupName];
+
+    // ONにする場合は接続性チェックを実行
+    if (newState) {
+      const requiredProvider = this.toolGroupProviderMapping[groupName.split('-')[0]]; // グループ名からプロバイダーを取得
+      if (requiredProvider === 'API_KEY') {
+        // 接続されていない場合は警告を表示してONにしない
+        this.showConnectionPrompt(groupName, requiredProvider);
+      } else if (requiredProvider) {
+        const isConnected = await this.checkProviderConnectivity(requiredProvider);
+
+        if (!isConnected) {
+          // 接続されていない場合は警告を表示してONにしない
+          this.showConnectionPrompt(groupName, requiredProvider);
+          return;
+        }
+      } else {
+        // プロバイダーが必要ない場合はそのままONにする
+      }
+    }
+
+    // 接続確認が完了したらツールグループの状態を更新
+    this.toolGroupStates[groupName] = newState;
 
     // 全スレッドに適用
     this.selectedThreadGroup.threadList.forEach(thread => {
@@ -2686,6 +2776,14 @@ export class ChatComponent implements OnInit {
         } else { /** 削除キャンセル */ }
       }
     });
+  }
+
+  /**
+   * チャットのエクスポート
+   */
+  exportChat(threadGroup: ThreadGroupForView): void {
+    // TODO: 実装
+    this.snackBar.open(`この機能はまだ実装されていません。`, 'close', { duration: 3000 });
   }
 
   tabIndex = 0;
