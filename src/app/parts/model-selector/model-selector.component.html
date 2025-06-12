@@ -17,7 +17,7 @@
 
     <!-- タグボタン -->
     <div mat-menu-item [matMenuTriggerFor]="tagMenu"
-        [class.selected]="aiModelService.modelMap[args().model].tags?.includes(tagGroup.tag?.name||'')">
+        [class.selected]="aiModelService.modelMap[args().model] && aiModelService.modelMap[args().model].tags?.includes(tagGroup.tag?.name||'')">
         <div class="tag-item">
             <div class="tag-name">{{ tagGroup.tag?.label || tagGroup.tag?.name || 'No Tags' }}</div>
             <!-- <div class="model-count">{{ tagGroup.models.length }}</div> -->

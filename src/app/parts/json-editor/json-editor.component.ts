@@ -1,5 +1,5 @@
 // json-editor.component.ts
-import { Component, Input, forwardRef, OnInit, OnDestroy, input } from '@angular/core';
+import { Component, Input, forwardRef, OnInit, OnDestroy, input, effect } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -44,14 +44,25 @@ export class JsonEditorComponent implements OnInit, OnDestroy, ControlValueAcces
   readonly suggestions = input<string[]>([]);
   readonly label = input<string>('JSON Editor');
   readonly placeholder = input<string>('Enter key');
+  readonly readonly = input<boolean>(false); // Use boolean for readonly state
+  readonly required = input<boolean>(false); // Use boolean for required validation
 
   form!: FormGroup;
   filteredOptions: { [key: string]: Observable<string[]> } = {};
   private destroy$ = new Subject<void>();
   private onChange: (value: Record<string, any>) => void = () => { };
   private onTouched: () => void = () => { };
+  private externallyDisabled = false; // Track external disabled state
 
-  constructor(private fb: FormBuilder) { }
+  constructor(private fb: FormBuilder) {
+    // Effect to handle readonly changes
+    effect(() => {
+      const isReadonly = this.readonly();
+      if (this.form) {
+        this.updateFormState();
+      }
+    });
+  }
 
   ngOnInit() {
     this.initForm();
@@ -62,6 +73,9 @@ export class JsonEditorComponent implements OnInit, OnDestroy, ControlValueAcces
       .subscribe(() => {
         this.onChange(this.getFormData());
       });
+
+    // Set initial readonly state
+    this.updateFormState();
   }
 
   ngOnDestroy() {
@@ -76,6 +90,29 @@ export class JsonEditorComponent implements OnInit, OnDestroy, ControlValueAcces
 
     // Add initial empty item
     this.addItem();
+  }
+
+  // Update form state based on readonly and disabled state
+  private updateFormState() {
+    if (!this.form) return;
+
+    const shouldDisable = this.readonly() || this.externallyDisabled;
+
+    if (shouldDisable) {
+      this.form.disable();
+    } else {
+      this.form.enable();
+    }
+  }
+
+  // Check if component is in readonly mode
+  isReadonly(): boolean {
+    return this.readonly();
+  }
+
+  // Check if component should be disabled (readonly or externally disabled)
+  isDisabled(): boolean {
+    return this.readonly() || this.externallyDisabled;
   }
 
   // ControlValueAccessor implementation
@@ -97,7 +134,8 @@ export class JsonEditorComponent implements OnInit, OnDestroy, ControlValueAcces
   }
 
   setDisabledState(isDisabled: boolean): void {
-    isDisabled ? this.form.disable() : this.form.enable();
+    this.externallyDisabled = isDisabled;
+    this.updateFormState();
   }
 
   // Form management methods
@@ -130,6 +168,9 @@ export class JsonEditorComponent implements OnInit, OnDestroy, ControlValueAcces
     if (itemsArray.length === 0) {
       this.addItem();
     }
+
+    // Update form state after populating data
+    this.updateFormState();
   }
 
   get items() {
@@ -138,12 +179,17 @@ export class JsonEditorComponent implements OnInit, OnDestroy, ControlValueAcces
 
   createItem(key: string = '', value: any = '') {
     return this.fb.group({
-      key: [key, Validators.required],
-      value: [value, Validators.required]
+      key: [key, this.required() ? Validators.required : null],
+      value: [value, this.required() ? Validators.required : null]
     });
   }
 
   addItem() {
+    // Don't add items if readonly
+    if (this.readonly()) {
+      return;
+    }
+
     const itemsArray = this.form.get('items') as FormArray;
     itemsArray.push(this.createItem());
     this.setupAutoComplete(itemsArray.length - 1);
@@ -151,6 +197,11 @@ export class JsonEditorComponent implements OnInit, OnDestroy, ControlValueAcces
   }
 
   removeItem(index: number) {
+    // Don't remove items if readonly
+    if (this.readonly()) {
+      return;
+    }
+
     const itemsArray = this.form.get('items') as FormArray;
     itemsArray.removeAt(index);
     this.onTouched();
@@ -205,6 +256,11 @@ export class JsonEditorComponent implements OnInit, OnDestroy, ControlValueAcces
   }
 
   onOptionSelected(index: number, event: any) {
+    // Don't allow selection if readonly
+    if (this.readonly()) {
+      return;
+    }
+
     const selectedKey = event.option.value;
     const itemGroup = (this.form.get('items') as FormArray).at(index) as FormGroup;
     itemGroup.get('key')?.setValue(selectedKey);

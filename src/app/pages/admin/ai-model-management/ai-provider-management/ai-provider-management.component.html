@@ -1,3 +1,5 @@
+<!-- AI Provider Management Template の修正版 -->
+
 <div class="container">
     <h2>AI Providers</h2>
     <div class="layout-container">
@@ -6,7 +8,11 @@
         <div class="table-container">
             <div class="table-header">
                 <h3>Providers</h3>
-                <button mat-raised-button type="button" class="btn btn-sm btn-primary" (click)="createNew()">
+                <!-- 権限チェックを追加 -->
+                <button mat-raised-button type="button" class="btn btn-sm btn-primary" (click)="createNew()"
+                    [disabled]="!canCreateProvider()"
+                    [matTooltip]="!canCreateProvider() ? 'You do not have permission to create providers in the current scope' : ''">
+                    <mat-icon>add</mat-icon>
                     新規登録
                 </button>
             </div>
@@ -34,7 +40,9 @@
                 </thead>
                 <tbody>
                     @for (provider of providers; track $index) {
-                    <tr [class.selected]="form.value.id === provider.id" (click)="selectProvider(provider)">
+                    <tr [class.selected]="form.value.id === provider.id"
+                        [class.own-scope]="isProvidersOwnScope(provider)"
+                        [class.other-scope]="!isProvidersOwnScope(provider)">
                         <td>
                             {{ provider.name }}
                             <div class="text-xs text-[#888] align-right">{{ provider.type }}</div>
@@ -48,26 +56,70 @@
                             <mat-icon class="status-icon">{{ provider.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
                         </td>
                         <td class="actions-cell">
-                            @if (canUserEditProvider(provider)) {
+                            @if (isProvidersOwnScope(provider)) {
+                            <!-- 自分のスコープの場合：通常の編集・複製・削除 -->
+                            @if (shouldShowEditButton(provider)) {
                             <button mat-icon-button class="mr-5"
-                                (click)="selectProvider(provider); $event.stopPropagation();" matTooltip="Edit">
+                                (click)="editProvider(provider); $event.stopPropagation();"
+                                matTooltip="Edit this provider">
                                 <mat-icon>edit</mat-icon>
                             </button>
-                            } @else {
-                            <button mat-icon-button class="mr-5"
-                                (click)="selectProvider(provider); $event.stopPropagation();" matTooltip="View">
-                                <mat-icon>visibility</mat-icon>
+                            }
+
+                            @if (shouldShowDuplicateButton(provider)) {
+                            <button mat-icon-button class="mr-5" (click)="duplicateProvider(provider, $event);"
+                                matTooltip="Duplicate this provider">
+                                <mat-icon>file_copy</mat-icon>
                             </button>
                             }
-                            <button mat-icon-button class="mr-5" (click)="duplicateProvider(provider, $event);"
-                                matTooltip="Duplicate">
-                                <mat-icon>content_copy</mat-icon>
-                            </button>
+
+                            @if (shouldShowDeleteButton(provider)) {
                             <button mat-icon-button class="mr-5"
-                                [ngStyle]="{'visibility': canUserEditProvider(provider) ? 'visible' : 'hidden'}"
-                                (click)="deleteProvider(provider.id); $event.stopPropagation();" matTooltip="Delete">
+                                (click)="deleteProvider(provider.id); $event.stopPropagation();"
+                                matTooltip="Delete this provider">
                                 <mat-icon>delete</mat-icon>
                             </button>
+                            } @else {
+                            <!-- スペース確保 -->
+                            <button mat-icon-button class="mr-5" style="visibility: hidden;">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                            }
+                            } @else {
+                            <!-- 他のスコープの場合：閲覧とオーバーライド -->
+                            <button mat-icon-button class="mr-5"
+                                (click)="viewProvider(provider); $event.stopPropagation();"
+                                matTooltip="View provider details">
+                                <mat-icon>visibility</mat-icon>
+                            </button>
+
+                            @if (shouldShowOverrideButton(provider)) {
+                            <button mat-icon-button class="mr-5 override-button"
+                                (click)="startOverride(provider, $event);" matTooltip="Create override in your scope">
+                                <div class="icon-stack">
+                                    <mat-icon class="base-icon">content_copy</mat-icon>
+                                    <mat-icon class="overlay-icon">add_circle</mat-icon>
+                                </div>
+                            </button>
+                            } @else {
+                            <button mat-icon-button class="mr-5" disabled
+                                matTooltip="No permission to create overrides">
+                                <mat-icon>block</mat-icon>
+                            </button>
+                            }
+
+                            <!-- 削除は表示しない（スペース確保のため透明） -->
+                            <button mat-icon-button class="mr-5" style="visibility: hidden;">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                            }
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="5" class="no-data">
+                            <mat-icon>info</mat-icon>
+                            <p>No providers found</p>
                         </td>
                     </tr>
                     }
@@ -77,9 +129,54 @@
 
         <!-- 右側：編集フォーム -->
         @if (isFormVisible) {
-        <div class="form-container">
+        <div class="form-container" [class.readonly-mode]="isViewOnlyMode">
+
+            <!-- スコープ情報バナー -->
+            @if (selectedProvider && !isProvidersOwnScope(selectedProvider)) {
+            <div class="scope-info-banner">
+                <mat-card class="info-card" [class.override-mode]="isOverrideMode">
+                    <mat-card-content>
+                        <div class="banner-content">
+                            <div class="banner-icon">
+                                <mat-icon [class.override]="isOverrideMode">
+                                    {{ isOverrideMode ? 'content_copy' : 'info_outline' }}
+                                </mat-icon>
+                            </div>
+                            <div class="banner-text">
+                                @if (isOverrideMode) {
+                                <strong>Creating Override</strong>
+                                <p>You are creating an override of "{{ selectedProvider.name }}"
+                                    from {{ getScopeTypeLabel(selectedProvider.scopeInfo.scopeType) }}:{{
+                                    getScopeLabel(selectedProvider.scopeInfo) }}
+                                    in your current scope {{ getScopeTypeLabel(selectedScope!.scopeType) }}:{{
+                                    getScopeLabel(selectedScope!) }}.</p>
+                                } @else {
+                                <strong>Viewing {{ getScopeTypeLabel(selectedProvider.scopeInfo.scopeType) }}
+                                    Provider</strong>
+                                <p>This provider belongs to {{ getScopeTypeLabel(selectedProvider.scopeInfo.scopeType)
+                                    }}:{{ getScopeLabel(selectedProvider.scopeInfo) }}.
+                                    You can view its configuration below.</p>
+                                }
+                            </div>
+                            @if (!isOverrideMode && canCreateProvider()) {
+                            <div class="banner-actions">
+                                <button mat-raised-button color="accent" (click)="switchToOverrideMode()">
+                                    <mat-icon>content_copy</mat-icon>
+                                    Create Override
+                                </button>
+                            </div>
+                            }
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            }
+
+            <!-- フォームヘッダー -->
             <div class="form-header">
-                <h3>{{ getFormTitle() }}</h3>
+                <h3 [class.override-title]="isOverrideMode" [class.view-title]="isViewOnlyMode">
+                    {{ getFormTitle() }}
+                </h3>
                 <button mat-icon-button type="button" (click)="closeForm()">
                     <mat-icon>close</mat-icon>
                 </button>
@@ -145,7 +242,9 @@
                             </label>
                         </div>
                     </div>
-                </div> <!-- スコープ情報 -->
+                </div>
+
+                <!-- スコープ情報 -->
                 <div class="form-section">
                     <h4>Scope Information</h4>
 
@@ -199,91 +298,90 @@
                     }
                 </div>
 
-                <!-- {{form.get('config')?.value| json}} -->
                 <!-- プロバイダー設定 -->
-                @if (form.get('basicInfo.type')?.value) {
+                @if (form.get('basicInfo.type')?.value && currentProviderFields.length > 0) {
                 <div class="form-section">
                     <h4>{{ Utils.toPascalCase(form.get('basicInfo.type')?.value) }} Configuration</h4>
 
                     <div formGroupName="config">
                         @for (field of currentProviderFields; track field.key) {
                         <div class="form-group">
-
-                            @if (field.type === 'array') {
                             <!-- 配列フィールド -->
+                            @if (field.type === 'array') {
                             <div class="array-header">
-                                <label>{{ field.label }} @if (field.required) {<span class="required">*</span>}</label>
-                                <button type="button" class="btn btn-sm btn-primary" (click)="addArrayItem(field.key)">
-                                    <mat-icon>add</mat-icon> Add {{ field.label.slice(0, -1) }}
+                                <label>{{ field.label }} @if(field.required) {<span class="required">*</span>}</label>
+                                @if (!isViewOnlyMode) {
+                                <button type="button" class="btn btn-sm btn-secondary"
+                                    (click)="addArrayItem(field.key)">
+                                    <mat-icon>add</mat-icon>
+                                    Add {{ getSingularLabel(field.label) }}
                                 </button>
+                                }
                             </div>
 
-                            @for (control of getArrayControls(field.key); track $index) {
-                            <div class="array-item-simple">
-                                <input type="text" [formControl]="control" class="form-control"
-                                    [placeholder]="field.placeholder || ''">
-                                <button type="button" class="btn btn-sm btn-danger"
-                                    (click)="removeArrayItem(field.key, $index)"
-                                    [disabled]="getArrayControls(field.key).length <= 1">
-                                    <mat-icon>delete</mat-icon>
-                                </button>
+                            @if (getArrayControls(field.key).length > 0) {
+                            <div formArrayName="{{ field.key }}">
+                                @for (control of getArrayControls(field.key); track $index) {
+                                <div class="array-item-simple">
+                                    <input type="text" [formControlName]="$index" class="form-control"
+                                        [placeholder]="field.placeholder || field.label">
+                                    @if (!isViewOnlyMode && getArrayControls(field.key).length > 1) {
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                        (click)="removeArrayItem(field.key, $index)">
+                                        <mat-icon>remove</mat-icon>
+                                    </button>
+                                    }
+                                </div>
+                                }
                             </div>
                             }
 
-                            } @else if (field.type === 'object_array') {
                             <!-- オブジェクト配列フィールド -->
+                            } @else if (field.type === 'object_array') {
                             <div class="array-header">
-                                <label>{{ field.label }} @if (field.required) {<span class="required">*</span>}</label>
-                                <button type="button" class="btn btn-sm btn-primary"
+                                <label>{{ field.label }} @if(field.required) {<span class="required">*</span>}</label>
+                                @if (!isViewOnlyMode) {
+                                <button type="button" class="btn btn-sm btn-secondary"
                                     (click)="addObjectArrayItem(field.key)">
-                                    <mat-icon>add</mat-icon> Add {{ getSingularLabel(field.label) }}
+                                    <mat-icon>add</mat-icon>
+                                    Add {{ getSingularLabel(field.label) }}
                                 </button>
+                                }
                             </div>
 
                             @if (getObjectArrayControls(field.key).length > 0) {
                             <div formArrayName="{{ field.key }}">
-                                @for (objectControl of getObjectArrayControls(field.key); track $index) {
+                                @for (objectGroup of getObjectArrayControls(field.key); track $index) {
                                 <div class="array-item" [formGroupName]="$index">
                                     <div class="array-item-header">
                                         <h5>{{ getSingularLabel(field.label) }} {{ $index + 1 }}</h5>
+                                        @if (!isViewOnlyMode && getObjectArrayControls(field.key).length > 1) {
                                         <button type="button" class="btn btn-sm btn-danger"
-                                            (click)="removeObjectArrayItem(field.key, $index)"
-                                            [disabled]="getObjectArrayControls(field.key).length <= 1">
+                                            (click)="removeObjectArrayItem(field.key, $index)">
                                             <mat-icon>delete</mat-icon>
                                         </button>
+                                        }
                                     </div>
 
                                     @for (objectField of getObjectFieldsForArray(field.key); track objectField.key) {
                                     <div class="form-group">
-                                        @if (objectField.type === 'json') {
-                                        <!-- JSON Editor -->
-                                        <label> {{ objectField.label }}
-                                            @if (objectField.required) {<span class="required">*</span>}
-                                        </label>
-                                        <app-json-editor [formControlName]="objectField.key"
-                                            [suggestions]="['organizationId', 'projectId']" [label]="objectField.label"
-                                            [placeholder]="objectField.placeholder || 'name'">
-                                        </app-json-editor>
-                                        @if (hasObjectArrayError(field.key, $index, objectField.key)) {
-                                        <div class="error-message">
-                                            {{ getObjectArrayErrorMessage(field.key, $index, objectField.key) }}
-                                        </div>
-                                        }
-                                        } @else {
-                                        <!-- 通常のフィールド -->
-                                        <label [for]="objectField.key + '_' + $index">
-                                            {{ objectField.label }} @if (objectField.required) {<span
-                                                class="required">*</span>}
-                                        </label>
-                                        <input [id]="objectField.key + '_' + $index" [type]="objectField.type"
-                                            [formControlName]="objectField.key" class="form-control"
-                                            [placeholder]="objectField.placeholder || ''"
+                                        <label>{{ objectField.label }} @if(objectField.required) {<span
+                                                class="required">*</span>}</label>
+                                        @if (objectField.type === 'password') {
+                                        <input type="password" [formControlName]="objectField.key" class="form-control"
+                                            [placeholder]="objectField.placeholder || objectField.label"
                                             [ngClass]="{'invalid': hasObjectArrayError(field.key, $index, objectField.key)}">
-                                        @if (hasObjectArrayError(field.key, $index, objectField.key)) {
-                                        <div class="error-message">
-                                            {{ getObjectArrayErrorMessage(field.key, $index,objectField.key) }}
-                                        </div>
+                                        } @else if (objectField.type === 'json') {
+                                        <app-json-editor [formControlName]="objectField.key"></app-json-editor>
+                                        } @else {
+                                        <input [type]="objectField.type === 'url' ? 'url' : 'text'"
+                                            [formControlName]="objectField.key" class="form-control"
+                                            [placeholder]="objectField.placeholder || objectField.label"
+                                            [ngClass]="{'invalid': hasObjectArrayError(field.key, $index, objectField.key)}">
                                         }
+                                        @if (hasObjectArrayError(field.key, $index, objectField.key)) {
+                                        <div class="error-message">{{ getObjectArrayErrorMessage(field.key, $index,
+                                            objectField.key) }}</div>
                                         }
                                     </div>
                                     }
@@ -292,43 +390,56 @@
                             </div>
                             }
 
-                            } @else if (field.type === 'json') {
-                            <!-- JSON Editor -->
-                            <label>{{ field.label }} @if (field.required) {<span class="required">*</span>}</label>
-                            <app-json-editor [formControlName]="field.key"
-                                [suggestions]="['organizationId', 'projectId']" [label]="field.label"
-                                [placeholder]="field.placeholder || 'name'">
-                            </app-json-editor>
-                            @if (hasError('config.' + field.key)) {
-                            <div class="error-message">{{ getErrorMessage('config.' + field.key) }}</div>
-                            }
-
+                            <!-- 通常フィールド -->
                             } @else {
-                            <!-- 通常のフィールド -->
-                            <label [for]="field.key">
-                                {{ field.label }} @if (field.required) {<span class="required">*</span>}
-                            </label>
-                            <input [id]="field.key" [type]="field.type" [formControlName]="field.key"
-                                class="form-control" [placeholder]="field.placeholder || ''"
-                                [ngClass]="{'invalid': hasError('config.' + field.key)}">
-                            @if (hasError('config.' + field.key)) {
-                            <div class="error-message">{{ getErrorMessage('config.' + field.key) }}</div>
+                            <label [for]="field.key">{{ field.label }} @if(field.required) {<span
+                                    class="required">*</span>}</label>
+                            @if (field.type === 'password') {
+                            <input type="password" [id]="field.key" [formControlName]="field.key" class="form-control"
+                                [placeholder]="field.placeholder || field.label">
+                            } @else if (field.type === 'json') {
+                            <app-json-editor [formControlName]="field.key"></app-json-editor>
+                            } @else {
+                            <input [type]="field.type === 'url' ? 'url' : 'text'" [id]="field.key"
+                                [formControlName]="field.key" class="form-control"
+                                [placeholder]="field.placeholder || field.label">
                             }
                             }
                         </div>
                         }
                     </div>
                 </div>
-                } <!-- ボタン -->
+                }
+
+                <!-- ボタン -->
                 <div class="button-group">
-                    @if (isEditMode || (!isEditMode && !form.get('id')?.value)) {
-                    <button type="submit" class="btn btn-primary" mat-raised-button>
-                        {{ isEditMode ? 'Update' : 'Register' }}
+                    @if (isViewOnlyMode) {
+                    <!-- 閲覧のみモード -->
+                    <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
+                        <mat-icon>close</mat-icon>
+                        Close
+                    </button>
+                    @if (canCreateProvider()) {
+                    <button type="button" class="btn btn-primary override-button" (click)="switchToOverrideMode()"
+                        mat-raised-button>
+                        <mat-icon>content_copy</mat-icon>
+                        Create Override
                     </button>
                     }
+                    } @else {
+                    <!-- 編集・作成モード -->
                     <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
-                        {{ (isEditMode || (!isEditMode && !form.get('id')?.value)) ? 'Cancel' : 'Close' }}
+                        <mat-icon>cancel</mat-icon>
+                        Cancel
                     </button>
+                    <button type="submit" class="btn btn-primary" mat-raised-button [disabled]="isEditDisabled()"
+                        [class.override-button]="isOverrideMode">
+                        <mat-icon>
+                            {{ isOverrideMode ? 'content_copy' : (isEditMode ? 'save' : 'add') }}
+                        </mat-icon>
+                        {{ isOverrideMode ? 'Create Override' : (isEditMode ? 'Update' : 'Create') }}
+                    </button>
+                    }
                 </div>
             </form>
         </div>

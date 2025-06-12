@@ -11,10 +11,7 @@ export const adminScopeGuard: CanActivateFn = (route: ActivatedRouteSnapshot, st
     const adminScopeService = inject(AdminScopeService);
     const router = inject(Router);
     const g = inject(GService);
-    const authService = inject(AuthService);
-
-    // ルートパラメータからスコープのタイプとIDを取得
-    // この形式で指定しているはずだが何故かscopeTypeにscopeTypeとscopeIdが繋がってい入ってくる
+    const authService = inject(AuthService);    // ルートパラメータからスコープのタイプとIDを取得
     const scopeTypeParam = route.paramMap.get('scopeType');
     const scopeIdParam = route.paramMap.get('scopeId');
 

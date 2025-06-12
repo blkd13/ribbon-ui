@@ -32,13 +32,13 @@
                 <a href="https://ai.google.dev/gemini-api/docs/models#gemini-2.0-flash" target="_blank"
                     class="text-blue-500 hover:underline">Gemini</a>
             </div>
-
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>Provider</th>
                         <!-- <th>Model ID</th> -->
                         <th>Name</th>
+                        <th>Scope</th>
                         <th>Context</th>
                         <!-- <th>Status</th> -->
                         <th>Price<span class="text-xs text-[#888] align-right">(in/out)</span></th>
@@ -60,6 +60,10 @@
                         <td>
                             {{ model.name }}
                             <div class="text-xs text-[#888] align-right">{{ model.providerModelId }}</div>
+                        </td>
+                        <td>
+                            {{ scopeLabelsMap[`${model.scopeInfo.scopeType}:${model.scopeInfo.scopeId}`] }}
+                            <div class="text-xs text-[#888] align-right">{{ model.scopeInfo.scopeType }}</div>
                         </td>
                         <td class="text-right">
                             {{ model.maxContextTokens | number }}
@@ -247,14 +251,67 @@
                     <div class="form-group">
                         <label for="description">Description</label>
                         <textarea id="description" formControlName="description" class="form-control"></textarea>
-                    </div>
-
-                    <!-- Is Active -->
+                    </div> <!-- Is Active -->
                     <div class="form-group checkbox-group">
                         <label>
                             <input type="checkbox" formControlName="isActive">
                             Active
                         </label>
+                    </div>
+
+                    <!-- Scope Information -->
+                    <div class="form-section">
+                        <h4>Scope Information</h4>
+
+                        @if (selectedScope) {
+                        <!-- Read-only scope display when scope is selected from admin -->
+                        <div class="scope-readonly-display">
+                            <div class="form-group">
+                                <label>Selected Scope</label>
+                                <div class="readonly-field">
+                                    <span class="scope-type">{{ getScopeTypeLabel(selectedScope.scopeType) }}</span>
+                                    <span class="scope-name">{{ getScopeLabel(selectedScope) }}</span>
+                                </div>
+                                <div class="scope-note">
+                                    <small class="text-muted">Scope is set by admin and cannot be changed</small>
+                                </div>
+                            </div>
+                        </div>
+                        } @else {
+                        <!-- Editable scope selection when no scope is selected from admin -->
+                        <div formGroupName="scopeInfo">
+                            <!-- Scope Type -->
+                            <div class="form-group">
+                                <label for="scopeType">Scope Type <span class="required">*</span></label>
+                                <select id="scopeType" formControlName="scopeType" class="form-control"
+                                    [ngClass]="{'invalid': hasError('scopeInfo.scopeType')}">
+                                    <option value="">Select a scope type</option>
+                                    @for (scopeType of scopeTypeOptions; track $index) {
+                                    <option [value]="scopeType.value">{{ scopeType.label }}</option>
+                                    }
+                                </select>
+                                @if (hasError('scopeInfo.scopeType')) {
+                                <div class="error-message">{{ getErrorMessage('scopeInfo.scopeType') }}</div>
+                                }
+                            </div>
+
+                            <!-- Scope ID -->
+                            <div class="form-group">
+                                <label for="scopeId">Scope <span class="required">*</span></label>
+                                <select id="scopeId" formControlName="scopeId" class="form-control"
+                                    [ngClass]="{'invalid': hasError('scopeInfo.scopeId')}">
+                                    <option value="">Select a scope</option>
+                                    @for (scope of scopeLabelsList(form.get('scopeInfo')?.value.scopeType); track
+                                    $index) {
+                                    <option [value]="scope.id">{{ scope.label }}</option>
+                                    }
+                                </select>
+                                @if (hasError('scopeInfo.scopeId')) {
+                                <div class="error-message">{{ getErrorMessage('scopeInfo.scopeId') }}</div>
+                                }
+                            </div>
+                        </div>
+                        }
                     </div>
                 </div>
 

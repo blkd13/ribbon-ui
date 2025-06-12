@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, map, Observable, of, tap } from 'rxjs';
 import { BaseEntity } from '../models/project-models';
 import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
+import { UserRoleType } from '../models/models';
 
 export enum AIProviderType {
   OPENAI = 'openai',
@@ -347,6 +348,9 @@ export interface AIModelEntity extends BaseEntity {
   /** 対応モダリティ一覧 */
   modalities: Modality[];
 
+  /** スコープ情報 */
+  scopeInfo: ScopeInfo;
+
   /** 入力コンテキスト最大トークン数 */
   maxContextTokens: number;
 
@@ -475,6 +479,11 @@ export class AIModelManagerService {
           model.description = model.description || '';
           model.name = model.name || '';
           model.providerModelId = model.providerModelId || '';
+          // Set up scopeInfo if not present
+          model.scopeInfo = model.scopeInfo || {
+            scopeType: ScopeType.GLOBAL,
+            scopeId: 'system'
+          };
           model.knowledgeCutoff = model.knowledgeCutoff ? new Date(model.knowledgeCutoff) : null;
           model.releaseDate = model.releaseDate ? new Date(model.releaseDate) : null;
           model.deprecationDate = model.deprecationDate ? new Date(model.deprecationDate) : null;

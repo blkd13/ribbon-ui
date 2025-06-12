@@ -12,6 +12,8 @@ import { AIProviderEntity, AIProviderManagerService, AIProviderType, ScopeType, 
 import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../services/auth.service';
 import { AdminScopeService } from '../../../../services/admin-scope.service';
 import { Utils } from '../../../../utils';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatCardModule } from '@angular/material/card';
 
 export interface ProviderConfigField {
   key: string;
@@ -372,6 +374,7 @@ export class ProviderConfigService {
   }
 }
 
+// ProviderConfigService の定義は元のまま使用
 @Component({
   selector: 'app-ai-provider-management',
   imports: [
@@ -380,6 +383,8 @@ export class ProviderConfigService {
     MatIconModule,
     MatButtonModule,
     MatSnackBarModule,
+    MatTooltipModule,
+    MatCardModule,
     JsonEditorComponent,
   ],
   templateUrl: './ai-provider-management.component.html',
@@ -398,9 +403,14 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
   form!: FormGroup;
   providers: AIProviderEntity[] = [];
   isFormVisible = false;
-  isEditMode = false;
-  isDuplicateMode = false; // 複製モードフラグを追加
   currentProviderFields: any[] = [];
+
+  // 新しいモード管理
+  isEditMode = false;
+  isDuplicateMode = false;
+  isViewOnlyMode = false;
+  isOverrideMode = false;
+  selectedProvider: AIProviderEntity | null = null;
 
   // Subscriptions
   private subscriptions = new Subscription();
@@ -430,23 +440,27 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
   scopeLabelsMap: Record<string, string> = {};
 
   constructor() {
-    this.loadProviders();
-  }
-  ngOnInit() {
     this.initForm();
+  }
 
+  ngOnInit() {
     // Subscribe to selected scope changes
     const scopeSubscription = this.adminScopeService.selectedScope$.subscribe(scope => {
       this.selectedScope = scope;
       this.updateScopeInForm(scope);
+      this.loadProviders();
     });
     this.subscriptions.add(scopeSubscription);
+
+    this.loadProviders();
   }
 
   ngOnDestroy() {
     this.subscriptions.unsubscribe();
-
   }
+
+  // ===== スコープ関連メソッド =====
+
   scopeLabelsList(type: keyof ScopeLabels) {
     return this.scopeLabels.scopeLabels[type] || [];
   }
@@ -463,52 +477,43 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
 
   private updateScopeInForm(scope: ScopeInfo | null) {
     if (scope && this.form) {
-      // Update the scope information in the form, but make it read-only
       this.form.get('scopeInfo')?.patchValue({
         scopeType: scope.scopeType,
         scopeId: scope.scopeId
       });
 
-      // Make scope fields read-only when scope is selected from admin
+      // disable/enableメソッドを使用
       this.form.get('scopeInfo.scopeType')?.disable();
       this.form.get('scopeInfo.scopeId')?.disable();
     } else if (this.form) {
-      // Re-enable scope fields if no scope is selected
       this.form.get('scopeInfo.scopeType')?.enable();
       this.form.get('scopeInfo.scopeId')?.enable();
     }
   }
+
+  // ===== データ読み込み =====
+
   private loadProviders() {
     this.authService.getScopeLabels().subscribe(scopeLabels => {
       this.scopeLabels = scopeLabels;
       this.buildScopeLabelsMap(scopeLabels);
     });
 
-    this.providerService.getProviders().subscribe(providers => {
-      // フィルタリング: 選択されたスコープの優先順位以下（数字が大きい）のプロバイダーのみを表示（優先順位が低い方にフォールバックするから）。優先順位が同じ場合はidが一致するもののみを表示
-      const selectedPriority = this.adminScopeService.SCOPE_PRIORITY[this.selectedScope!.scopeType];
-      providers = providers.filter(provider =>
-        this.adminScopeService.SCOPE_PRIORITY[provider.scopeInfo.scopeType] > selectedPriority
-        || (this.adminScopeService.SCOPE_PRIORITY[provider.scopeInfo.scopeType] === selectedPriority
-          && provider.scopeInfo.scopeId === this.selectedScope!.scopeId)
-      );
-
-      // Use AdminScopeService to get only effective (highest priority) providers
-      this.providers = this.adminScopeService.getEffectiveItems(providers);
+    this.providerService.getProviders().subscribe(allProviders => {
+      const visibleProviders = this.adminScopeService.getVisibleProviders(allProviders);
+      this.providers = this.adminScopeService.getEffectiveItems(visibleProviders);
     });
   }
+
   private buildScopeLabelsMap(scopeLabels: ScopeLabelsResponse) {
     this.scopeLabelsMap = {};
 
-    // Build map from API scope labels
     Object.entries(scopeLabels.scopeLabels).forEach(([type, labels]) => {
       (labels as any[]).forEach(label => {
         this.scopeLabelsMap[`${type}:${label.id}`] = label.label;
       });
     });
 
-    // TODO ここは要らない
-    // For providers, also use AdminScopeService's label mapping as fallback
     this.providers.forEach(provider => {
       const key = `${provider.scopeInfo.scopeType}:${provider.scopeInfo.scopeId}`;
       if (!this.scopeLabelsMap[key]) {
@@ -520,7 +525,8 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  // initFormメソッドのvalueChanges部分も修正
+  // ===== フォーム初期化 =====
+
   private initForm() {
     this.form = this.fb.group({
       id: [''],
@@ -539,69 +545,113 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
     });
 
     this.form.get('basicInfo.type')?.valueChanges.subscribe(type => {
-      // 編集モード中でない場合のみ新しいフォームを作成
-      if (!this.isEditMode && !this.isDuplicateMode) {
+      if (!this.isEditMode && !this.isDuplicateMode && !this.isOverrideMode) {
         this.updateConfigForm(type);
       }
     });
   }
 
   private updateConfigForm(providerType: string, existingConfig?: any) {
-    const configDefinition = this.providerConfigService.getConfigDefinition(providerType);
-    this.currentProviderFields = configDefinition.fields;
-    const newConfigForm = this.providerConfigService.createConfigForm(providerType);
-
-    // 既存の設定値がある場合はパッチする
-    if (existingConfig) {
-      this.providerConfigService.patchConfigForm(newConfigForm, existingConfig, providerType);
+    if (!providerType) {
+      this.currentProviderFields = [];
+      this.form.setControl('config', this.fb.group({}));
+      return;
     }
 
-    this.form.setControl('config', newConfigForm);
+    try {
+      const configDefinition = this.providerConfigService.getConfigDefinition(providerType);
+      this.currentProviderFields = configDefinition.fields;
+      const newConfigForm = this.providerConfigService.createConfigForm(providerType);
+
+      if (existingConfig) {
+        this.providerConfigService.patchConfigForm(newConfigForm, existingConfig, providerType);
+      }
+
+      this.form.setControl('config', newConfigForm);
+
+      // 読み取り専用モードの場合は無効化
+      if (this.isViewOnlyMode) {
+        newConfigForm.disable();
+      }
+    } catch (error) {
+      console.error('Error updating config form:', error);
+      this.currentProviderFields = [];
+      this.form.setControl('config', this.fb.group({}));
+    }
   }
 
-  // 配列フィールドの管理
+  // ===== 配列フィールド管理 =====
+
   getArrayControls(fieldKey: string): FormControl[] {
-    const formArray = this.form.get(`config.${fieldKey}`) as FormArray;
-    return formArray ? formArray.controls as FormControl[] : [];
+    try {
+      const formArray = this.form.get(`config.${fieldKey}`) as FormArray;
+      return formArray && formArray.controls ? formArray.controls as FormControl[] : [];
+    } catch (error) {
+      console.error(`Error getting array controls for ${fieldKey}:`, error);
+      return [];
+    }
   }
 
   addArrayItem(fieldKey: string) {
+    if (this.isViewOnlyMode) return;
     this.providerConfigService.addArrayItem(this.form.get('config') as FormGroup, fieldKey);
   }
 
   removeArrayItem(fieldKey: string, index: number) {
+    if (this.isViewOnlyMode) return;
     this.providerConfigService.removeArrayItem(this.form.get('config') as FormGroup, fieldKey, index);
   }
 
-  // オブジェクト配列の管理メソッド
   getObjectArrayControls(fieldKey: string): FormGroup[] {
-    const formArray = this.form.get(`config.${fieldKey}`) as FormArray;
-    if (!formArray) {
+    try {
+      const formArray = this.form.get(`config.${fieldKey}`) as FormArray;
+      if (!formArray || !formArray.controls) {
+        return [];
+      }
+      return formArray.controls as FormGroup[];
+    } catch (error) {
+      console.error(`Error getting object array controls for ${fieldKey}:`, error);
       return [];
     }
-    return formArray.controls as FormGroup[];
   }
 
   addObjectArrayItem(fieldKey: string) {
-    const providerType = this.form.get('basicInfo.type')?.value;
-    if (!providerType) return;
+    if (this.isViewOnlyMode) return;
 
-    const objectFields = this.providerConfigService.getObjectArrayFields(providerType, fieldKey);
-    this.providerConfigService.addObjectArrayItem(this.form.get('config') as FormGroup, fieldKey, objectFields);
+    try {
+      const providerType = this.form.get('basicInfo.type')?.value;
+      if (!providerType) return;
+
+      const objectFields = this.providerConfigService.getObjectArrayFields(providerType, fieldKey);
+      this.providerConfigService.addObjectArrayItem(this.form.get('config') as FormGroup, fieldKey, objectFields);
+    } catch (error) {
+      console.error(`Error adding object array item for ${fieldKey}:`, error);
+    }
   }
 
   removeObjectArrayItem(fieldKey: string, index: number) {
-    const formArray = this.form.get(`config.${fieldKey}`) as FormArray;
-    if (!formArray || formArray.length <= 1) return;
+    if (this.isViewOnlyMode) return;
 
-    this.providerConfigService.removeArrayItem(this.form.get('config') as FormGroup, fieldKey, index);
+    try {
+      const formArray = this.form.get(`config.${fieldKey}`) as FormArray;
+      if (!formArray || formArray.length <= 1) return;
+
+      this.providerConfigService.removeArrayItem(this.form.get('config') as FormGroup, fieldKey, index);
+    } catch (error) {
+      console.error(`Error removing object array item for ${fieldKey}:`, error);
+    }
   }
 
   getObjectFieldsForArray(fieldKey: string): any[] {
-    const providerType = this.form.get('basicInfo.type')?.value;
-    if (!providerType) return [];
+    try {
+      const providerType = this.form.get('basicInfo.type')?.value;
+      if (!providerType) return [];
 
-    return this.providerConfigService.getObjectArrayFields(providerType, fieldKey);
+      return this.providerConfigService.getObjectArrayFields(providerType, fieldKey);
+    } catch (error) {
+      console.error(`Error getting object fields for ${fieldKey}:`, error);
+      return [];
+    }
   }
 
   getSingularLabel(label: string): string {
@@ -612,63 +662,185 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
   }
 
   hasObjectArrayError(fieldKey: string, index: number, objectFieldKey: string): boolean {
-    const control = this.form.get(`config.${fieldKey}.${index}.${objectFieldKey}`);
-    return !!control?.invalid && !!control?.touched;
+    try {
+      const control = this.form.get(`config.${fieldKey}.${index}.${objectFieldKey}`);
+      return !!control?.invalid && !!control?.touched;
+    } catch (error) {
+      return false;
+    }
   }
 
   getObjectArrayErrorMessage(fieldKey: string, index: number, objectFieldKey: string): string {
-    const control = this.form.get(`config.${fieldKey}.${index}.${objectFieldKey}`);
-    if (!control?.errors) return '';
+    try {
+      const control = this.form.get(`config.${fieldKey}.${index}.${objectFieldKey}`);
+      if (!control?.errors) return '';
 
-    if (control.errors['required']) return 'This field is required';
-    if (control.errors['maxlength']) {
-      return `Maximum length is ${control.errors['maxlength'].requiredLength}`;
+      if (control.errors['required']) return 'This field is required';
+      if (control.errors['maxlength']) {
+        return `Maximum length is ${control.errors['maxlength'].requiredLength}`;
+      }
+      return 'Invalid input';
+    } catch (error) {
+      return '';
     }
-    return 'Invalid input';
-  }  // フォーム操作
+  }
+
+  // ===== 権限チェック =====
+
+  canCreateProvider(): boolean {
+    return this.adminScopeService.canCreateAIProvider();
+  }
+
+  canUserEditProvider(provider: AIProviderEntity): boolean {
+    return this.adminScopeService.canEditScope(
+      provider.scopeInfo.scopeType,
+      provider.scopeInfo.scopeId
+    );
+  }
+
+  isProvidersOwnScope(provider: AIProviderEntity): boolean {
+    const currentScope = this.selectedScope;
+    if (!currentScope) return false;
+
+    return provider.scopeInfo.scopeType === currentScope.scopeType &&
+      provider.scopeInfo.scopeId === currentScope.scopeId;
+  }
+
+  // ===== UIヘルパーメソッド =====
+
+  shouldShowEditButton(provider: AIProviderEntity): boolean {
+    return this.canUserEditProvider(provider) && this.isProvidersOwnScope(provider);
+  }
+
+  shouldShowViewButton(provider: AIProviderEntity): boolean {
+    return !this.isProvidersOwnScope(provider);
+  }
+
+  shouldShowOverrideButton(provider: AIProviderEntity): boolean {
+    return !this.isProvidersOwnScope(provider) && this.canCreateProvider();
+  }
+
+  shouldShowDuplicateButton(provider: AIProviderEntity): boolean {
+    return this.isProvidersOwnScope(provider) && this.canCreateProvider();
+  }
+
+  shouldShowDeleteButton(provider: AIProviderEntity): boolean {
+    return this.shouldShowEditButton(provider);
+  }
+
+  // ===== プロバイダー操作メソッド =====
+
   createNew() {
-    this.isEditMode = false;
-    this.isDuplicateMode = false;
+    if (!this.canCreateProvider()) {
+      this.showErrorMessage('You do not have permission to create providers in the current scope');
+      return;
+    }
+
+    this.resetFormState();
+    this.isFormVisible = true;
     this.initForm();
     this.currentProviderFields = [];
+
     this.form.patchValue({
       basicInfo: { isActive: true }
     });
 
-    // Set scope from AdminScopeService if available
     if (this.selectedScope) {
       this.updateScopeInForm(this.selectedScope);
     }
 
-    // Ensure form is editable for new providers
     this.setFormReadOnly(false);
-
-    this.isFormVisible = true;
   }
-  // 既存プロバイダーを複製して新規作成
+
+  viewProvider(provider: AIProviderEntity) {
+    this.selectedProvider = provider;
+    this.resetFormState();
+    this.isViewOnlyMode = true;
+    this.isFormVisible = true;
+
+    this.loadProviderToForm(provider);
+    this.setFormReadOnly(true);
+  }
+
+  editProvider(provider: AIProviderEntity) {
+    if (!this.isProvidersOwnScope(provider)) {
+      this.showErrorMessage('You can only edit providers in your own scope');
+      return;
+    }
+
+    this.selectedProvider = provider;
+    this.resetFormState();
+    this.isEditMode = true;
+    this.isFormVisible = true;
+
+    this.loadProviderToForm(provider);
+    this.setFormReadOnly(false);
+  }
+
+  startOverride(provider: AIProviderEntity, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.canCreateProvider()) {
+      this.showErrorMessage('You do not have permission to create providers in the current scope');
+      return;
+    }
+
+    if (this.isProvidersOwnScope(provider)) {
+      this.editProvider(provider);
+      return;
+    }
+
+    this.selectedProvider = provider;
+    this.resetFormState();
+    this.isOverrideMode = true;
+    this.isFormVisible = true;
+
+    this.prepareOverrideForm(provider);
+    this.setFormReadOnly(false);
+  }
+
+  switchToOverrideMode() {
+    if (!this.selectedProvider || !this.canCreateProvider()) {
+      return;
+    }
+
+    this.isViewOnlyMode = false;
+    this.isOverrideMode = true;
+    this.prepareOverrideForm(this.selectedProvider);
+    this.setFormReadOnly(false);
+  }
+
   duplicateProvider(provider: AIProviderEntity, event?: Event) {
     if (event) {
       event.stopPropagation();
     }
 
-    this.isEditMode = false;
+    if (!this.canCreateProvider()) {
+      this.showErrorMessage('You do not have permission to create providers in the current scope');
+      return;
+    }
+
+    this.selectedProvider = provider;
+    this.resetFormState();
     this.isDuplicateMode = true;
     this.isFormVisible = true;
 
-    // valueChangesイベントを発火させずにtypeを設定
-    this.form.get('basicInfo.type')?.setValue(provider.type, { emitEvent: false });
+    // フォーム初期化を明示的に行う
+    this.initForm();
 
-    // configフォームを既存の値込みで手動更新
+    // プロバイダータイプを設定してconfigフォームを作成
+    this.form.get('basicInfo.type')?.setValue(provider.type, { emitEvent: false });
     this.updateConfigForm(provider.type, provider.config);
 
-    // プロバイダーデータをコピー（IDはクリア）
     this.form.patchValue({
-      id: '', // IDはクリア
+      id: '',
       basicInfo: {
-        name: provider.name + '_copy', // 識別のため_copyを付加
+        name: provider.name + '_copy',
         label: provider.label + ' (Copy)',
         description: provider.description,
-        isActive: true, // 新規作成時はアクティブに
+        isActive: true,
       },
       scopeInfo: {
         scopeType: provider.scopeInfo.scopeType,
@@ -676,28 +848,25 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Ensure form is editable for duplicated providers
     this.setFormReadOnly(false);
   }
-  // selectProviderメソッドを修正
-  selectProvider(provider: AIProviderEntity) {
-    // Check if user has edit permission for this provider's scope
-    const canEdit = this.adminScopeService.canEditScope(
-      provider.scopeInfo.scopeType,
-      provider.scopeInfo.scopeId
-    );
 
-    this.isEditMode = canEdit;
+  // ===== フォーム関連ヘルパー =====
+
+  private resetFormState() {
+    this.isEditMode = false;
     this.isDuplicateMode = false;
-    this.isFormVisible = true;
+    this.isViewOnlyMode = false;
+    this.isOverrideMode = false;
+  }
 
-    // valueChangesイベントを発火させずにtypeを設定
+  private loadProviderToForm(provider: AIProviderEntity) {
+    // フォーム初期化を明示的に行う
+    this.initForm();
+
     this.form.get('basicInfo.type')?.setValue(provider.type, { emitEvent: false });
-
-    // configフォームを既存の値込みで手動更新
     this.updateConfigForm(provider.type, provider.config);
 
-    // 残りの値をパッチ
     this.form.patchValue({
       id: provider.id,
       basicInfo: {
@@ -708,13 +877,55 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
       },
       scopeInfo: provider.scopeInfo
     });
+  }
 
-    // If user cannot edit, make form read-only
-    if (!canEdit) {
-      this.setFormReadOnly(true);
+  private prepareOverrideForm(provider: AIProviderEntity) {
+    // フォーム初期化を明示的に行う
+    this.initForm();
+
+    this.form.get('basicInfo.type')?.setValue(provider.type, { emitEvent: false });
+    this.updateConfigForm(provider.type, provider.config);
+
+    this.form.patchValue({
+      id: '',
+      basicInfo: {
+        name: provider.name,
+        label: provider.label,
+        description: provider.description,
+        isActive: true,
+      }
+    });
+  }
+
+  getFormTitle(): string {
+    if (this.isViewOnlyMode) {
+      return 'View Provider';
+    } else if (this.isOverrideMode) {
+      return `Override Provider`;
+    } else if (this.isDuplicateMode) {
+      return 'Duplicate Provider';
+    } else if (this.isEditMode) {
+      return 'Edit Provider';
+    } else {
+      return 'New Provider';
     }
   }
+
+  closeForm(): void {
+    this.isFormVisible = false;
+    this.resetFormState();
+    this.selectedProvider = null;
+    this.currentProviderFields = [];
+    this.initForm(); // フォームをリセット
+  }
+
+  // ===== 保存・削除処理 =====
+
   register() {
+    if (this.isViewOnlyMode) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.markFormGroupTouched(this.form);
       this.showErrorMessage('Please fix the errors in the form');
@@ -722,18 +933,32 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const formValue = this.form.value;
+      const formValue = this.form.getRawValue(); // disabledフィールドも含めて取得
       const cleanedConfig = this.providerConfigService.getConfigValue(this.form.get('config') as FormGroup);
 
-      // Use the selected scope from AdminScopeService if available, otherwise use form values
-      const scopeInfo = this.selectedScope || {
-        scopeType: formValue.scopeInfo?.scopeType || '',
-        scopeId: formValue.scopeInfo?.scopeId || ''
-      };
+      const scopeInfo = this.selectedScope;
+      if (!scopeInfo) {
+        this.showErrorMessage('No scope selected');
+        return;
+      }
+
+      const isUpdate = formValue.id && this.isEditMode && !this.isOverrideMode;
+
+      if (isUpdate) {
+        if (!this.adminScopeService.canEditScope(scopeInfo.scopeType, scopeInfo.scopeId)) {
+          this.showErrorMessage('You do not have permission to edit this provider');
+          return;
+        }
+      } else {
+        if (!this.canCreateProvider()) {
+          this.showErrorMessage('You do not have permission to create providers in the current scope');
+          return;
+        }
+      }
 
       const providerData: AIProviderEntity = {
         ...genInitialBaseEntity('ai-provider'),
-        id: formValue.id || undefined,
+        id: isUpdate ? formValue.id : undefined,
         type: formValue.basicInfo.type,
         name: formValue.basicInfo.name,
         label: formValue.basicInfo.label,
@@ -744,9 +969,14 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
       };
 
       this.providerService.upsertProvider(providerData);
-      this.showSuccessMessage(
-        this.isEditMode ? 'Provider updated successfully' : 'Provider created successfully'
-      );
+
+      const successMessage = this.isOverrideMode
+        ? 'Provider override created successfully'
+        : isUpdate
+          ? 'Provider updated successfully'
+          : 'Provider created successfully';
+
+      this.showSuccessMessage(successMessage);
 
       this.loadProviders();
       this.closeForm();
@@ -757,13 +987,23 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
   }
 
   deleteProvider(id: string) {
+    const provider = this.providers.find(p => p.id === id);
+    if (!provider) {
+      this.showErrorMessage('Provider not found');
+      return;
+    }
+
+    if (!this.canUserEditProvider(provider)) {
+      this.showErrorMessage('You do not have permission to delete this provider');
+      return;
+    }
+
     if (confirm('Are you sure you want to delete this provider?')) {
       this.providerService.deleteProvider(id).subscribe({
         next: () => {
           this.showSuccessMessage('Provider deleted successfully');
           this.loadProviders();
 
-          // Close form if the deleted provider was the current one
           if (this.form.value.id === id) {
             this.closeForm();
           }
@@ -773,34 +1013,11 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
           this.showErrorMessage('Failed to delete provider');
         }
       });
-      if (this.form.value.id === id) {
-        this.closeForm();
-      }
     }
   }
 
-  closeForm() {
-    this.isFormVisible = false;
-    this.isEditMode = false;
-    this.isDuplicateMode = false;
-    this.form.reset();
-    this.currentProviderFields = [];
-  }
-  // フォームのタイトルを取得
-  getFormTitle(): string {
-    if (this.isDuplicateMode) {
-      return 'Duplicate Provider';
-    } else if (this.isEditMode) {
-      return 'Edit Provider';
-    } else if (this.isFormVisible && this.form.get('id')?.value) {
-      // If form is visible with an ID but not in edit mode, it's read-only
-      return 'View Provider (Read Only)';
-    } else {
-      return 'New Provider';
-    }
-  }
+  // ===== バリデーション関連 =====
 
-  // バリデーション関連
   hasError(controlPath: string): boolean {
     const control = this.form.get(controlPath);
     return !!control?.invalid && !!control?.touched;
@@ -836,6 +1053,21 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ===== ユーティリティ =====
+
+  private setFormReadOnly(readOnly: boolean): void {
+    if (readOnly) {
+      this.form.disable();
+    } else {
+      this.form.enable();
+      // スコープフィールドは選択されている場合は無効化を維持
+      if (this.selectedScope) {
+        this.form.get('scopeInfo.scopeType')?.disable();
+        this.form.get('scopeInfo.scopeId')?.disable();
+      }
+    }
+  }
+
   private showSuccessMessage(message: string) {
     this.snackBar.open(message, 'Close', { duration: 3000 });
   }
@@ -848,23 +1080,20 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Set form controls as read-only or editable
+   * 編集が無効化されるべきかどうか
    */
-  private setFormReadOnly(readOnly: boolean): void {
-    if (readOnly) {
-      this.form.disable();
-    } else {
-      this.form.enable();
-    }
+  isEditDisabled(): boolean {
+    return this.form.invalid || this.isViewOnlyMode;
   }
 
   /**
-   * Check if user can edit a specific provider
+   * 編集可能なスコープ一覧を取得
    */
-  canUserEditProvider(provider: AIProviderEntity): boolean {
-    return this.adminScopeService.canEditScope(
-      provider.scopeInfo.scopeType,
-      provider.scopeInfo.scopeId
-    );
+  getEditableScopes(): { scopeType: ScopeType; scopeId: string; label: string }[] {
+    const editableScopes = this.adminScopeService.getEditableScopes();
+    return editableScopes.map(scope => ({
+      ...scope,
+      label: this.getScopeLabel(scope)
+    }));
   }
 }

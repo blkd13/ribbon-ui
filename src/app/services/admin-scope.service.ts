@@ -81,22 +81,23 @@ export class AdminScopeService {
 
     /**
      * URLパラメータからスコープを復元する
-     * @param scopeParam URL内のスコープパラメータ（例: "global:system"）
+     * @param scopeTypeParam スコープタイプ（例: "division"）
+     * @param scopeIdParam スコープID（例: "div1"）
      * @returns 復元されたScopeInfo、または解析失敗時はnull
      */
-    restoreScopeFromUrl(scopeParam: string): ScopeInfo | null {
+    restoreScopeFromUrl(scopeTypeParam: string, scopeIdParam: string): ScopeInfo | null {
         try {
-            const [scopeType, scopeId] = scopeParam.split(':');
-            if (this.isValidScopeType(scopeType) && scopeId) {
+            if (this.isValidScopeType(scopeTypeParam) && scopeIdParam) {
                 const scope: ScopeInfo = {
-                    scopeType: scopeType as ScopeType,
-                    scopeId: scopeId
+                    scopeType: scopeTypeParam as ScopeType,
+                    scopeId: scopeIdParam
                 };
+
                 this.selectedScopeSubject.next(scope);
                 return scope;
             }
         } catch (error) {
-            console.warn('Failed to parse scope from URL:', scopeParam, error);
+            console.warn('Failed to parse scope from URL:', { scopeTypeParam, scopeIdParam }, error);
         }
         return null;
     }
@@ -104,7 +105,7 @@ export class AdminScopeService {
     /**
      * スコープをURL形式の文字列に変換
      * @param scope 変換するスコープ
-     * @returns URL形式のスコープ文字列（例: "global:system"）
+     * @returns URL形式のスコープ文字列（例: "division/div1"）
      */
     scopeToUrlParam(scope: ScopeInfo): string {
         return `${scope.scopeType}/${scope.scopeId}`;
@@ -153,13 +154,16 @@ export class AdminScopeService {
 
         return effectiveItems;
     }
+
     /**
      * ユーザーがスコープで編集権限を持っているかチェック
      * 
+     * 修正版: 各スコープは独立しており、そのスコープでの権限が必要
+     * 
      * 権限ルール:
-     * - Division作成: Organization Admin/Maintainer権限が必要
-     * - Division更新: 対象Division Admin/Maintainer権限が必要  
-     * - User Role管理: 対象Division Admin/Maintainer権限が必要
+     * - Organization Scope: そのOrganizationのAdmin/Maintainer権限が必要
+     * - Division Scope: そのDivisionのAdmin/Maintainer権限が必要  
+     * - User Scope: 本人か、そのユーザーが所属するDivisionのAdmin/Maintainer権限が必要
      * 
      * @param scopeType 対象スコープタイプ
      * @param scopeId 対象スコープID
@@ -171,68 +175,107 @@ export class AdminScopeService {
             return false;
         }
 
-        // Division作成の場合 - Organization Admin/Maintainer権限が必要
-        if (scopeType === ScopeType.DIVISION) {
-            // 既存のDivision更新の場合、対象Division Admin/Maintainer権限をチェック
-            const divisionRoles = currentUser.roleList.filter(role =>
-                role.scopeInfo.scopeType === ScopeType.DIVISION &&
-                role.scopeInfo.scopeId === scopeId &&
-                [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
-            );
-
-            if (divisionRoles.length > 0) {
-                return true;
-            }
-
-            // Division作成の場合（scopeIdが空またはnew）、Organization Admin/Maintainer権限をチェック
-            if (!scopeId || scopeId === 'new') {
-                const orgRoles = currentUser.roleList.filter(role =>
-                    role.scopeInfo.scopeType === ScopeType.ORGANIZATION &&
-                    [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
+        switch (scopeType) {
+            case ScopeType.ORGANIZATION:
+                return this.hasSpecificScopePermission(
+                    currentUser.roleList,
+                    ScopeType.ORGANIZATION,
+                    scopeId,
+                    [UserRoleType.Admin, UserRoleType.Maintainer]
                 );
-                return orgRoles.length > 0;
-            }
 
-            return false;
+            case ScopeType.DIVISION:
+                // Division作成の場合（scopeIdが空またはnew）
+                if (!scopeId || scopeId === 'new') {
+                    // Organization Admin/Maintainer権限が必要
+                    return this.hasAnyScopePermission(
+                        currentUser.roleList,
+                        ScopeType.ORGANIZATION,
+                        [UserRoleType.Admin, UserRoleType.Maintainer]
+                    );
+                }
+                // 既存のDivision更新の場合、そのDivisionのAdmin/Maintainer権限が必要
+                return this.hasSpecificScopePermission(
+                    currentUser.roleList,
+                    ScopeType.DIVISION,
+                    scopeId,
+                    [UserRoleType.Admin, UserRoleType.Maintainer]
+                );
+
+            case ScopeType.USER:
+                // ユーザー自身の管理は許可
+                if (scopeId === currentUser.id) {
+                    return true;
+                }
+
+                // TODO: ユーザーが所属するDivisionの情報が必要
+                // 現在は実装されていないため、全てのDivision Admin権限をチェック
+                // 実際の実装では、対象ユーザーが所属するDivisionを特定し、
+                // そのDivisionのAdmin/Maintainer権限をチェックするべき
+                return this.hasAnyScopePermission(
+                    currentUser.roleList,
+                    ScopeType.DIVISION,
+                    [UserRoleType.Admin, UserRoleType.Maintainer]
+                );
+
+            case ScopeType.PROJECT:
+            case ScopeType.TEAM:
+            case ScopeType.GLOBAL:
+                // その他のスコープは、そのスコープのAdmin/Maintainer権限が必要
+                return this.hasSpecificScopePermission(
+                    currentUser.roleList,
+                    scopeType,
+                    scopeId,
+                    [UserRoleType.Admin, UserRoleType.Maintainer]
+                );
+
+            default:
+                return false;
         }
+    }
 
-        // Organization管理の場合 - Organization Admin/Maintainer権限が必要
-        if (scopeType === ScopeType.ORGANIZATION) {
-            const orgRoles = currentUser.roleList.filter(role =>
-                role.scopeInfo.scopeType === ScopeType.ORGANIZATION &&
-                role.scopeInfo.scopeId === scopeId &&
-                [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
-            );
-            return orgRoles.length > 0;
-        }
-
-        // User管理の場合 - 関連するDivision Admin/Maintainer権限をチェック
-        if (scopeType === ScopeType.USER) {
-            // ユーザー自身の管理は許可
-            if (scopeId === currentUser.id) {
-                return true;
-            }
-
-            // Division Admin/Maintainer権限があるかチェック
-            const divisionAdminRoles = currentUser.roleList.filter(role =>
-                role.scopeInfo.scopeType === ScopeType.DIVISION &&
-                [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
-            );
-            return divisionAdminRoles.length > 0;
-        }
-
-        // その他のスコープタイプの場合、基本的には対象スコープのAdmin/Maintainer権限が必要
-        const targetRoles = currentUser.roleList.filter(role =>
+    /**
+     * 特定のスコープとIDに対する権限をチェック
+     * @param roleList ユーザーのロール一覧
+     * @param scopeType チェックするスコープタイプ
+     * @param scopeId チェックするスコープID
+     * @param requiredRoles 必要なロール一覧
+     * @returns 権限があるかどうか
+     */
+    private hasSpecificScopePermission(
+        roleList: any[],
+        scopeType: ScopeType,
+        scopeId: string,
+        requiredRoles: UserRoleType[]
+    ): boolean {
+        return roleList.some(role =>
             role.scopeInfo.scopeType === scopeType &&
             role.scopeInfo.scopeId === scopeId &&
-            [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
+            requiredRoles.includes(role.role)
         );
+    }
 
-        return targetRoles.length > 0;
+    /**
+     * 特定のスコープタイプに対する任意の権限をチェック（スコープIDは問わない）
+     * @param roleList ユーザーのロール一覧
+     * @param scopeType チェックするスコープタイプ
+     * @param requiredRoles 必要なロール一覧
+     * @returns 権限があるかどうか
+     */
+    private hasAnyScopePermission(
+        roleList: any[],
+        scopeType: ScopeType,
+        requiredRoles: UserRoleType[]
+    ): boolean {
+        return roleList.some(role =>
+            role.scopeInfo.scopeType === scopeType &&
+            requiredRoles.includes(role.role)
+        );
     }
 
     /**
      * ユーザーが指定されたDivisionでユーザーロール管理権限を持っているかチェック
+     * 現在選択されているスコープの情報も考慮に入れる
      * 
      * @param divisionId 対象DivisionのID
      * @returns ユーザーロール管理権限があるかどうか
@@ -243,14 +286,21 @@ export class AdminScopeService {
             return false;
         }
 
-        // 対象Division Admin/Maintainer権限をチェック
-        const divisionRoles = currentUser.roleList.filter(role =>
-            role.scopeInfo.scopeType === ScopeType.DIVISION &&
-            role.scopeInfo.scopeId === divisionId &&
-            [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
-        );
+        // 現在選択されているスコープの情報を考慮
+        const currentScope = this.getCurrentScope();
 
-        return divisionRoles.length > 0;
+        // 現在選択されているスコープが該当するDivisionでない場合は権限なし
+        if (!currentScope || currentScope.scopeType !== ScopeType.DIVISION || currentScope.scopeId !== divisionId) {
+            return false;
+        }
+
+        // 対象Division Admin/Maintainer権限をチェック
+        return this.hasSpecificScopePermission(
+            currentUser.roleList,
+            ScopeType.DIVISION,
+            divisionId,
+            [UserRoleType.Admin, UserRoleType.Maintainer]
+        );
     }
 
     /**
@@ -265,11 +315,88 @@ export class AdminScopeService {
         }
 
         // Organization Admin/Maintainer権限をチェック
-        const orgRoles = currentUser.roleList.filter(role =>
-            role.scopeInfo.scopeType === ScopeType.ORGANIZATION &&
-            [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
+        return this.hasAnyScopePermission(
+            currentUser.roleList,
+            ScopeType.ORGANIZATION,
+            [UserRoleType.Admin, UserRoleType.Maintainer]
         );
+    }
 
-        return orgRoles.length > 0;
+    /**
+     * 新しいAI Providerを作成する権限があるかチェック
+     * 現在選択されているスコープに基づいて判定
+     * 
+     * @returns 作成権限があるかどうか
+     */
+    canCreateAIProvider(): boolean {
+        const currentScope = this.getCurrentScope();
+        if (!currentScope) {
+            return false;
+        }
+
+        return this.canEditScope(currentScope.scopeType, currentScope.scopeId);
+    }
+
+    /**
+     * ユーザーが編集可能なスコープ一覧を取得
+     * UI でスコープ選択肢を表示する際に使用
+     * 
+     * @returns 編集可能なスコープ情報の配列
+     */
+    getEditableScopes(): ScopeInfo[] {
+        const currentUser = this.g.info.user;
+        if (!currentUser || !currentUser.roleList) {
+            return [];
+        }
+
+        const editableScopes: ScopeInfo[] = [];
+
+        // ユーザーのロール一覧から編集可能なスコープを抽出
+        currentUser.roleList.forEach(role => {
+            if ([UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)) {
+                const scope: ScopeInfo = {
+                    scopeType: role.scopeInfo.scopeType,
+                    scopeId: role.scopeInfo.scopeId
+                };
+
+                // 重複を避けるためにチェック
+                const exists = editableScopes.some(existingScope =>
+                    existingScope.scopeType === scope.scopeType &&
+                    existingScope.scopeId === scope.scopeId
+                );
+
+                if (!exists) {
+                    editableScopes.push(scope);
+                }
+            }
+        });
+
+        return editableScopes;
+    }
+
+    /**
+     * ユーザーが表示可能なAI Provider一覧を取得
+     * スコープの継承ルールに基づいてフィルタリング
+     * 
+     * @param allProviders 全てのAI Provider一覧
+     * @returns 表示可能なAI Provider一覧
+     */
+    getVisibleProviders<T extends { scopeInfo: ScopeInfo }>(allProviders: T[]): T[] {
+        const currentScope = this.getCurrentScope();
+        if (!currentScope) {
+            return [];
+        }
+
+        const currentScopePriority = this.getScopePriority(currentScope.scopeType);
+
+        // 現在選択されているスコープの優先順位以下（数字が大きい）のプロバイダーのみを表示
+        // 優先順位が同じ場合は、IDが一致するもののみを表示
+        return allProviders.filter(provider => {
+            const providerPriority = this.getScopePriority(provider.scopeInfo.scopeType);
+
+            return providerPriority > currentScopePriority ||
+                (providerPriority === currentScopePriority &&
+                    provider.scopeInfo.scopeId === currentScope.scopeId);
+        });
     }
 }

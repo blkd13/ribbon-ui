@@ -8,7 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Router, RouterModule, ActivatedRoute, NavigationEnd } from '@angular/router'; // ActivatedRoute, NavigationEnd を追加
 import { GService } from '../../services/g.service';
-import { ScopeInfo, ScopeInfoForView, ScopeType } from '../../services/model-manager.service'; // ScopeType を追加
+import { ScopeInfo, ScopeInfoForView } from '../../services/model-manager.service';
 import { AdminScopeService } from '../../services/admin-scope.service';
 import { UserRoleType } from '../../models/models';
 import { AuthService, ScopeLabelsResponseItem } from '../../services/auth.service'; // ScopeLabelsResponse を削除
@@ -85,6 +85,7 @@ export class AdminComponent implements OnInit, OnDestroy {
             .filter(([_, value]) => value && value.length > 0)
             .flatMap(([key, value]) => value.map(item => [`${key}:${item.id}`, item.label]))
         );
+        // ユーザーの管理者ロールからスコープ一覧を作成（同じscopeの重複は除去）
         this.availableScopes = this.g.info.user.roleList
           .filter(role => [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role))
           .map(role => role.scopeInfo)
@@ -92,9 +93,13 @@ export class AdminComponent implements OnInit, OnDestroy {
             index === self.findIndex(s => s.scopeId === scope.scopeId && s.scopeType === scope.scopeType)
           )
           .sort((a, b) => {
+            // スコープタイプで優先順位をつけて、同じタイプなら名前でソート
             const priorityA = this.adminScopeService.getScopePriority(a.scopeType);
             const priorityB = this.adminScopeService.getScopePriority(b.scopeType);
-            return priorityB - priorityA;
+            if (priorityA !== priorityB) {
+              return priorityB - priorityA;
+            }
+            return a.scopeId.localeCompare(b.scopeId);
           })
           .map(scope => ({
             ...scope,
@@ -144,13 +149,14 @@ export class AdminComponent implements OnInit, OnDestroy {
   onScopeChange() {
     if (this.selectedScope) {
       this.adminScopeService.setSelectedScope(this.selectedScope);
-      // GuardがURLを更新するので、ここでの明示的なURL更新は不要かもしれない
-      // ただし、選択中のセクションを維持してスコープのみ変更したい場合は、現在のセクションキーを使ってナビゲートする
+      // スコープ変更時にURLを更新して、選択中のセクションを維持
       const currentSectionKey = this.activeSection || this.baseMenuItems[0]?.key;
       if (currentSectionKey) {
-        const scopePrefix = this.adminScopeService.scopeToUrlParam(this.selectedScope).split('/');
+        const scopeUrlParam = this.adminScopeService.scopeToUrlParam(this.selectedScope);
+        const scopePathParts = scopeUrlParam.split('/');
+
         // スコープを含めたフルパスでナビゲーション
-        this.router.navigate(['/admin', ...scopePrefix, currentSectionKey]);
+        this.router.navigate(['/admin', ...scopePathParts, currentSectionKey]);
       }
       this.updateMenuItems(); // メニューのリンクも更新
     }

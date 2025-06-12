@@ -1,4 +1,4 @@
-/* Base Provider Component Styles */
+/* AI Provider Management Component Styles - 完全版 */
 
 :host {
     display: block;
@@ -53,24 +53,185 @@ h5 {
         border-radius: 4px;
         padding: 8px 12px;
         color: #e0e0e0;
-        
+
         .scope-type {
             font-weight: 500;
             margin-right: 8px;
         }
-        
+
         .scope-name {
             color: #a0a0a0;
         }
     }
-    
+
     .scope-note {
         margin-top: 4px;
-        
+
         small {
             color: #888;
             font-style: italic;
         }
+    }
+}
+
+/* オーバーライドボタンのアイコンスタック */
+.override-button {
+    position: relative;
+
+    .icon-stack {
+        position: relative;
+        display: inline-block;
+
+        .base-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+        }
+
+        .overlay-icon {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            font-size: 12px;
+            width: 12px;
+            height: 12px;
+            background-color: #2196f3;
+            border-radius: 50%;
+            color: white;
+        }
+    }
+
+    &:hover .icon-stack .overlay-icon {
+        background-color: #1976d2;
+    }
+
+    &.btn-primary {
+        background-color: #ff9800;
+
+        &:hover {
+            background-color: #e68900;
+        }
+    }
+}
+
+/* スコープ情報バナー */
+.scope-info-banner {
+    margin-bottom: 16px;
+
+    .info-card {
+        background-color: rgba(33, 150, 243, 0.1);
+        border-left: 4px solid #2196f3;
+
+        &.override-mode {
+            background-color: rgba(255, 152, 0, 0.1);
+            border-left-color: #ff9800;
+        }
+    }
+
+    .banner-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+
+        .banner-icon {
+            flex-shrink: 0;
+
+            mat-icon {
+                font-size: 24px;
+                width: 24px;
+                height: 24px;
+                color: #2196f3;
+
+                &.override {
+                    color: #ff9800;
+                }
+            }
+        }
+
+        .banner-text {
+            flex: 1;
+
+            strong {
+                display: block;
+                margin-bottom: 4px;
+                color: #e0e0e0;
+                font-size: 16px;
+            }
+
+            p {
+                margin: 0;
+                color: #ccc;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+        }
+
+        .banner-actions {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+    }
+}
+
+/* フォームタイトルのアイコン */
+.form-header {
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+}
+
+/* テーブル行のスコープ別スタイル */
+.data-table tr {
+    &.own-scope {
+        border-left: 3px solid #4caf50;
+        background-color: rgba(76, 175, 80, 0.05);
+
+        &:hover {
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        &.selected {
+            background-color: rgba(76, 175, 80, 0.15);
+        }
+    }
+
+    &.other-scope {
+        border-left: 3px solid #ff9800;
+        background-color: rgba(255, 152, 0, 0.05);
+
+        &:hover {
+            background-color: rgba(255, 152, 0, 0.1);
+        }
+
+        &.selected {
+            background-color: rgba(255, 152, 0, 0.15);
+        }
+    }
+}
+
+/* 読み取り専用フィールドの見た目を調整 */
+.form-container.readonly-mode {
+
+    .form-control:disabled,
+    .form-control[readonly] {
+        background-color: #2c2c2c;
+        border-color: #555;
+        opacity: 0.8;
+        cursor: default;
+    }
+
+    .mat-mdc-form-field.mat-form-field-disabled {
+        opacity: 0.8;
+    }
+
+    select:disabled {
+        background-color: #2c2c2c;
+        color: #ccc;
+        cursor: not-allowed;
     }
 }
 
@@ -96,6 +257,7 @@ h5 {
     border: 1px solid #3a3a3a;
     overflow: hidden;
     overflow-y: auto;
+    max-height: 80vh;
 }
 
 /* テーブルヘッダー */
@@ -130,16 +292,11 @@ h5 {
 }
 
 .data-table tr:hover {
-    background-color: #333;
     cursor: pointer;
 }
 
-.data-table tr.selected {
-    background-color: #2c3e50;
-}
-
 .actions-cell {
-    width: 120px;
+    width: 180px; // 3つのボタン + マージンを考慮
     text-align: right;
     white-space: nowrap;
 }
@@ -155,48 +312,6 @@ h5 {
     position: sticky;
     top: 0;
     z-index: 10;
-}
-
-/* Form Tabs */
-.form-tabs {
-    display: flex;
-    margin-bottom: 15px;
-    background-color: #2c2c2c;
-    border-radius: 4px;
-    overflow: hidden;
-    position: sticky;
-    top: 51px;
-    z-index: 9;
-}
-
-.tab {
-    padding: 10px 15px;
-    cursor: pointer;
-    flex: 1;
-    text-align: center;
-    color: #ccc;
-    transition: background-color 0.3s, color 0.3s;
-    border-bottom: 2px solid transparent;
-}
-
-.tab:hover {
-    background-color: #333;
-    color: #fff;
-}
-
-.tab.active {
-    background-color: #333;
-    color: #64b5f6;
-    border-bottom: 2px solid #64b5f6;
-}
-
-.tab-content {
-    display: none;
-    padding: 10px 0;
-}
-
-.tab-content.active {
-    display: block;
 }
 
 /* フォームスタイル */
@@ -232,9 +347,38 @@ label {
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
+.form-control:disabled,
+.form-control[readonly] {
+    background-color: #2c2c2c;
+    border-color: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
 textarea.form-control {
     min-height: 100px;
     resize: vertical;
+}
+
+.readonly-field {
+    padding: 8px 12px;
+    background-color: #2c2c2c;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 14px;
+    min-height: 20px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    position: sticky;
+    bottom: 0;
+    background-color: #2a2a2a;
+    padding: 15px 0;
+    z-index: 8;
 }
 
 .button-group {
@@ -246,35 +390,19 @@ textarea.form-control {
     background-color: #2a2a2a;
     padding: 15px 0;
     z-index: 8;
-}
 
-/* Metadata Mode Toggle */
-.metadata-mode-toggle {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding: 10px;
-    background-color: #333;
-    border-radius: 4px;
-}
+    .btn {
+        min-width: 120px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
 
-.metadata-mode-toggle .btn {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.3s;
-}
-
-.metadata-mode-toggle .btn-primary {
-    background-color: #64b5f6;
-    color: #000;
-}
-
-.metadata-mode-toggle .btn-secondary {
-    background-color: #555;
-    color: #ccc;
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+    }
 }
 
 /* Array Management Styles */
@@ -386,6 +514,9 @@ textarea.form-control {
 
 .checkbox-group input[type="checkbox"] {
     margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    accent-color: #64b5f6;
 }
 
 .checkbox-group label {
@@ -413,6 +544,14 @@ textarea.form-control {
     font-size: 12px;
     margin-top: 4px;
     min-height: 16px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &::before {
+        content: "⚠";
+        font-size: 10px;
+    }
 }
 
 /* Status Icon Styling */
@@ -426,30 +565,6 @@ textarea.form-control {
 
 .status-icon.cancel {
     color: #e74c3c;
-}
-
-/* Metadata helper styles */
-.metadata-helper {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #2c2c2c;
-    border: 1px solid #3a3a3a;
-    border-radius: 4px;
-}
-
-.provider-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.provider-field {
-    font-size: 13px;
-    color: #ccc;
-}
-
-.provider-field strong {
-    color: #64b5f6;
 }
 
 /* Source Links */
@@ -477,29 +592,98 @@ textarea.form-control {
     text-decoration: underline;
 }
 
-/* Provider Configuration Sections */
-.provider-config-section {
-    background-color: #2c2c2c;
-    border: 1px solid #3a3a3a;
-    border-radius: 4px;
-    padding: 15px;
-    margin-bottom: 15px;
+/* Form section styling */
+.form-section {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #333;
 }
 
-/* Animation for tab switching */
-.tab-content {
-    animation: fadeIn 0.3s ease-in-out;
+.form-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
+.form-section h4 {
+    margin: 0 0 16px 0;
+    color: #ccc;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* Material form field overrides for dark theme */
+::ng-deep .mat-mdc-form-field {
+    .mat-mdc-text-field-wrapper {
+        background-color: #333 !important;
     }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    .mat-mdc-form-field-input-control {
+        color: #e0e0e0 !important;
+    }
+
+    .mat-mdc-form-field-label {
+        color: #ccc !important;
+    }
+
+    &.mat-form-field-invalid {
+        .mat-mdc-text-field-wrapper {
+            border-color: #e74c3c !important;
+        }
+
+        .mat-mdc-form-field-error {
+            color: #e74c3c !important;
+        }
+    }
+
+    &.mat-form-field-disabled {
+        opacity: 0.6;
+
+        .mat-mdc-text-field-wrapper {
+            background-color: #2c2c2c !important;
+            border-color: #444 !important;
+        }
+
+        .mat-mdc-form-field-label {
+            color: #666 !important;
+        }
+    }
+}
+
+::ng-deep .mat-mdc-option {
+    background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
+
+    &:hover {
+        background-color: #333 !important;
+    }
+
+    &.mat-mdc-option-selected {
+        background-color: #2c3e50 !important;
+    }
+}
+
+::ng-deep .mat-mdc-autocomplete-panel {
+    background-color: #2a2a2a !important;
+    border: 1px solid #3a3a3a !important;
+}
+
+/* No data state */
+.no-data {
+    text-align: center;
+    padding: 40px !important;
+    color: #888;
+
+    mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    p {
+        margin: 8px 0;
+        font-size: 14px;
     }
 }
 
@@ -515,6 +699,19 @@ textarea.form-control {
         max-height: none;
     }
 
+    .scope-info-banner {
+        .banner-content {
+            flex-direction: column;
+            gap: 12px;
+
+            .banner-actions {
+                align-self: stretch;
+                flex-direction: row;
+                justify-content: flex-end;
+            }
+        }
+    }
+
     .array-item-simple {
         flex-direction: column;
         align-items: stretch;
@@ -526,17 +723,62 @@ textarea.form-control {
         gap: 10px;
     }
 
-    .metadata-mode-toggle {
-        flex-direction: column;
-    }
-
     .source-links {
         flex-wrap: wrap;
     }
+
+    .table-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .actions-cell {
+        width: auto;
+        min-width: 120px;
+    }
+
+    .override-button .icon-stack {
+        .base-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+
+        .overlay-icon {
+            font-size: 10px;
+            width: 10px;
+            height: 10px;
+            top: -3px;
+            right: -3px;
+        }
+    }
 }
 
-.actions-cell {
-    width: 160px; // 120pxから160pxに変更（3つのボタンに対応）
-    text-align: right;
-    white-space: nowrap;
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    .data-table {
+        font-size: 12px;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 8px 10px;
+    }
+
+    .form-container {
+        max-height: 60vh;
+    }
+
+    .button-group {
+        flex-direction: column;
+
+        .btn {
+            min-width: auto;
+            width: 100%;
+        }
+    }
 }

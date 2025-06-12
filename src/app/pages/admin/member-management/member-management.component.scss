@@ -567,3 +567,312 @@ textarea.form-control {
         max-height: 60vh;
     }
 }
+
+
+
+/* 自分自身のメンバー行の強調表示 */
+.data-table tr.self-member {
+    background-color: rgba(100, 181, 246, 0.05);
+    border-left: 3px solid #64b5f6;
+
+    &:hover {
+        background-color: rgba(100, 181, 246, 0.1);
+    }
+
+    &.selected {
+        background-color: rgba(100, 181, 246, 0.15);
+    }
+}
+
+/* 自分自身を示すインジケーター */
+.self-indicator {
+    font-size: 0.75rem;
+    color: #64b5f6;
+    font-weight: 500;
+    background-color: rgba(100, 181, 246, 0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+
+/* 権限制限を示すスタイル */
+.role-restriction {
+    font-size: 0.7rem;
+    color: #ff9800;
+    font-style: italic;
+}
+
+/* 警告メッセージスタイル */
+.warning-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    background-color: rgba(255, 152, 0, 0.1);
+    border-left: 4px solid #ff9800;
+    border-radius: 4px;
+    margin-top: 16px;
+
+    .warning-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: #ff9800;
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+
+    span {
+        font-size: 14px;
+        color: #e0e0e0;
+        line-height: 1.4;
+    }
+}
+
+/* エラーメッセージの強化 */
+.error-message {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+    min-height: 16px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &::before {
+        content: "⚠";
+        font-size: 10px;
+    }
+}
+
+/* 権限のないボタンのスタイル調整 */
+button[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+
+    &[mat-icon-button] {
+        mat-icon {
+            color: #666 !important;
+        }
+    }
+}
+
+/* 編集不可能なフィールドの視覚的フィードバック */
+.mat-mdc-form-field.mat-form-field-disabled {
+    opacity: 0.6;
+
+    .mat-mdc-text-field-wrapper {
+        background-color: #2c2c2c !important;
+        border-color: #444 !important;
+    }
+
+    .mat-mdc-form-field-label {
+        color: #666 !important;
+    }
+}
+
+/* 権限に基づくチェックボックスの無効化 */
+.mat-mdc-checkbox.mat-mdc-checkbox-disabled {
+    opacity: 0.4;
+
+    .mat-mdc-checkbox-frame {
+        border-color: #666 !important;
+    }
+}
+
+/* ロール選択の権限制限表示 */
+.mat-mdc-option[disabled] {
+    opacity: 0.5;
+    background-color: #1a1a1a !important;
+
+    &:hover {
+        background-color: #1a1a1a !important;
+        cursor: not-allowed;
+    }
+
+    .role-restriction {
+        display: inline;
+        margin-left: 4px;
+    }
+}
+
+/* 権限情報のツールチップスタイル強化 */
+.mat-mdc-tooltip.permission-tooltip {
+    background-color: #ff9800;
+    color: #000;
+    font-size: 12px;
+    max-width: 250px;
+    white-space: pre-wrap;
+}
+
+/* アクションボタンの権限状態表示 */
+.actions-cell {
+    .mr-5 {
+        transition: all 0.2s ease;
+
+        &:disabled {
+            transform: scale(0.9);
+        }
+
+        &:not(:disabled):hover {
+            transform: scale(1.05);
+        }
+    }
+}
+
+/* フォームセクションの権限警告 */
+.form-section {
+    &.permission-restricted {
+        opacity: 0.7;
+        pointer-events: none;
+        position: relative;
+
+        &::after {
+            content: "編集権限がありません";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #ff9800;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 10;
+        }
+    }
+}
+
+/* 権限レベルインジケーター */
+.role-tag {
+    &.admin-role {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+
+    &.maintainer-role {
+        background-color: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+        border: 1px solid rgba(255, 152, 0, 0.3);
+    }
+
+    &.user-role {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+        border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+
+    &.member-role {
+        background-color: rgba(100, 181, 246, 0.2);
+        color: #64b5f6;
+        border: 1px solid rgba(100, 181, 246, 0.3);
+    }
+}
+
+/* 権限コンテキストの表示強化 */
+.scope-context {
+    small {
+        &.permission-info {
+            background-color: rgba(100, 181, 246, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(100, 181, 246, 0.2);
+        }
+    }
+}
+
+/* バルクアクションの権限制限 */
+.bulk-actions {
+    &.permission-limited {
+        opacity: 0.6;
+
+        .selection-count::after {
+            content: " (一部選択不可)";
+            color: #ff9800;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+    }
+}
+
+/* レスポンシブデザインの権限表示調整 */
+@media (max-width: 768px) {
+    .self-indicator {
+        display: block;
+        margin: 2px 0;
+        font-size: 0.7rem;
+    }
+
+    .warning-message {
+        flex-direction: column;
+        gap: 4px;
+
+        .warning-icon {
+            align-self: flex-start;
+        }
+    }
+
+    .role-restriction {
+        display: block;
+        margin-top: 2px;
+    }
+}
+
+/* Dark theme での権限関連要素の調整 */
+[data-theme="dark"] {
+    .warning-message {
+        background-color: rgba(255, 152, 0, 0.15);
+
+        span {
+            color: #f5f5f5;
+        }
+    }
+
+    .self-indicator {
+        background-color: rgba(100, 181, 246, 0.2);
+        color: #90caf9;
+    }
+
+    .role-restriction {
+        color: #ffb74d;
+    }
+}
+
+/* アニメーション効果 */
+@keyframes permissionDenied {
+    0% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-2px);
+    }
+
+    75% {
+        transform: translateX(2px);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.permission-denied {
+    animation: permissionDenied 0.3s ease-in-out;
+}
+
+/* ホバー効果の権限考慮 */
+.data-table tr {
+    &.permission-limited {
+        &:hover {
+            background-color: rgba(255, 152, 0, 0.05);
+            cursor: default;
+        }
+    }
+
+    &:not(.permission-limited):hover {
+        background-color: #333;
+        cursor: pointer;
+    }
+}

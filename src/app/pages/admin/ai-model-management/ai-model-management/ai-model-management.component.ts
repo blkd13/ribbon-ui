@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { AIModelManagerService, AIModelPricingService, ModelPricing, AIModelEntity, AIModelStatus, AIProviderType, Modality, AIModelEntityForView, AIProviderManagerService, AIProviderEntity, ScopeInfo } from '../../../../services/model-manager.service';
+import { AIModelManagerService, AIModelPricingService, ModelPricing, AIModelEntity, AIModelStatus, AIProviderType, Modality, AIModelEntityForView, AIProviderManagerService, AIProviderEntity, ScopeInfo, ScopeType } from '../../../../services/model-manager.service';
 import { forkJoin, of } from 'rxjs';
 import { map, catchError, switchMap, tap } from 'rxjs/operators';
 import { genInitialBaseEntity } from '../../../../services/project.service';
@@ -22,6 +22,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TagService, TagEntity } from '../../../../services/model-manager.service';
 import { TagManagementDialogComponent } from '../tag-management-dialog/tag-management-dialog.component';
+import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../services/auth.service';
 
 @Component({
   selector: 'app-ai-model-management',
@@ -52,11 +53,11 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   readonly dialog = inject(MatDialog);
 
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
-
   readonly aiProviderService: AIProviderManagerService = inject(AIProviderManagerService);
   readonly aiModelService: AIModelManagerService = inject(AIModelManagerService);
   readonly aiModelPricingService: AIModelPricingService = inject(AIModelPricingService);
   readonly tagService = inject(TagService);
+  readonly authService = inject(AuthService);
 
   models: AIModelEntityForView[] = [];
 
@@ -90,6 +91,21 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   availableTags: TagEntity[] = [];
   filteredTags: TagEntity[] = [];
 
+  // Scope management
+  readonly scopeTypeOptions = [
+    { value: ScopeType.ORGANIZATION, label: 'Organization' },
+    { value: ScopeType.DIVISION, label: 'Division' },
+  ];
+  scopeLabels: ScopeLabelsResponse = {
+    scopeLabels: {
+      [ScopeType.ORGANIZATION]: [],
+      [ScopeType.DIVISION]: [],
+      [ScopeType.PROJECT]: [],
+      [ScopeType.TEAM]: [],
+    },
+    roleList: [],
+  };
+  scopeLabelsMap: Record<string, string> = {};
   constructor() {
     this.loadData();
   }
@@ -101,6 +117,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     // Subscribe to selected scope changes
     const scopeSubscription = this.adminScopeService.selectedScope$.subscribe(scope => {
       this.selectedScope = scope;
+      this.updateScopeInForm(scope);
       this.filterProvidersByScope();
     });
     this.subscriptions.add(scopeSubscription);
@@ -108,6 +125,38 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subscriptions.unsubscribe();
+  }
+
+  private updateScopeInForm(scope: ScopeInfo | null) {
+    if (scope && this.form) {
+      // Update the scope information in the form, but make it read-only
+      this.form.get('scopeInfo')?.patchValue({
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId
+      });
+
+      // Make scope fields read-only when scope is selected from admin
+      this.form.get('scopeInfo.scopeType')?.disable();
+      this.form.get('scopeInfo.scopeId')?.disable();
+    } else if (this.form) {
+      // Re-enable scope fields if no scope is selected
+      this.form.get('scopeInfo.scopeType')?.enable();
+      this.form.get('scopeInfo.scopeId')?.enable();
+    }
+  }
+
+  scopeLabelsList(type: keyof ScopeLabels) {
+    return this.scopeLabels.scopeLabels[type] || [];
+  }
+
+  getScopeTypeLabel(scopeType: ScopeType): string {
+    const typeOption = this.scopeTypeOptions.find(option => option.value === scopeType);
+    return typeOption ? typeOption.label : scopeType;
+  }
+
+  getScopeLabel(scope: ScopeInfo): string {
+    const key = `${scope.scopeType}:${scope.scopeId}`;
+    return this.scopeLabelsMap[key] || scope.scopeId;
   }
 
   private filterProvidersByScope() {
@@ -194,9 +243,14 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     const tag = this.availableTags.find(t => t.name === tagName);
     return tag?.color;
   }
-
   // データの読み込み（モデルと価格情報）
   loadData() {
+    // Load scope labels first
+    this.authService.getScopeLabels().subscribe(scopeLabels => {
+      this.scopeLabels = scopeLabels;
+      this.buildScopeLabelsMap(scopeLabels);
+    });
+
     this.aiProviderService.getProviders().pipe().subscribe({
       next: (providers) => {
         // Use AdminScopeService to get only effective (highest priority) providers
@@ -214,23 +268,8 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     // モデルと各モデルの最新価格情報を取得
     this.aiModelService.getAIModels(true).pipe(
       tap(models => {
-        // Filter models by effective items logic - since AIModelEntityForView doesn't have scopeInfo,
-        // we'll use a simple name-based grouping approach similar to the effective items logic
-        const modelGroups = new Map<string, AIModelEntityForView[]>();
-
-        // Group models by name
-        models.forEach(model => {
-          const key = model.name || 'unnamed';
-          if (!modelGroups.has(key)) {
-            modelGroups.set(key, []);
-          }
-          modelGroups.get(key)!.push(model);
-        });        // For each group, select the most recent or active model
-
-        this.models = Array.from(modelGroups.values()).map(group => {
-          // Sort by priority: isActive -> release date (newest first) -> uiOrder -> name
-          return this.aiModelService.sortModels(group)[0];
-        });
+        // Use AdminScopeService to get only effective (highest priority) models
+        this.models = this.adminScopeService.getEffectiveItems(models);
       }),
     ).subscribe({
       next: (pricingResults) => {
@@ -246,6 +285,27 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     });
   }
 
+  private buildScopeLabelsMap(scopeLabels: ScopeLabelsResponse) {
+    this.scopeLabelsMap = {};
+
+    // Build map from API scope labels
+    Object.entries(scopeLabels.scopeLabels).forEach(([type, labels]) => {
+      (labels as any[]).forEach(label => {
+        this.scopeLabelsMap[`${type}:${label.id}`] = label.label;
+      });
+    });
+
+    // For models, also use AdminScopeService's label mapping as fallback
+    this.models.forEach(model => {
+      const key = `${model.scopeInfo.scopeType}:${model.scopeInfo.scopeId}`;
+      if (!this.scopeLabelsMap[key]) {
+        this.scopeLabelsMap[key] = this.adminScopeService.getScopeLabel(
+          model.scopeInfo.scopeType,
+          model.scopeInfo.scopeId
+        );
+      }
+    });
+  }
   // フォームの初期化
   initForm() {
     // 現在の日付を取得してYYYY-MM-DD形式に変換
@@ -279,6 +339,11 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       uiOrder: [0],
       isStream: [true],
       isActive: [true],
+      // スコープ情報
+      scopeInfo: this.fb.group({
+        scopeType: ['', Validators.required],
+        scopeId: ['', Validators.required]
+      }),
       // 価格設定用のネストされたフォームグループ
       pricing: this.fb.group({
         id: [''],
@@ -290,7 +355,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       })
     });
   }
-
   // 完全なフォームリセット
   resetForm() {
     this.form.reset({
@@ -314,13 +378,16 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       endpointTemplate: '',
       documentationUrl: '',
       licenseType: '',
-      knowledgeCutoff: '',
-      releaseDate: '',
+      knowledgeCutoff: '',      releaseDate: '',
       deprecationDate: '',
       tags: [],
       uiOrder: 0,
       isStream: true,
       isActive: true,
+      scopeInfo: {
+        scopeType: '',
+        scopeId: ''
+      },
       pricing: {
         id: '',
         modelId: '',
@@ -342,14 +409,18 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   // タブの切り替え
   setActiveTab(tabName: string) {
     this.activeTab = tabName;
-  }
-  // 新規作成モードを開始
+  }  // 新規作成モードを開始
   createNew() {
     this.isEditMode = false;
     this.isDuplicateMode = false;
 
     // フォームを完全にリセット
     this.resetForm();
+
+    // Set scope from AdminScopeService if available
+    if (this.selectedScope) {
+      this.updateScopeInForm(this.selectedScope);
+    }
 
     // Ensure form is editable for new creation
     this.setFormReadOnly(false);
@@ -427,16 +498,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
     // チェックボックスの状態を更新
     this.updateCheckboxes();
-  }
-  // 既存モデルの選択（編集モード）
+  }  // 既存モデルの選択（編集モード）
   selectModel(model: AIModelEntityForView) {
-    // Check if user has edit permission for this model's provider scope
-    // TODO モデルの権限があればよいのでプロバイダーの権限をチェックする必要は無いのでは？
-    const providerList = this.providerOptions.filter(provider => model.providerNameList.includes(provider.name));
-    const canEdit = providerList.length > 0 ? this.adminScopeService.canEditScope(
-      providerList[0].scopeInfo.scopeType,
-      providerList[0].scopeInfo.scopeId
-    ) : false;
+    // Check if user has edit permission for this model's scope
+    const canEdit = this.adminScopeService.canEditScope(
+      model.scopeInfo.scopeType,
+      model.scopeInfo.scopeId
+    );
 
     this.isEditMode = canEdit;
     this.isDuplicateMode = false;
@@ -560,7 +628,11 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
           panelClass: 'error-snackbar'
         });
         return;
-      }
+      }      // Use the selected scope from AdminScopeService if available, otherwise use form values
+      const scopeInfo = this.selectedScope || {
+        scopeType: formValue.scopeInfo?.scopeType || '',
+        scopeId: formValue.scopeInfo?.scopeId || ''
+      };
 
       // モデルデータの構築
       const modelData: AIModelEntity & { aliases: string[] } = {
@@ -592,6 +664,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         uiOrder: formValue.uiOrder || undefined,
         isStream: !!formValue.isStream,
         isActive: !!formValue.isActive,
+        scopeInfo: scopeInfo,
       };
 
       // 価格情報の構築
@@ -961,19 +1034,14 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     } else {
       this.form.enable();
     }
-  }
-
-  /**
-   * Check if user can edit a specific model based on its provider scope
+  }  /**
+   * Check if user can edit a specific model based on its scope
    */
   canUserEditModel(model: AIModelEntityForView): boolean {
-    // const providerNameList = this.providerOptions.filter(provider => model.providerNameList.includes(provider.name));
-    // return providerNameList.length > 0 ? this.adminScopeService.canEditScope(
-    //   providerNameList[0].scopeInfo.scopeType,
-    //   providerNameList[0].scopeInfo.scopeId
-    // ) : false;
-    // TODO モデルの権限があればよいのでプロバイダーの権限をチェックする必要は無いのでは？
-    return true;
+    return this.adminScopeService.canEditScope(
+      model.scopeInfo.scopeType,
+      model.scopeInfo.scopeId
+    );
   }
 
   /**
