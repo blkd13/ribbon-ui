@@ -65,19 +65,19 @@ export class ExtApiProviderService {
   }
 
   upsertApiProviderTemplate(apiProvider: MakeOptional<ExtApiProviderTemplateEntity, BaseEntityFields>): Observable<ExtApiProviderTemplateEntity> {
-    return this.http.post<ExtApiProviderTemplateEntity>(`/maintainer/ext-api-provider-template`, apiProvider);
+    return this.http.post<ExtApiProviderTemplateEntity>(`/admin/ext-api-provider-template`, apiProvider);
   }
 
   createApiProviderTemplate(apiProvider: MakeOptional<ExtApiProviderTemplateEntity, BaseEntityFields>): Observable<ExtApiProviderTemplateEntity> {
-    return this.http.post<ExtApiProviderTemplateEntity>(`/maintainer/ext-api-provider-template`, apiProvider);
+    return this.http.post<ExtApiProviderTemplateEntity>(`/admin/ext-api-provider-template`, apiProvider);
   }
 
   updateApiProviderTemplate(apiProvider: ExtApiProviderTemplateEntity): Observable<ExtApiProviderTemplateEntity> {
-    return this.http.put<ExtApiProviderTemplateEntity>(`/maintainer/ext-api-provider-template/${apiProvider.id}`, apiProvider);
+    return this.http.put<ExtApiProviderTemplateEntity>(`/admin/ext-api-provider-template/${apiProvider.id}`, apiProvider);
   }
 
   deleteApiProviderTemplate(id: string): Observable<void> {
-    return this.http.delete<void>(`/maintainer/ext-api-provider-template/${id}`);
+    return this.http.delete<void>(`/admin/ext-api-provider-template/${id}`);
   }
 
 }

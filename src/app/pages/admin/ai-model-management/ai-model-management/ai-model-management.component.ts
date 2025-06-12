@@ -1,3 +1,5 @@
+// ai-model-management.component.ts - Enhanced version with scope management
+
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
@@ -23,6 +25,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TagService, TagEntity } from '../../../../services/model-manager.service';
 import { TagManagementDialogComponent } from '../tag-management-dialog/tag-management-dialog.component';
 import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../services/auth.service';
+import { MatCardModule } from '@angular/material/card';
 
 @Component({
   selector: 'app-ai-model-management',
@@ -38,6 +41,7 @@ import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../servi
     MatTooltipModule,
     MatSelectModule,
     MatDialogModule,
+    MatCardModule,
     JsonEditorComponent,
     TrimTrailingZerosPipe,
   ],
@@ -60,6 +64,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
 
   models: AIModelEntityForView[] = [];
+  selectedModel: AIModelEntityForView | null = null;
 
   // Subscriptions
   private subscriptions = new Subscription();
@@ -70,8 +75,10 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   // 表示状態管理
   isFormVisible = false;
   isEditMode = false;
-  isDuplicateMode = false; // 複製モードフラグを追加
-  activeTab = 'basic'; // basic, capabilities, pricing, advanced
+  isDuplicateMode = false;
+  isViewOnlyMode = false;
+  isOverrideMode = false;
+  activeTab = 'basic';
 
   // 価格情報管理
   currentPricing: ModelPricing | null = null;
@@ -106,6 +113,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     roleList: [],
   };
   scopeLabelsMap: Record<string, string> = {};
+
   constructor() {
     this.loadData();
   }
@@ -118,28 +126,29 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     const scopeSubscription = this.adminScopeService.selectedScope$.subscribe(scope => {
       this.selectedScope = scope;
       this.updateScopeInForm(scope);
-      this.filterProvidersByScope();
+      this.loadModels();
     });
     this.subscriptions.add(scopeSubscription);
+
+    this.loadModels();
   }
 
   ngOnDestroy() {
     this.subscriptions.unsubscribe();
   }
 
+  // ===== スコープ関連メソッド =====
+
   private updateScopeInForm(scope: ScopeInfo | null) {
     if (scope && this.form) {
-      // Update the scope information in the form, but make it read-only
       this.form.get('scopeInfo')?.patchValue({
         scopeType: scope.scopeType,
         scopeId: scope.scopeId
       });
 
-      // Make scope fields read-only when scope is selected from admin
       this.form.get('scopeInfo.scopeType')?.disable();
       this.form.get('scopeInfo.scopeId')?.disable();
     } else if (this.form) {
-      // Re-enable scope fields if no scope is selected
       this.form.get('scopeInfo.scopeType')?.enable();
       this.form.get('scopeInfo.scopeId')?.enable();
     }
@@ -159,128 +168,82 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return this.scopeLabelsMap[key] || scope.scopeId;
   }
 
-  private filterProvidersByScope() {
-    // if (this.selectedScope) {
-    //   // Filter providers to only show those that match the selected scope
-    //   this.providerOptions = this.providerOptions.filter(provider =>
-    //     provider.scopeInfo.scopeType === this.selectedScope?.scopeType &&
-    //     provider.scopeInfo.scopeId === this.selectedScope.scopeId
-    //   );
-    // }
-    // // If no scope is selected, show all providers (handled by loadData)
-  }
-
   getScopeDisplayName(scope: ScopeInfo): string {
-    // You can customize this method to display a more user-friendly scope name
-    // For now, just show the scope type and ID
-    return `${scope.scopeType}: ${scope.scopeId}`;
+    return `${this.getScopeTypeLabel(scope.scopeType)}: ${this.getScopeLabel(scope)}`;
   }
 
-  /**
-   * タグ一覧を読み込み
-   */
-  private loadTags() {
-    const tagSubscription = this.tagService.getTags().subscribe({
-      next: (tags) => {
-        this.availableTags = tags;
-        this.filteredTags = tags;
-      },
-      error: (err) => {
-        console.error('Error loading tags:', err);
-        this.snackBar.open('Error loading tags', 'Close', {
-          duration: 3000,
-          panelClass: 'error-snackbar'
-        });
-      }
-    });
-    this.subscriptions.add(tagSubscription);
+  // ===== 権限チェック =====
+
+  canCreateModel(): boolean {
+    return this.adminScopeService.canCreateAIProvider(); // Same permission as AI Provider
   }
 
-  /**
-   * タグ管理ダイアログを開く
-   */
-  openTagManagement() {
-    const dialogRef = this.dialog.open(TagManagementDialogComponent, {
-      width: '800px',
-      maxHeight: '80vh',
-      data: { tags: this.availableTags }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        // タグが更新された場合、一覧を再読み込み
-        this.loadTags();
-      }
-    });
-  }
-
-  /**
-   * タグのオートコンプリート用フィルタリング
-   */
-  filterTags(query: string): TagEntity[] {
-    if (!query) {
-      return this.availableTags;
-    }
-    const filterValue = query.toLowerCase();
-    return this.availableTags.filter(tag =>
-      tag.name.toLowerCase().includes(filterValue) ||
-      (tag.label && tag.label.toLowerCase().includes(filterValue))
+  canUserEditModel(model: AIModelEntityForView): boolean {
+    return this.adminScopeService.canEditScope(
+      model.scopeInfo.scopeType,
+      model.scopeInfo.scopeId
     );
   }
 
-  /**
-   * タグの表示名を取得（labelがあればlabel、なければname）
-   */
-  getTagDisplayName(tagName: string): string {
-    const tag = this.availableTags.find(t => t.name === tagName);
-    return tag?.label || tagName;
+  isModelsOwnScope(model: AIModelEntityForView): boolean {
+    const currentScope = this.selectedScope;
+    if (!currentScope) return false;
+
+    return model.scopeInfo.scopeType === currentScope.scopeType &&
+      model.scopeInfo.scopeId === currentScope.scopeId;
   }
 
-  /**
-   * タグの色を取得
-   */
-  getTagColor(tagName: string): string | undefined {
-    const tag = this.availableTags.find(t => t.name === tagName);
-    return tag?.color;
+  // ===== UIヘルパーメソッド =====
+
+  shouldShowEditButton(model: AIModelEntityForView): boolean {
+    return this.canUserEditModel(model) && this.isModelsOwnScope(model);
   }
-  // データの読み込み（モデルと価格情報）
-  loadData() {
-    // Load scope labels first
+
+  shouldShowViewButton(model: AIModelEntityForView): boolean {
+    return !this.isModelsOwnScope(model);
+  }
+
+  shouldShowOverrideButton(model: AIModelEntityForView): boolean {
+    return !this.isModelsOwnScope(model) && this.canCreateModel();
+  }
+
+  shouldShowDuplicateButton(model: AIModelEntityForView): boolean {
+    return this.isModelsOwnScope(model) && this.canCreateModel();
+  }
+
+  shouldShowDeleteButton(model: AIModelEntityForView): boolean {
+    return this.shouldShowEditButton(model);
+  }
+
+  // ===== データ読み込み =====
+
+  private loadModels() {
     this.authService.getScopeLabels().subscribe(scopeLabels => {
       this.scopeLabels = scopeLabels;
       this.buildScopeLabelsMap(scopeLabels);
     });
 
-    this.aiProviderService.getProviders().pipe().subscribe({
+    this.aiModelService.getAIModels(true).subscribe({
+      next: (allModels) => {
+        const visibleModels = this.adminScopeService.getVisibleProviders(allModels);
+        this.models = this.adminScopeService.getEffectiveItems(visibleModels);
+      },
+      error: (err) => {
+        console.error('Error loading models:', err);
+        this.showErrorMessage('Error loading models');
+      }
+    });
+  }
+
+  loadData() {
+    // Load providers for dropdown
+    this.aiProviderService.getProviders().subscribe({
       next: (providers) => {
-        // Use AdminScopeService to get only effective (highest priority) providers
         this.providerOptions = this.adminScopeService.getEffectiveItems(providers);
-        this.filterProvidersByScope(); // Filter providers based on selected scope
       },
       error: (err) => {
         console.error('Error fetching provider names:', err);
-        this.snackBar.open('Error loading provider names', 'Close', {
-          duration: 3000,
-          panelClass: 'error-snackbar'
-        });
-      }
-    });
-    // モデルと各モデルの最新価格情報を取得
-    this.aiModelService.getAIModels(true).pipe(
-      tap(models => {
-        // Use AdminScopeService to get only effective (highest priority) models
-        this.models = this.adminScopeService.getEffectiveItems(models);
-      }),
-    ).subscribe({
-      next: (pricingResults) => {
-        // Models are already processed in the tap operator
-      },
-      error: (err) => {
-        console.error('Error fetching data:', err);
-        this.snackBar.open('Error loading data', 'Close', {
-          duration: 3000,
-          panelClass: 'error-snackbar'
-        });
+        this.showErrorMessage('Error loading provider names');
       }
     });
   }
@@ -288,14 +251,12 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   private buildScopeLabelsMap(scopeLabels: ScopeLabelsResponse) {
     this.scopeLabelsMap = {};
 
-    // Build map from API scope labels
     Object.entries(scopeLabels.scopeLabels).forEach(([type, labels]) => {
       (labels as any[]).forEach(label => {
         this.scopeLabelsMap[`${type}:${label.id}`] = label.label;
       });
     });
 
-    // For models, also use AdminScopeService's label mapping as fallback
     this.models.forEach(model => {
       const key = `${model.scopeInfo.scopeType}:${model.scopeInfo.scopeId}`;
       if (!this.scopeLabelsMap[key]) {
@@ -306,222 +267,153 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       }
     });
   }
-  // フォームの初期化
-  initForm() {
-    // 現在の日付を取得してYYYY-MM-DD形式に変換
-    const today = this.formatDateForInput(new Date());
 
-    this.form = this.fb.group({
-      id: [''],
-      providerNameList: [[], Validators.required],
-      providerModelId: ['', Validators.required],
-      name: ['', Validators.required],
-      aliases: [[]],
-      shortName: ['', Validators.required],
-      throttleKey: ['', Validators.required],
-      status: [AIModelStatus.ACTIVE, Validators.required],
-      description: [''],
-      modalities: [[Modality.TEXT], Validators.required],
-      maxContextTokens: [0, [Validators.required, Validators.min(0)]],
-      maxOutputTokens: [0, [Validators.required, Validators.min(0)]],
-      inputFormats: [[Modality.TEXT]],
-      outputFormats: [[Modality.TEXT]],
-      defaultParameters: [{}], // JSON文字列として扱う
-      capabilities: [{}], // JSON文字列として扱う
-      metadata: [{}], // JSON文字列として扱う
-      endpointTemplate: [''],
-      documentationUrl: [''],
-      licenseType: [''],
-      knowledgeCutoff: [''],
-      releaseDate: [''],
-      deprecationDate: [''],
-      tags: [[]], // コンマ区切りで処理
-      uiOrder: [0],
-      isStream: [true],
-      isActive: [true],
-      // スコープ情報
-      scopeInfo: this.fb.group({
-        scopeType: ['', Validators.required],
-        scopeId: ['', Validators.required]
-      }),
-      // 価格設定用のネストされたフォームグループ
-      pricing: this.fb.group({
-        id: [''],
-        modelId: [''],
-        inputPricePerUnit: [0.00, [Validators.required, Validators.min(0)]],
-        outputPricePerUnit: [0.00, [Validators.required, Validators.min(0)]],
-        unit: ['USD/1M tokens', Validators.required],
-        validFrom: [today, Validators.required]
-      })
-    });
-  }
-  // 完全なフォームリセット
-  resetForm() {
-    this.form.reset({
-      id: '',
-      providerNameList: [],
-      providerModelId: '',
-      name: '',
-      aliases: [],
-      shortName: '',
-      throttleKey: '',
-      status: AIModelStatus.ACTIVE,
-      description: '',
-      modalities: [Modality.TEXT],
-      maxContextTokens: 0,
-      maxOutputTokens: 0,
-      inputFormats: [Modality.TEXT],
-      outputFormats: [Modality.TEXT],
-      defaultParameters: {},
-      capabilities: {},
-      metadata: {},
-      endpointTemplate: '',
-      documentationUrl: '',
-      licenseType: '',
-      knowledgeCutoff: '',      releaseDate: '',
-      deprecationDate: '',
-      tags: [],
-      uiOrder: 0,
-      isStream: true,
-      isActive: true,
-      scopeInfo: {
-        scopeType: '',
-        scopeId: ''
-      },
-      pricing: {
-        id: '',
-        modelId: '',
-        inputPricePerUnit: 0.00,
-        outputPricePerUnit: 0.00,
-        unit: 'USD/1M tokens',
-        validFrom: this.formatDateForInput(new Date())
-      }
-    });
+  // ===== モデル操作メソッド =====
 
-    // 価格情報関連の状態をリセット
-    this.currentPricing = null;
-    this.pricingHistory = [];
-    this.hasExistingPricing = false;
-    this.pricingSelectionMode = 'new';
-    this.selectedPricingId = undefined;
-  }
-
-  // タブの切り替え
-  setActiveTab(tabName: string) {
-    this.activeTab = tabName;
-  }  // 新規作成モードを開始
   createNew() {
-    this.isEditMode = false;
-    this.isDuplicateMode = false;
+    if (!this.canCreateModel()) {
+      this.showErrorMessage('You do not have permission to create models in the current scope');
+      return;
+    }
 
-    // フォームを完全にリセット
+    this.resetFormState();
+    this.isFormVisible = true;
     this.resetForm();
 
-    // Set scope from AdminScopeService if available
     if (this.selectedScope) {
       this.updateScopeInForm(this.selectedScope);
     }
 
-    // Ensure form is editable for new creation
     this.setFormReadOnly(false);
-
-    this.isFormVisible = true;
-    this.setActiveTab('basic'); // 初期タブを設定
+    this.setActiveTab('basic');
   }
 
-  // 既存モデルを複製して新規作成
+  viewModel(model: AIModelEntityForView) {
+    this.selectedModel = model;
+    this.resetFormState();
+    this.isViewOnlyMode = true;
+    this.isFormVisible = true;
+
+    this.loadModelToForm(model);
+    this.setFormReadOnly(true);
+  }
+
+  editModel(model: AIModelEntityForView) {
+    if (!this.isModelsOwnScope(model)) {
+      this.showErrorMessage('You can only edit models in your own scope');
+      return;
+    }
+
+    this.selectedModel = model;
+    this.resetFormState();
+    this.isEditMode = true;
+    this.isFormVisible = true;
+
+    this.loadModelToForm(model);
+    this.setFormReadOnly(false);
+  }
+
+  startOverride(model: AIModelEntityForView, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    if (!this.canCreateModel()) {
+      this.showErrorMessage('You do not have permission to create models in the current scope');
+      return;
+    }
+
+    if (this.isModelsOwnScope(model)) {
+      this.editModel(model);
+      return;
+    }
+
+    this.selectedModel = model;
+    this.resetFormState();
+    this.isOverrideMode = true;
+    this.isFormVisible = true;
+
+    this.prepareOverrideForm(model);
+    this.setFormReadOnly(false);
+  }
+
+  switchToOverrideMode() {
+    if (!this.selectedModel || !this.canCreateModel()) {
+      return;
+    }
+
+    this.isViewOnlyMode = false;
+    this.isOverrideMode = true;
+    this.prepareOverrideForm(this.selectedModel);
+    this.setFormReadOnly(false);
+  }
+
+  selectModel(model: AIModelEntityForView) {
+    // Determine the appropriate action based on permissions
+    if (this.isModelsOwnScope(model) && this.canUserEditModel(model)) {
+      this.editModel(model);
+    } else {
+      this.viewModel(model);
+    }
+  }
+
   duplicateModel(model: AIModelEntityForView, event?: Event) {
     if (event) {
       event.stopPropagation();
     }
 
-    this.isEditMode = false;
+    if (!this.canCreateModel()) {
+      this.showErrorMessage('You do not have permission to create models in the current scope');
+      return;
+    }
+
+    this.selectedModel = model;
+    this.resetFormState();
     this.isDuplicateMode = true;
     this.isFormVisible = true;
-    this.setActiveTab('basic');
 
-    // モデルデータをコピー（IDはクリア）
-    const knowledgeCutoff = model.knowledgeCutoff ? this.formatDateForInput(model.knowledgeCutoff) : '';
-    const releaseDate = model.releaseDate ? this.formatDateForInput(model.releaseDate) : '';
-    const deprecationDate = model.deprecationDate ? this.formatDateForInput(model.deprecationDate) : '';
+    this.initForm();
+    this.loadModelToForm(model);
 
+    // Clear ID and modify name for duplication
     this.form.patchValue({
-      id: '', // IDはクリア
-      providerNameList: model.providerNameList.filter(name => this.providerOptions.find(provider => provider.name === name)), // 選択されたプロバイダーのみ
-      providerModelId: model.providerModelId + '_copy', // 識別のため_copyを付加
-      name: model.name + ' (Copy)',
-      aliases: [...(model.aliases || [])],
-      shortName: model.shortName,
-      throttleKey: model.throttleKey,
-      status: model.status,
-      description: model.description || '',
-      modalities: [...(model.modalities || [])],
-      maxContextTokens: model.maxContextTokens,
-      maxOutputTokens: model.maxOutputTokens,
-      inputFormats: [...(model.inputFormats || [])],
-      outputFormats: [...(model.outputFormats || [])],
-      defaultParameters: { ...(model.defaultParameters || {}) },
-      capabilities: { ...(model.capabilities || {}) },
-      metadata: { ...(model.metadata || {}) },
-      endpointTemplate: model.endpointTemplate || '',
-      documentationUrl: model.documentationUrl || '',
-      licenseType: model.licenseType || '',
-      knowledgeCutoff: knowledgeCutoff,
-      releaseDate: releaseDate,
-      deprecationDate: deprecationDate,
-      tags: [...(model.tags || [])],
-      uiOrder: model.uiOrder || 0,
-      isStream: model.isStream || false,
-      isActive: true, // 新規作成時はアクティブに
+      id: '',
+      name: model.name + '_copy',
+      providerModelId: model.providerModelId + '_copy',
+      isActive: true,
     });
 
-    // 価格情報は最新のものをコピー（新規作成扱い）
-    if (model.pricingHistory && model.pricingHistory.length > 0) {
-      const latestPricing = model.pricingHistory[0];
-      this.form.get('pricing')?.patchValue({
-        id: '', // IDはクリア
-        modelId: '', // モデルIDもクリア
-        inputPricePerUnit: latestPricing.inputPricePerUnit,
-        outputPricePerUnit: latestPricing.outputPricePerUnit,
-        unit: latestPricing.unit,
-        validFrom: this.formatDateForInput(new Date()) // 今日の日付
-      });
-    }    // 価格情報の状態を新規作成モードに
+    // Clear pricing information for new model
     this.currentPricing = null;
     this.pricingHistory = [];
     this.hasExistingPricing = false;
     this.pricingSelectionMode = 'new';
     this.selectedPricingId = undefined;
 
-    // Ensure form is editable for duplication
     this.setFormReadOnly(false);
-
-    // チェックボックスの状態を更新
     this.updateCheckboxes();
-  }  // 既存モデルの選択（編集モード）
-  selectModel(model: AIModelEntityForView) {
-    // Check if user has edit permission for this model's scope
-    const canEdit = this.adminScopeService.canEditScope(
-      model.scopeInfo.scopeType,
-      model.scopeInfo.scopeId
-    );
+  }
 
-    this.isEditMode = canEdit;
+  // ===== フォーム関連ヘルパー =====
+
+  private resetFormState() {
+    this.isEditMode = false;
     this.isDuplicateMode = false;
-    this.isFormVisible = true;
-    // this.setActiveTab('basic'); // 初期タブを設定
+    this.isViewOnlyMode = false;
+    this.isOverrideMode = false;
+  }
 
-    // モデルの価格情報を取得
+  private loadModelToForm(model: AIModelEntityForView) {
+    this.initForm();
+
+    // Load pricing information
     this.hasExistingPricing = model.pricingHistory && model.pricingHistory.length > 0;
     if (this.hasExistingPricing) {
-      // 最新の価格情報を取得
       const latestPricing = model.pricingHistory[0];
       this.currentPricing = latestPricing;
       this.selectedPricingId = latestPricing.id;
       this.pricingHistory = [...model.pricingHistory];
       this.pricingHistory.sort((a, b) => new Date(b.validFrom).getTime() - new Date(a.validFrom).getTime());
-
-      // 最新の価格情報をフォームに設定
       this.selectExistingPricing(latestPricing);
     } else {
       this.currentPricing = null;
@@ -530,15 +422,15 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       this.setPricingSelectionMode('new');
     }
 
-    // 日付のフォーマット
+    // Format dates
     const knowledgeCutoff = model.knowledgeCutoff ? this.formatDateForInput(model.knowledgeCutoff) : '';
     const releaseDate = model.releaseDate ? this.formatDateForInput(model.releaseDate) : '';
     const deprecationDate = model.deprecationDate ? this.formatDateForInput(model.deprecationDate) : '';
 
-    // モデルデータをフォームに設定
+    // Set form values
     this.form.patchValue({
       id: model.id,
-      providerNameList: model.providerNameList.filter(name => this.providerOptions.find(provider => provider.name === name)), // 選択されたプロバイダーのみ
+      providerNameList: model.providerNameList.filter(name => this.providerOptions.find(provider => provider.name === name)),
       providerModelId: model.providerModelId,
       name: model.name,
       aliases: model.aliases || [],
@@ -564,80 +456,94 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       uiOrder: model.uiOrder || 0,
       isStream: model.isStream || false,
       isActive: model.isActive || false,
+      scopeInfo: model.scopeInfo
     });
 
-    // If user cannot edit, make form read-only
-    if (!canEdit) {
-      this.setFormReadOnly(true);
-    }
-
-    // チェックボックスの状態を更新
     this.updateCheckboxes();
   }
 
-  // 登録/更新処理
+  private prepareOverrideForm(model: AIModelEntityForView) {
+    this.initForm();
+    this.loadModelToForm(model);
+
+    // Clear ID for new model creation
+    this.form.patchValue({
+      id: '',
+      isActive: true,
+    });
+
+    // Use selected scope for override
+    if (this.selectedScope) {
+      this.updateScopeInForm(this.selectedScope);
+    }
+  }
+
+  getFormTitle(): string {
+    if (this.isViewOnlyMode) {
+      return 'View Model';
+    } else if (this.isOverrideMode) {
+      return `Override Model`;
+    } else if (this.isDuplicateMode) {
+      return 'Duplicate Model';
+    } else if (this.isEditMode) {
+      return 'Edit Model';
+    } else {
+      return 'New Model';
+    }
+  }
+
+  closeForm(): void {
+    this.isFormVisible = false;
+    this.resetFormState();
+    this.selectedModel = null;
+    this.resetForm();
+  }
+
+  // ===== 保存・削除処理 =====
+
   register() {
+    if (this.isViewOnlyMode) {
+      return;
+    }
+
     if (this.form.invalid) {
-      // バリデーションエラーの詳細をログ出力
-      Object.keys(this.form.controls).forEach(key => {
-        const controlErrors = this.form.get(key)?.errors;
-        if (controlErrors) {
-          console.log('エラーのあるフィールド:', key);
-          console.log('エラー内容:', controlErrors);
-        }
-      });
-
-      // 価格情報のバリデーションエラーもチェック
-      const pricingGroup = this.form.get('pricing') as FormGroup;
-      if (pricingGroup) {
-        Object.keys(pricingGroup.controls).forEach(key => {
-          const controlErrors = pricingGroup.get(key)?.errors;
-          if (controlErrors) {
-            console.log('価格情報のエラー:', key, controlErrors);
-          }
-        });
-      }
-
-      // バリデーションエラーのあるタブをアクティブにする
       this.activateTabWithErrors();
-
-      // Mark all fields as touched to show validation errors
       this.markFormGroupTouched(this.form);
-
-      // エラーメッセージを表示
-      this.snackBar.open('Please fix the validation errors', 'Close', {
-        duration: 3000,
-        panelClass: 'error-snackbar'
-      });
+      this.showErrorMessage('Please fix the validation errors');
       return;
     }
 
     try {
-      // フォームの値を取得
-      const formValue = this.form.value;
+      const formValue = this.form.getRawValue(); // disabled フィールドも含めて取得
 
-      // 日付の処理
+      const scopeInfo = this.selectedScope;
+      if (!scopeInfo) {
+        this.showErrorMessage('No scope selected');
+        return;
+      }
+
+      const isUpdate = formValue.id && this.isEditMode && !this.isOverrideMode;
+
+      if (isUpdate) {
+        if (!this.adminScopeService.canEditScope(scopeInfo.scopeType, scopeInfo.scopeId)) {
+          this.showErrorMessage('You do not have permission to edit this model');
+          return;
+        }
+      } else {
+        if (!this.canCreateModel()) {
+          this.showErrorMessage('You do not have permission to create models in the current scope');
+          return;
+        }
+      }
+
+      // Build model data
       const knowledgeCutoff = formValue.knowledgeCutoff ? new Date(formValue.knowledgeCutoff) : null;
       const releaseDate = formValue.releaseDate ? new Date(formValue.releaseDate) : null;
       const deprecationDate = formValue.deprecationDate ? new Date(formValue.deprecationDate) : null;
 
-      const invalidProviderName = (formValue.providerNameList as string[]).find(providerName => !this.providerOptions.find(provider => provider.name === providerName));
-      if (invalidProviderName) {
-        this.snackBar.open('Selected provider is invalid', 'Close', {
-          duration: 3000,
-          panelClass: 'error-snackbar'
-        });
-        return;
-      }      // Use the selected scope from AdminScopeService if available, otherwise use form values
-      const scopeInfo = this.selectedScope || {
-        scopeType: formValue.scopeInfo?.scopeType || '',
-        scopeId: formValue.scopeInfo?.scopeId || ''
-      };
-
-      // モデルデータの構築
       const modelData: AIModelEntity & { aliases: string[] } = {
         ...genInitialBaseEntity(),
-        id: this.isEditMode ? formValue.id : undefined, // 新規作成時はIDを設定しない
+        id: isUpdate ? formValue.id : undefined,
         providerNameList: formValue.providerNameList,
         providerModelId: formValue.providerModelId,
         name: formValue.name,
@@ -667,124 +573,275 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         scopeInfo: scopeInfo,
       };
 
-      // 価格情報の構築
+      // Build pricing data
       const pricingData: Partial<ModelPricing> = {
         id: this.pricingSelectionMode === 'new' ? undefined : formValue.pricing?.id,
-        modelId: formValue.id, // 一時的にフォームのIDを設定（後で更新される）
+        modelId: formValue.id,
         inputPricePerUnit: formValue.pricing?.inputPricePerUnit || 0,
         outputPricePerUnit: formValue.pricing?.outputPricePerUnit || 0,
         unit: formValue.pricing?.unit || 'USD/1M tokens',
         validFrom: formValue.pricing?.validFrom ? new Date(formValue.pricing.validFrom) : new Date(),
       };
 
-      const operationType = this.isEditMode ? 'update' : 'create';
+      const operationType = this.isOverrideMode
+        ? 'override'
+        : isUpdate
+          ? 'update'
+          : 'create';
 
-      // モデルの作成または更新
+      // Save model and pricing
       this.aiModelService.upsertAIModel(modelData).pipe(
         switchMap(savedModel => {
           if (savedModel) {
-            // 保存されたモデルIDを価格情報に設定
             pricingData.modelId = savedModel.id;
 
-            // 価格情報の処理
-            if (this.pricingSelectionMode === 'new' || !this.isEditMode) {
-              // 新規価格情報の作成
-              return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
-            } else if (this.pricingSelectionMode === 'edit' && this.isPricingChanged(pricingData)) {
-              // 既存価格情報の更新（変更がある場合のみ）
-              return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
-            } else {
-              // 変更がなければ何もしない
-              return of(null);
-            }
+            // if (this.pricingSelectionMode === 'new' || !this.isEditMode) {
+            //   return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
+            // } else if (this.pricingSelectionMode === 'edit' && this.isPricingChanged(pricingData)) {
+            //   return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
+            // } else {
+            //   return of(null);
+            // }
+            return of(null);
           } else {
             return of(null);
           }
         })
       ).subscribe({
         next: () => {
-          const message = operationType === 'create'
-            ? 'Model and pricing created successfully'
-            : 'Model and pricing updated successfully';
-          this.snackBar.open(message, 'Close', {
-            duration: 3000
-          });
-          this.loadData();
+          const message = this.isOverrideMode
+            ? 'Model override created successfully'
+            : operationType === 'create'
+              ? 'Model created successfully'
+              : 'Model updated successfully';
+
+          this.showSuccessMessage(message);
+          this.loadModels();
           this.closeForm();
         },
         error: (error) => {
-          console.error(`Error ${operationType}ing model or pricing:`, error);
-          this.snackBar.open(`Error ${operationType}ing data`, 'Close', {
-            duration: 3000,
-            panelClass: 'error-snackbar'
-          });
+          console.error(`Error ${operationType}ing model:`, error);
+          this.showErrorMessage(`Error ${operationType}ing model`);
         }
       });
     } catch (error) {
       console.error('Error processing form data:', error);
-      this.snackBar.open('Error processing form data', 'Close', {
-        duration: 3000,
-        panelClass: 'error-snackbar'
-      });
+      this.showErrorMessage('Error processing form data');
     }
   }
 
-  // 価格情報が変更されたかチェック
-  isPricingChanged(newPricing: Partial<ModelPricing>): boolean {
-    // 編集中の価格情報IDに基づいて該当する価格情報を取得
-    const selectedPricing = this.pricingHistory.find(p => p.id === this.selectedPricingId);
-    if (!selectedPricing) return true; // 選択した価格情報が見つからなければ変更とみなす
-
-    // 数値を文字列に変換して比較
-    const currentInput = selectedPricing.inputPricePerUnit.toString();
-    const newInput = newPricing.inputPricePerUnit?.toString() || '';
-
-    const currentOutput = selectedPricing.outputPricePerUnit.toString();
-    const newOutput = newPricing.outputPricePerUnit?.toString() || '';
-
-    // 変更がないかチェック
-    return currentInput !== newInput ||
-      currentOutput !== newOutput ||
-      selectedPricing.unit !== newPricing.unit ||
-      this.formatDateForInput(selectedPricing.validFrom) !== this.formatDateForInput(newPricing.validFrom as Date);
-  }
-
-  // モデルの削除
   deleteModel(id: string) {
+    const model = this.models.find(m => m.id === id);
+    if (!model) {
+      this.showErrorMessage('Model not found');
+      return;
+    }
+
+    if (!this.canUserEditModel(model)) {
+      this.showErrorMessage('You do not have permission to delete this model');
+      return;
+    }
+
     if (confirm('Are you sure you want to delete this model and its pricing information?')) {
-      // モデルと関連する価格情報を削除
       this.aiModelPricingService.deletePricingByModelId(id).pipe(
         switchMap(() => this.aiModelService.deleteAIModel(id))
       ).subscribe({
         next: () => {
-          this.snackBar.open('Model and pricing deleted successfully', 'Close', {
-            duration: 3000
-          });
-          this.loadData();
+          this.showSuccessMessage('Model deleted successfully');
+          this.loadModels();
+
           if (this.form.value.id === id) {
             this.closeForm();
           }
         },
         error: (error) => {
-          console.error('Error deleting model or pricing:', error);
-          this.snackBar.open('Error deleting data', 'Close', {
-            duration: 3000,
-            panelClass: 'error-snackbar'
-          });
+          console.error('Error deleting model:', error);
+          this.showErrorMessage('Failed to delete model');
         }
       });
     }
   }
 
-  // フォームを閉じる
-  closeForm() {
-    this.isFormVisible = false;
-    this.isEditMode = false;
-    this.isDuplicateMode = false;
-    this.resetForm();
+  // ===== ユーティリティメソッド =====
+
+  private setFormReadOnly(readOnly: boolean): void {
+    if (readOnly) {
+      this.form.disable();
+    } else {
+      this.form.enable();
+      if (this.selectedScope) {
+        this.form.get('scopeInfo.scopeType')?.disable();
+        this.form.get('scopeInfo.scopeId')?.disable();
+      }
+    }
   }
 
-  // チェックボックスの変更処理（汎用）
+  private showSuccessMessage(message: string) {
+    this.snackBar.open(message, 'Close', { duration: 3000 });
+  }
+
+  private showErrorMessage(message: string) {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      panelClass: 'error-snackbar'
+    });
+  }
+
+  // ===== フォーム初期化と管理 =====
+
+  initForm() {
+    const today = this.formatDateForInput(new Date());
+
+    this.form = this.fb.group({
+      id: [''],
+      providerNameList: [[], Validators.required],
+      providerModelId: ['', Validators.required],
+      name: ['', Validators.required],
+      aliases: [[]],
+      shortName: ['', Validators.required],
+      throttleKey: ['', Validators.required],
+      status: [AIModelStatus.ACTIVE, Validators.required],
+      description: [''],
+      modalities: [[Modality.TEXT], Validators.required],
+      maxContextTokens: [0, [Validators.required, Validators.min(0)]],
+      maxOutputTokens: [0, [Validators.required, Validators.min(0)]],
+      inputFormats: [[Modality.TEXT]],
+      outputFormats: [[Modality.TEXT]],
+      defaultParameters: [{}],
+      capabilities: [{}],
+      metadata: [{}],
+      endpointTemplate: [''],
+      documentationUrl: [''],
+      licenseType: [''],
+      knowledgeCutoff: [''],
+      releaseDate: [''],
+      deprecationDate: [''],
+      tags: [[]],
+      uiOrder: [0],
+      isStream: [true],
+      isActive: [true],
+      scopeInfo: this.fb.group({
+        scopeType: ['', Validators.required],
+        scopeId: ['', Validators.required]
+      }),
+      pricing: this.fb.group({
+        id: [''],
+        modelId: [''],
+        inputPricePerUnit: [0.00, [Validators.required, Validators.min(0)]],
+        outputPricePerUnit: [0.00, [Validators.required, Validators.min(0)]],
+        unit: ['USD/1M tokens', Validators.required],
+        validFrom: [today, Validators.required]
+      })
+    });
+  }
+
+  resetForm() {
+    this.form.reset({
+      id: '',
+      providerNameList: [],
+      providerModelId: '',
+      name: '',
+      aliases: [],
+      shortName: '',
+      throttleKey: '',
+      status: AIModelStatus.ACTIVE,
+      description: '',
+      modalities: [Modality.TEXT],
+      maxContextTokens: 0,
+      maxOutputTokens: 0,
+      inputFormats: [Modality.TEXT],
+      outputFormats: [Modality.TEXT],
+      defaultParameters: {},
+      capabilities: {},
+      metadata: {},
+      endpointTemplate: '',
+      documentationUrl: '',
+      licenseType: '',
+      knowledgeCutoff: '',
+      releaseDate: '',
+      deprecationDate: '',
+      tags: [],
+      uiOrder: 0,
+      isStream: true,
+      isActive: true,
+      scopeInfo: {
+        scopeType: '',
+        scopeId: ''
+      },
+      pricing: {
+        id: '',
+        modelId: '',
+        inputPricePerUnit: 0.00,
+        outputPricePerUnit: 0.00,
+        unit: 'USD/1M tokens',
+        validFrom: this.formatDateForInput(new Date())
+      }
+    });
+
+    this.currentPricing = null;
+    this.pricingHistory = [];
+    this.hasExistingPricing = false;
+    this.pricingSelectionMode = 'new';
+    this.selectedPricingId = undefined;
+  }
+
+  setActiveTab(tabName: string) {
+    this.activeTab = tabName;
+  }
+
+  // ===== タグ管理 =====
+
+  private loadTags() {
+    const tagSubscription = this.tagService.getTags().subscribe({
+      next: (tags) => {
+        this.availableTags = tags;
+        this.filteredTags = tags;
+      },
+      error: (err) => {
+        console.error('Error loading tags:', err);
+        this.showErrorMessage('Error loading tags');
+      }
+    });
+    this.subscriptions.add(tagSubscription);
+  }
+
+  openTagManagement() {
+    const dialogRef = this.dialog.open(TagManagementDialogComponent, {
+      width: '800px',
+      maxHeight: '80vh',
+      data: { tags: this.availableTags }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadTags();
+      }
+    });
+  }
+
+  filterTags(query: string): TagEntity[] {
+    if (!query) {
+      return this.availableTags;
+    }
+    const filterValue = query.toLowerCase();
+    return this.availableTags.filter(tag =>
+      tag.name.toLowerCase().includes(filterValue) ||
+      (tag.label && tag.label.toLowerCase().includes(filterValue))
+    );
+  }
+
+  getTagDisplayName(tagName: string): string {
+    const tag = this.availableTags.find(t => t.name === tagName);
+    return tag?.label || tagName;
+  }
+
+  getTagColor(tagName: string): string | undefined {
+    const tag = this.availableTags.find(t => t.name === tagName);
+    return tag?.color;
+  }
+
+  // ===== チェックボックス管理 =====
+
   onCheckboxChange(event: Event, fieldName: string) {
     const checkbox = event.target as HTMLInputElement;
     const value = checkbox.value;
@@ -802,16 +859,10 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.form.get(fieldName)?.setValue(values);
   }
 
-  // チェックボックスの状態を更新
   updateCheckboxes() {
     setTimeout(() => {
-      // モダリティのチェックボックスを更新
       this.updateCheckboxField('modalities');
-
-      // 入力フォーマットのチェックボックスを更新
       this.updateCheckboxField('inputFormats');
-
-      // 出力フォーマットのチェックボックスを更新
       this.updateCheckboxField('outputFormats');
     });
   }
@@ -821,25 +872,20 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return values.includes(value);
   }
 
-  // 特定のフィールドのチェックボックスを更新する
   updateCheckboxField(fieldName: string) {
     const values = this.form.get(fieldName)?.value as string[] || [];
 
     this.modalityOptions.forEach(option => {
       const selector = `input[type="checkbox"][value="${option}"]`;
-      // 特定のフィールド用のチェックボックスのみを選択
       const allCheckboxes = document.querySelectorAll(selector);
 
-      // 適切なチェックボックスを見つけて更新
       allCheckboxes.forEach(cb => {
         const checkbox = cb as HTMLInputElement;
-        // 親要素を遡って、このチェックボックスが特定のフィールドに関連しているか確認
         let parent = checkbox.parentElement;
         while (parent && !parent.textContent?.includes(fieldName) && parent.tagName !== 'FORM') {
           parent = parent.parentElement;
         }
 
-        // 適切なフィールドに関連するチェックボックスを更新
         if (parent && parent.textContent?.includes(fieldName)) {
           checkbox.checked = values.includes(option);
         }
@@ -847,9 +893,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  // バリデーションエラーがあるタブをアクティブにする
+  // ===== バリデーション関連 =====
+
   activateTabWithErrors() {
-    // 各タブに関連するフィールドのグループを定義
     const tabFields = {
       'basic': ['providerNameList', 'providerModelId', 'name', 'aliases', 'shortName', 'throttleKey', 'status', 'description', 'isStream', 'isActive'],
       'capabilities': ['modalities', 'maxContextTokens', 'maxOutputTokens', 'inputFormats', 'outputFormats', 'defaultParameters', 'capabilities'],
@@ -857,17 +903,14 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       'advanced': ['endpointTemplate', 'documentationUrl', 'licenseType', 'releaseDate', 'knowledgeCutoff', 'deprecationDate', 'tags', 'uiOrder', 'metadata']
     };
 
-    // 各タブのフィールドのバリデーションエラーを確認
     for (const [tab, fields] of Object.entries(tabFields)) {
       for (const field of fields) {
-        // ネストされたフィールドの場合
         if (field.includes('.')) {
           if (this.hasNestedError(field)) {
             this.setActiveTab(tab);
             return;
           }
         } else {
-          // 通常のフィールドの場合
           if (this.hasError(field)) {
             this.setActiveTab(tab);
             return;
@@ -877,7 +920,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ネストされたエラーチェック
   hasNestedError(path: string): boolean {
     const parts = path.split('.');
     if (parts.length !== 2) return false;
@@ -889,7 +931,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return !!control?.invalid && !!control?.touched;
   }
 
-  // ネストされたエラーメッセージの取得
   getNestedErrorMessage(path: string): string {
     const parts = path.split('.');
     if (parts.length !== 2) return '';
@@ -912,13 +953,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  // 日付のフォーマット（UI表示用）
+  // ===== 日付関連ユーティリティ =====
+
   formatDate(date: Date | string): string {
     const d = date instanceof Date ? date : new Date(date);
     return d.toLocaleDateString();
   }
 
-  // 日付をInput要素に適した形式に変換
   formatDateForInput(date: Date | string): string {
     const d = date instanceof Date ? date : new Date(date);
     const year = d.getFullYear();
@@ -927,7 +968,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return `${year}-${month}-${day}`;
   }
 
-  // Recursively mark all controls in a form group as touched
   markFormGroupTouched(formGroup: FormGroup) {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);
@@ -939,7 +979,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Get error message for a form control
   getErrorMessage(controlName: string): string {
     const control = this.form.get(controlName);
     if (!control) return '';
@@ -956,23 +995,22 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  // Check if a control has an error and has been touched
   hasError(controlName: string): boolean {
     const control = this.form.get(controlName);
     return !!control?.invalid && !!control?.touched;
   }
 
-  // 新規作成モードに設定
+  // ===== 価格情報管理 =====
+
   setPricingSelectionMode(mode: 'new' | 'edit') {
     this.pricingSelectionMode = mode;
 
     if (mode === 'new') {
-      // 新規作成モードの場合、フォームをリセット
       const today = this.formatDateForInput(new Date());
       const pricingForm = this.form.get('pricing');
       if (pricingForm) {
         pricingForm.patchValue({
-          id: '',  // IDをクリア
+          id: '',
           modelId: this.form.get('id')?.value || '',
           inputPricePerUnit: 0.00,
           outputPricePerUnit: 0.00,
@@ -982,7 +1020,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       }
       this.selectedPricingId = undefined;
     } else if (mode === 'edit') {
-      // 編集モードの場合、選択された価格情報を取得
       const selectedPricing = this.pricingHistory.find(p => p.id === this.selectedPricingId);
       if (selectedPricing) {
         const pricingForm = this.form.get('pricing');
@@ -1000,12 +1037,10 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  // 既存の価格情報を選択
   selectExistingPricing(pricing: ModelPricing) {
     this.pricingSelectionMode = 'edit';
     this.selectedPricingId = pricing.id;
 
-    // 選択した価格情報をフォームに設定
     const pricingForm = this.form.get('pricing');
     if (pricingForm) {
       pricingForm.patchValue({
@@ -1019,57 +1054,35 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  // 現在適用中の価格情報かどうかを判定
   isCurrentPricing(pricing: ModelPricing): boolean {
     if (!this.currentPricing) return false;
     return pricing.id === this.currentPricing.id;
   }
 
-  /**
-   * Set form controls as read-only or editable
-   */
-  private setFormReadOnly(readOnly: boolean): void {
-    if (readOnly) {
-      this.form.disable();
-    } else {
-      this.form.enable();
-    }
-  }  /**
-   * Check if user can edit a specific model based on its scope
-   */
-  canUserEditModel(model: AIModelEntityForView): boolean {
-    return this.adminScopeService.canEditScope(
-      model.scopeInfo.scopeType,
-      model.scopeInfo.scopeId
-    );
+  isPricingChanged(newPricing: Partial<ModelPricing>): boolean {
+    const selectedPricing = this.pricingHistory.find(p => p.id === this.selectedPricingId);
+    if (!selectedPricing) return true;
+
+    const currentInput = selectedPricing.inputPricePerUnit.toString();
+    const newInput = newPricing.inputPricePerUnit?.toString() || '';
+
+    const currentOutput = selectedPricing.outputPricePerUnit.toString();
+    const newOutput = newPricing.outputPricePerUnit?.toString() || '';
+
+    return currentInput !== newInput ||
+      currentOutput !== newOutput ||
+      selectedPricing.unit !== newPricing.unit ||
+      this.formatDateForInput(selectedPricing.validFrom) !== this.formatDateForInput(newPricing.validFrom as Date);
   }
 
-  /**
-   * Get form title based on current mode
-   */
-  getFormTitle(): string {
-    if (this.isDuplicateMode) {
-      return 'Duplicate Model';
-    } else if (this.isEditMode) {
-      return 'Edit Model';
-    } else if (this.isFormVisible && this.form.get('id')?.value) {
-      // If form is visible with an ID but not in edit mode, it's read-only
-      return 'View Model (Read Only)';
-    } else {
-      return 'New Model';
-    }
-  }
+  // ===== チップ入力関連 =====
 
-  /**
-   * Add a keyword to a reactive form array (for aliases, tags, etc.)
-   */
   addReactiveKeyword(fieldName: string, event: MatChipInputEvent): void {
     const value = (event.value || '').trim();
     if (value) {
       const control = this.form.get(fieldName);
       if (control) {
         const currentArray = control.value || [];
-        // 重複チェック
         if (!currentArray.includes(value)) {
           control.setValue([...currentArray, value]);
         }
@@ -1078,9 +1091,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     event.chipInput!.clear();
   }
 
-  /**
-   * Remove a keyword from a reactive form array
-   */
   removeReactiveKeyword(fieldName: string, keyword: string): void {
     const control = this.form.get(fieldName);
     if (control) {
@@ -1093,9 +1103,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Handle autocomplete selection for chip inputs
-   */
   autocompleteSelect(fieldName: string, event: any): void {
     const tagName = event.option.value;
     const control = this.form.get(fieldName);

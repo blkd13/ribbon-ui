@@ -20,15 +20,20 @@ export enum UserStatus {
 }
 
 export enum UserRoleType {
-    Maintainer = 'Maintainer', // メンテナ
+    // Maintainer = 'Maintainer', // メンテナ
     User = 'User', // ユーザー
-    Owner = 'Owner', // 所有者
-    BizAdmin = 'BizAdmin', // ビジネス管理者
-    SysAdmin = 'SysAdmin', // システム管理者
+    // Owner = 'Owner', // 所有者
+    // BizAdmin = 'BizAdmin', // ビジネス管理者
+    // SysAdmin = 'SysAdmin', // システム管理者
+    MemberManager = 'MemberManager', // メンバー管理者
+    AIManager = 'AIManager', // AI管理者
+    APIManager = 'APIManager', // API管理者
+    Auditor = 'Auditor', // 監査者
     Admin = 'Admin', // 管理者
-    Member = 'Member', // メンバー
-    Viewer = 'Viewer', // 閲覧者
-    Guest = 'Guest', // ゲスト
+    SuperAdmin = 'SuperAdmin', // スーパーユーザー
+    // Member = 'Member', // メンバー
+    // Viewer = 'Viewer', // 閲覧者
+    // Guest = 'Guest', // ゲスト
 }
 
 export interface UserRole {

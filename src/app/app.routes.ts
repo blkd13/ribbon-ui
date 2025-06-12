@@ -65,6 +65,6 @@ export const routes: Routes = [
       { path: '', redirectTo: 'global/dummy', pathMatch: 'full' }, // デフォルトリダイレクト先を修正
     ], // adminScopeGuardを適用
   },
-  { path: 'maintainer/announcements', canActivate: [loginGuardGenerator(UserRoleType.Maintainer, 'home')], loadComponent: () => import('./pages/announcements/announcements-list/announcements-list.component').then(m => m.AnnouncementsListComponent) },
+  { path: 'maintainer/announcements', canActivate: [loginGuardGenerator(UserRoleType.SuperAdmin, 'home')], loadComponent: () => import('./pages/announcements/announcements-list/announcements-list.component').then(m => m.AnnouncementsListComponent) },
   { path: '**', redirectTo: 'login' }, // 未定義のルートの場合はログインページにリダイレクトする
 ];

@@ -184,7 +184,7 @@ export class MemberAssignmentDialogComponent implements OnInit, OnDestroy {
         const roleNames: Record<UserRoleType.User | UserRoleType.Admin, string> = {
             [UserRoleType.User]: 'ユーザー',
             [UserRoleType.Admin]: '管理者',
-            // [UserRoleType.Maintainer]: 'メンテナー',
+            // [UserRoleType.SuperAdmin]: 'メンテナー',
             // [UserRoleType.Member]: 'メンバー',
             // [UserRoleType.Viewer]: '閲覧者',
             // [UserRoleType.Guest]: 'ゲスト',

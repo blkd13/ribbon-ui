@@ -18,15 +18,19 @@ export class UserRolePermissionService {
 
   // ロールの階層定義（数字が小さいほど高い権限）
   private readonly ROLE_HIERARCHY: Record<UserRoleType, number> = {
-    [UserRoleType.SysAdmin]: 10,
-    [UserRoleType.BizAdmin]: 20,
-    [UserRoleType.Owner]: 30,
-    [UserRoleType.Admin]: 40,
-    [UserRoleType.Maintainer]: 50,
+    // [UserRoleType.SysAdmin]: 10,
+    // [UserRoleType.BizAdmin]: 20,
+    // [UserRoleType.Owner]: 30,
+    [UserRoleType.SuperAdmin]: 10,
+    [UserRoleType.Admin]: 20,
+    [UserRoleType.MemberManager]: 30,
+    [UserRoleType.AIManager]: 40,
+    [UserRoleType.APIManager]: 40,
+    [UserRoleType.Auditor]: 40,
     [UserRoleType.User]: 60,
-    [UserRoleType.Member]: 70,
-    [UserRoleType.Viewer]: 80,
-    [UserRoleType.Guest]: 90,
+    // [UserRoleType.Member]: 70,
+    // [UserRoleType.Viewer]: 80,
+    // [UserRoleType.Guest]: 90,
   };
 
   /**
@@ -41,11 +45,11 @@ export class UserRolePermissionService {
       return false;
     }
 
-    // 対象DivisionでAdmin/Maintainer権限を持っているかチェック
+    // 対象DivisionでAdmin/SuperAdmin権限を持っているかチェック
     const divisionRoles = currentUser.roleList.filter(role =>
       role.scopeInfo.scopeType === ScopeType.DIVISION &&
       role.scopeInfo.scopeId === divisionId &&
-      [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
+      [UserRoleType.Admin, UserRoleType.SuperAdmin].includes(role.role)
     );
 
     return divisionRoles.length > 0;
@@ -168,10 +172,10 @@ export class UserRolePermissionService {
       return false;
     }
 
-    // Organization Admin/Maintainer権限をチェック
+    // Organization Admin/SuperAdmin権限をチェック
     const orgRoles = currentUser.roleList.filter(role =>
       role.scopeInfo.scopeType === ScopeType.ORGANIZATION &&
-      [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
+      [UserRoleType.Admin, UserRoleType.SuperAdmin].includes(role.role)
     );
 
     return orgRoles.length > 0;
@@ -189,11 +193,11 @@ export class UserRolePermissionService {
       return false;
     }
 
-    // そのDivisionのAdmin/Maintainer権限をチェック
+    // そのDivisionのAdmin/SuperAdmin権限をチェック
     const divisionRoles = currentUser.roleList.filter(role =>
       role.scopeInfo.scopeType === ScopeType.DIVISION &&
       role.scopeInfo.scopeId === divisionId &&
-      [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)
+      [UserRoleType.Admin, UserRoleType.SuperAdmin].includes(role.role)
     );
 
     return divisionRoles.length > 0;
@@ -274,11 +278,15 @@ export class UserRolePermissionService {
     // SysAdmin, BizAdminなどはOrganization/Globalスコープなので除外
     const divisionValidRoles: UserRoleType[] = [
       UserRoleType.Admin,
-      UserRoleType.Maintainer,
+      UserRoleType.SuperAdmin,
       UserRoleType.User,
-      UserRoleType.Member,
-      UserRoleType.Viewer,
-      UserRoleType.Guest
+      UserRoleType.MemberManager,
+      UserRoleType.AIManager,
+      UserRoleType.APIManager,
+      UserRoleType.Auditor,
+      // UserRoleType.Member,
+      // UserRoleType.Viewer,
+      // UserRoleType.Guest
     ];
 
     return divisionValidRoles.includes(role);

@@ -49,7 +49,7 @@ export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanA
 }
 
 export const loginGuardGenerator = (role: UserRoleType, navigate: string): CanActivateFn => {
-  const rolePriority = [UserRoleType.User, UserRoleType.Admin, UserRoleType.Maintainer];
+  const rolePriority = [UserRoleType.User, UserRoleType.Admin, UserRoleType.SuperAdmin];
   const roles = rolePriority.splice(rolePriority.indexOf(role));
   return (route, state) => {
     const authService: AuthService = inject(AuthService);

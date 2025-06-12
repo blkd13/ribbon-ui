@@ -29,13 +29,14 @@ export class UserSettingDialogComponent {
   isAnimationEnabled$ = this.animationService.animationEnabled$;
   needsReload = false;
   current = false;
-
   theme: 'system' | 'dark' | 'light';
   enterMode: 'Enter' | 'Ctrl+Enter';
+  historyCloseMode: 0 | 1 | 2;
 
   constructor() {
     this.enterMode = this.userService.enterMode;
     this.theme = this.userService.theme;
+    this.historyCloseMode = this.userService.historyCloseMode;
     this.animationService.animationEnabled$.subscribe(enabled => {
       this.current = enabled;
     });
@@ -65,10 +66,14 @@ export class UserSettingDialogComponent {
     this.enterMode = event.value;
   }
 
+  toggleHistoryCloseMode(event: MatRadioChange) {
+    this.historyCloseMode = event.value;
+  }
+
   saveAndClose() {
     if (this.needsReload) {
       if (confirm('設定を反映するにはページをリロードする必要があります。よろしいですか？')) {
-        this.userService.saveSetting(this.theme, this.enterMode).subscribe({
+        this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).subscribe({
           complete: () => {
             _paq.push(['trackEvent', 'ユーザー設定', 'アニメーション設定保存', this.current]);
             this.animationService.toggleAnimation(this.current);
@@ -77,7 +82,7 @@ export class UserSettingDialogComponent {
         });
       } else { }
     } else {
-      this.userService.saveSetting(this.theme, this.enterMode).subscribe({
+      this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).subscribe({
         complete: () => {
           this.dialogRef.close();
         }

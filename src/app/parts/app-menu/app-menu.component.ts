@@ -30,7 +30,7 @@ export class AppMenuComponent implements OnInit {
 
   constructor() {
     this.user = this.authService.getCurrentUser();
-    this.isAdmin = !!this.user.roleList.find(role => [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role));
+    this.isAdmin = !!this.user.roleList.find(role => [UserRoleType.Admin, UserRoleType.SuperAdmin].includes(role.role));
 
     this.extApiProviderService.getApiProviders(true).subscribe({
       next: apiProviderList => {

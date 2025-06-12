@@ -83,28 +83,28 @@
 
     <!-- 部門別詳細 -->
     <div class="departments-section">
-        @for(department of departmentList; track department.department.id){
-        @if(department.cost && department.cost[selectYyyyMm]){
+        @for(division of divisionMemberList; track $index){
+        @if(division.cost && division.cost[selectYyyyMm]){
         <div class="department-card">
             <div class="department-header">
                 <div class="department-info">
-                    <h3>{{ department.department.label }}</h3>
-                    <span class="department-id">ID: {{ department.department.id }}</span>
+                    <h3>{{ division.division.label }}</h3>
+                    <span class="department-id">ID: {{ division.division.id }}</span>
                 </div>
                 <div class="department-summary">
                     <div class="summary-item cost-summary">
-                        <div class="summary-value">{{ department.cost[selectYyyyMm].totalCost * 150 | number:'1.0-0' }}円
+                        <div class="summary-value">{{ division.cost[selectYyyyMm].totalCost * 150 | number:'1.0-0' }}円
                         </div>
                         <div class="summary-label">コスト総計</div>
                     </div>
                     <div class="summary-item usage-summary">
-                        <div class="summary-value">{{ (department.cost[selectYyyyMm].totalReqToken +
-                            department.cost[selectYyyyMm].totalResToken) | number }}</div>
+                        <div class="summary-value">{{ (division.cost[selectYyyyMm].totalReqToken +
+                            division.cost[selectYyyyMm].totalResToken) | number }}</div>
                         <div class="summary-label">利用量</div>
                     </div>
                     <div class="summary-item foreign-summary">
-                        <div class="summary-value">{{ (department.cost[selectYyyyMm].foreignModelReqToken +
-                            department.cost[selectYyyyMm].foreignModelResToken) | number }}</div>
+                        <div class="summary-value">{{ (division.cost[selectYyyyMm].foreignModelReqToken +
+                            division.cost[selectYyyyMm].foreignModelResToken) | number }}</div>
                         <div class="summary-label">海外分</div>
                     </div>
                 </div>
@@ -122,24 +122,24 @@
                     <div class="header-cell foreign-col">海外分</div>
                 </div>
 
-                @for(member of department.members; track member.id){
-                <div class="table-row" [class.clickable]="member.user" (click)="detail(member)">
+                @for(member of division.members; track member.id){
+                <div class="table-row" [class.clickable]="member.id" (click)="detail(member)">
                     <div class="table-cell name-col">
                         <div class="member-info">
-                            <div class="member-name">{{ member.label }}</div>
-                            <div class="member-id">{{ member.name }}</div>
+                            <div class="member-name">{{ member.name }}</div>
+                            <div class="member-id">{{ member.id }}</div>
                         </div>
                     </div>
                     <div class="table-cell id-col">
                         <span class="member-id-badge">{{ member.name }}</span>
                     </div>
                     <div class="table-cell role-col">
-                        <span class="role-badge">{{ member.departementRole }}</span>
+                        <span class="role-badge">{{ member.role }}</span>
                     </div>
 
-                    @if(member.user){
+                    @if(member.id){
                     <div class="table-cell status-col" (click)="eventCancel($event)">
-                        <mat-radio-group [(ngModel)]="member.user.status" (change)="updateUserStatus(member)"
+                        <mat-radio-group [(ngModel)]="member.status" (change)="updateUserStatus(member)"
                             class="status-radio">
                             <mat-radio-button value="Active" class="status-active">有効</mat-radio-button>
                             <mat-radio-button value="Suspended" class="status-suspended">停止</mat-radio-button>
@@ -204,7 +204,7 @@
         }
     </div>
 
-    @if(departmentList.length === 0 || !hasDataForPeriod()) {
+    @if(divisionMemberList.length === 0 || !hasDataForPeriod()) {
     <div class="empty-state">
         <mat-icon>assessment</mat-icon>
         <h3>データがありません</h3>

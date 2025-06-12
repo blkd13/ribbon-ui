@@ -87,7 +87,7 @@ export class AIProviderManagerService {
   readonly http: HttpClient = inject(HttpClient);
 
   getProviderTemplates() {
-    return this.http.get<AIProviderTemplateEntity[]>(`/maintainer/ai-provider-templates`).pipe(
+    return this.http.get<AIProviderTemplateEntity[]>(`/admin/ai-provider-templates`).pipe(
       tap(res => {
         res.forEach(provider => {
           provider.createdAt = new Date(provider.createdAt);
@@ -110,7 +110,7 @@ export class AIProviderManagerService {
   }
 
   upsertProviderTemplate(provider: AIProviderTemplateEntity) {
-    this.http.post<AIProviderTemplateEntity>(`/maintainer/ai-provider-template`, provider).subscribe({
+    this.http.post<AIProviderTemplateEntity>(`/admin/ai-provider-template`, provider).subscribe({
       next: (res) => {
         res.createdAt = new Date(res.createdAt);
         res.updatedAt = new Date(res.updatedAt);
@@ -224,7 +224,7 @@ export interface TemplateDefinition {
 
 @Injectable({ providedIn: 'root' })
 export class AIProviderTemplateManagerService {
-  private apiUrl = `/maintainer/ai-provider-template`;
+  private apiUrl = `/admin/ai-provider-template`;
 
   constructor(private http: HttpClient) { }
 
@@ -603,8 +603,8 @@ export class AIModelPricingService {
     );
   }
   //   return (!pricing.id
-  //     ? this.http.post<ModelPricing>(`/maintainer/ai-model/pricing`, pricing)
-  //     : this.http.put<ModelPricing>(`/maintainer/ai-model/${pricing.id}/pricing`, pricing)).pipe(
+  //     ? this.http.post<ModelPricing>(`/admin/ai-model/pricing`, pricing)
+  //     : this.http.put<ModelPricing>(`/admin/ai-model/${pricing.id}/pricing`, pricing)).pipe(
   //       map(modelPricingFormat),
   //     );
   // }

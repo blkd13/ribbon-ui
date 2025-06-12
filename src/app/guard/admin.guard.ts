@@ -31,7 +31,7 @@ export const adminScopeGuard: CanActivateFn = (route: ActivatedRouteSnapshot, st
             );
 
             const availableScopesRaw = g.info.user.roleList
-                .filter(role => [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role))
+                .filter(role => [UserRoleType.Admin, UserRoleType.SuperAdmin].includes(role.role))
                 .map(role => role.scopeInfo);
 
             // 重複を除去し、優先順位でソート

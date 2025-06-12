@@ -43,6 +43,24 @@
             </p>
         </div>
     </div>
+    <mat-divider></mat-divider>
+    <div class="settings-section">
+        <h3>履歴を閉じる設定</h3>
+        <div class="setting-item">
+            <mat-radio-group [value]="historyCloseMode" name="history-close-mode"
+                (change)="toggleHistoryCloseMode($event)">
+                <mat-radio-button [value]="0">閉じない</mat-radio-button>
+                <span class="inline-block min-w-10"></span>
+                <mat-radio-button [value]="1">ユーザープロンプトのみ閉じる</mat-radio-button>
+                <span class="inline-block min-w-10"></span>
+                <mat-radio-button [value]="2">両方閉じる</mat-radio-button>
+            </mat-radio-group>
+            <p class="setting-description">
+                新しいメッセージが生成された際に、過去の履歴を自動的に閉じるかどうかを設定します。<br />
+                デフォルトは「閉じない」です。
+            </p>
+        </div>
+    </div>
 </mat-dialog-content>
 
 <mat-dialog-actions>

@@ -1,4 +1,4 @@
-/* Base Model Component Styles */
+/* Enhanced AI Model Management Component Styles with Scope Management */
 
 :host {
     display: block;
@@ -45,6 +45,202 @@ h5 {
     margin: 15px 0 10px;
 }
 
+/* Scope readonly display styles */
+.scope-readonly-display {
+    .readonly-field {
+        background-color: #2a2a2a;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 8px 12px;
+        color: #e0e0e0;
+
+        .scope-type {
+            font-weight: 500;
+            margin-right: 8px;
+        }
+
+        .scope-name {
+            color: #a0a0a0;
+        }
+    }
+
+    .scope-note {
+        margin-top: 4px;
+
+        small {
+            color: #888;
+            font-style: italic;
+        }
+    }
+}
+
+/* オーバーライドボタンのアイコンスタック */
+.override-button {
+    position: relative;
+
+    .icon-stack {
+        position: relative;
+        display: inline-block;
+
+        .base-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+        }
+
+        .overlay-icon {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            font-size: 12px;
+            width: 12px;
+            height: 12px;
+            background-color: #2196f3;
+            border-radius: 50%;
+            color: white;
+        }
+    }
+
+    &:hover .icon-stack .overlay-icon {
+        background-color: #1976d2;
+    }
+
+    &.btn-primary {
+        background-color: #ff9800;
+
+        &:hover {
+            background-color: #e68900;
+        }
+    }
+}
+
+/* スコープ情報バナー */
+.scope-info-banner {
+    margin-bottom: 16px;
+
+    .info-card {
+        background-color: rgba(33, 150, 243, 0.1);
+        border-left: 4px solid #2196f3;
+
+        &.override-mode {
+            background-color: rgba(255, 152, 0, 0.1);
+            border-left-color: #ff9800;
+        }
+    }
+
+    .banner-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+
+        .banner-icon {
+            flex-shrink: 0;
+
+            mat-icon {
+                font-size: 24px;
+                width: 24px;
+                height: 24px;
+                color: #2196f3;
+
+                &.override {
+                    color: #ff9800;
+                }
+            }
+        }
+
+        .banner-text {
+            flex: 1;
+
+            strong {
+                display: block;
+                margin-bottom: 4px;
+                color: #e0e0e0;
+                font-size: 16px;
+            }
+
+            p {
+                margin: 0;
+                color: #ccc;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+        }
+
+        .banner-actions {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+    }
+}
+
+/* フォームタイトルのアイコン */
+.form-header {
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        &.override-title {
+            color: #ff9800;
+        }
+
+        &.view-title {
+            color: #2196f3;
+        }
+    }
+}
+
+/* テーブル行のスコープ別スタイル */
+.data-table tr {
+    &.own-scope {
+        border-left: 3px solid #4caf50;
+
+        &:hover {
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        &.selected {
+            background-color: rgba(76, 175, 80, 0.15);
+        }
+    }
+
+    &.other-scope {
+        border-left: 3px solid #ff9800;
+
+        &:hover {
+            background-color: rgba(255, 152, 0, 0.1);
+        }
+
+        &.selected {
+            background-color: rgba(255, 152, 0, 0.15);
+        }
+    }
+}
+
+/* 読み取り専用フィールドの見た目を調整 */
+.form-container.readonly-mode {
+
+    .form-control:disabled,
+    .form-control[readonly] {
+        background-color: #2c2c2c;
+        border-color: #555;
+        opacity: 0.8;
+        cursor: default;
+    }
+
+    .mat-mdc-form-field.mat-form-field-disabled {
+        opacity: 0.8;
+    }
+
+    select:disabled {
+        background-color: #2c2c2c;
+        color: #ccc;
+        cursor: not-allowed;
+    }
+}
+
 /* Scope context display */
 .scope-context {
     margin: 4px 0;
@@ -82,6 +278,7 @@ h5 {
     border: 1px solid #3a3a3a;
     overflow: hidden;
     overflow-y: auto;
+    max-height: 80vh;
 }
 
 /* テーブルヘッダー */
@@ -92,6 +289,25 @@ h5 {
     padding: 15px;
     background-color: #2c2c2c;
     border-bottom: 1px solid #3a3a3a;
+
+    .header-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .btn-secondary {
+            background-color: #555;
+            color: #e0e0e0;
+
+            &:hover {
+                background-color: #666;
+            }
+
+            .mat-icon {
+                margin-right: 4px;
+            }
+        }
+    }
 }
 
 /* テーブルスタイル */
@@ -116,16 +332,11 @@ h5 {
 }
 
 .data-table tr:hover {
-    background-color: #333;
     cursor: pointer;
 }
 
-.data-table tr.selected {
-    background-color: #2c3e50;
-}
-
 .actions-cell {
-    width: 160px; // 120pxから160pxに増やして3つのボタンに対応
+    width: 180px; // 3つのボタン + マージンを考慮
     text-align: right;
     white-space: nowrap;
 }
@@ -218,6 +429,14 @@ label {
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
+.form-control:disabled,
+.form-control[readonly] {
+    background-color: #2c2c2c;
+    border-color: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
 textarea.form-control {
     min-height: 100px;
     resize: vertical;
@@ -226,6 +445,16 @@ textarea.form-control {
 .code-editor {
     font-family: 'Courier New', monospace;
     min-height: 150px;
+}
+
+.readonly-field {
+    padding: 8px 12px;
+    background-color: #2c2c2c;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 14px;
+    min-height: 20px;
 }
 
 .button-group {
@@ -237,6 +466,19 @@ textarea.form-control {
     background-color: #2a2a2a;
     padding: 15px 0;
     z-index: 8;
+
+    .btn {
+        min-width: 120px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+
+        mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+    }
 }
 
 /* チェックボックスコンテナ */
@@ -259,6 +501,9 @@ textarea.form-control {
 
 .checkbox-group input[type="checkbox"] {
     margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    accent-color: #64b5f6;
 }
 
 .checkbox-group label {
@@ -286,6 +531,14 @@ textarea.form-control {
     font-size: 12px;
     margin-top: 4px;
     min-height: 16px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &::before {
+        content: "⚠";
+        font-size: 10px;
+    }
 }
 
 /* Status Icon Styling */
@@ -329,7 +582,7 @@ textarea.form-control {
     color: #e2e8f0;
 }
 
-/* Pricing Selection Styles - 新規追加 */
+/* Pricing Selection Styles */
 .pricing-selection {
     margin-bottom: 20px;
     border: 1px solid #444;
@@ -369,7 +622,7 @@ textarea.form-control {
     cursor: pointer;
 }
 
-/* Pricing Form Styles - 新規追加 */
+/* Pricing Form Styles */
 .pricing-form {
     margin-bottom: 20px;
     border: 1px solid #444;
@@ -421,89 +674,116 @@ textarea.form-control {
     background-color: #333;
 }
 
-/* 選択された行のハイライト - 新規追加 */
 .history-table tr.highlighted {
     background-color: #2c3e50;
 }
 
-/* 現在有効な価格設定のアイコン - 新規追加 */
 .status-icon.current {
     color: #4caf50;
 }
 
-/* アクションボタンのツールチップ対応 */
-.mat-icon-button {
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-
-    &:hover {
-        opacity: 1;
-    }
-}
-
-/* レスポンシブデザイン */
-@media (max-width: 992px) {
-    .layout-container {
-        flex-direction: column;
-    }
-
-    .form-container {
-        flex: none;
-        width: 100%;
-        max-height: none;
-    }
-
-    /* 新規追加: モバイル向け価格選択UI */
-    .radio-group {
-        gap: 15px;
-    }
-
-    .pricing-selection,
-    .pricing-form {
-        padding: 12px;
-    }
-
-    .actions-cell {
-        width: auto;
-    }
-}
-
-
-
-
-
-
-// ai-model-management.component.scss への追加
-
-/* 既存のスタイル... */
-
-/* テーブルヘッダーのボタン配置 */
-.table-header {
+/* Source Links */
+.source-links {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    gap: 8px;
     padding: 15px;
     background-color: #2c2c2c;
     border-bottom: 1px solid #3a3a3a;
+    font-size: 13px;
+}
 
-    .header-buttons {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+.source-links span {
+    color: #ccc;
+}
 
-        .btn-secondary {
-            background-color: #555;
-            color: #e0e0e0;
+.source-links a {
+    color: #64b5f6;
+    text-decoration: none;
+    transition: color 0.3s;
+}
 
-            &:hover {
-                background-color: #666;
-            }
+.source-links a:hover {
+    color: #42a5f5;
+    text-decoration: underline;
+}
 
-            .mat-icon {
-                margin-right: 4px;
-            }
-        }
-    }
+/* Form section styling */
+.form-section {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #333;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.form-section h4 {
+    margin: 0 0 16px 0;
+    color: #ccc;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* Button Styles */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-primary {
+    background-color: #64b5f6;
+    color: #000;
+}
+
+.btn-primary:hover {
+    background-color: #42a5f5;
+}
+
+.btn-secondary {
+    background-color: #555;
+    color: #e0e0e0;
+}
+
+.btn-secondary:hover {
+    background-color: #666;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.btn-sm mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Tag styles */
+.tag {
+    display: inline-block;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin: 1px;
 }
 
 /* タグオートコンプリートオプションのスタイル */
@@ -519,7 +799,7 @@ textarea.form-control {
         flex: 1;
         display: flex;
         flex-direction: column;
-        min-width: 0; // flexboxでのoverflow対応
+        min-width: 0;
     }
 
     .tag-name {
@@ -561,86 +841,107 @@ textarea.form-control {
     }
 }
 
-/* タグチップの改良スタイル */
-.mat-mdc-chip-row {
-    margin: 2px 4px 2px 0;
-    transition: all 0.2s ease;
+/* Material form field overrides for dark theme */
+::ng-deep .mat-mdc-form-field {
+    .mat-mdc-text-field-wrapper {
+        background-color: #333 !important;
+    }
 
-    // カスタムカラーが設定されている場合の文字色調整
-    &[style*="background-color"] {
-        .mdc-chip__primary-action {
-            color: white !important;
+    .mat-mdc-form-field-input-control {
+        color: #e0e0e0 !important;
+    }
+
+    .mat-mdc-form-field-label {
+        color: #ccc !important;
+    }
+
+    &.mat-form-field-invalid {
+        .mat-mdc-text-field-wrapper {
+            border-color: #e74c3c !important;
         }
 
-        .mat-mdc-chip-remove {
-            color: rgba(255, 255, 255, 0.7) !important;
+        .mat-mdc-form-field-error {
+            color: #e74c3c !important;
+        }
+    }
 
-            &:hover {
-                color: white !important;
-                background-color: rgba(255, 255, 255, 0.1);
-            }
+    &.mat-form-field-disabled {
+        opacity: 0.6;
+
+        .mat-mdc-text-field-wrapper {
+            background-color: #2c2c2c !important;
+            border-color: #444 !important;
+        }
+
+        .mat-mdc-form-field-label {
+            color: #666 !important;
         }
     }
 }
 
-/* Advanced タブのタグフィールド専用スタイル */
-.tab-content[class*="advanced"] {
-    .mat-mdc-form-field {
-        &:has([formControlName="tags"]) {
-            .mat-mdc-chip-grid {
-                min-height: 48px;
-                padding: 8px;
-                border-radius: 4px;
-                background-color: #333;
-                border: 1px solid #444;
+::ng-deep .mat-mdc-option {
+    background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
 
-                .mat-mdc-chip-row {
-                    font-size: 13px;
+    &:hover {
+        background-color: #333 !important;
+    }
 
-                    .mdc-chip__primary-action {
-                        padding: 0 8px;
-                        line-height: 24px;
-                    }
-                }
-            }
-
-            input[matInput] {
-                background: transparent;
-                border: none;
-                outline: none;
-                color: #e0e0e0;
-                padding: 4px 0;
-
-                &::placeholder {
-                    color: #666;
-                    font-style: italic;
-                }
-            }
-        }
+    &.mat-mdc-option-selected {
+        background-color: #2c3e50 !important;
     }
 }
 
-/* オートコンプリートパネルのスタイル調整 */
-.mat-mdc-autocomplete-panel {
-    background-color: #2a2a2a;
-    border: 1px solid #444;
+::ng-deep .mat-mdc-autocomplete-panel {
+    background-color: #2a2a2a !important;
+    border: 1px solid #3a3a3a !important;
+}
 
-    .mat-mdc-option {
-        color: #e0e0e0;
+/* No data state */
+.no-data {
+    text-align: center;
+    padding: 40px !important;
+    color: #888;
 
-        &:hover,
-        &.mat-mdc-option-active {
-            background-color: #333;
-        }
+    mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
 
-        &.mat-mdc-option-selected {
-            background-color: #2c3e50;
-        }
+    p {
+        margin: 8px 0;
+        font-size: 14px;
     }
 }
 
-/* レスポンシブ対応の追加 */
+/* レスポンシブデザイン */
 @media (max-width: 992px) {
+    .layout-container {
+        flex-direction: column;
+    }
+
+    .form-container {
+        flex: none;
+        width: 100%;
+        max-height: none;
+    }
+
+    .scope-info-banner {
+        .banner-content {
+            flex-direction: column;
+            gap: 12px;
+
+            .banner-actions {
+                align-self: stretch;
+                flex-direction: row;
+                justify-content: flex-end;
+            }
+        }
+    }
+
     .table-header {
         flex-direction: column;
         gap: 12px;
@@ -648,6 +949,27 @@ textarea.form-control {
 
         .header-buttons {
             justify-content: center;
+        }
+    }
+
+    .actions-cell {
+        width: auto;
+        min-width: 120px;
+    }
+
+    .override-button .icon-stack {
+        .base-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+        }
+
+        .overlay-icon {
+            font-size: 10px;
+            width: 10px;
+            height: 10px;
+            top: -3px;
+            right: -3px;
         }
     }
 
@@ -669,6 +991,32 @@ textarea.form-control {
 }
 
 @media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+
+    .data-table {
+        font-size: 12px;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 8px 10px;
+    }
+
+    .form-container {
+        max-height: 60vh;
+    }
+
+    .button-group {
+        flex-direction: column;
+
+        .btn {
+            min-width: auto;
+            width: 100%;
+        }
+    }
+
     .header-buttons {
         flex-direction: column;
         gap: 8px;

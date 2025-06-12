@@ -898,15 +898,15 @@ export class ChatComponent implements OnInit {
     }
     if (model.startsWith('gemini-1.5')) {
       const charCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalBillableCharacters || 0;
-      const isLarge = tokenObject.totalTokens > 128000 ? 2 : 1;
-      return charCount / 1000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit * isLarge;
+      const isLarge = tokenObject.totalTokens > 128_000 ? 2 : 1;
+      return charCount / 1_000_000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit * isLarge;
     } else if (model.startsWith('gemini-2')) {
       const tokenCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalTokens;
-      const isLarge = tokenObject.totalTokens > 200000 ? 2 : 1;
-      return tokenCount / 1000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit * isLarge;
+      const isLarge = tokenObject.totalTokens > 200_000 ? 2 : 1;
+      return tokenCount / 1_000_000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit * isLarge;
     } else {
       const tokenCount = (tokenObject.text + tokenObject.image + tokenObject.audio + tokenObject.video) || tokenObject.totalTokens;
-      return tokenCount / 1000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit;
+      return tokenCount / 1_000_000 * this.aiModelManagerService.modelMap[model].pricingHistory[0].inputPricePerUnit;
     }
   }
 
@@ -1184,8 +1184,9 @@ export class ChatComponent implements OnInit {
       const args = thread.inDto.args;
 
       // バリデーションエラー
-      if (!args.model) {
-        throw new Error('Model is not set');
+      if (!args.model || !model) {
+        this.snackBar.open(`${modelName}は利用できません。他のモデルに変更してください。`, 'close', { duration: 3000 });
+        throw new Error('Model is not available.');
       } else if (this.tokenObjList[threadIndex] && this.tokenObjList[threadIndex].totalTokens > model.maxContextTokens) {
         this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxContextTokens}以下にしてください。`, 'close', { duration: 3000 });
         throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxContextTokens}以下にしてください。`);
@@ -1339,12 +1340,21 @@ export class ChatComponent implements OnInit {
                         // タブ表示じゃない場合はスレッド分岐してないので、anchorIndexはそのままメッセージグループのインデックスを使う。
                         anchorIndex = this.messageGroupIdListMas[this.selectedThreadGroup.threadList[threadIndex].id].indexOf(message.messageGroupId);
                       }
-
                       // 履歴を閉じていくバージョン
-                      if (false && this.messageService.messageGroupMas[messageGroup.previousMessageGroupId || '']) {
-                        this.messageService.messageGroupMas[messageGroup.previousMessageGroupId || ''].isExpanded = false; // メッセージグループを閉じる
-                        anchorIndex--; // さらに1つ前のメッセージを取りたいので-1する。
-                      }
+                      if (this.userService.historyCloseMode > 0) {
+                        let closePreviousMessageGroup: MessageGroupForView = messageGroup;
+                        for (let i = 0; i < this.userService.historyCloseMode; i++) {
+                          closePreviousMessageGroup = this.messageService.messageGroupMas[closePreviousMessageGroup.previousMessageGroupId || ''];
+                          if (closePreviousMessageGroup) {
+                            closePreviousMessageGroup.isExpanded = false; // メッセージグループを閉じる
+                            if (i === 0) {
+                              anchorIndex--; // さらに1つ前のメッセージを取りたいので-1する。
+                            } else { }
+                          } else {
+                            break
+                          }
+                        }
+                      } else { }
 
                       // console.log(`threadIndex=${threadIndex} containerIndex=${containerIndex} anchorIndex=${anchorIndex}`);
                       const anchorElem = this.anchor().at(anchorIndex);

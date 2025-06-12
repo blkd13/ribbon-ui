@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Chart, registerables } from 'chart.js';
 
-import { Cost, DepartmentForView, DepartmentMember, DepartmentService } from '../../../services/department.service';
+import { Cost, DepartmentService, DivisionEntity, DivisionMemberCost } from '../../../services/department.service';
 import { UserStatus } from '../../../models/models';
 import { DialogComponent, DialogData } from '../../../parts/dialog/dialog.component';
 import { PredictHistoryComponent } from '../../../parts/predict-history/predict-history.component';
@@ -44,10 +44,10 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
   selectYyyyMm: string = 'ALL';
   yyyyMmList: string[] = [];
 
-  departmentList: {
-    department: DepartmentForView,
+  divisionMemberList: {
+    division: DivisionEntity,
     cost: { [key: string]: Cost },
-    members: DepartmentMember[]
+    members: DivisionMemberCost[]
   }[] = [];
 
   private deptChart!: Chart;
@@ -87,10 +87,10 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
   }
 
   private loadDepartmentData(): void {
-    this.departmentService.getDepartment().subscribe({
+    this.departmentService.getDivisionStats().subscribe({
       next: response => {
-        this.departmentList = response.departmentList;
-        const set = this.departmentList.reduce((bef, curr) => {
+        this.divisionMemberList = response.divisionMemberList;
+        const set = this.divisionMemberList.reduce((bef, curr) => {
           curr.members.forEach(member => {
             if (member.cost) {
               Object.keys(member.cost).forEach(key => bef.add(key));
@@ -149,9 +149,9 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
   private updateDepartmentCostChart(): void {
     const labels: string[] = [];
     const data: number[] = [];
-    this.departmentList.forEach(dept => {
+    this.divisionMemberList.forEach(dept => {
       const c = dept.cost[this.selectYyyyMm];
-      if (c) { labels.push(dept.department.name); data.push(c.totalCost * 150); }
+      if (c) { labels.push(dept.division.name); data.push(c.totalCost * 150); }
     });
     this.deptChart.data.labels = labels;
     this.deptChart.data.datasets![0].data = data;
@@ -161,7 +161,7 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
   private updatePeriodTrendChart(): void {
     const labels = this.yyyyMmList.map(y => y.replace('-', '/'));
     const data = this.yyyyMmList.map(k =>
-      this.departmentList.reduce((sum, d) => sum + (d.cost[k]?.totalCost || 0) * 150, 0)
+      this.divisionMemberList.reduce((sum, d) => sum + (d.cost[k]?.totalCost || 0) * 150, 0)
     );
     this.trendChart.data.labels = labels;
     this.trendChart.data.datasets![0].data = data;
@@ -172,8 +172,8 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
   private updateMemberCostChart(): void {
     // 選択中の期間でメンバー別コストを集計
     const costMap = new Map<string, number>();
-    this.departmentList.forEach(dept => {
-      dept.members.forEach(m => {
+    this.divisionMemberList.forEach(division => {
+      division.members.forEach(m => {
         let total = 0;
         if (this.selectYyyyMm === 'ALL') {
           // 全期間
@@ -184,7 +184,7 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
           total = c ? c.totalCost * 150 : 0;
         }
         if (total > 0) {
-          const name = m.user?.name || 'Unknown';
+          const name = m.name || 'Unknown';
           costMap.set(name, (costMap.get(name) || 0) + total);
         }
       });
@@ -226,56 +226,56 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
 
   getTotalCost(): number {
     if (this.selectYyyyMm === 'ALL') return this.calculateTotalCostAllPeriods();
-    return this.departmentList.reduce((total, dept) => {
-      const c = dept.cost[this.selectYyyyMm];
+    return this.divisionMemberList.reduce((total, division) => {
+      const c = division.cost[this.selectYyyyMm];
       return total + (c ? c.totalCost * 150 : 0);
     }, 0);
   }
 
   getTotalTokens(): number {
     if (this.selectYyyyMm === 'ALL') return this.calculateTotalTokensAllPeriods();
-    return this.departmentList.reduce((total, dept) => {
-      const c = dept.cost[this.selectYyyyMm];
+    return this.divisionMemberList.reduce((total, division) => {
+      const c = division.cost[this.selectYyyyMm];
       return total + (c ? c.totalReqToken + c.totalResToken : 0);
     }, 0);
   }
 
   getForeignTokens(): number {
     if (this.selectYyyyMm === 'ALL') return this.calculateForeignTokensAllPeriods();
-    return this.departmentList.reduce((total, dept) => {
-      const c = dept.cost[this.selectYyyyMm];
+    return this.divisionMemberList.reduce((total, division) => {
+      const c = division.cost[this.selectYyyyMm];
       return total + (c ? c.foreignModelReqToken + c.foreignModelResToken : 0);
     }, 0);
   }
 
   getActiveDepartmentCount(): number {
-    return this.departmentList.filter(dept => dept.cost[this.selectYyyyMm]).length;
+    return this.divisionMemberList.filter(division => division.cost[this.selectYyyyMm]).length;
   }
 
   hasDataForPeriod(): boolean {
-    return this.departmentList.some(dept => dept.cost[this.selectYyyyMm]);
+    return this.divisionMemberList.some(division => division.cost[this.selectYyyyMm]);
   }
 
   private calculateTotalCostAllPeriods(): number {
-    return this.departmentList.reduce((total, dept) => {
-      return total + Object.values(dept.cost).reduce((sum, cost) => sum + cost.totalCost * 150, 0);
+    return this.divisionMemberList.reduce((total, division) => {
+      return total + Object.values(division.cost).reduce((sum, cost) => sum + cost.totalCost * 150, 0);
     }, 0);
   }
 
   private calculateTotalTokensAllPeriods(): number {
-    return this.departmentList.reduce((total, dept) => {
-      return total + Object.values(dept.cost).reduce((sum, cost) => sum + cost.totalReqToken + cost.totalResToken, 0);
+    return this.divisionMemberList.reduce((total, division) => {
+      return total + Object.values(division.cost).reduce((sum, cost) => sum + cost.totalReqToken + cost.totalResToken, 0);
     }, 0);
   }
 
   private calculateForeignTokensAllPeriods(): number {
-    return this.departmentList.reduce((total, dept) => {
-      return total + Object.values(dept.cost).reduce((sum, cost) => sum + cost.foreignModelReqToken + cost.foreignModelResToken, 0);
+    return this.divisionMemberList.reduce((total, division) => {
+      return total + Object.values(division.cost).reduce((sum, cost) => sum + cost.foreignModelReqToken + cost.foreignModelResToken, 0);
     }, 0);
   }
 
-  detail(member: DepartmentMember): void {
-    if (member.user) {
+  detail(member: DivisionMemberCost): void {
+    if (member) {
       this.dialog.open(PredictHistoryComponent, { data: { member } });
     }
   }
@@ -284,30 +284,30 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
     $event.stopImmediatePropagation();
   }
 
-  updateUserStatus(member: DepartmentMember): void {
-    if (!member.user) return;
+  updateUserStatus(member: DivisionMemberCost): void {
+    if (!member) return;
     const transMap: Record<string, string> = { Active: '有効', Suspended: '停止' };
     this.matDialog.open(DialogComponent, {
       data: {
         title: '確認',
-        message: `${member.user.name}のステータスを「${transMap[member.user.status]}」に変更しますか?`,
+        message: `${member.name}のステータスを「${transMap[member.status]}」に変更しますか?`,
         options: ['キャンセル', 'OK'],
       } as DialogData
     }).afterClosed().subscribe(result => {
       if (result === 1) {
-        this.departmentService.departmentMemberManagement(
-          member.departmentId,
-          { userName: member.user!.name, status: member.user!.status }
+        this.departmentService.divisionMemberManagement(
+          member.divisionId,
+          { userId: member.id, role: member.role, status: member.status }
         ).subscribe({
           next: () => this.snackBar.open('ステータスを変更しました', 'OK', { duration: 3000 }),
           error: error => {
             console.error('Status update error:', error);
             this.snackBar.open('ステータスの変更に失敗しました', 'OK', { duration: 3000 });
-            member.user!.status = member.user!.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active;
+            member.status = member.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active;
           }
         });
       } else {
-        member.user!.status = member.user!.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active;
+        member.status = member.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active;
       }
     });
   }

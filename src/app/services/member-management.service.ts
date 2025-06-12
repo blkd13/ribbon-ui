@@ -142,7 +142,7 @@ export class MemberManagementService {
      */
     getAvailableRoles(): UserRoleType[] {
         return [
-            // UserRoleType.Maintainer,
+            // UserRoleType.SuperAdmin,
             UserRoleType.Admin,
             UserRoleType.User,
             // UserRoleType.Owner,

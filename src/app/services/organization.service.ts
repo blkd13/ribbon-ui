@@ -19,7 +19,7 @@ export class OrganizationService {
       params = params.set('isActive', isActive.toString());
     }
 
-    return this.http.get<OrganizationEntity[]>(`/maintainer/organizations`, { params }).pipe(
+    return this.http.get<OrganizationEntity[]>(`/admin/organizations`, { params }).pipe(
       catchError(this.handleError)
     );
   }
@@ -48,7 +48,7 @@ export class OrganizationService {
    * @param organization 作成する組織情報
    */
   createOrganization(organization: Partial<OrganizationEntity>): Observable<OrganizationEntity> {
-    return this.http.post<OrganizationEntity>(`/maintainer/organization`, organization).pipe(
+    return this.http.post<OrganizationEntity>(`/admin/organization`, organization).pipe(
       catchError(this.handleError)
     );
   }
@@ -59,7 +59,7 @@ export class OrganizationService {
    * @param organization 更新する組織情報
    */
   updateOrganization(id: string, organization: Partial<OrganizationEntity>): Observable<OrganizationEntity> {
-    return this.http.put<OrganizationEntity>(`/maintainer/organization/${id}`, organization).pipe(
+    return this.http.put<OrganizationEntity>(`/admin/organization/${id}`, organization).pipe(
       catchError(this.handleError)
     );
   }
@@ -70,7 +70,7 @@ export class OrganizationService {
    * @param isActive 設定するアクティブ状態
    */
   toggleOrganizationActive(id: string, isActive: boolean): Observable<OrganizationEntity> {
-    return this.http.patch<OrganizationEntity>(`/maintainer/organization/${id}/active`, { isActive }).pipe(
+    return this.http.patch<OrganizationEntity>(`/admin/organization/${id}/active`, { isActive }).pipe(
       catchError(this.handleError)
     );
   }
@@ -80,7 +80,7 @@ export class OrganizationService {
    * @param id 組織ID
    */
   deleteOrganization(id: string): Observable<void> {
-    return this.http.delete<void>(`/maintainer/organization/${id}`).pipe(
+    return this.http.delete<void>(`/admin/organization/${id}`).pipe(
       catchError(this.handleError)
     );
   }
@@ -89,7 +89,7 @@ export class OrganizationService {
    * 組織の統計情報を取得する（管理者向け）
    */
   getOrganizationStats(): Observable<{ total: number, active: number, inactive: number }> {
-    return this.http.get<{ total: number, active: number, inactive: number }>(`/maintainer/organization/stats`).pipe(
+    return this.http.get<{ total: number, active: number, inactive: number }>(`/admin/organization/stats`).pipe(
       catchError(this.handleError)
     );
   }
@@ -120,7 +120,7 @@ export class OrganizationService {
    * @param organizationId 切り替え先の組織ID
    */
   switchOrganization(organizationId: string): Observable<{ success: boolean, message?: string }> {
-    return this.http.post<{ success: boolean, message?: string }>(`/maintainer/organization/switch`, { organizationId }).pipe(
+    return this.http.post<{ success: boolean, message?: string }>(`/admin/organization/switch`, { organizationId }).pipe(
       catchError(this.handleError)
     );
   }

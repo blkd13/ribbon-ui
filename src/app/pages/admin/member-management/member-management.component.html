@@ -29,9 +29,47 @@
                 </div>
             </div>
 
-            <!-- 既存のSearch and Filter Controls はそのまま -->
+            <!-- フィルターセクション（大した数じゃないので要らない）-->
             <div class="filters-section">
-                <!-- ... 既存のフィルター部分 ... -->
+                <div class="filters-form" [formGroup]="filterForm">
+                    <!-- Search -->
+                    <mat-form-field appearance="outline" class="search-field">
+                        <mat-label>Search</mat-label>
+                        <input matInput [formControl]="searchControl" placeholder="Search by name or email">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </mat-form-field>
+
+                    <!-- Division Filter -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-label>Division</mat-label>
+                        <mat-select formControlName="divisionId">
+                            <mat-option value="">All</mat-option>
+                            @for (division of divisions; track division.id) {
+                            <mat-option [value]="division.id">{{ division.name }}</mat-option>
+                            }
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Role Filter -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-label>Role</mat-label>
+                        <mat-select formControlName="role">
+                            <mat-option value="">All</mat-option>
+                            @for (role of availableRoles; track role) {
+                            <mat-option [value]="role">{{ role }}</mat-option>
+                            }
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Active Filter -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-label>Status</mat-label>
+                        <mat-select formControlName="isActive">
+                            <mat-option [value]="true">Active</mat-option>
+                            <mat-option [value]="false">Inactive</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
             </div>
 
             <!-- Bulk Actions - 権限チェック追加 -->
@@ -113,7 +151,28 @@
                         </td>
                     </tr>
                     } @empty {
-                    <!-- 既存の空状態表示 -->
+                    <tr>
+                        <td colspan="7" class="no-data">
+                            @if(isLoading) {
+                            <div class="loading-container">
+                                <mat-icon class="loading-icon">hourglass_empty</mat-icon>
+                                <span>Loading...</span>
+                            </div>
+                            } @else {
+                            <div class="empty-state">
+                                <mat-icon>people_outline</mat-icon>
+                                <p>No members found</p>
+                                @if (!selectedScope) {
+                                <p>Please select a scope</p>
+                                } @else if (searchControl.value) {
+                                <p>Try adjusting your search criteria</p>
+                                } @else {
+                                <p>Add members to get started</p>
+                                }
+                            </div>
+                            }
+                        </td>
+                    </tr>
                     }
                 </tbody>
             </table>
@@ -131,7 +190,91 @@
 
             <!-- Division Form は既存のまま -->
             @if(formType === 'division') {
-            <!-- ... 既存のDivision Form ... -->
+            <form [formGroup]="divisionForm" (ngSubmit)="submitForm()">
+                <div class="form-section">
+                    <h4>Basic Information</h4>
+
+                    <!-- Division Name -->
+                    <div class="form-group">
+                        <label for="name">Division Name<span class="required">*</span></label>
+                        <input id="name" type="text" formControlName="name" class="form-control"
+                            [ngClass]="{'invalid': hasFormError('name')}">
+                        @if(hasFormError('name')){
+                        <div class="error-message">{{ getFormErrorMessage('name') }}</div>
+                        }
+                    </div>
+
+                    <!-- Division Label -->
+                    <div class="form-group">
+                        <label for="label">Display Label<span class="required">*</span></label>
+                        <input id="label" type="text" formControlName="label" class="form-control"
+                            [ngClass]="{'invalid': hasFormError('label')}">
+                        @if(hasFormError('label')){
+                        <div class="error-message">{{ getFormErrorMessage('label') }}</div>
+                        }
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" formControlName="description" class="form-control"
+                            rows="3"></textarea>
+                    </div>
+
+                    <!-- Is Active -->
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" formControlName="isActive">
+                            Active
+                        </label>
+                    </div>
+                </div>
+
+                @if(isEditMode && selectedDivision) {
+                <!-- Division Statistics -->
+                <div class="form-section">
+                    <h4>Statistics & Settings</h4>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Members</span>
+                            <span class="stat-value">{{ divisionStats?.totalMembers || 0 }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Active Members</span>
+                            <span class="stat-value">{{ divisionStats?.activeMembers || 0 }}</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Created</label>
+                        <div class="readonly-field">{{ selectedDivision.createdAt | date:'yyyy/MM/dd HH:mm' }}</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Last Updated</label>
+                        <div class="readonly-field">{{ selectedDivision.updatedAt | date:'yyyy/MM/dd HH:mm' }}</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Division ID</label>
+                        <div class="readonly-field">{{ selectedDivision.id }}</div>
+                    </div>
+                </div>
+                }
+
+                <!-- Division Form Actions -->
+                <div class="form-actions">
+                    <button mat-raised-button type="button" color="secondary" (click)="closeForm()">
+                        Cancel
+                    </button>
+                    <button mat-raised-button type="submit" color="primary" [disabled]="divisionForm.invalid || isLoading || 
+                                (isEditMode && !canUpdateDivision()) ||
+                                (!isEditMode && !canCreateDivision())">
+                        {{ isEditMode ? 'Update' : 'Create' }}
+                    </button>
+                </div>
+            </form>
             }
 
             <!-- Member Add Form - ロール選択肢の動的変更 -->
@@ -140,9 +283,28 @@
                 <div class="form-section">
                     <h4>User Selection</h4>
 
-                    <!-- User Search/Select は既存のまま -->
+                    <!-- User Search/Select -->
                     <div class="form-group">
-                        <!-- ... 既存のユーザー選択フィールド ... -->
+                        <label for="selectedUser">User<span class="required">*</span></label>
+                        <mat-form-field appearance="outline" class="full-width">
+                            <mat-label>Search User</mat-label>
+                            <input type="text" matInput formControlName="selectedUser"
+                                placeholder="Search by name or email..." [matAutocomplete]="userAuto"
+                                [ngClass]="{'invalid': hasFormError('selectedUser')}">
+                            <mat-autocomplete #userAuto="matAutocomplete" [displayWith]="displayUser">
+                                @for(user of filteredUsers | async; track user.id) {
+                                <mat-option [value]="user" (onSelectionChange)="onUserSelected(user)">
+                                    <div class="user-option">
+                                        <div class="user-name">{{ user.name }}</div>
+                                        <div class="user-email">{{ user.email }}</div>
+                                    </div>
+                                </mat-option>
+                                }
+                            </mat-autocomplete>
+                        </mat-form-field>
+                        @if(hasFormError('selectedUser')){
+                        <div class="error-message">{{ getFormErrorMessage('selectedUser') }}</div>
+                        }
                     </div>
 
                     <!-- Role Selection - 動的に制限 -->

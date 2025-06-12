@@ -87,7 +87,7 @@ export class AdminComponent implements OnInit, OnDestroy {
         );
         // ユーザーの管理者ロールからスコープ一覧を作成（同じscopeの重複は除去）
         this.availableScopes = this.g.info.user.roleList
-          .filter(role => [UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role))
+          .filter(role => [UserRoleType.Admin, UserRoleType.SuperAdmin].includes(role.role))
           .map(role => role.scopeInfo)
           .filter((scope, index, self) =>
             index === self.findIndex(s => s.scopeId === scope.scopeId && s.scopeType === scope.scopeType)

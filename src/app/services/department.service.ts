@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { inject, Injectable } from '@angular/core';
 import { Observable, of, tap } from 'rxjs';
 import { User, UserRoleType, UserStatus } from '../models/models';
+import { BaseEntity } from '../models/project-models';
 
 @Injectable({ providedIn: 'root' })
 export class DepartmentService {
@@ -17,12 +18,12 @@ export class DepartmentService {
   //   return this.http.get<{ departmentMemberList: DepartmentMember[] }>('/user/department-member');
   // }
 
-  getDepartment(): Observable<{ departmentList: { department: DepartmentForView, cost: { [key: string]: Cost }, members: DepartmentMember[] }[] }> {
-    return this.http.get<{ departmentList: { department: DepartmentForView, cost: { [key: string]: Cost }, members: DepartmentMember[] }[] }>('/admin/department');
+  getDivisionStats(): Observable<{ divisionMemberList: { division: DivisionEntity, cost: { [key: string]: Cost }, members: DivisionMemberCost[] }[] }> {
+    return this.http.get<{ divisionMemberList: { division: DivisionEntity, cost: { [key: string]: Cost }, members: DivisionMemberCost[] }[] }>('/admin/division-stats');
   }
 
-  departmentMemberManagement(departmentId: string, inDto: { userName: string, role?: UserRoleType, status?: UserStatus }): Observable<{ success: boolean }> {
-    return this.http.patch<{ success: boolean }>(`/admin/department/${departmentId}`, inDto);
+  divisionMemberManagement(divisionId: string, inDto: { userId: string, role?: UserRoleType, status?: UserStatus }): Observable<{ success: boolean }> {
+    return this.http.patch<{ success: boolean }>(`/admin/division/${divisionId}/member/${inDto.userId}`, inDto);
   }
 
   predictHistory(userId: string, offset: number = 0, limit: number = 100): Observable<{ predictHistory: PredictTransaction[], totalCount: number }> {
@@ -52,12 +53,26 @@ export class DepartmentService {
   }
 }
 
-export interface DepartmentMember {
-  departmentId: string;
-  departmentRole: string;
-  userId: string;
+export interface DivisionEntity extends BaseEntity {
   name: string;
+  label: string;
+  description?: string;
+  isActive: boolean; // 有効/無効フラグ
 }
+
+export interface DivisionMemberCost extends User {
+  divisionId: string; // 所属する部門のID
+  role: UserRoleType; // ユーザーロール
+  status: UserStatus; // ユーザーステータス
+  cost: { [key: string]: Cost }; // モデルごとのコスト
+}
+
+// export interface DepartmentMember {
+//   departmentId: string;
+//   departmentRole: string;
+//   userId: string;
+//   name: string;
+// }
 
 export enum DepartmentRoleType {
   Maintainer = 'Maintainer', // メンテナ
@@ -74,23 +89,23 @@ export interface Department {
   label: string;
 }
 
-export interface DepartmentForView {
-  id: string;
-  name: string;
-  label: string;
-  members: DepartmentMember[];
-}
+// export interface DepartmentForView {
+//   id: string;
+//   name: string;
+//   label: string;
+//   members: DepartmentMember[];
+// }
 
-export interface DepartmentMember {
-  id: string;
-  departmentId: string;
-  userId: string; // 登録する経路が無いから最初は空である。。。
-  name: string;
-  label: string;
-  departementRole: DepartmentRoleType;
-  user?: User;
-  cost?: { [key: string]: Cost };
-}
+// export interface DepartmentMember {
+//   id: string;
+//   departmentId: string;
+//   userId: string; // 登録する経路が無いから最初は空である。。。
+//   name: string;
+//   label: string;
+//   departementRole: DepartmentRoleType;
+//   user?: User;
+//   cost?: { [key: string]: Cost };
+// }
 
 export interface Cost {
   totalCost: number;

@@ -1,3 +1,4 @@
+<!-- Enhanced AI Model Management Template with Scope Management -->
 <div class="container">
     <h2>AI Models</h2>
     <div class="layout-container">
@@ -17,10 +18,15 @@
                         <mat-icon>local_offer</mat-icon>
                         Tags
                     </button>
-                    <button mat-raised-button type="button" class="btn btn-sm btn-primary"
-                        (click)="createNew()">新規登録</button>
+                    <button mat-raised-button type="button" class="btn btn-sm btn-primary" (click)="createNew()"
+                        [disabled]="!canCreateModel()"
+                        [matTooltip]="!canCreateModel() ? 'You do not have permission to create models in the current scope' : ''">
+                        <mat-icon>add</mat-icon>
+                        新規登録
+                    </button>
                 </div>
             </div>
+
             <div class="source-links flex gap-2 p-4">
                 <span>Data Source:</span>
                 <a href="https://platform.openai.com/docs/models" target="_blank"
@@ -32,15 +38,14 @@
                 <a href="https://ai.google.dev/gemini-api/docs/models#gemini-2.0-flash" target="_blank"
                     class="text-blue-500 hover:underline">Gemini</a>
             </div>
+
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>Provider</th>
-                        <!-- <th>Model ID</th> -->
                         <th>Name</th>
                         <th>Scope</th>
                         <th>Context</th>
-                        <!-- <th>Status</th> -->
                         <th>Price<span class="text-xs text-[#888] align-right">(in/out)</span></th>
                         <th>Knowledge</th>
                         <th>Modalities</th>
@@ -51,12 +56,13 @@
                 </thead>
                 <tbody>
                     @for (model of models; track $index) {
-                    <tr [class.selected]="form.value.id === model.id" (click)="selectModel(model)">
+                    <tr [class.selected]="form.value.id === model.id"
+                        [class.own-scope]="isModelsOwnScope(model)"
+                        [class.other-scope]="!isModelsOwnScope(model)"
+                        (click)="selectModel(model)">
                         <td>
                             {{ model.providerNameList.join(', ') }}
-                            <!-- <div class="text-xs text-[#888]">{{ model.providerType }}</div> -->
                         </td>
-                        <!-- <td>{{ model.providerModelId }}</td> -->
                         <td>
                             {{ model.name }}
                             <div class="text-xs text-[#888] align-right">{{ model.providerModelId }}</div>
@@ -69,7 +75,6 @@
                             {{ model.maxContextTokens | number }}
                             <div class="text-xs text-[#888] align-right">{{ model.maxOutputTokens | number }}</div>
                         </td>
-                        <!-- <td>{{ model.status }}</td> -->
                         <td class="text-right">
                             @if(model.pricingHistory && model.pricingHistory.length > 0){
                             <div>
@@ -93,15 +98,6 @@
                                 }
                             </div>
                         </td>
-                        <style>
-                            .tag {
-                                display: inline-block;
-                                padding: 2px 4px;
-                                /* background-color: #e0e0e0; */
-                                border-radius: 4px;
-                                font-size: 12px;
-                            }
-                        </style>
                         <td>
                             @if(model.modalities && model.modalities.length > 0){
                             @for(modality of model.modalities;track $index){
@@ -128,19 +124,70 @@
                             <mat-icon class="status-icon">{{ model.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
                         </td>
                         <td class="actions-cell">
-                            <button mat-icon-button class="mr-5" (click)="selectModel(model); $event.stopPropagation();"
-                                [matTooltip]="canUserEditModel(model) ? 'Edit' : 'View'">
-                                <mat-icon>{{ canUserEditModel(model) ? 'edit' : 'visibility' }}</mat-icon>
-                            </button>
-                            <button mat-icon-button class="mr-5" (click)="duplicateModel(model, $event);"
-                                matTooltip="Duplicate">
-                                <mat-icon>content_copy</mat-icon>
-                            </button>
+                            @if (isModelsOwnScope(model)) {
+                            <!-- 自分のスコープの場合：通常の編集・複製・削除 -->
+                            @if (shouldShowEditButton(model)) {
                             <button mat-icon-button class="mr-5"
-                                [ngStyle]="{'visibility': canUserEditModel(model) ? 'visible' : 'hidden'}"
-                                (click)="deleteModel(model.id); $event.stopPropagation();" matTooltip="Delete">
+                                (click)="editModel(model); $event.stopPropagation();"
+                                matTooltip="Edit this model">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+                            }
+
+                            @if (shouldShowDuplicateButton(model)) {
+                            <button mat-icon-button class="mr-5" (click)="duplicateModel(model, $event);"
+                                matTooltip="Duplicate this model">
+                                <mat-icon>file_copy</mat-icon>
+                            </button>
+                            }
+
+                            @if (shouldShowDeleteButton(model)) {
+                            <button mat-icon-button class="mr-5"
+                                (click)="deleteModel(model.id); $event.stopPropagation();"
+                                matTooltip="Delete this model">
                                 <mat-icon>delete</mat-icon>
                             </button>
+                            } @else {
+                            <!-- スペース確保 -->
+                            <button mat-icon-button class="mr-5" style="visibility: hidden;">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                            }
+                            } @else {
+                            <!-- 他のスコープの場合：閲覧とオーバーライド -->
+                            <button mat-icon-button class="mr-5"
+                                (click)="viewModel(model); $event.stopPropagation();"
+                                matTooltip="View model details">
+                                <mat-icon>visibility</mat-icon>
+                            </button>
+
+                            @if (shouldShowOverrideButton(model)) {
+                            <button mat-icon-button class="mr-5 override-button"
+                                (click)="startOverride(model, $event);" matTooltip="Create override in your scope">
+                                <div class="icon-stack">
+                                    <mat-icon class="base-icon">content_copy</mat-icon>
+                                    <mat-icon class="overlay-icon">add_circle</mat-icon>
+                                </div>
+                            </button>
+                            } @else {
+                            <button mat-icon-button class="mr-5" disabled
+                                matTooltip="No permission to create overrides">
+                                <mat-icon>block</mat-icon>
+                            </button>
+                            }
+
+                            <!-- 削除は表示しない（スペース確保のため透明） -->
+                            <button mat-icon-button class="mr-5" style="visibility: hidden;">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                            }
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="10" class="no-data">
+                            <mat-icon>info</mat-icon>
+                            <p>No models found</p>
                         </td>
                     </tr>
                     }
@@ -150,9 +197,54 @@
 
         <!-- 右側：編集フォーム -->
         @if(isFormVisible){
-        <div class="form-container">
+        <div class="form-container" [class.readonly-mode]="isViewOnlyMode">
+
+            <!-- スコープ情報バナー -->
+            @if (selectedModel && !isModelsOwnScope(selectedModel)) {
+            <div class="scope-info-banner">
+                <mat-card class="info-card" [class.override-mode]="isOverrideMode">
+                    <mat-card-content>
+                        <div class="banner-content">
+                            <div class="banner-icon">
+                                <mat-icon [class.override]="isOverrideMode">
+                                    {{ isOverrideMode ? 'content_copy' : 'info_outline' }}
+                                </mat-icon>
+                            </div>
+                            <div class="banner-text">
+                                @if (isOverrideMode) {
+                                <strong>Creating Override</strong>
+                                <p>You are creating an override of "{{ selectedModel.name }}"
+                                    from {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}:{{
+                                    getScopeLabel(selectedModel.scopeInfo) }}
+                                    in your current scope {{ getScopeTypeLabel(selectedScope!.scopeType) }}:{{
+                                    getScopeLabel(selectedScope!) }}.</p>
+                                } @else {
+                                <strong>Viewing {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}
+                                    Model</strong>
+                                <p>This model belongs to {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType)
+                                    }}:{{ getScopeLabel(selectedModel.scopeInfo) }}.
+                                    You can view its configuration below.</p>
+                                }
+                            </div>
+                            @if (!isOverrideMode && canCreateModel()) {
+                            <div class="banner-actions">
+                                <button mat-raised-button color="accent" (click)="switchToOverrideMode()">
+                                    <mat-icon>content_copy</mat-icon>
+                                    Create Override
+                                </button>
+                            </div>
+                            }
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            }
+
+            <!-- フォームヘッダー -->
             <div class="form-header">
-                <h3>{{ getFormTitle() }}</h3>
+                <h3 [class.override-title]="isOverrideMode" [class.view-title]="isViewOnlyMode">
+                    {{ getFormTitle() }}
+                </h3>
                 <button mat-icon-button type="button" (click)="closeForm()">
                     <mat-icon>close</mat-icon>
                 </button>
@@ -174,7 +266,7 @@
                 <div class="tab-content" [class.active]="activeTab === 'basic'">
                     <!-- Provider (Multiple Selection) -->
                     <div class="form-group">
-                        <label for="roles">Roles<span class="required">*</span></label>
+                        <label for="roles">Providers<span class="required">*</span></label>
                         <mat-form-field appearance="outline" class="w-full">
                             <mat-label>Select Providers</mat-label>
                             <mat-select formControlName="providerNameList" multiple
@@ -212,12 +304,12 @@
                     <!-- Aliases -->
                     <mat-form-field class="form-group w-full">
                         <mat-label>Aliases</mat-label>
-                        <mat-chip-grid #aliasChipGrid aria-label="Enter reactive form aliases" class="w-full"
+                        <mat-chip-grid #aliasChipGrid aria-label="Enter aliases" class="w-full"
                             formControlName="aliases">
                             @for (alias of form.get('aliases')?.value; track alias) {
                             <mat-chip-row (removed)="removeReactiveKeyword('aliases',alias)">
                                 {{alias}}
-                                <button matChipRemove [attr.aria-label]="'remove reactive form' + alias">
+                                <button matChipRemove [attr.aria-label]="'remove alias' + alias">
                                     <mat-icon>cancel</mat-icon>
                                 </button>
                             </mat-chip-row>
@@ -251,7 +343,9 @@
                     <div class="form-group">
                         <label for="description">Description</label>
                         <textarea id="description" formControlName="description" class="form-control"></textarea>
-                    </div> <!-- Is Active -->
+                    </div>
+
+                    <!-- Is Active -->
                     <div class="form-group checkbox-group">
                         <label>
                             <input type="checkbox" formControlName="isActive">
@@ -396,13 +490,14 @@
                         [suggestions]="['temperature', 'max_tokens', 'top_p']" label="Default Parameters"
                         placeholder="Parameter name">
                     </app-json-editor>
+
                     <!-- Capabilities -->
                     <app-json-editor formControlName="capabilities" [suggestions]="['streaming', 'tool_call']"
-                        label="Capabilities" placeholder="Parameter name">
+                        label="Capabilities" placeholder="Capability name">
                     </app-json-editor>
                 </div>
 
-                <!-- Pricing Tab (新しいタブ) -->
+                <!-- Pricing Tab -->
                 <div class="tab-content" [class.active]="activeTab === 'pricing'">
                     <div formGroupName="pricing">
                         <div class="pricing-header">
@@ -530,6 +625,7 @@
                         }
                     </div>
                 </div>
+
                 <!-- Advanced Tab -->
                 <div class="tab-content" [class.active]="activeTab === 'advanced'">
                     <!-- Endpoint Template -->
@@ -570,7 +666,7 @@
                         <input id="deprecationDate" type="date" formControlName="deprecationDate" class="form-control">
                     </div>
 
-                    <!-- Tags - 改良版 -->
+                    <!-- Tags -->
                     <mat-form-field class="form-group w-full">
                         <mat-label>Tags</mat-label>
                         <mat-chip-grid #tagsChipGrid aria-label="Enter tags" formControlName="tags">
@@ -624,15 +720,35 @@
                         <textarea id="metadata" formControlName="metadata" class="form-control code-editor"></textarea>
                     </div>
                 </div>
+
                 <div class="button-group">
-                    @if (isEditMode || !form.get('id')?.value) {
-                    <button type="submit" class="btn btn-primary" mat-raised-button>
-                        {{ isEditMode ? 'Update' : 'Register' }}
+                    @if (isViewOnlyMode) {
+                    <!-- 閲覧のみモード -->
+                    <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
+                        <mat-icon>close</mat-icon>
+                        Close
+                    </button>
+                    @if (canCreateModel()) {
+                    <button type="button" class="btn btn-primary override-button" (click)="switchToOverrideMode()"
+                        mat-raised-button>
+                        <mat-icon>content_copy</mat-icon>
+                        Create Override
                     </button>
                     }
+                    } @else {
+                    <!-- 編集・作成モード -->
                     <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
-                        {{ (!isEditMode && form.get('id')?.value) ? 'Close' : 'Cancel' }}
+                        <mat-icon>cancel</mat-icon>
+                        Cancel
                     </button>
+                    <button type="submit" class="btn btn-primary" mat-raised-button
+                        [class.override-button]="isOverrideMode">
+                        <mat-icon>
+                            {{ isOverrideMode ? 'content_copy' : (isEditMode ? 'save' : 'add') }}
+                        </mat-icon>
+                        {{ isOverrideMode ? 'Create Override' : (isEditMode ? 'Update' : 'Create') }}
+                    </button>
+                    }
                 </div>
             </form>
         </div>

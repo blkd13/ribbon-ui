@@ -1,6 +1,6 @@
 import { AuthService } from './../../services/auth.service';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { DepartmentMember, DepartmentService, PredictTransaction } from './../../services/department.service';
+import { DepartmentService, DivisionMemberCost, PredictTransaction } from './../../services/department.service';
 import { Component, inject, OnInit } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
@@ -21,11 +21,11 @@ export class PredictHistoryComponent implements OnInit {
   readonly departmentService: DepartmentService = inject(DepartmentService);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly dialogRef: MatDialogRef<PredictHistoryComponent> = inject(MatDialogRef<PredictHistoryComponent>);
-  readonly data = inject<{ member: DepartmentMember }>(MAT_DIALOG_DATA);
+  readonly data = inject<{ member: DivisionMemberCost }>(MAT_DIALOG_DATA);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
 
   predictHistory: PredictTransaction[] = [];
-  member?: DepartmentMember;
+  member?: DivisionMemberCost;
   monthlySummary: MonthlySummary[] = [];
   isLoading = false;
 
@@ -46,7 +46,7 @@ export class PredictHistoryComponent implements OnInit {
 
     if (this.data && this.data.member) {
       this.member = this.data.member;
-      const userId = this.data.member.user?.id;
+      const userId = this.data.member.id;
       if (userId) {
         this.departmentService.predictHistory(userId, offset, pageSize).subscribe(response => {
           this.predictHistory = response.predictHistory;
@@ -78,7 +78,7 @@ export class PredictHistoryComponent implements OnInit {
 
   // 詳細ダイアログを開く
   openPredictDetail(predict: PredictTransaction): void {
-    const userId = this.data?.member?.user?.id;
+    const userId = this.data?.member.id;
 
     this.dialog.open(PredictDetailComponent, {
       data: {

@@ -1,3 +1,5 @@
+// admin-scope.service.ts - Enhanced version with generic methods
+
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { ScopeInfo, ScopeType } from './model-manager.service';
@@ -129,6 +131,7 @@ export class AdminScopeService {
 
     /**
      * アイテムリストから最優先のものを取得
+     * 汎用版 - AI Provider、AI Model両方で使用可能
      */
     getEffectiveItems<T extends { name?: string; scopeInfo: ScopeInfo }>(items: T[]): T[] {
         // 名前でグループ化
@@ -156,14 +159,62 @@ export class AdminScopeService {
     }
 
     /**
+     * ユーザーが表示可能なアイテム一覧を取得
+     * 汎用版 - AI Provider、AI Model両方で使用可能
+     * スコープの継承ルールに基づいてフィルタリング
+     * 
+     * @param allItems 全てのアイテム一覧
+     * @returns 表示可能なアイテム一覧
+     */
+    getVisibleItems<T extends { scopeInfo: ScopeInfo }>(allItems: T[]): T[] {
+        const currentScope = this.getCurrentScope();
+        if (!currentScope) {
+            return [];
+        }
+
+        const currentScopePriority = this.getScopePriority(currentScope.scopeType);
+
+        // 現在選択されているスコープの優先順位以下（数字が大きい）のアイテムのみを表示
+        // 優先順位が同じ場合は、IDが一致するもののみを表示
+        return allItems.filter(item => {
+            const itemPriority = this.getScopePriority(item.scopeInfo.scopeType);
+
+            return itemPriority > currentScopePriority ||
+                (itemPriority === currentScopePriority &&
+                    item.scopeInfo.scopeId === currentScope.scopeId);
+        });
+    }
+
+    /**
+     * ユーザーが表示可能なAI Provider一覧を取得
+     * 後方互換性のために残す
+     * 
+     * @param allProviders 全てのAI Provider一覧
+     * @returns 表示可能なAI Provider一覧
+     */
+    getVisibleProviders<T extends { scopeInfo: ScopeInfo }>(allProviders: T[]): T[] {
+        return this.getVisibleItems(allProviders);
+    }
+
+    /**
+     * ユーザーが表示可能なAI Model一覧を取得
+     * 
+     * @param allModels 全てのAI Model一覧
+     * @returns 表示可能なAI Model一覧
+     */
+    getVisibleModels<T extends { scopeInfo: ScopeInfo }>(allModels: T[]): T[] {
+        return this.getVisibleItems(allModels);
+    }
+
+    /**
      * ユーザーがスコープで編集権限を持っているかチェック
      * 
      * 修正版: 各スコープは独立しており、そのスコープでの権限が必要
      * 
      * 権限ルール:
-     * - Organization Scope: そのOrganizationのAdmin/Maintainer権限が必要
-     * - Division Scope: そのDivisionのAdmin/Maintainer権限が必要  
-     * - User Scope: 本人か、そのユーザーが所属するDivisionのAdmin/Maintainer権限が必要
+     * - Organization Scope: そのOrganizationのAdmin/SuperAdmin権限が必要
+     * - Division Scope: そのDivisionのAdmin/SuperAdmin権限が必要  
+     * - User Scope: 本人か、そのユーザーが所属するDivisionのAdmin/SuperAdmin権限が必要
      * 
      * @param scopeType 対象スコープタイプ
      * @param scopeId 対象スコープID
@@ -181,25 +232,25 @@ export class AdminScopeService {
                     currentUser.roleList,
                     ScopeType.ORGANIZATION,
                     scopeId,
-                    [UserRoleType.Admin, UserRoleType.Maintainer]
+                    [UserRoleType.Admin, UserRoleType.SuperAdmin]
                 );
 
             case ScopeType.DIVISION:
                 // Division作成の場合（scopeIdが空またはnew）
                 if (!scopeId || scopeId === 'new') {
-                    // Organization Admin/Maintainer権限が必要
+                    // Organization Admin/SuperAdmin権限が必要
                     return this.hasAnyScopePermission(
                         currentUser.roleList,
                         ScopeType.ORGANIZATION,
-                        [UserRoleType.Admin, UserRoleType.Maintainer]
+                        [UserRoleType.Admin, UserRoleType.SuperAdmin]
                     );
                 }
-                // 既存のDivision更新の場合、そのDivisionのAdmin/Maintainer権限が必要
+                // 既存のDivision更新の場合、そのDivisionのAdmin/SuperAdmin権限が必要
                 return this.hasSpecificScopePermission(
                     currentUser.roleList,
                     ScopeType.DIVISION,
                     scopeId,
-                    [UserRoleType.Admin, UserRoleType.Maintainer]
+                    [UserRoleType.Admin, UserRoleType.SuperAdmin]
                 );
 
             case ScopeType.USER:
@@ -211,22 +262,22 @@ export class AdminScopeService {
                 // TODO: ユーザーが所属するDivisionの情報が必要
                 // 現在は実装されていないため、全てのDivision Admin権限をチェック
                 // 実際の実装では、対象ユーザーが所属するDivisionを特定し、
-                // そのDivisionのAdmin/Maintainer権限をチェックするべき
+                // そのDivisionのAdmin/SuperAdmin権限をチェックするべき
                 return this.hasAnyScopePermission(
                     currentUser.roleList,
                     ScopeType.DIVISION,
-                    [UserRoleType.Admin, UserRoleType.Maintainer]
+                    [UserRoleType.Admin, UserRoleType.SuperAdmin]
                 );
 
             case ScopeType.PROJECT:
             case ScopeType.TEAM:
             case ScopeType.GLOBAL:
-                // その他のスコープは、そのスコープのAdmin/Maintainer権限が必要
+                // その他のスコープは、そのスコープのAdmin/SuperAdmin権限が必要
                 return this.hasSpecificScopePermission(
                     currentUser.roleList,
                     scopeType,
                     scopeId,
-                    [UserRoleType.Admin, UserRoleType.Maintainer]
+                    [UserRoleType.Admin, UserRoleType.SuperAdmin]
                 );
 
             default:
@@ -294,12 +345,12 @@ export class AdminScopeService {
             return false;
         }
 
-        // 対象Division Admin/Maintainer権限をチェック
+        // 対象Division Admin/SuperAdmin権限をチェック
         return this.hasSpecificScopePermission(
             currentUser.roleList,
             ScopeType.DIVISION,
             divisionId,
-            [UserRoleType.Admin, UserRoleType.Maintainer]
+            [UserRoleType.Admin, UserRoleType.SuperAdmin]
         );
     }
 
@@ -314,11 +365,11 @@ export class AdminScopeService {
             return false;
         }
 
-        // Organization Admin/Maintainer権限をチェック
+        // Organization Admin/SuperAdmin権限をチェック
         return this.hasAnyScopePermission(
             currentUser.roleList,
             ScopeType.ORGANIZATION,
-            [UserRoleType.Admin, UserRoleType.Maintainer]
+            [UserRoleType.Admin, UserRoleType.SuperAdmin]
         );
     }
 
@@ -338,6 +389,16 @@ export class AdminScopeService {
     }
 
     /**
+     * 新しいAI Modelを作成する権限があるかチェック
+     * AI Providerと同じ権限を使用
+     * 
+     * @returns 作成権限があるかどうか
+     */
+    canCreateAIModel(): boolean {
+        return this.canCreateAIProvider();
+    }
+
+    /**
      * ユーザーが編集可能なスコープ一覧を取得
      * UI でスコープ選択肢を表示する際に使用
      * 
@@ -353,7 +414,7 @@ export class AdminScopeService {
 
         // ユーザーのロール一覧から編集可能なスコープを抽出
         currentUser.roleList.forEach(role => {
-            if ([UserRoleType.Admin, UserRoleType.Maintainer].includes(role.role)) {
+            if ([UserRoleType.Admin, UserRoleType.SuperAdmin].includes(role.role)) {
                 const scope: ScopeInfo = {
                     scopeType: role.scopeInfo.scopeType,
                     scopeId: role.scopeInfo.scopeId
@@ -372,31 +433,5 @@ export class AdminScopeService {
         });
 
         return editableScopes;
-    }
-
-    /**
-     * ユーザーが表示可能なAI Provider一覧を取得
-     * スコープの継承ルールに基づいてフィルタリング
-     * 
-     * @param allProviders 全てのAI Provider一覧
-     * @returns 表示可能なAI Provider一覧
-     */
-    getVisibleProviders<T extends { scopeInfo: ScopeInfo }>(allProviders: T[]): T[] {
-        const currentScope = this.getCurrentScope();
-        if (!currentScope) {
-            return [];
-        }
-
-        const currentScopePriority = this.getScopePriority(currentScope.scopeType);
-
-        // 現在選択されているスコープの優先順位以下（数字が大きい）のプロバイダーのみを表示
-        // 優先順位が同じ場合は、IDが一致するもののみを表示
-        return allProviders.filter(provider => {
-            const providerPriority = this.getScopePriority(provider.scopeInfo.scopeType);
-
-            return providerPriority > currentScopePriority ||
-                (providerPriority === currentScopePriority &&
-                    provider.scopeInfo.scopeId === currentScope.scopeId);
-        });
     }
 }
