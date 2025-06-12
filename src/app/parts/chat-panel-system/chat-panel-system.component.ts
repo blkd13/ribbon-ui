@@ -54,7 +54,7 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
 
   toolChoiceMapper: { [tool_choice: string]: { name: string, label: string } } = {
     'auto': { name: 'auto', label: '自動判定' },
-    'none': { name: 'none', label: '使わない' },
+    // 'none': { name: 'none', label: '使わない' },
     'required': { name: 'required', label: '必ず使う' }
   };
 
@@ -220,6 +220,9 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
     } else { }
   }
 
+  expandedChange($event: boolean): void {
+    this.expandedEmitter.emit($event);
+  }
 
   // toolGroupCheck($event: MatCheckboxChange, groupDef: MyToolType[]): void {
   //   // groupDef.forEach(toolCallPart => {

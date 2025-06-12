@@ -178,6 +178,7 @@ export class ChatComponent implements OnInit {
   ngOnInit(): void {
     this.defaultPlaceholder = `メッセージを入力...。Shift+Enterで改行。${this.userService.enterMode}で送信。Drag＆Drop、ファイル貼り付け。`;
     document.title = `AI`;
+    this.initializeToolGroupStates();
     of(0).pipe(
       switchMap(() => forkJoin([this.loadTeams(), this.aiModelManagerService.getAIModels(), this.extApiProviderService.getApiProviders()])),
       switchMap(() => this.loadProjects()),
@@ -275,6 +276,77 @@ export class ChatComponent implements OnInit {
 
   readonly toolCallService: ToolCallService = inject(ToolCallService);
   presetLabel = '通常';
+
+  // ツールグループ管理用
+  toolGroupStates: { [groupName: string]: boolean } = {};
+  // ツールグループの状態を切り替える
+  toggleToolGroup(groupName: string): void {
+    this.toolGroupStates[groupName] = !this.toolGroupStates[groupName];
+
+    // 全スレッドに適用
+    this.selectedThreadGroup.threadList.forEach(thread => {
+      if (!thread.inDto.args.tools) {
+        thread.inDto.args.tools = [];
+      }
+
+      const groupDef = this.toolCallService.tools.find(tool => tool.group === groupName);
+      if (groupDef) {
+        if (this.toolGroupStates[groupName]) {
+          // ONにする場合：グループ内の全ツールを追加
+          groupDef.tools.forEach(tool => {
+            const exists = thread.inDto.args.tools!.find(t => t.function.name === tool.definition.function.name);
+            if (!exists) {
+              thread.inDto.args.tools!.push(tool.definition);
+            }
+          });
+        } else {
+          // OFFにする場合：グループ内の全ツールを削除
+          groupDef.tools.forEach(tool => {
+            thread.inDto.args.tools = thread.inDto.args.tools!.filter(t => t.function.name !== tool.definition.function.name);
+          });
+        }
+      }
+      thread.inDto.args.tools = [...thread.inDto.args.tools];
+    });
+
+    // system-panelの状態も同期する
+    this.syncToolGroupStatesWithSystemPanels();
+
+    this.cdr.detectChanges();
+    this.rebuildThreadGroup();
+    this.onChange();
+  }
+
+  // ツールグループの現在状態を取得（全スレッドで一致している場合のみtrue）
+  isToolGroupEnabled(groupName: string): boolean {
+    return this.toolGroupStates[groupName] || false;
+  }
+  // ツールグループの状態を初期化
+  initializeToolGroupStates(): void {
+    this.toolCallService.tools.forEach(group => {
+      // 各スレッドでそのグループのツールが有効かどうかをチェック
+      const isGroupEnabled = this.selectedThreadGroup?.threadList.filter(thread => {
+        if (!thread.inDto.args.tools) return false;
+        const groupDef = this.toolCallService.tools.find(tool => tool.group === group.group);
+        if (!groupDef) return false;
+
+        // 何かしらのツールが選択されている場合は、グループの状態を自動でONにする
+        thread.inDto.args.tool_choice = 'auto';
+        // グループ内の全ツールが有効かどうかをチェック
+        return groupDef.tools.every(tool =>
+          thread.inDto.args.tools!.find(t => t.function.name === tool.definition.function.name)
+        );
+      }).length > 0;
+
+      this.toolGroupStates[group.group] = isGroupEnabled;
+    });
+
+    // system-panelの状態も同期する
+    setTimeout(() => {
+      this.syncToolGroupStatesWithSystemPanels();
+    }, 100);
+  }
+
   selectPreset(preset: PresetDef): void {
     _paq.push(['trackEvent', 'AIチャット', 'モード選択', this.selectedThreadGroup.threadList.length]);
     this.presetLabel = preset.label;
@@ -327,6 +399,10 @@ export class ChatComponent implements OnInit {
 
     this.rebuildThreadGroup();
     this.onChange();
+
+    // ツールグループの状態を更新
+    this.initializeToolGroupStates();
+
     if (modelCheckOK) {
       setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
     } else { /* モデルチェックエラーが出ているのでフォーカスはしない。 */ }
@@ -495,6 +571,8 @@ export class ChatComponent implements OnInit {
       });
 
       this.rebuildThreadGroup();
+      // ツールグループの状態を初期化
+      this.initializeToolGroupStates();
 
       this.inputArea = this.generateInitalInputArea();
       // this.inputArea.previousMessageGroupId = lastMessage.id;
@@ -572,6 +650,9 @@ export class ChatComponent implements OnInit {
               );
               this.cdr.detectChanges();
               // スレッドオブジェクトとメッセージグループオブジェクトの不整合（複数スレッドのはずなのにメッセージグループが無いとか）が起きていても大丈夫なようにする。
+
+              // ツールグループの状態を初期化
+              this.initializeToolGroupStates();
             }),
             // switchMap(resDto => safeForkJoin(
             //   this.selectedThreadGroup.threadList.map(thread => this.messageGroupIdListMas[thread.id]
@@ -2384,7 +2465,7 @@ export class ChatComponent implements OnInit {
                   } else if (content.type === 'file') {
                     const contentPartFile = this.messageService.initContentPart(message.id, content.text);
                     contentPartFile.type = content.type as ContentPartType;
-                    contentPartFile.linkId = content.fileGroupId;
+                    contentPartFile.linkId = contentPartFile.type === 'file' ? (content as { fileGroupId: string }).fileGroupId : undefined;
                     contents.push(contentPartFile);
                   }
                   message.contents = contents;
@@ -2661,5 +2742,19 @@ export class ChatComponent implements OnInit {
   logout(): void {
     this.authService.logout();
     // this.router.navigate(['/login']);
+  }
+
+  // system-panelコンポーネントの状態を同期する
+  syncToolGroupStatesWithSystemPanels(): void {
+    // system-panelコンポーネントのtoolGroupCheckMasを更新
+    this.chatSystemPanelList().forEach(systemPanel => {
+      this.toolCallService.tools.forEach(group => {
+        if (this.toolGroupStates[group.group]) {
+          systemPanel.toolGroupCheckMas[group.group] = 2; // 全選択
+        } else {
+          systemPanel.toolGroupCheckMas[group.group] = 0; // 未選択
+        }
+      });
+    });
   }
 }

@@ -2,7 +2,7 @@
 
 @if(vm.messageGroup.messages && vm.messageGroup.messages.length>0){
 <mat-expansion-panel class="message" #exPanel [expanded]="vm.messageGroup.isExpanded"
-    (opened)="loadContent().subscribe()" (expandedChange)="expandedEmitter.emit($event)">
+    (opened)="loadContent().subscribe()" (expandedChange)="expandedChange($event)">
     <mat-expansion-panel-header class="message-header">
         <mat-panel-title class="message-title" style="font-weight: normal;">
             <!-- モデル選択 -->
@@ -182,9 +182,9 @@
             <legend>ツール使用設定</legend>
             <mat-radio-group [(ngModel)]="vm.thread.inDto.args.tool_choice" (change)="threadChange()">
 
-                @for(tool_choice of ['none', 'auto', 'required'];track $index) {
-                <mat-radio-button [value]="tool_choice" class="" color="primary">
-                    [{{tool_choice}}] {{toolChoiceMapper[tool_choice].label}}
+                @for(toolChoiceObj of toolChoiceMapper|keyvalue;track $index) {
+                <mat-radio-button [value]="toolChoiceObj.key" class="" color="primary">
+                    [{{toolChoiceObj.key}}] {{toolChoiceObj.value.label}}
                 </mat-radio-button>
                 }
             </mat-radio-group>

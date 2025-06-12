@@ -195,6 +195,20 @@
           [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
         }
       </div>
+      <h1 style="font-size: 1.78rem;margin-top: 40px;">ツール</h1>
+      <div class="w-full flex justify-center items-center gap-5 flex-wrap">
+        @for(toolGroup of toolCallService.tools; track $index){
+        <div class="course-panel text-center tool-group-panel" (click)="toggleToolGroup(toolGroup.group)"
+          [ngClass]="{selected: isToolGroupEnabled(toolGroup.group)}" style="line-height: 1.5; position: relative;">
+          <img [src]="'./image/'+toolGroup.group.split('-')[0]+'-logo.svg'" alt="icon" class="w-6 h-6 mb-1">
+          <div class="text-xs">{{toolGroup.group.split('-')[0]}}</div>
+          <!-- <div class="tool-status-indicator" [ngClass]="{active: isToolGroupEnabled(toolGroup.group)}">
+            <mat-icon class="status-icon">{{isToolGroupEnabled(toolGroup.group) ? 'check_circle' :
+              'radio_button_unchecked'}}</mat-icon>
+          </div> -->
+        </div>
+        }
+      </div>
       <h1 style="font-size: 1.78rem;margin-top: 40px;">モード</h1>
       <div class="w-full flex justify-center items-center gap-5 flex-wrap">
         @for(preset of chatService.presetDefs;track $index){

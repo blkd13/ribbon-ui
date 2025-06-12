@@ -109,6 +109,11 @@ function baseEntityFormat(base: BaseEntity): BaseEntity {
 function threadFormat(thread: Thread): Thread {
     // thread.inDto = JSON.parse((thread as any).inDtoJson);
     // delete (thread as any).inDtoJson;
+    // tool_choice = 'none' の選択肢はそもそも要らないと思う。
+    if (!thread.inDto.args.tool_choice || thread.inDto.args.tool_choice === 'none') {
+        thread.inDto.args.tools = [];
+        thread.inDto.args.tool_choice = 'auto';
+    } else { }
     return thread;
 }
 
