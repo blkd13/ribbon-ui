@@ -202,6 +202,11 @@
           [ngClass]="{selected: isToolGroupEnabled(toolGroup.group)}" style="line-height: 1.5; position: relative;">
           <img [src]="'./image/'+toolGroup.group.split('-')[0]+'-logo.svg'" alt="icon" class="w-6 h-6 mb-1">
           <div class="text-xs">{{toolGroup.group.replace('-', ' ')}}</div>
+          @if(toolGroupLoadingStates[toolGroup.group]) {
+          <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10 rounded-xl">
+            <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+          </div>
+          }
           <!-- <div class="tool-status-indicator" [ngClass]="{active: isToolGroupEnabled(toolGroup.group)}">
             <mat-icon class="status-icon">{{isToolGroupEnabled(toolGroup.group) ? 'check_circle' :
               'radio_button_unchecked'}}</mat-icon>

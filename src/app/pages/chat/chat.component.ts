@@ -278,6 +278,8 @@ export class ChatComponent implements OnInit {
   presetLabel = '通常';
   // ツールグループ管理用
   toolGroupStates: { [groupName: string]: boolean } = {};
+  // ツールグループのローディング状態管理用
+  toolGroupLoadingStates: { [groupName: string]: boolean } = {};
 
   // ツールグループと外部プロバイダーのマッピング
   private readonly toolGroupProviderMapping: { [groupName: string]: string } = {
@@ -346,65 +348,73 @@ export class ChatComponent implements OnInit {
       verticalPosition: 'top'
     });
   }
-
   // ツールグループの状態を切り替える
   async toggleToolGroup(groupName: string): Promise<void> {
     const newState = !this.toolGroupStates[groupName];
 
-    // ONにする場合は接続性チェックを実行
-    if (newState) {
-      const requiredProvider = this.toolGroupProviderMapping[groupName.split('-')[0]]; // グループ名からプロバイダーを取得
-      if (requiredProvider === 'API_KEY') {
-        // 接続されていない場合は警告を表示してONにしない
-        this.showConnectionPrompt(groupName, requiredProvider);
-      } else if (requiredProvider) {
-        const isConnected = await this.checkProviderConnectivity(requiredProvider);
+    // ローディング状態を開始
+    this.toolGroupLoadingStates[groupName] = true;
 
-        if (!isConnected) {
+    try {
+      // ONにする場合は接続性チェックを実行
+      if (newState) {
+        const requiredProvider = this.toolGroupProviderMapping[groupName.split('-')[0]]; // グループ名からプロバイダーを取得
+        if (requiredProvider === 'API_KEY') {
           // 接続されていない場合は警告を表示してONにしない
           this.showConnectionPrompt(groupName, requiredProvider);
           return;
-        }
-      } else {
-        // プロバイダーが必要ない場合はそのままONにする
-      }
-    }
+        } else if (requiredProvider) {
+          const isConnected = await this.checkProviderConnectivity(requiredProvider);
 
-    // 接続確認が完了したらツールグループの状態を更新
-    this.toolGroupStates[groupName] = newState;
-
-    // 全スレッドに適用
-    this.selectedThreadGroup.threadList.forEach(thread => {
-      if (!thread.inDto.args.tools) {
-        thread.inDto.args.tools = [];
-      }
-
-      const groupDef = this.toolCallService.tools.find(tool => tool.group === groupName);
-      if (groupDef) {
-        if (this.toolGroupStates[groupName]) {
-          // ONにする場合：グループ内の全ツールを追加
-          groupDef.tools.forEach(tool => {
-            const exists = thread.inDto.args.tools!.find(t => t.function.name === tool.definition.function.name);
-            if (!exists) {
-              thread.inDto.args.tools!.push(tool.definition);
-            }
-          });
+          if (!isConnected) {
+            // 接続されていない場合は警告を表示してONにしない
+            this.showConnectionPrompt(groupName, requiredProvider);
+            return;
+          }
         } else {
-          // OFFにする場合：グループ内の全ツールを削除
-          groupDef.tools.forEach(tool => {
-            thread.inDto.args.tools = thread.inDto.args.tools!.filter(t => t.function.name !== tool.definition.function.name);
-          });
+          // プロバイダーが必要ない場合はそのままONにする
         }
       }
-      thread.inDto.args.tools = [...thread.inDto.args.tools];
-    });
 
-    // system-panelの状態も同期する
-    this.syncToolGroupStatesWithSystemPanels();
+      // 接続確認が完了したらツールグループの状態を更新
+      this.toolGroupStates[groupName] = newState;
 
-    this.cdr.detectChanges();
-    this.rebuildThreadGroup();
-    this.onChange();
+      // 全スレッドに適用
+      this.selectedThreadGroup.threadList.forEach(thread => {
+        if (!thread.inDto.args.tools) {
+          thread.inDto.args.tools = [];
+        }
+
+        const groupDef = this.toolCallService.tools.find(tool => tool.group === groupName);
+        if (groupDef) {
+          if (this.toolGroupStates[groupName]) {
+            // ONにする場合：グループ内の全ツールを追加
+            groupDef.tools.forEach(tool => {
+              const exists = thread.inDto.args.tools!.find(t => t.function.name === tool.definition.function.name);
+              if (!exists) {
+                thread.inDto.args.tools!.push(tool.definition);
+              }
+            });
+          } else {
+            // OFFにする場合：グループ内の全ツールを削除
+            groupDef.tools.forEach(tool => {
+              thread.inDto.args.tools = thread.inDto.args.tools!.filter(t => t.function.name !== tool.definition.function.name);
+            });
+          }
+        }
+        thread.inDto.args.tools = [...thread.inDto.args.tools];
+      });
+
+      // system-panelの状態も同期する
+      this.syncToolGroupStatesWithSystemPanels();
+
+      this.cdr.detectChanges();
+      this.rebuildThreadGroup();
+      this.onChange();
+    } finally {
+      // ローディング状態を終了
+      this.toolGroupLoadingStates[groupName] = false;
+    }
   }
 
   // ツールグループの現在状態を取得（全スレッドで一致している場合のみtrue）
