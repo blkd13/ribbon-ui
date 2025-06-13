@@ -186,27 +186,6 @@ export class AdminScopeService {
     }
 
     /**
-     * ユーザーが表示可能なAI Provider一覧を取得
-     * 後方互換性のために残す
-     * 
-     * @param allProviders 全てのAI Provider一覧
-     * @returns 表示可能なAI Provider一覧
-     */
-    getVisibleProviders<T extends { scopeInfo: ScopeInfo }>(allProviders: T[]): T[] {
-        return this.getVisibleItems(allProviders);
-    }
-
-    /**
-     * ユーザーが表示可能なAI Model一覧を取得
-     * 
-     * @param allModels 全てのAI Model一覧
-     * @returns 表示可能なAI Model一覧
-     */
-    getVisibleModels<T extends { scopeInfo: ScopeInfo }>(allModels: T[]): T[] {
-        return this.getVisibleItems(allModels);
-    }
-
-    /**
      * ユーザーがスコープで編集権限を持っているかチェック
      * 
      * 修正版: 各スコープは独立しており、そのスコープでの権限が必要

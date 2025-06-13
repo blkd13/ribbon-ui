@@ -223,9 +223,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       this.buildScopeLabelsMap(scopeLabels);
     });
 
-    this.aiModelService.getAIModels(true).subscribe({
+    this.aiModelService.getAIModels(true, true).subscribe({
       next: (allModels) => {
-        const visibleModels = this.adminScopeService.getVisibleProviders(allModels);
+        const visibleModels = this.adminScopeService.getVisibleItems(allModels);
         this.models = this.adminScopeService.getEffectiveItems(visibleModels);
       },
       error: (err) => {
@@ -237,7 +237,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   loadData() {
     // Load providers for dropdown
-    this.aiProviderService.getProviders().subscribe({
+    this.aiProviderService.getProviders(false).subscribe({
       next: (providers) => {
         this.providerOptions = this.adminScopeService.getEffectiveItems(providers);
       },

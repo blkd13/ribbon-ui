@@ -241,6 +241,13 @@
     <!-- @if(messageGroup.type==='Single') { } -->
     }
 
+    <!-- Mermaidエラー修正ボタン -->
+    @if(hasMermaidErrors){
+    <button mat-icon-button (click)="openMermaidFixDialog($event)" title="Mermaidエラーを修正" class="mermaid-error-btn"
+      [ngClass]="{running: isMermaidErrorFixing}">
+      <mat-icon class="text-orange-500">error_outline</mat-icon>
+    </button>
+    }
     <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）"
       [ngStyle]="{visibility: vm.messageGroup.role==='assistant'?'visible':'hidden'}">
       <mat-icon>folder_zip</mat-icon>

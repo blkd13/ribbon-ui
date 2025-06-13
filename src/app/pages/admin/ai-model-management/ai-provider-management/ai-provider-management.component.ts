@@ -499,8 +499,8 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
       this.buildScopeLabelsMap(scopeLabels);
     });
 
-    this.providerService.getProviders().subscribe(allProviders => {
-      const visibleProviders = this.adminScopeService.getVisibleProviders(allProviders);
+    this.providerService.getProviders(true).subscribe(allProviders => {
+      const visibleProviders = this.adminScopeService.getVisibleItems(allProviders);
       this.providers = this.adminScopeService.getEffectiveItems(visibleProviders);
     });
   }

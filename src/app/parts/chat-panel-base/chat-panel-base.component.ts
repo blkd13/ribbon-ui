@@ -22,18 +22,20 @@ import { Utils } from '../../utils';
 import { MatMenuModule } from '@angular/material/menu';
 import { ToolCallPart, ToolCallPartBody, ToolCallPartCommand, ToolCallPartCommandBody, ToolCallPartInfo, ToolCallPartType, ToolCallSet } from '../../services/tool-call.service';
 import { MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { ToolCallCallResultDialogComponent } from '../tool-call-call-result-dialog/tool-call-call-result-dialog.component';
 import { MatTabsModule } from '@angular/material/tabs';
 import { UserService } from '../../services/user.service';
 import { MarkdownService } from 'ngx-markdown';
 import { ChatPanelZoomDialogComponent } from '../chat-panel-zoom-dialog/chat-panel-zoom-dialog.component';
+import { MermaidValidatorService } from '../../services/mermaid-validator.service';
 
 
 @Component({
   selector: 'app-chat-panel-base',
   imports: [
     CommonModule, FormsModule,
-    MatTooltipModule, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule, MatMenuModule,
+    MatTooltipModule, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule, MatMenuModule, MatDialogModule,
   ],
   templateUrl: './chat-panel-base.component.html',
   styleUrl: './chat-panel-base.component.scss',
@@ -176,8 +178,14 @@ export class ChatPanelBaseComponent implements OnInit {
   readonly userService: UserService = inject(UserService);
   readonly chatService: ChatService = inject(ChatService);
   readonly messageService: MessageService = inject(MessageService);
+  readonly mermaidValidator: MermaidValidatorService = inject(MermaidValidatorService);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
+  readonly dialog: MatDialog = inject(MatDialog);
+
+  // Mermaidエラー状態を管理
+  mermaidErrors: Array<{ code: string; error: string; startIndex: number; endIndex: number }> = [];
+  hasMermaidErrors: boolean = false;
 
   constructor() {
     // TODO シグナル式のやり方をとりあえず実装してみた。汚い気がするので後で直したい。シグナル使う必要無いと思う？？
@@ -388,7 +396,6 @@ export class ChatPanelBaseComponent implements OnInit {
     setTimeout(() => { DomUtils.textAreaHeighAdjust(this.textAreaElem()!.nativeElement); }, 0);
   }
 
-  readonly dialog: MatDialog = inject(MatDialog);
   openToolCallDialog($event: MouseEvent, toolCallSet: ToolCallSet): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
@@ -493,7 +500,98 @@ export class ChatPanelBaseComponent implements OnInit {
   onReady($event: any, type: string): void {
     // console.log($event, type);
     this.convertSvgToImage();
+    this.checkMermaidSyntax();
     this.readyEmitter.emit(true);
+  }
+
+  /**
+   * Mermaidの構文チェックを実行
+   */
+  private async checkMermaidSyntax(): Promise<void> {
+    // アシスタントのメッセージのみチェック（ユーザーメッセージは編集可能なのでチェック不要）
+    if (this.messageGroup().role !== 'assistant') {
+      return;
+    }
+
+    try {
+      const textContent = this.message.contents
+        .filter(content => content.type === ContentPartType.TEXT)
+        .map(content => content.text)
+        .join('\n');
+
+      if (!textContent.includes('```mermaid')) {
+        this.mermaidErrors = [];
+        this.hasMermaidErrors = false;
+        return;
+      }
+
+      // エラー検出のみ実行（自動修正はしない）
+      const result = await this.mermaidValidator.detectMermaidErrors(textContent);
+
+      this.mermaidErrors = result.errors;
+      this.hasMermaidErrors = result.hasErrors;
+
+      if (this.hasMermaidErrors) {
+        console.log(`Mermaidエラーが検出されました: ${this.mermaidErrors.length}件`);
+      }
+
+    } catch (error) {
+      console.error('Mermaid構文チェックでエラーが発生しました:', error);
+    }
+  }
+
+  isMermaidErrorFixing = false;
+  /**
+   * Mermaidエラー修正ダイアログを開く
+   */
+  async openMermaidFixDialog($event: MouseEvent): Promise<void> {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+    if (!this.hasMermaidErrors || this.mermaidErrors.length === 0) {
+      return;
+    }
+
+    try {
+      const textContent = this.message.contents
+        .filter(content => content.type === ContentPartType.TEXT)
+        .map(content => content.text)
+        .join('\n');
+
+      this.isMermaidErrorFixing = true;
+      const result = await this.mermaidValidator.showFixDialog(textContent, this.mermaidErrors);
+      this.isMermaidErrorFixing = false;
+
+      if (result.success && result.result !== textContent) {
+        // 修正されたコンテンツで更新
+        const textContentPart = this.message.contents.find(content => content.type === ContentPartType.TEXT);
+        if (textContentPart) {
+          textContentPart.text = result.result;
+
+          // メッセージを保存
+          this.messageService.editMessageWithContents(this.message).subscribe({
+            next: (updatedMessage) => {
+              // 更新されたメッセージで現在のメッセージを置き換える
+              Object.assign(this.message, updatedMessage);
+
+              // エラー状態をリセット
+              this.mermaidErrors = [];
+              this.hasMermaidErrors = false;
+
+              this.cdr.detectChanges();
+              this.snackBar.open('Mermaidコードを修正しました', 'Close', { duration: 3000 });
+            },
+            error: (error) => {
+              console.error('Mermaid修正内容の保存に失敗しました:', error);
+              this.snackBar.open('修正内容の保存に失敗しました', 'Close', { duration: 5000 });
+            }
+          });
+        }
+      }
+    } catch (error) {
+      this.isMermaidErrorFixing = false;
+      console.error('Mermaid修正処理でエラーが発生しました:', error);
+      this.snackBar.open('修正処理でエラーが発生しました', 'Close', { duration: 5000 });
+    }
   }
 
   convertSvgToImage() {

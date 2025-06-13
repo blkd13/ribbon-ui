@@ -130,8 +130,8 @@ export class AIProviderManagerService {
 
 
 
-  getProviders() {
-    return this.http.get<AIProviderEntity[]>(`/admin/ai-providers`).pipe(
+  getProviders(includeOverridden: boolean = false): Observable<AIProviderEntity[]> {
+    return this.http.get<AIProviderEntity[]>(`/admin/ai-providers?includeOverridden=${includeOverridden}`).pipe(
       tap(res => {
         res.forEach(provider => {
           provider.createdAt = new Date(provider.createdAt);
@@ -460,11 +460,11 @@ export class AIModelManagerService {
   }
 
   /** 一覧取得 */
-  getAIModels(force: boolean = false): Observable<AIModelEntityForView[]> {
+  getAIModels(includeOverridden: boolean = false, force: boolean = false): Observable<AIModelEntityForView[]> {
     if (this.stockedModels.length > 0 && !force) {
       return of(this.stockedModels);
     }
-    return this.http.get<AIModelEntityForView[]>(`/user/ai-models`).pipe(
+    return this.http.get<AIModelEntityForView[]>(`/user/ai-models?includeOverridden=${includeOverridden}`).pipe(
       tap(models => {
         this.stockedModels = models;
         this.modelList = models;
@@ -672,8 +672,8 @@ export class TagService {
   /**
    * 全タグ一覧取得
    */
-  getTags(): Observable<TagEntity[]> {
-    return this.http.get<TagEntity[]>(`/user/tags`).pipe(
+  getTags(includeOverridden: boolean = false): Observable<TagEntity[]> {
+    return this.http.get<TagEntity[]>(`/user/tags?includeOverridden=${includeOverridden}`).pipe(
       tap(tags => this.tagsSubject.next(tags))
     );
   }
