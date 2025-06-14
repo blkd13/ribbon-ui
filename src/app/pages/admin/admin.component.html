@@ -15,7 +15,7 @@
                 </label>
                 <mat-form-field appearance="outline" class="w-full scope-select-field">
                     <mat-select [(value)]="selectedScope" (selectionChange)="onScopeChange()" placeholder="スコープを選択"
-                        [compareWith]="compareScopeInfo">
+                        [compareWith]="compareScopeInfo" panelWidth="400px">
 
                         @for (group of availableScopes | groupBy: 'scopeType'; track group.key) {
                         <mat-optgroup [label]="group.key">

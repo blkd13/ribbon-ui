@@ -5,7 +5,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonModule } from '@angular/material/button';
 import { AIModelEntityForView, AIModelManagerService, TagService, TagEntity } from '../../services/model-manager.service';
-import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions.mjs';
 import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
 import { forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -154,9 +153,9 @@ export class ModelSelectorComponent {
     { key: 'modalities', label: 'Modality' },
     // { key: 'documentationUrl', label: 'Document' },
     // { key: 'licenseUrl', label: 'License' },
-    // { key: 'knowledgeCutoff', label: 'Knowledge Cutoff' },
+    { key: 'knowledgeCutoff', label: 'Knowledge Cutoff' },
     // { key: 'releaseDate', label: 'Release Date' },
-    { key: 'deprecationDate', label: 'Deprecation Date' },
+    // { key: 'deprecationDate', label: 'Deprecation Date' },
     // { key: 'licenseType', label: 'License Type' },
     // { key: 'inputPricePerUnit', label: 'Input Price' },
     // { key: 'outputPricePerUnit', label: 'Output Price' },

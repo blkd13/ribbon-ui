@@ -78,8 +78,8 @@
                     <!-- 横並び: 日付ペア -->
                     <div class="detail-pair">
                         <div class="detail-block">
-                            <div class="field-label">Knowledge Cutoff</div>
-                            <div class="field-value">{{ (model.object.knowledgeCutoff | date:'yyyy-MM') || '—' }}</div>
+                            <div class="field-label">Release Date</div>
+                            <div class="field-value">{{ (model.object.releaseDate | date:'yyyy-MM-dd') || '—' }}</div>
                         </div>
                         <div class="detail-block">
                             <div class="field-label">Deprecation Date</div>
@@ -88,6 +88,7 @@
                     </div>
 
                     <!-- 横並び: 日付ペア -->
+                    <!--
                     <div class="detail-pair">
                         <div class="detail-block">
                             <div class="field-label">Release Date</div>
@@ -98,6 +99,7 @@
                             <div class="field-value"></div>
                         </div>
                     </div>
+                    -->
 
                     <!-- 単項目表示 -->
                     @for(field of extraFields; track $index) {

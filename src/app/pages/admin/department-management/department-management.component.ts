@@ -163,8 +163,8 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
     const data = this.yyyyMmList.map(k =>
       this.divisionMemberList.reduce((sum, d) => sum + (d.cost[k]?.totalCost || 0) * 150, 0)
     );
-    this.trendChart.data.labels = labels;
-    this.trendChart.data.datasets![0].data = data;
+    this.trendChart.data.labels = labels.reverse();
+    this.trendChart.data.datasets![0].data = data.reverse();
     this.trendChart.update();
   }
 
