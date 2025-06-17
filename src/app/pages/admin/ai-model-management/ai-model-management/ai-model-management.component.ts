@@ -577,6 +577,8 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       const pricingData: Partial<ModelPricing> = {
         id: this.pricingSelectionMode === 'new' ? undefined : formValue.pricing?.id,
         modelId: formValue.id,
+        name: formValue.name,
+        scopeInfo: scopeInfo,
         inputPricePerUnit: formValue.pricing?.inputPricePerUnit || 0,
         outputPricePerUnit: formValue.pricing?.outputPricePerUnit || 0,
         unit: formValue.pricing?.unit || 'USD/1M tokens',
@@ -594,14 +596,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         switchMap(savedModel => {
           if (savedModel) {
             pricingData.modelId = savedModel.id;
-
-            // if (this.pricingSelectionMode === 'new' || !this.isEditMode) {
-            //   return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
-            // } else if (this.pricingSelectionMode === 'edit' && this.isPricingChanged(pricingData)) {
-            //   return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
-            // } else {
-            //   return of(null);
-            // }
+            if (this.pricingSelectionMode === 'new' || !this.isEditMode) {
+              return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
+            } else if (this.pricingSelectionMode === 'edit' && this.isPricingChanged(pricingData)) {
+              return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
+            } else {
+              return of(null);
+            }
             return of(null);
           } else {
             return of(null);
