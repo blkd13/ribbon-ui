@@ -617,10 +617,13 @@ export class AIModelPricingService {
 // src/app/models/model-pricing.model.ts
 export interface ModelPricing {
   id?: string;
+  name: string;
   modelId: string;
-  validFrom: Date;
   inputPricePerUnit: number;
   outputPricePerUnit: number;
+  scopeInfo: ScopeInfo;
+  metadata?: Record<string, any>;
+  validFrom: Date;
   unit: string;
 }
 

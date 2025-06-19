@@ -18,6 +18,27 @@
 @import url('./theme/light.scss');
 @import url('./theme/dark.scss');
 
+// Notification Service Styles
+.success-snackbar {
+  background-color: #4caf50 !important;
+  color: white !important;
+}
+
+.error-snackbar {
+  background-color: #f44336 !important;
+  color: white !important;
+}
+
+.warning-snackbar {
+  background-color: #ff9800 !important;
+  color: white !important;
+}
+
+.info-snackbar {
+  background-color: #2196f3 !important;
+  color: white !important;
+}
+
 // Angular Material 18まではあったけど19からは無くなった定義。本当は19に合わせて直した方がよかったが、影響がでかすぎるから据え置きで移設してきた。いつか消したい。
 .mat-display-large,
 .mat-typography .mat-display-large,

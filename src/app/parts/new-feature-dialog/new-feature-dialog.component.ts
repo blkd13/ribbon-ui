@@ -1,12 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { forkJoin } from 'rxjs';
+import { map } from 'rxjs/operators';
+
+import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
 import { AnnouncementsService } from '../../services/announcements.service';
 import { UserSettingService } from '../../services/user-setting.service';
 import { Announcement } from '../../models/announcement';
-import { forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-new-feature-dialog',
@@ -19,61 +21,82 @@ import { map } from 'rxjs/operators';
   templateUrl: './new-feature-dialog.component.html',
   styleUrl: './new-feature-dialog.component.scss'
 })
-export class NewFeatureDialogComponent implements OnInit {
-  announcements: Announcement[] = [];
+export class NewFeatureDialogComponent extends BaseDialogComponent<void, boolean> implements OnInit {
+  private readonly announcementsService = inject(AnnouncementsService);
+  private readonly userSettingService = inject(UserSettingService);
 
-  constructor(
-    private dialogRef: MatDialogRef<NewFeatureDialogComponent>,
-    private announcementsService: AnnouncementsService,
-    private userSettingService: UserSettingService
-  ) {}
+  protected announcements: Announcement[] = [];
 
   ngOnInit(): void {
     this.loadUnreadAnnouncements();
   }
 
-  loadUnreadAnnouncements(): void {
-    // アクティブなお知らせと未読情報を取得して、未読のもののみを表示
-    forkJoin([
-      this.announcementsService.getActiveAnnouncements(),
-      this.userSettingService.getUnreadAnnouncements()
-    ]).pipe(
-      map(([announcements, unreadIds]) => 
-        announcements.filter(a => unreadIds.includes(a.id))
-      )
-    ).subscribe(
-      unreadAnnouncements => {
-        this.announcements = unreadAnnouncements;
-        if (this.announcements.length === 0) {
-          this.dialogRef.close();
+  private async loadUnreadAnnouncements(): Promise<void> {
+    try {
+      this.setLoading(true);
+
+      const success = await this.executeAsync(async () => {
+        // アクティブなお知らせと未読情報を取得して、未読のもののみを表示
+        const result = await forkJoin([
+          this.announcementsService.getActiveAnnouncements(),
+          this.userSettingService.getUnreadAnnouncements()
+        ]).pipe(
+          map(([announcements, unreadIds]) => [
+            announcements,
+            unreadIds
+          ])
+        ).toPromise();
+
+        if (result) {
+          const [announcements, unreadIds] = result;
+          this.announcements = (announcements as any[])?.filter((a: any) => (unreadIds as string[])?.includes(a.id)) || [];
+        } else {
+          this.announcements = [];
         }
-      },
-      error => {
-        console.error('Failed to load unread announcements:', error);
-        this.dialogRef.close();
+
+        if (this.announcements.length === 0) {
+          // 未読のお知らせがない場合は自動的にダイアログを閉じる
+          this.close(false);
+        }
+
+        return this.announcements;
+      }, undefined, 'お知らせの読み込みに失敗しました');
+
+      if (!success) {
+        this.close(false);
       }
-    );
+    } finally {
+      this.setLoading(false);
+    }
   }
 
-  onClose(): void {
-    // 表示中のお知らせを既読にする
-    const markReadPromises = this.announcements.map(announcement => 
-      this.userSettingService.markAnnouncementAsRead(announcement.id)
-    );
+  protected async onClose(): Promise<void> {
+    try {
+      this.setSaving(true);
 
-    forkJoin(markReadPromises).subscribe(
-      () => {
-        this.dialogRef.close();
-      },
-      error => {
-        console.error('Failed to mark announcements as read:', error);
-        this.dialogRef.close();
-      }
-    );
+      await this.executeAsync(async () => {
+        // 表示中のお知らせを既読にする
+        const markReadPromises = this.announcements.map(announcement =>
+          this.userSettingService.markAnnouncementAsRead(announcement.id)
+        );
+
+        await forkJoin(markReadPromises).toPromise();
+        return true;
+      }, 'お知らせを既読にしました', 'お知らせの既読処理に失敗しました');
+
+      this.close(true);
+    } finally {
+      this.setSaving(false);
+    }
   }
 
-  onDontShowAgain(): void {
+  protected async onDontShowAgain(): Promise<void> {
     // 表示中のお知らせを既読にして、ダイアログを閉じる
-    this.onClose();
+    await this.onClose();
+  }
+
+  protected onCancel(): void {
+    // キャンセルボタンは表示しないため、実装なし
+    this.cancel();
   }
 }

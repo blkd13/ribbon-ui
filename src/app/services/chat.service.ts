@@ -13,6 +13,9 @@ import { Utils } from '../utils';
 import { ToolCallPartCommand, ToolCallPartCommandBody, ToolCallService } from './tool-call.service';
 import { AIProviderType } from './model-manager.service';
 
+// 新しいチャットサービスのインポート
+import { ChatCoordinationService } from './chat/chat-coordination.service';
+
 export interface ChatInputArea {
   role: OpenAI.ChatCompletionRole;
   content: ChatContent[];
@@ -38,6 +41,7 @@ export type LlmModel = {
   isPdf: boolean;
   price: number[];
   id: string;
+  label?: string;
 }
 
 /**
@@ -49,6 +53,12 @@ export type LlmModel = {
  */
 @Injectable({ providedIn: 'root' })
 export class ChatService {
+  
+  // 新しいチャットサービスへの参照（段階的移行用）
+  private readonly newChatService = inject(ChatCoordinationService);
+  
+  // 移行フラグ（新しいサービスを使用するかどうか）
+  private readonly USE_NEW_SERVICES = environment.useNewChatServices ?? false;
 
   // /**
   //  * gemini は 1,000 [文字] あたりの料金
@@ -230,6 +240,12 @@ export class ChatService {
   // this.getOpenAiApiKey().subscribe();
 
   public getObserver(messageId: string): { text: string, observer: Subject<OpenAI.ChatCompletionChunk> | null } {
+    // 新しいサービスを使用する場合は新しいサービスに移譲
+    if (this.USE_NEW_SERVICES) {
+      return this.newChatService.getObserver(messageId);
+    }
+    
+    // 既存の実装
     const streamIdList = this.messageIdStreamIdMap[messageId];
     if (streamIdList) {
       const streamId = `${streamIdList.at(-1)}|${messageId}`;

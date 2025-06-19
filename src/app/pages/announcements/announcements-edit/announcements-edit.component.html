@@ -1,14 +1,21 @@
 <h2 mat-dialog-title>{{data.mode === 'create' ? 'お知らせ新規作成' : 'お知らせ編集'}}</h2>
 
+<!-- エラーメッセージ表示 -->
+@if (error) {
+  <div class="error-message" style="color: red; margin: 16px; padding: 8px; background: #ffebee; border-radius: 4px;">
+    {{ error }}
+  </div>
+}
+
 <form [formGroup]="form" (ngSubmit)="onSubmit()">
   <mat-dialog-content>
     <div class="form-field">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>タイトル</mat-label>
         <input matInput formControlName="title" required>
-        <mat-error *ngIf="form.get('title')?.hasError('required')">
-          タイトルは必須です
-        </mat-error>
+        @if (hasError('title')) {
+          <mat-error>{{ getErrorMessage('title') }}</mat-error>
+        }
       </mat-form-field>
     </div>
 
@@ -16,9 +23,9 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>メッセージ</mat-label>
         <textarea matInput formControlName="message" rows="4" required></textarea>
-        <mat-error *ngIf="form.get('message')?.hasError('required')">
-          メッセージは必須です
-        </mat-error>
+        @if (hasError('message')) {
+          <mat-error>{{ getErrorMessage('message') }}</mat-error>
+        }
       </mat-form-field>
     </div>
 
@@ -28,9 +35,9 @@
         <input matInput [matDatepicker]="startPicker" formControlName="startDate" required>
         <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
         <mat-datepicker #startPicker></mat-datepicker>
-        <mat-error *ngIf="form.get('startDate')?.hasError('required')">
-          表示開始日は必須です
-        </mat-error>
+        @if (hasError('startDate')) {
+          <mat-error>{{ getErrorMessage('startDate') }}</mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -38,9 +45,9 @@
         <input matInput [matDatepicker]="endPicker" formControlName="endDate" required>
         <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
         <mat-datepicker #endPicker></mat-datepicker>
-        <mat-error *ngIf="form.get('endDate')?.hasError('required')">
-          表示終了日は必須です
-        </mat-error>
+        @if (hasError('endDate')) {
+          <mat-error>{{ getErrorMessage('endDate') }}</mat-error>
+        }
       </mat-form-field>
     </div>
 
@@ -52,8 +59,11 @@
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button mat-button mat-dialog-close type="button">キャンセル</button>
-    <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
+    <button mat-button type="button" (click)="onCancel()" [disabled]="isSaving">キャンセル</button>
+    <button mat-raised-button color="primary" type="submit" [disabled]="isSaving">
+      @if (isSaving) {
+        <mat-icon>hourglass_empty</mat-icon>
+      }
       {{data.mode === 'create' ? '作成' : '更新'}}
     </button>
   </mat-dialog-actions>

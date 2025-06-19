@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { OrganizationService } from '../../../services/organization.service';
 import { OrganizationEntity } from '../../../models/models';
 import { CommonModule } from '@angular/common';
+import { BaseFormComponent } from '../../../shared/base/base-form.component';
 
 @Component({
   selector: 'app-organization-form',
@@ -11,21 +12,15 @@ import { CommonModule } from '@angular/common';
   templateUrl: './organization-form.component.html',
   styleUrl: './organization-form.component.scss'
 })
-export class OrganizationFormComponent implements OnInit {
-  organizationForm!: FormGroup;
-  organizationId: string | null = null;
-  isEditing = false;
-  isLoading = false;
-  isSaving = false;
-  error: string | null = null;
-  successMessage: string | null = null;
+export class OrganizationFormComponent extends BaseFormComponent implements OnInit {
+  private readonly fb = inject(FormBuilder);
+  private readonly organizationService = inject(OrganizationService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-  constructor(
-    private fb: FormBuilder,
-    private organizationService: OrganizationService,
-    private router: Router,
-    private route: ActivatedRoute
-  ) { }
+  protected form!: FormGroup;
+  protected organizationId: string | null = null;
+  protected isEditing = false;
 
   ngOnInit(): void {
     this.initForm();
@@ -41,7 +36,7 @@ export class OrganizationFormComponent implements OnInit {
   }
 
   private initForm(): void {
-    this.organizationForm = this.fb.group({
+    this.form = this.fb.group({
       key: ['', [Validators.required, Validators.maxLength(100)]],
       description: ['', Validators.maxLength(500)],
       isActive: [true]
@@ -49,83 +44,56 @@ export class OrganizationFormComponent implements OnInit {
   }
 
   private loadOrganization(id: string): void {
-    this.isLoading = true;
-    this.error = null;
+    this.setLoading(true);
+    this.clearError();
 
-    this.organizationService.getOrganizationById(id).subscribe(
-      organization => {
-        this.organizationForm.patchValue({
+    this.organizationService.getOrganizationById(id).subscribe({
+      next: organization => {
+        this.form.patchValue({
           key: organization.key,
           description: organization.description,
           isActive: organization.isActive
         });
-        this.isLoading = false;
+        this.setLoading(false);
       },
-      err => {
-        this.error = '組織情報の取得に失敗しました';
-        this.isLoading = false;
+      error: err => {
+        this.showError('組織情報の取得に失敗しました');
+        this.setLoading(false);
         console.error(err);
       }
-    );
+    });
   }
 
   onSubmit(): void {
-    if (this.organizationForm.invalid) {
-      // フォームが無効な場合は全フィールドにタッチしてバリデーションメッセージを表示
-      Object.keys(this.organizationForm.controls).forEach(key => {
-        const control = this.organizationForm.get(key);
-        control?.markAsTouched();
-      });
+    if (!this.beforeSubmit()) {
       return;
     }
 
-    this.isSaving = true;
-    this.error = null;
-    this.successMessage = null;
+    this.setSaving(true);
+    const organizationData = this.form.value;
 
-    const organizationData = this.organizationForm.value;
+    const operation = this.isEditing && this.organizationId ?
+      this.organizationService.updateOrganization(this.organizationId, organizationData) :
+      this.organizationService.createOrganization(organizationData);
 
-    if (this.isEditing && this.organizationId) {
-      // 既存組織の更新
-      this.organizationService.updateOrganization(this.organizationId, organizationData).subscribe(
-        updatedOrganization => {
-          this.isSaving = false;
-          this.successMessage = '組織情報を更新しました';
-          setTimeout(() => {
-            this.router.navigate(['/organizations']);
-          }, 1500);
-        },
-        err => {
-          this.isSaving = false;
-          this.error = '組織情報の更新に失敗しました';
-          console.error(err);
-        }
-      );
-    } else {
-      // 新規組織の作成
-      this.organizationService.createOrganization(organizationData).subscribe(
-        newOrganization => {
-          this.isSaving = false;
-          this.successMessage = '組織を作成しました';
-          setTimeout(() => {
-            this.router.navigate(['/organizations']);
-          }, 1500);
-        },
-        err => {
-          this.isSaving = false;
-          this.error = '組織の作成に失敗しました';
-          console.error(err);
-        }
-      );
-    }
-  }
+    const successMessage = this.isEditing ? '組織情報を更新しました' : '組織を作成しました';
+    const errorMessage = this.isEditing ? '組織情報の更新に失敗しました' : '組織の作成に失敗しました';
 
-  hasError(controlName: string, errorName: string): boolean {
-    const control = this.organizationForm.get(controlName);
-    return control ? control.hasError(errorName) && control.touched : false;
+    operation.subscribe({
+      next: result => {
+        this.afterSubmit(true, successMessage);
+        setTimeout(() => {
+          this.router.navigate(['/admin/organizations']);
+        }, 1500);
+      },
+      error: err => {
+        this.afterSubmit(false, errorMessage);
+        console.error(err);
+      }
+    });
   }
 
   cancel(): void {
-    this.router.navigate(['/organizations']);
+    this.router.navigate(['/admin/organizations']);
   }
 }
