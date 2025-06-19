@@ -1,5 +1,10 @@
-import { Component, inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { Component } from '@angular/core';
+import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
+
+export interface ImageDialogData {
+  fileName: string;
+  imageBase64String: string;
+}
 
 @Component({
     selector: 'app-image-dialog',
@@ -7,7 +12,6 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
     templateUrl: './image-dialog.component.html',
     styleUrl: './image-dialog.component.scss'
 })
-export class ImageDialogComponent {
-  readonly dialogRef: MatDialogRef<ImageDialogComponent> = inject(MatDialogRef<ImageDialogComponent>);
-  readonly data: { fileName: string, imageBase64String: string } = inject(MAT_DIALOG_DATA);
+export class ImageDialogComponent extends BaseDialogComponent<ImageDialogData> {
+  // BaseDialogComponentから継承されるため、dialogRefとdataは自動的に利用可能
 }

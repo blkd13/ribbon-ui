@@ -1,26 +1,42 @@
 <div class="p-10">
     <h1 mat-dialog-title>Save As Mode</h1>
     <p mat-dialog-content>現在のチャット設定を「モード」として保存します。</p>
-    <div mat-dialog-content class="save-thread-dialog mt-10">
+    
+    <form [formGroup]="form" mat-dialog-content class="save-thread-dialog mt-10">
         <mat-form-field appearance="fill" class="w-full">
             <mat-label>モード名</mat-label>
-            <input matInput [(ngModel)]="data.threadName" placeholder="例：高機能エージェント" required>
+            <input matInput formControlName="threadName" placeholder="例：高機能エージェント" required>
+            @if (hasError('threadName')) {
+                <mat-error>{{ getErrorMessage('threadName') }}</mat-error>
+            }
         </mat-form-field>
 
         <mat-form-field appearance="fill" class="w-full mt-4">
             <mat-label>説明</mat-label>
-            <textarea matInput rows="3" [(ngModel)]="data.description" placeholder="例：全ツールONのモード"></textarea>
+            <textarea matInput rows="3" formControlName="description" placeholder="例：全ツールONのモード"></textarea>
         </mat-form-field>
 
         @if(!data.isRenameOnly && data.hasMessages) {
-        <mat-checkbox class="mt-4" [(ngModel)]="data.includeMessages">
+        <mat-checkbox class="mt-4" formControlName="includeMessages">
             回答履歴も含めて保存する
         </mat-checkbox>
         }
+    </form>
+
+    @if (error) {
+    <div class="mt-4 text-red-600 text-sm">
+        {{ error }}
     </div>
+    }
 
     <div mat-dialog-actions class="flex justify-between mt-4">
-        <button mat-button (click)="onCancel()">キャンセル</button>
-        <button mat-raised-button color="primary" (click)="onSave()">保存</button>
+        <button mat-button (click)="onCancel()" [disabled]="isSaving">キャンセル</button>
+        <button mat-raised-button color="primary" (click)="onSave()" [disabled]="isSaving">
+            @if (isSaving) {
+                保存中...
+            } @else {
+                保存
+            }
+        </button>
     </div>
 </div>

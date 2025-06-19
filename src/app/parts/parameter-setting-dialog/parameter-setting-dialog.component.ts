@@ -4,7 +4,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { ChatService } from '../../services/chat.service';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationService } from '../../shared/services/notification.service';
 import { MessageGroupForView, ProjectVisibility, Thread, ThreadGroup, ThreadGroupType } from '../../models/project-models';
 import { Utils } from '../../utils';
 import { MatSliderModule } from '@angular/material/slider';
@@ -41,7 +41,7 @@ export class ParameterSettingDialogComponent {
 
   readonly dialog: MatDialog = inject(MatDialog);
   readonly dialogRef: MatDialogRef<ParameterSettingDialogComponent> = inject(MatDialogRef);
-  readonly snackBar: MatSnackBar = inject(MatSnackBar);
+  readonly notificationService: NotificationService = inject(NotificationService);
   readonly data = inject<{ threadGroup: ThreadGroup }>(MAT_DIALOG_DATA);
 
   threadGroup: ThreadGroup = Utils.clone(this.data.threadGroup);
@@ -133,7 +133,7 @@ export class ParameterSettingDialogComponent {
             )).pipe(map(next => savedThreadGroup)); // メッセージグループを保存したらスレッドグループを返す
           }),
         ).subscribe((threadGroup) => {
-          this.snackBar.open('設定を保存しました。', 'Close', { duration: 2000 });
+          this.notificationService.showSuccess('設定を保存しました');
           Object.assign(this.threadGroup, threadGroup); // スレッドグループを上書きする
           this.submit(true);
         });

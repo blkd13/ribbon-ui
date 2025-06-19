@@ -1,42 +1,44 @@
-import { Component, Inject, inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+import { Component, inject, OnInit } from '@angular/core';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+
+import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
 import { AIModelEntity, AIModelManagerService } from '../../services/model-manager.service';
 import { ModelSelectorComponent } from "../model-selector/model-selector.component";
 import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
 import { MermaidValidatorService } from '../../services/mermaid-validator.service';
 
 export interface MermaidFixDialogData {
-    errors: Array<{ code: string; error: string; startIndex: number; endIndex: number }>;
+  errors: Array<{ code: string; error: string; startIndex: number; endIndex: number }>;
 }
 
 export interface MermaidFixDialogResult {
-    proceed: boolean;
-    model?: string;
-    customPrompt?: string;
+  proceed: boolean;
+  model?: string;
+  customPrompt?: string;
 }
 
 @Component({
-    selector: 'app-mermaid-fix-dialog',
-    standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        MatDialogModule,
-        MatButtonModule,
-        MatFormFieldModule,
-        MatSelectModule,
-        MatInputModule,
-        MatIconModule,
-        ModelSelectorComponent,
-    ],
-    template: `
+  selector: 'app-mermaid-fix-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatInputModule,
+    MatIconModule,
+    ModelSelectorComponent,
+  ],
+  template: `
     <h2 mat-dialog-title class="flex items-center gap-2">
       <mat-icon class="text-red-500">error_outline</mat-icon>
       Mermaid構文エラー検出
@@ -54,38 +56,53 @@ export interface MermaidFixDialogResult {
         </div>
       </div>
 
-      <div class="mb-4">
+      <form [formGroup]="form">
+        <div class="mb-4">
           <mat-label>修正に使用するAIモデル</mat-label>
           <app-model-selector name="model-select" [args]="args" (argsChange)="changeModel($event)"></app-model-selector>
-      </div>
+          @if (hasError('model')) {
+            <div class="text-red-600 text-sm mt-1">{{ getErrorMessage('model') }}</div>
+          }
+        </div>
 
-      <div class="mb-4">
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>カスタムプロンプト（オプション）</mat-label>
-          <textarea 
-            matInput 
-            [(ngModel)]="customPrompt" 
-            placeholder="特定の修正指示がある場合は入力してください..."
-            rows="3"
-            class="resize-none">
-          </textarea>
-          <mat-hint>空欄の場合はデフォルトのプロンプトを使用します</mat-hint>
-        </mat-form-field>
-      </div>
+        <div class="mb-4">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>カスタムプロンプト（オプション）</mat-label>
+            <textarea 
+              matInput 
+              formControlName="customPrompt"
+              placeholder="特定の修正指示がある場合は入力してください..."
+              rows="3"
+              class="resize-none">
+            </textarea>
+            <mat-hint>空欄の場合はデフォルトのプロンプトを使用します</mat-hint>
+          </mat-form-field>
+        </div>
+      </form>
+
+      @if (error) {
+        <div class="mb-4 text-red-600 text-sm">
+          {{ error }}
+        </div>
+      }
     </mat-dialog-content>
     
     <mat-dialog-actions class="flex gap-2 justify-end">
-      <button mat-button (click)="onCancel()">キャンセル</button>
+      <button mat-button (click)="onCancel()" [disabled]="isSaving">キャンセル</button>
       <button 
         mat-raised-button 
         color="primary" 
         (click)="onFix()"
-        [disabled]="!args.model">
-        AI修正を実行
+        [disabled]="!args.model || isSaving">
+        @if (isSaving) {
+          修正実行中...
+        } @else {
+          AI修正を実行
+        }
       </button>
     </mat-dialog-actions>
   `,
-    styles: [`
+  styles: [`
     .error-message {
       background-color: #ffebee;
       color: #c62828;
@@ -106,47 +123,105 @@ export interface MermaidFixDialogResult {
     }
   `]
 })
-export class MermaidFixDialogComponent {
-    private readonly aiModelManager = inject(AIModelManagerService);
-    private readonly mermaidValidatorService = inject(MermaidValidatorService);
+export class MermaidFixDialogComponent extends BaseDialogComponent<MermaidFixDialogData, MermaidFixDialogResult> implements OnInit {
+  private readonly aiModelManager = inject(AIModelManagerService);
+  private readonly mermaidValidatorService = inject(MermaidValidatorService);
 
-    customPrompt: string = '';
-    availableModels: AIModelEntity[] = [];
-    args = {
-        model: this.mermaidValidatorService.defaultModel,
-    } as ChatCompletionCreateParamsWithoutMessages;
+  protected availableModels: AIModelEntity[] = [];
+  protected args = {
+    model: '',
+  } as ChatCompletionCreateParamsWithoutMessages;
 
-    constructor(
-        public dialogRef: MatDialogRef<MermaidFixDialogComponent>,
-        @Inject(MAT_DIALOG_DATA) public data: MermaidFixDialogData
-    ) {
-        this.customPrompt = this.mermaidValidatorService.defaultSystemPrompt;
-        this.loadAvailableModels();
+  // リアクティブフォーム
+  protected readonly form = new FormGroup({
+    model: new FormControl('', [Validators.required]),
+    customPrompt: new FormControl(this.mermaidValidatorService.defaultSystemPrompt)
+  });
+
+  ngOnInit(): void {
+    this.initializeComponent();
+  }
+
+  private async initializeComponent(): Promise<void> {
+    try {
+      this.setLoading(true);
+
+      await this.executeAsync(async () => {
+        const models = await this.aiModelManager.getAIModels().toPromise();
+        this.availableModels = models?.filter(model => model.isActive) || [];
+
+        // デフォルトモデルを設定
+        const defaultModel = this.mermaidValidatorService.defaultModel;
+        if (defaultModel && this.availableModels.find(m => m.name === defaultModel)) {
+          this.args.model = defaultModel;
+          this.form.patchValue({ model: defaultModel });
+        } else if (this.availableModels.length > 0) {
+          this.args.model = this.availableModels[0].name;
+          this.form.patchValue({ model: this.availableModels[0].name });
+        }
+
+        return this.availableModels;
+      }, undefined, 'モデル一覧の読み込みに失敗しました');
+    } finally {
+      this.setLoading(false);
     }
-    private loadAvailableModels() {
-        this.aiModelManager.getAIModels().subscribe(models => {
-            this.availableModels = models.filter(model => model.isActive);
-            // デフォルトで最初の利用可能なモデルを選択
-            if (this.availableModels.length > 0 && !this.args.model) {
-                this.args.model = this.availableModels[0].id;
-            }
-        });
+  }
+
+  protected changeModel(args: ChatCompletionCreateParamsWithoutMessages): void {
+    this.args = args;
+    this.form.patchValue({ model: args.model });
+  }
+
+  protected onCancel(): void {
+    this.cancel();
+  }
+
+  protected async onFix(): Promise<void> {
+    if (!this.validateForm()) {
+      return;
     }
 
-    changeModel(args: ChatCompletionCreateParamsWithoutMessages): void {
-        this.args = args;
+    try {
+      this.setSaving(true);
+
+      const result: MermaidFixDialogResult = {
+        proceed: true,
+        model: this.args.model,
+        customPrompt: this.form.value.customPrompt?.trim() || undefined
+      };
+
+      this.confirm(result);
+    } finally {
+      this.setSaving(false);
+    }
+  }
+
+  private validateForm(): boolean {
+    if (!this.args.model) {
+      this.setError('AIモデルを選択してください。');
+      return false;
     }
 
-    onCancel(): void {
-        this.dialogRef.close({ proceed: false });
-    }
+    this.clearError();
+    return true;
+  }
 
-    onFix(): void {
-        const result: MermaidFixDialogResult = {
-            proceed: true,
-            model: this.args.model,
-            customPrompt: this.customPrompt.trim() || undefined
-        };
-        this.dialogRef.close(result);
+  // BaseDialogComponentのメソッドオーバーライド
+  protected hasError(controlName: string): boolean {
+    const control = this.form.get(controlName);
+    return !!(control?.invalid && control?.touched);
+  }
+
+  protected override getErrorMessage(controlName: string): string {
+    const control = this.form.get(controlName);
+    if (!control?.errors) return '';
+
+    if (control.errors['required']) {
+      if (controlName === 'model') {
+        return 'AIモデルの選択は必須です';
+      }
+      return `${controlName}は必須です`;
     }
+    return `${controlName}に入力エラーがあります`;
+  }
 }

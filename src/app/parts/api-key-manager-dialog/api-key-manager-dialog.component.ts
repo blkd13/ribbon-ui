@@ -8,7 +8,8 @@ import { MatDialogModule, MatDialog, MAT_DIALOG_DATA } from '@angular/material/d
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { NotificationService } from '../../shared/services/notification.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { AuthService, OAuthAccount } from '../../services/auth.service';
@@ -28,7 +29,7 @@ import { GService } from '../../services/g.service';
 })
 export class ApiKeyManagerDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
-  private snackBar = inject(MatSnackBar);
+  private notificationService = inject(NotificationService);
   private dialog = inject(MatDialog);
   readonly g: GService = inject(GService);
   readonly authServices: AuthService = inject(AuthService);
@@ -73,7 +74,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
       },
       error: (error) => {
         console.log(error);
-        this.snackBar.open(`APIプロバイダの取得に失敗しました。`, 'close', { duration: 3000 });
+        this.notificationService.showError('APIプロバイダの取得に失敗しました');
       },
       complete: () => {
         if (this.apiProviderGroupedKeys.length === 0) {
@@ -105,7 +106,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
         });
       },
       error: error => {
-        this.snackBar.open('API鍵の取得に失敗しました', '閉じる', { duration: 3000 });
+        this.notificationService.showError('API鍵の取得に失敗しました');
       },
     });
   }
@@ -120,11 +121,11 @@ export class ApiKeyManagerDialogComponent implements OnInit {
 
   genAPIKey(): void {
     if (this.apiLabelForm.invalid || !this.apiLabelForm.value.label) {
-      this.snackBar.open('ラベルを入力してください', '閉じる', { duration: 3000 });
+      this.notificationService.showValidationError('ラベルを入力してください');
       return;
     }
     if (this.apiKeys.find(key => key.provider === `local-${this.apiLabelForm.value.label}`)) {
-      this.snackBar.open(`${this.apiLabelForm.value.label}\n既に同名のAPI鍵が存在します。別のラベルを入力してください。`, '閉じる', { duration: 3000 });
+      this.notificationService.showError(`${this.apiLabelForm.value.label}\n既に同名のAPI鍵が存在します。別のラベルを入力してください。`);
       return;
     } else { }
     this.authServices.genApiKey(this.apiLabelForm.value.label).subscribe({
@@ -133,7 +134,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
         this.loadApiKeys();
       },
       error: error => {
-        this.snackBar.open('API鍵の生成に失敗しました', '閉じる', { duration: 3000 });
+        this.notificationService.showError('API鍵の生成に失敗しました');
       },
     });
   }
@@ -145,9 +146,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
       // TODO ここはいけてない。メッセージをsnackbarじゃなくて画面に載せた方が良い。
       this.authServices.registApiKey(formValue as any).subscribe({
         next: next => {
-          this.snackBar.open('API鍵を登録しました', '閉じる', {
-            duration: 10000
-          });
+          this.notificationService.showSuccess('API鍵を登録しました');
           this.loadApiKeys();
           // リセット時に初期値をセットすることで、バリデーションエラーを回避する
           this.apiKeyForm.reset({
@@ -159,9 +158,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           this.apiKeyForm.markAsUntouched();
         },
         error: error => {
-          this.snackBar.open(JSON.stringify(error), '閉じる', {
-            duration: 10000
-          });
+          this.notificationService.showLongError(error, 'API鍵登録エラー');
         }
       });
     }
@@ -174,7 +171,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           // TODO: APIサービスでの削除処理に置き換え
           this.apiKeys = this.apiKeys.filter(k => k.id !== key.id);
 
-          this.snackBar.open('API鍵を削除しました', '閉じる', { duration: 3000 });
+          this.notificationService.showOperationResult('API鍵を削除', true);
           this.loadApiKeys();
         }
       });
@@ -207,13 +204,13 @@ export class ApiKeyManagerDialogComponent implements OnInit {
 })
 export class ApiKeyDialogComponent implements OnInit {
   readonly data = inject<{ apiKey: string }>(MAT_DIALOG_DATA);
-  private snackBar = inject(MatSnackBar);
+  private notificationService = inject(NotificationService);
 
   ngOnInit(): void { }
 
   copyToClipboard(): void {
     navigator.clipboard.writeText(this.data.apiKey).then(() => {
-      this.snackBar.open('APIキーをコピーしました', '閉じる', { duration: 2000 });
+      this.notificationService.showCopySuccess('APIキーをクリップボードにコピーしました');
     });
   }
 }

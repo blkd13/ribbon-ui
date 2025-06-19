@@ -294,7 +294,7 @@ export class ChatComponent implements OnInit {
   };
 
   // 外部プロバイダーの接続性チェック
-  private async checkProviderConnectivity(providerType: string): Promise<boolean> {
+  private async checkProviderConnectivity(providerType: string, providerName: string): Promise<boolean> {
     try {
       // プロバイダーが必要ない場合は常にtrue
       if (!providerType) {
@@ -309,7 +309,7 @@ export class ChatComponent implements OnInit {
 
       // 該当するプロバイダータイプのプロバイダーを検索
       const matchingProviders = availableProviders.filter(provider =>
-        provider.type === providerType && provider.name
+        provider.type === providerType && provider.name === providerName
       );
 
       if (matchingProviders.length === 0) {
@@ -358,13 +358,15 @@ export class ChatComponent implements OnInit {
     try {
       // ONにする場合は接続性チェックを実行
       if (newState) {
-        const requiredProvider = this.toolGroupProviderMapping[groupName.split('-')[0]]; // グループ名からプロバイダーを取得
+        const providerType = groupName.split('-')[0]; // グループ名からプロバイダーを取得
+        const providerName = groupName.substring(groupName.indexOf('-') + 1); // グループ名からプロバイダー名を取得
+        const requiredProvider = this.toolGroupProviderMapping[providerType]; // グループ名からプロバイダーを取得
         if (requiredProvider === 'API_KEY') {
           // 接続されていない場合は警告を表示してONにしない
           this.showConnectionPrompt(groupName, requiredProvider);
           return;
         } else if (requiredProvider) {
-          const isConnected = await this.checkProviderConnectivity(requiredProvider);
+          const isConnected = await this.checkProviderConnectivity(requiredProvider, providerName);
 
           if (!isConnected) {
             // 接続されていない場合は警告を表示してONにしない

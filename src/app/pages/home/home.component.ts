@@ -1,4 +1,5 @@
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { NotificationService } from '../../shared/services/notification.service';
 import { FullPathFile, FileUploadContent, FileManagerService } from './../../services/file-manager.service';
 import { MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 import { Observable, tap, forkJoin, from, map, mergeMap, of, switchMap } from 'rxjs';
@@ -75,7 +76,7 @@ export class HomeComponent implements OnInit {
   readonly dbService: NgxIndexedDBService = inject(NgxIndexedDBService);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly router: Router = inject(Router);
-  readonly snackBar: MatSnackBar = inject(MatSnackBar);
+  readonly notificationService: NotificationService = inject(NotificationService);
   readonly g: GService = inject(GService);
   readonly apiGitlabService: ApiGitlabService = inject(ApiGitlabService);
   readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
@@ -165,7 +166,7 @@ export class HomeComponent implements OnInit {
       },
       error: (error) => {
         console.log(error);
-        this.snackBar.open(`APIプロバイダの取得に失敗しました。`, 'close', { duration: 3000 });
+        this.notificationService.showError('APIプロバイダの取得に失敗しました');
       },
       complete: () => {
         console.log('complete');
