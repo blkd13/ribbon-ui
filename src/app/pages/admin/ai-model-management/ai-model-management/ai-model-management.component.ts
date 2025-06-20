@@ -3,7 +3,7 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, ValueChangeEvent } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, ValueChangeEvent, FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -17,6 +17,7 @@ import { JsonEditorComponent } from "../../../../parts/json-editor/json-editor.c
 import { TrimTrailingZerosPipe } from '../../../../pipe/trim-trailing-zeros.pipe';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteActivatedEvent, MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AdminScopeService } from '../../../../services/admin-scope.service';
@@ -26,22 +27,28 @@ import { TagService, TagEntity } from '../../../../services/model-manager.servic
 import { TagManagementDialogComponent } from '../tag-management-dialog/tag-management-dialog.component';
 import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../services/auth.service';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { BulkTagDialogComponent } from '../bulk-tag-dialog/bulk-tag-dialog.component';
+import { BulkProviderDialogComponent } from '../bulk-provider-dialog/bulk-provider-dialog.component';
 
 @Component({
   selector: 'app-ai-model-management',
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     MatAutocompleteModule,
     MatIconModule,
     MatButtonModule,
     MatSnackBarModule,
     MatFormFieldModule,
+    MatInputModule,
     MatChipsModule,
     MatTooltipModule,
     MatSelectModule,
     MatDialogModule,
     MatCardModule,
+    MatCheckboxModule,
     JsonEditorComponent,
     TrimTrailingZerosPipe,
   ],
@@ -64,7 +71,17 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
 
   models: AIModelEntityForView[] = [];
+  filteredModels: AIModelEntityForView[] = [];
   selectedModel: AIModelEntityForView | null = null;
+
+  // フィルター・ソート・一括操作関連
+  searchFilter = '';
+  providerFilter: string[] = [];
+  statusFilter = '';
+  sortBy: string | null = null;
+  sortDirection: 'asc' | 'desc' = 'desc';
+  selectedModels: string[] = [];
+  availableProviders: string[] = [];
 
   // Subscriptions
   private subscriptions = new Subscription();
@@ -227,6 +244,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       next: (allModels) => {
         const visibleModels = this.adminScopeService.getVisibleItems(allModels);
         this.models = this.adminScopeService.getEffectiveItems(visibleModels);
+        this.updateFilteredModels();
       },
       error: (err) => {
         console.error('Error loading models:', err);
@@ -1113,5 +1131,323 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         control.setValue([...currentArray, tagName]);
       }
     }
+  }
+
+  // ===== フィルター・ソート・一括操作関連 =====
+
+  applyFilters(): void {
+    let filtered = [...this.models];
+
+    // 検索フィルター
+    if (this.searchFilter.trim()) {
+      const search = this.searchFilter.toLowerCase();
+      filtered = filtered.filter(model =>
+        model.name.toLowerCase().includes(search) ||
+        model.providerModelId.toLowerCase().includes(search) ||
+        model.providerNameList.some(p => p.toLowerCase().includes(search)) ||
+        (model.description && model.description.toLowerCase().includes(search))
+      );
+    }
+
+    // プロバイダーフィルター
+    if (this.providerFilter.length > 0) {
+      filtered = filtered.filter(model =>
+        model.providerNameList.some(p => this.providerFilter.includes(p))
+      );
+    }
+
+    // ステータスフィルター
+    if (this.statusFilter !== '') {
+      const isActive = this.statusFilter === 'true';
+      filtered = filtered.filter(model => model.isActive === isActive);
+    }
+
+    this.filteredModels = filtered;
+    this.applySorting();
+  }
+
+  applySorting(): void {
+    // 安定ソートのために配列をインデックス付きで処理
+    const indexedModels = this.filteredModels.map((model, index) => ({ model, index }));
+
+    indexedModels.sort((a, b) => {
+      let valueA: any;
+      let valueB: any;
+
+      switch (this.sortBy) {
+        case null:
+        case '':
+          // デフォルト順序：リリース日新しい順 > 名前順
+          const releaseDateA = a.model.releaseDate ? new Date(a.model.releaseDate).getTime() : 0;
+          const releaseDateB = b.model.releaseDate ? new Date(b.model.releaseDate).getTime() : 0;
+
+          if (releaseDateA !== releaseDateB) {
+            return releaseDateB - releaseDateA; // 新しい順（descending）
+          }
+
+          // リリース日が同じ場合は名前でソート
+          return a.model.name.localeCompare(b.model.name);
+
+        case 'release':
+          valueA = a.model.releaseDate ? new Date(a.model.releaseDate).getTime() : 0;
+          valueB = b.model.releaseDate ? new Date(b.model.releaseDate).getTime() : 0;
+          break;
+        case 'name':
+          valueA = a.model.name;
+          valueB = b.model.name;
+          break;
+        case 'provider':
+          valueA = a.model.providerNameList.join(',');
+          valueB = b.model.providerNameList.join(',');
+          break;
+        case 'context':
+          valueA = a.model.maxContextTokens || 0;
+          valueB = b.model.maxContextTokens || 0;
+          break;
+        case 'price':
+          valueA = a.model.pricingHistory?.[0]?.inputPricePerUnit || 0;
+          valueB = b.model.pricingHistory?.[0]?.inputPricePerUnit || 0;
+          break;
+        case 'updated':
+          valueA = a.model.updatedAt;
+          valueB = b.model.updatedAt;
+          break;
+        default:
+          // 値が同じ場合は元のインデックス順を保持（安定ソート）
+          return a.index - b.index;
+      }
+
+      // 値が同じ場合は元のインデックス順を保持（安定ソート）
+      if (valueA === valueB) {
+        return a.index - b.index;
+      }
+
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        const result = valueA.localeCompare(valueB);
+        return this.sortDirection === 'asc' ? result : -result;
+      } else {
+        const result = valueA - valueB;
+        return this.sortDirection === 'asc' ? result : -result;
+      }
+    });
+
+    // ソート結果を元の配列に戻す
+    this.filteredModels = indexedModels.map(item => item.model);
+  }
+
+  toggleSortDirection(): void {
+    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    this.applySorting();
+  }
+
+  resetFilters(): void {
+    this.searchFilter = '';
+    this.providerFilter = [];
+    this.statusFilter = '';
+    this.sortBy = null;
+    this.sortDirection = 'desc';
+    this.selectedModels = [];
+    this.applyFilters();
+  }
+
+  // 一括選択関連
+  isModelSelected(modelId: string): boolean {
+    return this.selectedModels.includes(modelId);
+  }
+
+  toggleModelSelection(modelId: string, event: MatCheckboxChange): void {
+    if (event.checked) {
+      if (!this.selectedModels.includes(modelId)) {
+        this.selectedModels.push(modelId);
+      }
+    } else {
+      const index = this.selectedModels.indexOf(modelId);
+      if (index > -1) {
+        this.selectedModels.splice(index, 1);
+      }
+    }
+  }
+
+  isAllSelected(): boolean {
+    return this.filteredModels.length > 0 && this.selectedModels.length === this.filteredModels.length;
+  }
+
+  isSomeSelected(): boolean {
+    return this.selectedModels.length > 0 && this.selectedModels.length < this.filteredModels.length;
+  }
+
+  toggleSelectAll(event: MatCheckboxChange): void {
+    if (event.checked) {
+      this.selectedModels = this.filteredModels.map(model => model.id);
+    } else {
+      this.selectedModels = [];
+    }
+  }
+
+  // 一括操作
+  canBulkEdit(): boolean {
+    return this.selectedModels.length > 0 && this.selectedModels.every(id => {
+      const model = this.models.find(m => m.id === id);
+      return model && this.isModelsOwnScope(model);
+    });
+  }
+
+  bulkToggleStatus(isActive: boolean): void {
+    if (!this.canBulkEdit()) return;
+
+    const action = isActive ? 'activate' : 'deactivate';
+    const confirmed = confirm(`Are you sure you want to ${action} ${this.selectedModels.length} models?`);
+
+    if (!confirmed) return;
+
+    const updatePromises = this.selectedModels.map(id => {
+      const model = this.models.find(m => m.id === id);
+      if (model && this.isModelsOwnScope(model)) {
+        const updatedModel = { ...model, isActive };
+        return this.aiModelService.upsertAIModel(updatedModel);
+      }
+      return Promise.resolve();
+    });
+
+    Promise.all(updatePromises)
+      .then(() => {
+        this.snackBar.open(`${this.selectedModels.length} models ${isActive ? 'activated' : 'deactivated'}`, 'Close', { duration: 3000 });
+        this.selectedModels = [];
+        this.loadModels();
+      })
+      .catch(error => {
+        console.error('Bulk update failed:', error);
+        this.snackBar.open('Bulk update failed', 'Close', { duration: 3000 });
+      });
+  }
+
+  bulkDelete(): void {
+    if (!this.canBulkEdit()) return;
+
+    if (confirm(`Are you sure you want to delete ${this.selectedModels.length} models? This action cannot be undone.`)) {
+      const deletePromises = this.selectedModels.map(id => {
+        const model = this.models.find(m => m.id === id);
+        if (model && this.isModelsOwnScope(model)) {
+          return this.aiModelService.deleteAIModel(id);
+        }
+        return Promise.resolve();
+      });
+
+      Promise.all(deletePromises)
+        .then(() => {
+          this.snackBar.open(`${this.selectedModels.length} models deleted`, 'Close', { duration: 3000 });
+          this.selectedModels = [];
+          this.loadModels();
+        })
+        .catch(error => {
+          console.error('Bulk delete failed:', error);
+          this.snackBar.open('Bulk delete failed', 'Close', { duration: 3000 });
+        });
+    }
+  }
+
+  // 一括タグ追加ダイアログ
+  openBulkTagDialog(): void {
+    if (!this.canBulkEdit()) return;
+
+    const dialogRef = this.dialog.open(BulkTagDialogComponent, {
+      width: '600px',
+      data: {
+        selectedModels: this.selectedModels,
+        availableTags: this.availableTags,
+        models: this.models
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.tags) {
+        this.bulkAddTags(result.tags);
+      }
+    });
+  }
+
+  // 一括プロバイダー設定ダイアログ
+  openBulkProviderDialog(): void {
+    if (!this.canBulkEdit()) return;
+
+    const dialogRef = this.dialog.open(BulkProviderDialogComponent, {
+      width: '600px',
+      data: {
+        selectedModels: this.selectedModels,
+        availableProviders: this.providerOptions,
+        models: this.models
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.providers) {
+        this.bulkSetProviders(result.providers);
+      }
+    });
+  }
+
+  bulkAddTags(tags: string[]): void {
+    if (!this.canBulkEdit() || !tags.length) return;
+
+    const updatePromises = this.selectedModels.map(id => {
+      const model = this.models.find(m => m.id === id);
+      if (model && this.isModelsOwnScope(model)) {
+        const existingTags = model.tags || [];
+        const newTags = [...new Set([...existingTags, ...tags])]; // 重複除去
+        const updatedModel = { ...model, tags: newTags };
+        return this.aiModelService.upsertAIModel(updatedModel);
+      }
+      return Promise.resolve();
+    });
+
+    Promise.all(updatePromises)
+      .then(() => {
+        this.snackBar.open(`Tags added to ${this.selectedModels.length} models`, 'Close', { duration: 3000 });
+        this.selectedModels = [];
+        this.loadModels();
+      })
+      .catch(error => {
+        console.error('Bulk tag update failed:', error);
+        this.snackBar.open('Bulk tag update failed', 'Close', { duration: 3000 });
+      });
+  }
+
+  bulkSetProviders(providers: string[]): void {
+    if (!this.canBulkEdit() || !providers.length) return;
+
+    const updatePromises = this.selectedModels.map(id => {
+      const model = this.models.find(m => m.id === id);
+      if (model && this.isModelsOwnScope(model)) {
+        const updatedModel = { ...model, providerNameList: providers };
+        return this.aiModelService.upsertAIModel(updatedModel);
+      }
+      return Promise.resolve();
+    });
+
+    Promise.all(updatePromises)
+      .then(() => {
+        this.snackBar.open(`Providers updated for ${this.selectedModels.length} models`, 'Close', { duration: 3000 });
+        this.selectedModels = [];
+        this.loadModels();
+      })
+      .catch(error => {
+        console.error('Bulk provider update failed:', error);
+        this.snackBar.open('Bulk provider update failed', 'Close', { duration: 3000 });
+      });
+  }
+
+  private updateAvailableProviders(): void {
+    const providers = new Set<string>();
+    this.models.forEach(model => {
+      model.providerNameList.forEach(provider => providers.add(provider));
+    });
+    this.availableProviders = Array.from(providers).sort();
+  }
+
+  private updateFilteredModels(): void {
+    this.filteredModels = [...this.models];
+    this.updateAvailableProviders();
+    // 初期化時は自動でソートを適用
+    this.applyFilters();
   }
 }

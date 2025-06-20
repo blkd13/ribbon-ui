@@ -60,6 +60,11 @@ h4 {
     border-radius: 4px;
     border: 1px solid #3a3a3a;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 20px;
+    height: calc(100vh - 40px);
 }
 
 /* テーブルヘッダー */
@@ -70,6 +75,53 @@ h4 {
     padding: 15px;
     background-color: #2c2c2c;
     border-bottom: 1px solid #3a3a3a;
+}
+
+/* フィルターバー */
+.filter-bar {
+    background-color: #2c2c2c;
+    border-bottom: 1px solid #3a3a3a;
+    padding: 15px;
+
+    .filter-controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+
+        .filter-field {
+            min-width: 200px;
+            flex: 0 0 auto;
+
+            ::ng-deep .mat-mdc-form-field-wrapper {
+                padding-bottom: 0;
+            }
+
+            ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+                display: none;
+            }
+        }
+
+        button {
+            flex-shrink: 0;
+        }
+    }
+
+    .bulk-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+        border-top: 1px solid #3a3a3a;
+        margin-top: 10px;
+
+        .selected-count {
+            color: #64b5f6;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+    }
 }
 
 /* テーブルスタイル */
@@ -102,6 +154,21 @@ h4 {
     background-color: #2c3e50;
 }
 
+.data-table tr.bulk-selected {
+    background-color: rgba(100, 181, 246, 0.1);
+}
+
+.checkbox-column {
+    width: 56px;
+    text-align: center;
+    padding: 8px !important;
+}
+
+.checkbox-column mat-checkbox {
+    display: flex;
+    justify-content: center;
+}
+
 .actions-cell {
     width: 120px;
     text-align: right;
@@ -116,11 +183,22 @@ h4 {
     padding: 15px;
     background-color: #2c2c2c;
     border-bottom: 1px solid #3a3a3a;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 /* フォームスタイル */
+.form-content {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
 form {
     padding: 15px;
+    flex: 1;
 }
 
 .form-group {
@@ -160,6 +238,15 @@ textarea.form-control {
     display: flex;
     gap: 10px;
     margin-top: 20px;
+    position: sticky;
+    bottom: 0;
+    background-color: #2a2a2a;
+    padding: 15px;
+    z-index: 8;
+    margin-left: -15px;
+    margin-right: -15px;
+    margin-bottom: -15px;
+    border-top: 1px solid #3a3a3a;
 }
 
 /* OAuth2 セクション */

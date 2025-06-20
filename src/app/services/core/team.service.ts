@@ -18,15 +18,14 @@ import { NotificationService } from '../../shared/services/notification.service'
  * チームのCRUD操作とメンバー管理を提供
  */
 @Injectable({ providedIn: 'root' })
-export class TeamService extends BaseApiService<Team> {
+export class TeamService extends BaseApiService<Team, TeamCreateDto, TeamUpdateDto> {
+    protected baseUrl = '/user/team';
+    protected entityName = 'チーム';
+    
     private readonly authService = inject(AuthService);
     private readonly notificationService = inject(NotificationService);
     
     private teamList: Team[] = [];
-
-    constructor() {
-        super('/user/team');
-    }
 
     /**
      * 新しいチームを作成
@@ -159,7 +158,7 @@ export class TeamService extends BaseApiService<Team> {
     /**
      * チームキャッシュをクリア
      */
-    clearCache(): void {
+    override clearCache(): void {
         this.teamList = [];
     }
 
@@ -169,8 +168,8 @@ export class TeamService extends BaseApiService<Team> {
      * @returns 所属チームリスト
      */
     getUserTeams(userId?: string): Observable<Team[]> {
-        const params = userId ? { userId } : {};
-        return this.http.get<Team[]>(`${this.baseUrl}/user-teams`, { params });
+        const options = userId ? { params: { userId } } : {};
+        return this.http.get<Team[]>(`${this.baseUrl}/user-teams`, options);
     }
 
     /**

@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AnnouncementsService } from '../../../services/announcements.service';
 import { Announcement } from '../../../models/announcement';
 import { BaseDialogComponent } from '../../../shared/base/base-dialog.component';
+import { BaseFormComponent } from '../../../shared/base/base-form.component';
 
 export interface DialogData {
   mode: 'create' | 'edit';
@@ -20,6 +21,35 @@ export interface DialogData {
 
 export interface DialogResult {
   announcement: Announcement;
+}
+
+class FormHelper extends BaseFormComponent {
+  protected form!: FormGroup;
+
+  // Expose protected methods as public for composition
+  public setFormReference(form: FormGroup): void {
+    this.form = form;
+  }
+
+  public validateAndPrepare(): boolean {
+    return this.beforeSubmit();
+  }
+
+  public setLoadingState(loading: boolean): void {
+    this.setSaving(loading);
+  }
+
+  public handleResult(success: boolean, message: string): void {
+    this.afterSubmit(success, message);
+  }
+
+  public checkError(controlName: string): boolean {
+    return this.hasError(controlName);
+  }
+
+  public displayError(message: string): void {
+    this.showError(message);
+  }
 }
 
 @Component({
@@ -40,11 +70,13 @@ export interface DialogResult {
   templateUrl: './announcements-edit.component.html',
   styleUrl: './announcements-edit.component.scss'
 })
+
 export class AnnouncementsEditComponent extends BaseDialogComponent<DialogData, DialogResult> implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly announcementsService = inject(AnnouncementsService);
 
   protected form!: FormGroup;
+  private formHelper = new FormHelper();
 
   constructor() {
     super();
@@ -52,7 +84,6 @@ export class AnnouncementsEditComponent extends BaseDialogComponent<DialogData, 
   }
 
   ngOnInit(): void {
-    // 初期化時にフォームデータを設定
     this.initForm();
   }
 
@@ -64,6 +95,8 @@ export class AnnouncementsEditComponent extends BaseDialogComponent<DialogData, 
       endDate: [new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), Validators.required],
       isActive: [true]
     });
+
+    this.formHelper.setFormReference(this.form);
 
     if (this.data.mode === 'edit' && this.data.announcement) {
       this.form.patchValue({
@@ -77,7 +110,7 @@ export class AnnouncementsEditComponent extends BaseDialogComponent<DialogData, 
   }
 
   onSubmit(): void {
-    if (!this.validateForm()) {
+    if (!this.formHelper.validateAndPrepare() || !this.validateDateRange()) {
       return;
     }
 
@@ -87,31 +120,35 @@ export class AnnouncementsEditComponent extends BaseDialogComponent<DialogData, 
     const successMessage = isEdit ? 'お知らせを更新しました' : 'お知らせを作成しました';
     const errorMessage = isEdit ? 'お知らせの更新に失敗しました' : 'お知らせの作成に失敗しました';
 
-    this.executeAsync(async () => {
-      if (isEdit && this.data.announcement) {
-        return await this.announcementsService.updateAnnouncement(this.data.announcement.id, {
-          title: formValue.title,
-          message: formValue.message,
-          startDate: formValue.startDate,
-          endDate: formValue.endDate,
-          isActive: formValue.isActive,
-          updatedBy: 'system'
-        }).toPromise();
-      } else {
-        return await this.announcementsService.createAnnouncement({
-          title: formValue.title,
-          message: formValue.message,
-          startDate: formValue.startDate,
-          endDate: formValue.endDate,
-          isActive: formValue.isActive,
-          createdBy: 'system',
-          updatedBy: 'system'
-        }).toPromise();
-      }
-    }, successMessage, errorMessage).then(success => {
-      if (success) {
-        // 成功時は結果とともにダイアログを閉じる
+    this.formHelper.setLoadingState(true);
+
+    const operation = isEdit && this.data.announcement ?
+      this.announcementsService.updateAnnouncement(this.data.announcement.id, {
+        title: formValue.title,
+        message: formValue.message,
+        startDate: formValue.startDate,
+        endDate: formValue.endDate,
+        isActive: formValue.isActive,
+        updatedBy: 'system'
+      }) :
+      this.announcementsService.createAnnouncement({
+        title: formValue.title,
+        message: formValue.message,
+        startDate: formValue.startDate,
+        endDate: formValue.endDate,
+        isActive: formValue.isActive,
+        createdBy: 'system',
+        updatedBy: 'system'
+      });
+
+    operation.subscribe({
+      next: result => {
+        this.formHelper.handleResult(true, successMessage);
         this.close({ announcement: formValue as Announcement });
+      },
+      error: err => {
+        this.formHelper.handleResult(false, errorMessage);
+        console.error(err);
       }
     });
   }
@@ -120,10 +157,8 @@ export class AnnouncementsEditComponent extends BaseDialogComponent<DialogData, 
     this.cancel();
   }
 
-  // フォームバリデーション用のヘルパーメソッド
   protected hasError(controlName: string): boolean {
-    const control = this.form.get(controlName);
-    return !!(control?.invalid && control?.touched);
+    return this.formHelper.checkError(controlName);
   }
 
   protected override getErrorMessage(controlName: string): string {
@@ -142,29 +177,14 @@ export class AnnouncementsEditComponent extends BaseDialogComponent<DialogData, 
     return `${controlName}に入力エラーがあります`;
   }
 
-  private validateForm(): boolean {
-    if (this.form.invalid) {
-      this.markFormGroupTouched();
-      this.setError('入力内容を確認してください');
-      return false;
-    }
-
-    // 日付の妥当性チェック
+  private validateDateRange(): boolean {
     const startDate = this.form.get('startDate')?.value;
     const endDate = this.form.get('endDate')?.value;
     
     if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
-      this.setError('終了日は開始日より後の日付を設定してください');
+      this.formHelper.displayError('終了日は開始日より後の日付を設定してください');
       return false;
     }
-
     return true;
-  }
-
-  private markFormGroupTouched(): void {
-    Object.keys(this.form.controls).forEach(key => {
-      const control = this.form.get(key);
-      control?.markAsTouched();
-    });
   }
 }

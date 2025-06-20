@@ -33,17 +33,16 @@ export interface ProjectStats {
  * プロジェクトのCRUD操作と検索機能を提供
  */
 @Injectable({ providedIn: 'root' })
-export class ProjectCoreService extends BaseApiService<Project> {
+export class ProjectCoreService extends BaseApiService<Project, ProjectCreateDto, ProjectUpdateDto> {
+    protected baseUrl = '/user/project';
+    protected entityName = 'プロジェクト';
+    
     private readonly authService = inject(AuthService);
     private readonly notificationService = inject(NotificationService);
     
     private projectList: Project[] = [];
     private lastFetchTime: number = 0;
     private cacheDuration = 5 * 60 * 1000; // 5分
-
-    constructor() {
-        super('/user/project');
-    }
 
     /**
      * 新しいプロジェクトを作成
@@ -156,8 +155,8 @@ export class ProjectCoreService extends BaseApiService<Project> {
      * @returns 参加プロジェクトリスト
      */
     getUserProjects(userId?: string): Observable<Project[]> {
-        const params = userId ? { userId } : {};
-        return this.http.get<Project[]>(`${this.baseUrl}/user-projects`, { params });
+        const options = userId ? { params: { userId } } : {};
+        return this.http.get<Project[]>(`${this.baseUrl}/user-projects`, options);
     }
 
     /**
@@ -252,7 +251,7 @@ export class ProjectCoreService extends BaseApiService<Project> {
     /**
      * プロジェクトキャッシュをクリア
      */
-    clearCache(): void {
+    override clearCache(): void {
         this.projectList = [];
         this.lastFetchTime = 0;
     }
@@ -295,7 +294,7 @@ export class ProjectCoreService extends BaseApiService<Project> {
      */
     getActiveProjects(): Observable<Project[]> {
         return this.getProjectList().pipe(
-            map(projects => projects.filter(p => p.isActive !== false))
+            map(projects => projects.filter(p => p.id)) // idが存在するものをアクティブとみなす
         );
     }
 }

@@ -57,7 +57,7 @@ export const routes: Routes = [
           { path: 'ai-model-management', loadComponent: () => import('./pages/admin/ai-model-management/ai-model-management/ai-model-management.component').then(m => m.AIModelManagementComponent) },
           { path: 'ext-api-provider-template-form', loadComponent: () => import('./pages/admin/ext-api-provider-template-form/ext-api-provider-template-form.component').then(m => m.ExtApiProviderTemplateFormComponent) },
           { path: 'ext-api-provider-form', loadComponent: () => import('./pages/admin/ext-api-provider-form/ext-api-provider-form.component').then(m => m.ExtApiProviderFormComponent) },
-          { path: 'department', loadComponent: () => import('./pages/admin/department-management/department-management.component').then(m => m.DepartmentManagementComponent) },
+          { path: 'department', loadComponent: () => import('./pages/admin/usage-stats-dashboard/usage-stats-dashboard.component').then(m => m.UsageStatsDashboardComponent) },
           { path: 'member-management', loadComponent: () => import('./pages/admin/member-management/member-management.component').then(m => m.MemberManagementComponent) },
           { path: '', redirectTo: 'department', pathMatch: 'full' }, // デフォルトリダイレクト先を修正
         ],

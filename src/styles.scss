@@ -20,23 +20,23 @@
 
 // Notification Service Styles
 .success-snackbar {
-  background-color: #4caf50 !important;
-  color: white !important;
+    background-color: #4caf50 !important;
+    color: white !important;
 }
 
 .error-snackbar {
-  background-color: #f44336 !important;
-  color: white !important;
+    background-color: #f44336 !important;
+    color: white !important;
 }
 
 .warning-snackbar {
-  background-color: #ff9800 !important;
-  color: white !important;
+    background-color: #ff9800 !important;
+    color: white !important;
 }
 
 .info-snackbar {
-  background-color: #2196f3 !important;
-  color: white !important;
+    background-color: #2196f3 !important;
+    color: white !important;
 }
 
 // Angular Material 18まではあったけど19からは無くなった定義。本当は19に合わせて直した方がよかったが、影響がでかすぎるから据え置きで移設してきた。いつか消したい。
@@ -186,24 +186,8 @@ html>body {
     // アコーディオン
     // --mat-expansion-container-text-font: 'Noto Sans JP', Roboto, "Helvetica Neue", sans-serif;
 
-    .mat-expanded {
-        .mat-expansion-panel-header-description {
-            visibility: hidden;
-        }
-    }
-
-    .mat-expansion-panel-header-description {
-        min-width: 0;
-    }
-
-    .mat-expansion-panel-header-title {
-        flex-grow: 0;
-        width: 100px;
-        flex-basis: auto;
-    }
-
-    --mat-dialog-container-max-width:auto;
-    --mat-dialog-container-min-width:auto;
+    --mat-dialog-container-max-width: auto;
+    --mat-dialog-container-min-width: auto;
 
     a {
         color: var(--link-color);

@@ -1,10 +1,14 @@
 import { Component, inject, OnInit, Injectable, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray, AbstractControl, FormControl } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormArray, AbstractControl, FormControl, FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule, MatCheckboxChange } from '@angular/material/checkbox';
 
 import { genInitialBaseEntity } from '../../../../services/project.service';
 import { JsonEditorComponent } from "../../../../parts/json-editor/json-editor.component";
@@ -380,11 +384,16 @@ export class ProviderConfigService {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     MatIconModule,
     MatButtonModule,
     MatSnackBarModule,
     MatTooltipModule,
     MatCardModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatCheckboxModule,
     JsonEditorComponent,
   ],
   templateUrl: './ai-provider-management.component.html',
@@ -402,8 +411,18 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
   // Component state
   form!: FormGroup;
   providers: AIProviderEntity[] = [];
+  filteredProviders: AIProviderEntity[] = [];
   isFormVisible = false;
   currentProviderFields: any[] = [];
+
+  // フィルター・ソート・一括操作関連
+  searchFilter = '';
+  typeFilter: string[] = [];
+  statusFilter = '';
+  sortBy: string | null = null;
+  sortDirection: 'asc' | 'desc' = 'asc';
+  selectedProviders: string[] = [];
+  availableTypes: string[] = [];
 
   // 新しいモード管理
   isEditMode = false;
@@ -502,6 +521,7 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
     this.providerService.getProviders(true).subscribe(allProviders => {
       const visibleProviders = this.adminScopeService.getVisibleItems(allProviders);
       this.providers = this.adminScopeService.getEffectiveItems(visibleProviders);
+      this.updateFilteredProviders();
     });
   }
 
@@ -1095,5 +1115,212 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
       ...scope,
       label: this.getScopeLabel(scope)
     }));
+  }
+
+  // ===== フィルター・ソート・一括操作メソッド =====
+
+  applyFilters(): void {
+    let filtered = [...this.providers];
+
+    // 検索フィルター
+    if (this.searchFilter.trim()) {
+      const search = this.searchFilter.toLowerCase();
+      filtered = filtered.filter(provider => 
+        provider.label.toLowerCase().includes(search) ||
+        provider.name.toLowerCase().includes(search) ||
+        provider.type.toLowerCase().includes(search)
+      );
+    }
+
+    // タイプフィルター
+    if (this.typeFilter.length > 0) {
+      filtered = filtered.filter(provider => 
+        this.typeFilter.includes(provider.type)
+      );
+    }
+
+    // ステータスフィルター
+    if (this.statusFilter) {
+      const isActive = this.statusFilter === 'true';
+      filtered = filtered.filter(provider => provider.isActive === isActive);
+    }
+
+    this.filteredProviders = filtered;
+    this.applySorting();
+  }
+
+  applySorting(): void {
+    // 安定ソートのために配列をインデックス付きで処理
+    const indexedProviders = this.filteredProviders.map((provider, index) => ({ provider, index }));
+    
+    indexedProviders.sort((a, b) => {
+      let valueA: any;
+      let valueB: any;
+
+      switch (this.sortBy) {
+        case null:
+        case '':
+          // デフォルト順序：ラベル順
+          return a.provider.label.localeCompare(b.provider.label);
+          
+        case 'label':
+          valueA = a.provider.label;
+          valueB = b.provider.label;
+          break;
+        case 'name':
+          valueA = a.provider.name;
+          valueB = b.provider.name;
+          break;
+        case 'type':
+          valueA = a.provider.type;
+          valueB = b.provider.type;
+          break;
+        case 'updated':
+          valueA = a.provider.updatedAt;
+          valueB = b.provider.updatedAt;
+          break;
+        default:
+          // 値が同じ場合は元のインデックス順を保持（安定ソート）
+          return a.index - b.index;
+      }
+
+      // 値が同じ場合は元のインデックス順を保持（安定ソート）
+      if (valueA === valueB) {
+        return a.index - b.index;
+      }
+
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        const result = valueA.localeCompare(valueB);
+        return this.sortDirection === 'asc' ? result : -result;
+      } else {
+        const result = valueA - valueB;
+        return this.sortDirection === 'asc' ? result : -result;
+      }
+    });
+    
+    // ソート結果を元の配列に戻す
+    this.filteredProviders = indexedProviders.map(item => item.provider);
+  }
+
+  toggleSortDirection(): void {
+    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    this.applySorting();
+  }
+
+  resetFilters(): void {
+    this.searchFilter = '';
+    this.typeFilter = [];
+    this.statusFilter = '';
+    this.sortBy = null;
+    this.sortDirection = 'asc';
+    this.selectedProviders = [];
+    this.applyFilters();
+  }
+
+  // 一括選択関連
+  isProviderSelected(providerId: string): boolean {
+    return this.selectedProviders.includes(providerId);
+  }
+
+  toggleProviderSelection(providerId: string, event: MatCheckboxChange): void {
+    if (event.checked) {
+      if (!this.selectedProviders.includes(providerId)) {
+        this.selectedProviders.push(providerId);
+      }
+    } else {
+      const index = this.selectedProviders.indexOf(providerId);
+      if (index > -1) {
+        this.selectedProviders.splice(index, 1);
+      }
+    }
+  }
+
+  isAllSelected(): boolean {
+    return this.filteredProviders.length > 0 && this.selectedProviders.length === this.filteredProviders.length;
+  }
+
+  isSomeSelected(): boolean {
+    return this.selectedProviders.length > 0 && this.selectedProviders.length < this.filteredProviders.length;
+  }
+
+  toggleSelectAll(event: MatCheckboxChange): void {
+    if (event.checked) {
+      this.selectedProviders = this.filteredProviders.map(provider => provider.id);
+    } else {
+      this.selectedProviders = [];
+    }
+  }
+
+  // 一括操作
+  canBulkEdit(): boolean {
+    return this.selectedProviders.length > 0 && this.selectedProviders.some(id => {
+      const provider = this.providers.find(p => p.id === id);
+      return provider && this.canUserEditProvider(provider);
+    });
+  }
+
+  bulkToggleStatus(isActive: boolean): void {
+    if (!this.canBulkEdit()) return;
+
+    const selectedProviderEntities = this.selectedProviders
+      .map(id => this.providers.find(p => p.id === id))
+      .filter(p => p && this.canUserEditProvider(p)) as AIProviderEntity[];
+
+    if (selectedProviderEntities.length === 0) return;
+
+    const statusLabel = isActive ? 'activate' : 'deactivate';
+    const confirmed = confirm(`Are you sure you want to ${statusLabel} ${selectedProviderEntities.length} providers?`);
+    if (!confirmed) return;
+
+    selectedProviderEntities.forEach(provider => {
+      const updatedProvider = { ...provider, isActive };
+      this.providerService.upsertProvider(updatedProvider);
+    });
+
+    this.snackBar.open(`${selectedProviderEntities.length} providers ${statusLabel}d`, 'Close', { duration: 3000 });
+    this.selectedProviders = [];
+    this.loadProviders();
+  }
+
+  bulkDelete(): void {
+    if (!this.canBulkEdit()) return;
+
+    const selectedProviderEntities = this.selectedProviders
+      .map(id => this.providers.find(p => p.id === id))
+      .filter(p => p && this.canUserEditProvider(p)) as AIProviderEntity[];
+
+    if (selectedProviderEntities.length === 0) return;
+
+    const confirmed = confirm(`Are you sure you want to delete ${selectedProviderEntities.length} providers? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    const deletePromises = selectedProviderEntities.map(provider => 
+      this.providerService.deleteProvider(provider.id)
+    );
+
+    Promise.all(deletePromises)
+      .then(() => {
+        this.snackBar.open(`${selectedProviderEntities.length} providers deleted`, 'Close', { duration: 3000 });
+        this.selectedProviders = [];
+        this.loadProviders();
+      })
+      .catch(error => {
+        console.error('Bulk delete failed:', error);
+        this.snackBar.open('Bulk delete failed', 'Close', { duration: 3000 });
+      });
+  }
+
+  private updateAvailableTypes(): void {
+    const types = new Set<string>();
+    this.providers.forEach(provider => {
+      types.add(provider.type);
+    });
+    this.availableTypes = Array.from(types).sort();
+  }
+
+  private updateFilteredProviders(): void {
+    this.filteredProviders = [...this.providers];
+    this.updateAvailableTypes();
+    this.applyFilters();
   }
 }

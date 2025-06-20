@@ -14,6 +14,7 @@ import { UserRoleType } from '../../models/models';
 import { AuthService, ScopeLabelsResponseItem } from '../../services/auth.service'; // ScopeLabelsResponse を削除
 import { tap, filter, map, switchMap, takeUntil, Subject } from 'rxjs'; // filter, map, switchMap, takeUntil, Subject を追加
 import { GroupByPipe } from '../../pipe/group-by.pipe';
+import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
 
 interface MenuItem {
   link: string;
@@ -28,7 +29,8 @@ interface MenuItem {
     CommonModule, RouterModule,
     MatIconModule, MatButtonModule, MatFormFieldModule, MatSlideToggleModule, MatSelectModule, FormsModule,
     GroupByPipe,
-  ],
+    AppMenuComponent
+],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'
 })

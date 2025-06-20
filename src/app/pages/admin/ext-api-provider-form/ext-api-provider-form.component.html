@@ -5,13 +5,78 @@
         <div class="table-container">
             <div class="table-header">
                 <h3>Providers</h3>
-                <button mat-raised-button type="button" class="btn btn-sm btn-primary"
-                    (click)="createNew()">新規登録</button>
+                <button mat-raised-button type="button" color="primary" (click)="createNew()">新規登録</button>
+            </div>
+
+            <!-- フィルター・ソート・一括操作バー -->
+            <div class="filter-bar">
+                <div class="filter-controls">
+                    <!-- 検索フィルター -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-label>Search providers...</mat-label>
+                        <input matInput [(ngModel)]="searchFilter" (input)="applyFilters()">
+                        <mat-icon matSuffix>search</mat-icon>
+                    </mat-form-field>
+
+                    <!-- タイプフィルター -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-select placeholder="Type" 
+                                    [(value)]="typeFilter" 
+                                    (selectionChange)="applyFilters()"
+                                    multiple>
+                            <mat-option value="">All Types</mat-option>
+                            @for (type of availableTypes; track type) {
+                            <mat-option [value]="type">{{ type }}</mat-option>
+                            }
+                        </mat-select>
+                        <mat-icon matSuffix>filter_list</mat-icon>
+                    </mat-form-field>
+
+                    <!-- ソート -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-label>Sort by...</mat-label>
+                        <mat-select [(value)]="sortBy" (selectionChange)="applySorting()">
+                            <mat-option [value]="null">Default Order</mat-option>
+                            <mat-option value="label">Label</mat-option>
+                            <mat-option value="type">Type</mat-option>
+                            <mat-option value="name">Provider Name</mat-option>
+                            <mat-option value="updated">Last Updated</mat-option>
+                        </mat-select>
+                        <mat-icon matSuffix>sort</mat-icon>
+                    </mat-form-field>
+
+                    <button mat-icon-button (click)="toggleSortDirection()"
+                        [matTooltip]="sortDirection === 'asc' ? 'Sort Descending' : 'Sort Ascending'">
+                        <mat-icon>{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                    </button>
+
+                    <!-- フィルターリセット -->
+                    <button mat-icon-button (click)="resetFilters()" matTooltip="Reset Filters">
+                        <mat-icon>clear</mat-icon>
+                    </button>
+                </div>
+
+                <!-- 一括操作エリア -->
+                @if (selectedProviders.length > 0) {
+                <div class="bulk-actions">
+                    <span class="selected-count">{{ selectedProviders.length }} providers selected</span>
+                    <button mat-raised-button color="warn" (click)="bulkDelete()"
+                        [disabled]="!canBulkEdit()">
+                        <mat-icon>delete</mat-icon>
+                        Delete
+                    </button>
+                </div>
+                }
             </div>
 
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th class="checkbox-column">
+                            <mat-checkbox [checked]="isAllSelected()" [indeterminate]="isSomeSelected()"
+                                (change)="toggleSelectAll($event)">
+                            </mat-checkbox>
+                        </th>
                         <th>Label</th>
                         <th>Type</th>
                         <th>Provider</th>
@@ -19,11 +84,17 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for (provider of providers; track $index) {
-                    <tr [class.selected]="form.value.id === provider.id" (click)="selectProvider(provider)">
-                        <td>{{ provider.label }}</td>
-                        <td>{{ provider.type }}</td>
-                        <td>{{ provider.name }}</td>
+                    @for (provider of filteredProviders; track $index) {
+                    <tr [class.selected]="form.value.id === provider.id" 
+                        [class.bulk-selected]="isProviderSelected(provider.id)">
+                        <td class="checkbox-column" (click)="$event.stopPropagation()">
+                            <mat-checkbox [checked]="isProviderSelected(provider.id)"
+                                (change)="toggleProviderSelection(provider.id, $event)">
+                            </mat-checkbox>
+                        </td>
+                        <td (click)="selectProvider(provider)">{{ provider.label }}</td>
+                        <td (click)="selectProvider(provider)">{{ provider.type }}</td>
+                        <td (click)="selectProvider(provider)">{{ provider.name }}</td>
                         <td class="actions-cell">
                             <button mat-icon-button class="mr-5"
                                 (click)="selectProvider(provider); $event.stopPropagation();">
@@ -50,7 +121,8 @@
                 </button>
             </div>
 
-            <form [formGroup]="form" (ngSubmit)="register()">
+            <div class="form-content">
+                <form [formGroup]="form" (ngSubmit)="register()">
                 <!-- Type Selection from Templates -->
                 <div class="form-group">
                     <label for="type">Type <span class="required">*</span></label>
@@ -267,7 +339,8 @@
                         Cancel
                     </button>
                 </div>
-            </form>
+                </form>
+            </div>
         </div>
         }
     </div>

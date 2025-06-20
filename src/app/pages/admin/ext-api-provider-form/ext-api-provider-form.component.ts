@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
+import { BaseFormComponent } from '../../../shared/base/base-form.component';
 import { ExtApiProviderService } from '../../../services/ext-api-provider.service';
 import {
     ExtApiProviderEntity,
@@ -15,15 +16,33 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { GService } from '../../../services/g.service';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule, MatCheckboxChange } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
     selector: 'app-ext-api-provider-form',
-    imports: [CommonModule, ReactiveFormsModule, MatIconModule, MatButtonModule, MatSnackBarModule, MatButtonToggleModule],
+    imports: [
+        CommonModule, 
+        ReactiveFormsModule, 
+        FormsModule,
+        MatIconModule, 
+        MatButtonModule, 
+        MatSnackBarModule, 
+        MatButtonToggleModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatCheckboxModule,
+        MatTooltipModule
+    ],
     templateUrl: './ext-api-provider-form.component.html',
     styleUrl: './ext-api-provider-form.component.scss'
 })
-export class ExtApiProviderFormComponent implements OnInit {
-    form!: FormGroup;
+export class ExtApiProviderFormComponent extends BaseFormComponent implements OnInit {
+    protected form!: FormGroup;
     private fb: FormBuilder = inject(FormBuilder);
 
     readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
@@ -31,6 +50,7 @@ export class ExtApiProviderFormComponent implements OnInit {
     readonly g: GService = inject(GService);
 
     providers: ExtApiProviderEntity[] = [];
+    filteredProviders: ExtApiProviderEntity[] = [];
     providerTemplates: ExtApiProviderTemplateEntity[] = [];
     templateMap: { [key: string]: ExtApiProviderTemplateEntity } = {};
 
@@ -38,7 +58,16 @@ export class ExtApiProviderFormComponent implements OnInit {
     isFormVisible = false;
     isEditMode = false;
 
+    // フィルター・ソート・一括操作関連
+    searchFilter = '';
+    typeFilter: string[] = [];
+    sortBy: string | null = null;
+    sortDirection: 'asc' | 'desc' = 'asc';
+    selectedProviders: string[] = [];
+    availableTypes: string[] = [];
+
     constructor() {
+        super();
         this.loadProviders();
         this.loadProviderTemplates();
     }
@@ -60,6 +89,7 @@ export class ExtApiProviderFormComponent implements OnInit {
         this.extApiProviderService.getApiProviders(true).subscribe({
             next: (providers) => {
                 this.providers = providers;
+                this.updateFilteredProviders();
             },
             error: (err) => {
                 console.error('Error fetching API Providers:', err);
@@ -201,7 +231,7 @@ export class ExtApiProviderFormComponent implements OnInit {
     // 新規作成モードを開始
     createNew() {
         this.isEditMode = false;
-        this.form.reset();
+        this.resetForm();
         this.initForm();
         this.resetTemplateRelatedFields();
         this.isFormVisible = true;
@@ -213,7 +243,7 @@ export class ExtApiProviderFormComponent implements OnInit {
         this.isFormVisible = true;
 
         // フォームをリセット
-        this.form.reset();
+        this.resetForm();
         this.initForm();
 
         // テンプレートタイプを設定（これにより自動的にフォームが更新される）
@@ -250,7 +280,7 @@ export class ExtApiProviderFormComponent implements OnInit {
     // フォームを閉じる
     closeForm() {
         this.isFormVisible = false;
-        this.form.reset();
+        this.resetForm();
         this.resetTemplateRelatedFields();
     }
 
@@ -274,11 +304,7 @@ export class ExtApiProviderFormComponent implements OnInit {
 
     // プロバイダーの登録・更新
     register() {
-        if (this.form.invalid) {
-            // Mark all fields as touched to show validation errors
-            this.markFormGroupTouched(this.form);
-
-            // デバッグ用：無効なフィールドを特定
+        if (!this.beforeSubmit()) {
             this.logInvalidControls(this.form);
             return;
         }
@@ -313,31 +339,26 @@ export class ExtApiProviderFormComponent implements OnInit {
             };
         }
 
-        if (this.isEditMode) {
-            // 更新処理
-            this.extApiProviderService.updateApiProvider(apiProvider as ExtApiProviderEntity).subscribe({
-                next: (response) => {
-                    console.log('API Provider updated successfully:', response);
-                    this.loadProviders();
-                    this.closeForm();
-                },
-                error: (error) => {
-                    console.error('Error updating API Provider:', error);
-                }
-            });
-        } else {
-            // 新規登録処理 
-            this.extApiProviderService.createApiProvider(apiProvider).subscribe({
-                next: (response) => {
-                    console.log('API Provider created successfully:', response);
-                    this.loadProviders();
-                    this.closeForm();
-                },
-                error: (error) => {
-                    console.error('Error creating API Provider:', error);
-                }
-            });
-        }
+        this.setSaving(true);
+
+        const successMessage = this.isEditMode ? 'APIプロバイダーを更新しました' : 'APIプロバイダーを作成しました';
+        const errorMessage = this.isEditMode ? 'APIプロバイダーの更新に失敗しました' : 'APIプロバイダーの作成に失敗しました';
+
+        const operation = this.isEditMode ?
+            this.extApiProviderService.updateApiProvider(apiProvider as ExtApiProviderEntity) :
+            this.extApiProviderService.createApiProvider(apiProvider);
+
+        operation.subscribe({
+            next: (response) => {
+                this.afterSubmit(true, successMessage);
+                this.loadProviders();
+                this.closeForm();
+            },
+            error: (error) => {
+                this.afterSubmit(false, errorMessage);
+                console.error('Error with API Provider operation:', error);
+            }
+        });
     }
 
     // デバッグ用：無効なフィールドを特定するヘルパーメソッド
@@ -353,58 +374,25 @@ export class ExtApiProviderFormComponent implements OnInit {
         });
     }
 
-    // Recursively mark all controls in a form group as touched
-    markFormGroupTouched(formGroup: FormGroup) {
-        Object.keys(formGroup.controls).forEach(key => {
-            const control = formGroup.get(key);
-            if (control instanceof FormGroup) {
-                this.markFormGroupTouched(control);
-            } else {
-                control?.markAsTouched();
-            }
-        });
+    // Get error message for a nested form control (overrides base implementation for specific needs)
+    override getNestedErrorMessage(path: string): string {
+        return super.getNestedErrorMessage(path) || this.getCustomErrorMessage(path);
     }
 
-    // Get error message for a form control
-    getErrorMessage(controlName: string): string {
-        const control = this.form.get(controlName);
-        if (control?.errors?.['required']) {
-            return 'This field is required';
-        }
-        return '';
+    // Check if a nested control has an error and has been touched (delegates to base implementation)
+    override hasNestedError(path: string): boolean {
+        return super.hasNestedError(path);
     }
 
-    // Check if a control has an error and has been touched
-    hasError(controlName: string): boolean {
-        const control = this.form.get(controlName);
-        return !!control?.invalid && !!control?.touched;
-    }
-
-    // Get error message for a nested form control
-    getNestedErrorMessage(path: string): string {
+    private getCustomErrorMessage(path: string): string {
         const parts = path.split('.');
         if (parts.length !== 2) return '';
 
-        const group = this.form.get(parts[0]) as FormGroup;
-        if (!group) return '';
-
-        const control = group.get(parts[1]);
+        const control = this.form.get(path);
         if (control?.errors?.['required']) {
             return 'This field is required';
         }
         return '';
-    }
-
-    // Check if a nested control has an error and has been touched
-    hasNestedError(path: string): boolean {
-        const parts = path.split('.');
-        if (parts.length !== 2) return false;
-
-        const group = this.form.get(parts[0]) as FormGroup;
-        if (!group) return false;
-
-        const control = group.get(parts[1]);
-        return !!control?.invalid && !!control?.touched;
     }
 
     // リダイレクトURIをクリップボードにコピー
@@ -416,5 +404,173 @@ export class ExtApiProviderFormComponent implements OnInit {
         this.snackBar.open('Redirect URI copied to clipboard', 'Close', {
             duration: 2000,
         });
+    }
+
+    // ===== フィルター・ソート・一括操作関連 =====
+
+    applyFilters(): void {
+        let filtered = [...this.providers];
+
+        // 検索フィルター
+        if (this.searchFilter.trim()) {
+            const search = this.searchFilter.toLowerCase();
+            filtered = filtered.filter(provider => 
+                provider.label.toLowerCase().includes(search) ||
+                provider.name.toLowerCase().includes(search) ||
+                provider.type.toLowerCase().includes(search)
+            );
+        }
+
+        // タイプフィルター
+        if (this.typeFilter.length > 0) {
+            filtered = filtered.filter(provider => 
+                this.typeFilter.includes(provider.type)
+            );
+        }
+
+        this.filteredProviders = filtered;
+        this.applySorting();
+    }
+
+    applySorting(): void {
+        // 安定ソートのために配列をインデックス付きで処理
+        const indexedProviders = this.filteredProviders.map((provider, index) => ({ provider, index }));
+        
+        indexedProviders.sort((a, b) => {
+            let valueA: any;
+            let valueB: any;
+
+            switch (this.sortBy) {
+                case null:
+                case '':
+                    // デフォルト順序：ラベル順
+                    return a.provider.label.localeCompare(b.provider.label);
+                    
+                case 'label':
+                    valueA = a.provider.label;
+                    valueB = b.provider.label;
+                    break;
+                case 'type':
+                    valueA = a.provider.type;
+                    valueB = b.provider.type;
+                    break;
+                case 'name':
+                    valueA = a.provider.name;
+                    valueB = b.provider.name;
+                    break;
+                case 'updated':
+                    valueA = a.provider.updatedAt;
+                    valueB = b.provider.updatedAt;
+                    break;
+                default:
+                    // 値が同じ場合は元のインデックス順を保持（安定ソート）
+                    return a.index - b.index;
+            }
+
+            // 値が同じ場合は元のインデックス順を保持（安定ソート）
+            if (valueA === valueB) {
+                return a.index - b.index;
+            }
+
+            if (typeof valueA === 'string' && typeof valueB === 'string') {
+                const result = valueA.localeCompare(valueB);
+                return this.sortDirection === 'asc' ? result : -result;
+            } else {
+                const result = valueA - valueB;
+                return this.sortDirection === 'asc' ? result : -result;
+            }
+        });
+        
+        // ソート結果を元の配列に戻す
+        this.filteredProviders = indexedProviders.map(item => item.provider);
+    }
+
+    toggleSortDirection(): void {
+        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        this.applySorting();
+    }
+
+    resetFilters(): void {
+        this.searchFilter = '';
+        this.typeFilter = [];
+        this.sortBy = null;
+        this.sortDirection = 'asc';
+        this.selectedProviders = [];
+        this.applyFilters();
+    }
+
+    // 一括選択関連
+    isProviderSelected(providerId: string): boolean {
+        return this.selectedProviders.includes(providerId);
+    }
+
+    toggleProviderSelection(providerId: string, event: MatCheckboxChange): void {
+        if (event.checked) {
+            if (!this.selectedProviders.includes(providerId)) {
+                this.selectedProviders.push(providerId);
+            }
+        } else {
+            const index = this.selectedProviders.indexOf(providerId);
+            if (index > -1) {
+                this.selectedProviders.splice(index, 1);
+            }
+        }
+    }
+
+    isAllSelected(): boolean {
+        return this.filteredProviders.length > 0 && this.selectedProviders.length === this.filteredProviders.length;
+    }
+
+    isSomeSelected(): boolean {
+        return this.selectedProviders.length > 0 && this.selectedProviders.length < this.filteredProviders.length;
+    }
+
+    toggleSelectAll(event: MatCheckboxChange): void {
+        if (event.checked) {
+            this.selectedProviders = this.filteredProviders.map(provider => provider.id);
+        } else {
+            this.selectedProviders = [];
+        }
+    }
+
+    // 一括操作
+    canBulkEdit(): boolean {
+        return this.selectedProviders.length > 0;
+    }
+
+    bulkDelete(): void {
+        if (!this.canBulkEdit()) return;
+
+        const confirmed = confirm(`Are you sure you want to delete ${this.selectedProviders.length} providers? This action cannot be undone.`);
+        if (!confirmed) return;
+
+        const deletePromises = this.selectedProviders.map(id => 
+            this.extApiProviderService.deleteApiProvider(id)
+        );
+
+        Promise.all(deletePromises)
+            .then(() => {
+                this.snackBar.open(`${this.selectedProviders.length} providers deleted`, 'Close', { duration: 3000 });
+                this.selectedProviders = [];
+                this.loadProviders();
+            })
+            .catch(error => {
+                console.error('Bulk delete failed:', error);
+                this.snackBar.open('Bulk delete failed', 'Close', { duration: 3000 });
+            });
+    }
+
+    private updateAvailableTypes(): void {
+        const types = new Set<string>();
+        this.providers.forEach(provider => {
+            types.add(provider.type);
+        });
+        this.availableTypes = Array.from(types).sort();
+    }
+
+    private updateFilteredProviders(): void {
+        this.filteredProviders = [...this.providers];
+        this.updateAvailableTypes();
+        this.applyFilters();
     }
 }

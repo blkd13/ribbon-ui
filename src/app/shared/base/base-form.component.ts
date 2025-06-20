@@ -6,9 +6,7 @@ import { NotificationService } from '../services/notification.service';
  * フォームコンポーネントの基底クラス
  * 共通のフォームバリデーション、エラーハンドリング、状態管理を提供
  */
-@Component({
-  template: ''
-})
+// @Component({ template: '' })
 export type FormMode = 'create' | 'edit' | 'view' | 'duplicate';
 
 export interface FormArrayConfig {
@@ -23,7 +21,7 @@ export interface ConditionalValidator {
 }
 
 export abstract class BaseFormComponent {
-  private notificationService = inject(NotificationService);
+  protected notificationService = inject(NotificationService);
 
   protected abstract form: FormGroup;
   protected isLoading = false;
@@ -33,7 +31,7 @@ export abstract class BaseFormComponent {
 
   // 条件付きバリデーター管理
   private conditionalValidators: Map<string, ConditionalValidator> = new Map();
-  
+
   // フォーム配列設定
   private formArrayConfigs: Map<string, FormArrayConfig> = new Map();
 
@@ -47,8 +45,8 @@ export abstract class BaseFormComponent {
     const control = this.getControl(controlName);
     if (!control) return false;
 
-    const hasValidationError = errorType ? 
-      control.hasError(errorType) : 
+    const hasValidationError = errorType ?
+      control.hasError(errorType) :
       control.invalid;
 
     return hasValidationError && (control.dirty || control.touched);
@@ -168,11 +166,11 @@ export abstract class BaseFormComponent {
   }
 
   /**
-   * 指定されたコントロールを取得
-   * @param controlName コントロール名
+   * 指定されたコントロールを取得（ネストパス対応）
+   * @param controlName コントロール名またはドット記法のパス
    * @returns AbstractControl または null
    */
-  private getControl(controlName: string): AbstractControl | null {
+  protected getControl(controlName: string): AbstractControl | null {
     return this.form?.get(controlName) || null;
   }
 
@@ -190,7 +188,7 @@ export abstract class BaseFormComponent {
    */
   protected beforeSubmit(): boolean {
     this.clearError();
-    
+
     if (!this.validateForm()) {
       this.showError('入力内容を確認してください');
       return false;
@@ -210,7 +208,7 @@ export abstract class BaseFormComponent {
    */
   protected afterSubmit(success: boolean, message?: string): void {
     this.setSaving(false);
-    
+
     if (success) {
       if (message) {
         this.showSuccess(message);
@@ -268,10 +266,10 @@ export abstract class BaseFormComponent {
 
     const newItem = item || config.itemFactory();
     formArray.push(newItem);
-    
+
     const newIndex = formArray.length - 1;
     this.notificationService.showSuccess('アイテムを追加しました');
-    
+
     return newIndex;
   }
 
@@ -302,7 +300,7 @@ export abstract class BaseFormComponent {
 
     formArray.removeAt(index);
     this.notificationService.showSuccess('アイテムを削除しました');
-    
+
     return true;
   }
 
@@ -314,9 +312,9 @@ export abstract class BaseFormComponent {
    */
   protected moveArrayItem(arrayName: string, fromIndex: number, toIndex: number): void {
     const formArray = this.getFormArray(arrayName);
-    
+
     if (fromIndex < 0 || fromIndex >= formArray.length ||
-        toIndex < 0 || toIndex >= formArray.length) {
+      toIndex < 0 || toIndex >= formArray.length) {
       this.showError('無効なインデックスです');
       return;
     }
@@ -324,7 +322,7 @@ export abstract class BaseFormComponent {
     const item = formArray.at(fromIndex);
     formArray.removeAt(fromIndex);
     formArray.insert(toIndex, item);
-    
+
     this.notificationService.showSuccess('アイテムを移動しました');
   }
 
@@ -338,12 +336,12 @@ export abstract class BaseFormComponent {
     const formArray = this.getFormArray(arrayName);
 
     if (config?.minItems && formArray.length < config.minItems) {
-      this.setError(`${arrayName}は最低${config.minItems}件必要です`);
+      this.showError(`${arrayName}は最低${config.minItems}件必要です`);
       return false;
     }
 
     if (config?.maxItems && formArray.length > config.maxItems) {
-      this.setError(`${arrayName}は最大${config.maxItems}件までです`);
+      this.showError(`${arrayName}は最大${config.maxItems}件までです`);
       return false;
     }
 
@@ -369,8 +367,8 @@ export abstract class BaseFormComponent {
    * @param validators バリデーター配列
    */
   protected setConditionalValidators(
-    controlName: string, 
-    condition: () => boolean, 
+    controlName: string,
+    condition: () => boolean,
     validators: ValidatorFn[]
   ): void {
     this.conditionalValidators.set(controlName, { condition, validators });
@@ -411,6 +409,23 @@ export abstract class BaseFormComponent {
   }
 
   // ===== Enhanced Error Handling =====
+
+  /**
+   * ネストされたパスのエラーがあるかチェック
+   * @param path ドット記法のパス (例: 'user.profile.name')
+   * @param errorType エラータイプ（省略時は任意のエラー）
+   * @returns エラーがあり、タッチされている場合はtrue
+   */
+  protected hasNestedError(path: string, errorType?: string): boolean {
+    const control = this.getControl(path);
+    if (!control) return false;
+
+    const hasValidationError = errorType ?
+      control.hasError(errorType) :
+      control.invalid;
+
+    return hasValidationError && (control.dirty || control.touched);
+  }
 
   /**
    * ネストされたパスのエラーメッセージを取得
@@ -472,11 +487,11 @@ export abstract class BaseFormComponent {
       Object.keys(form.controls).forEach(key => {
         const control = form.get(key);
         const path = parentPath ? `${parentPath}.${key}` : key;
-        
+
         if (control && control.errors) {
           errors[path] = control.errors;
         }
-        
+
         if (control instanceof FormGroup || control instanceof FormArray) {
           const nestedErrors = this.collectFormErrors(control, path);
           Object.assign(errors, nestedErrors);
@@ -485,11 +500,11 @@ export abstract class BaseFormComponent {
     } else if (form instanceof FormArray) {
       form.controls.forEach((control, index) => {
         const path = `${parentPath}[${index}]`;
-        
+
         if (control.errors) {
           errors[path] = control.errors;
         }
-        
+
         if (control instanceof FormGroup || control instanceof FormArray) {
           const nestedErrors = this.collectFormErrors(control, path);
           Object.assign(errors, nestedErrors);
@@ -508,7 +523,7 @@ export abstract class BaseFormComponent {
    */
   protected setFormMode(mode: FormMode): void {
     this.formMode = mode;
-    
+
     if (mode === 'view') {
       this.form.disable();
     } else {
@@ -550,5 +565,72 @@ export abstract class BaseFormComponent {
     this.form.reset();
     this.clearError();
     this.formMode = 'create';
+  }
+
+  // ===== Async Form Submission Support =====
+
+  /**
+   * 非同期フォーム送信のヘルパー
+   * @param submitFn 送信関数
+   * @param successMessage 成功メッセージ
+   * @param errorMessage エラーメッセージ
+   * @returns Promise
+   */
+  protected async executeAsync<T>(
+    submitFn: () => Promise<T>,
+    successMessage?: string,
+    errorMessage?: string
+  ): Promise<T | null> {
+    if (!this.beforeSubmit()) {
+      return null;
+    }
+
+    this.setSaving(true);
+
+    try {
+      const result = await submitFn();
+      this.afterSubmit(true, successMessage || '保存しました');
+      return result;
+    } catch (error: any) {
+      const message = errorMessage || error?.message || '保存に失敗しました';
+      this.afterSubmit(false, message);
+      return null;
+    }
+  }
+
+  /**
+   * フォーム値を型安全に取得
+   * @returns フォームの値
+   */
+  protected getFormValue<T>(): T {
+    return this.form.getRawValue() as T;
+  }
+
+  /**
+   * フォーム値を部分的にパッチ
+   * @param value パッチする値
+   * @param options パッチオプション
+   */
+  protected patchFormValue(value: any, options?: { onlySelf?: boolean; emitEvent?: boolean }): void {
+    this.form.patchValue(value, options);
+  }
+
+  /**
+   * 特定のコントロールの値を取得
+   * @param controlName コントロール名
+   * @returns コントロールの値
+   */
+  protected getControlValue<T>(controlName: string): T {
+    return this.getControl(controlName)?.value as T;
+  }
+
+  /**
+   * 特定のコントロールの値を設定
+   * @param controlName コントロール名
+   * @param value 設定する値
+   * @param options 設定オプション
+   */
+  protected setControlValue(controlName: string, value: any, options?: { onlySelf?: boolean; emitEvent?: boolean }): void {
+    this.getControl(controlName)?.setValue(value, options);
   }
 }

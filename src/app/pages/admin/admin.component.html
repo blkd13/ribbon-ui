@@ -5,14 +5,13 @@
         style="background-color: var(--plain-background-area, #1f1f1f); border-color: var(--plain-border-color, #333);">
         <!-- ヘッダー -->
         <div class="p-6 border-b" style="border-color: var(--plain-border-color, #333);">
-            <h1 class="text-xl font-semibold mb-4" style="color: var(--plain-color, #f3f4f6);">設定</h1>
+            <app-app-menu></app-app-menu>
 
             <!-- スコープ選択 -->
-
             <div class="scope-selector">
-                <label class="block text-sm font-medium mb-2" style="color: var(--plain-color, #f3f4f6);">
+                <!-- <label class="block text-sm font-medium mb-2" style="color: var(--plain-color, #f3f4f6);">
                     スコープ
-                </label>
+                </label> -->
                 <mat-form-field appearance="outline" class="w-full scope-select-field">
                     <mat-select [(value)]="selectedScope" (selectionChange)="onScopeChange()" placeholder="スコープを選択"
                         [compareWith]="compareScopeInfo" panelWidth="400px">
@@ -24,7 +23,6 @@
                             }
                         </mat-optgroup>
                         }
-
                     </mat-select>
                 </mat-form-field>
             </div>

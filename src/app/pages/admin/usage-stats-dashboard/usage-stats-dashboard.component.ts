@@ -7,6 +7,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatButtonModule } from '@angular/material/button';
 import { Chart, registerables } from 'chart.js';
 
 import { Cost, DepartmentService, DivisionEntity, DivisionMemberCost } from '../../../services/department.service';
@@ -17,7 +19,7 @@ import { PredictHistoryComponent } from '../../../parts/predict-history/predict-
 Chart.register(...registerables);
 
 @Component({
-  selector: 'app-department-management',
+  selector: 'app-usage-stats-dashboard',
   standalone: true,
   imports: [
     CommonModule,
@@ -25,12 +27,14 @@ Chart.register(...registerables);
     MatRadioModule,
     MatSelectModule,
     MatFormFieldModule,
-    MatIconModule
+    MatIconModule,
+    MatExpansionModule,
+    MatButtonModule
   ],
-  templateUrl: './department-management.component.html',
-  styleUrl: './department-management.component.scss'
+  templateUrl: './usage-stats-dashboard.component.html',
+  styleUrl: './usage-stats-dashboard.component.scss'
 })
-export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnDestroy {
+export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly departmentService: DepartmentService = inject(DepartmentService);
   readonly matDialog: MatDialog = inject(MatDialog);
@@ -49,6 +53,9 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
     cost: { [key: string]: Cost },
     members: DivisionMemberCost[]
   }[] = [];
+
+  // エキスパンションパネルの状態
+  expandedPanels: { [index: number]: boolean } = {};
 
   private deptChart!: Chart;
   private trendChart!: Chart;
@@ -105,6 +112,7 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
         }
 
         this.updateCharts();
+        this.initializeExpansionPanels();
       },
       error: err => {
         console.error('Error loading department data:', err);
@@ -282,6 +290,14 @@ export class DepartmentManagementComponent implements OnInit, AfterViewInit, OnD
 
   eventCancel($event: MouseEvent): void {
     $event.stopImmediatePropagation();
+  }
+
+  private initializeExpansionPanels(): void {
+    // 複数divisionがある場合は閉じた状態、1divisionの場合は開いた状態
+    const hasMultipleDivisions = this.divisionMemberList.length > 1;
+    this.divisionMemberList.forEach((_, index) => {
+      this.expandedPanels[index] = !hasMultipleDivisions;
+    });
   }
 
   updateUserStatus(member: DivisionMemberCost): void {
