@@ -78,6 +78,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   searchFilter = '';
   providerFilter: string[] = [];
   statusFilter = '';
+  tagFilter: string[] = [];
   sortBy: string | null = null;
   sortDirection: 'asc' | 'desc' = 'desc';
   selectedModels: string[] = [];
@@ -111,8 +112,11 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   pricingSelectionMode: 'new' | 'edit' = 'new';
   selectedPricingId: string | undefined = undefined;
 
-  // タグ関連
-  availableTags: TagEntity[] = [];
+  // タグ関連（フィルター用）
+  availableTags: string[] = [];
+  
+  // タグエンティティ関連（タグ管理用）
+  availableTagEntities: TagEntity[] = [];
   filteredTags: TagEntity[] = [];
 
   // Scope management
@@ -813,7 +817,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   private loadTags() {
     const tagSubscription = this.tagService.getTags().subscribe({
       next: (tags) => {
-        this.availableTags = tags;
+        this.availableTagEntities = tags;
         this.filteredTags = tags;
       },
       error: (err) => {
@@ -840,22 +844,22 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   filterTags(query: string): TagEntity[] {
     if (!query) {
-      return this.availableTags;
+      return this.availableTagEntities;
     }
     const filterValue = query.toLowerCase();
-    return this.availableTags.filter(tag =>
+    return this.availableTagEntities.filter(tag =>
       tag.name.toLowerCase().includes(filterValue) ||
       (tag.label && tag.label.toLowerCase().includes(filterValue))
     );
   }
 
   getTagDisplayName(tagName: string): string {
-    const tag = this.availableTags.find(t => t.name === tagName);
+    const tag = this.availableTagEntities.find(t => t.name === tagName);
     return tag?.label || tagName;
   }
 
   getTagColor(tagName: string): string | undefined {
-    const tag = this.availableTags.find(t => t.name === tagName);
+    const tag = this.availableTagEntities.find(t => t.name === tagName);
     return tag?.color;
   }
 
@@ -1162,6 +1166,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(model => model.isActive === isActive);
     }
 
+    // タグフィルター
+    if (this.tagFilter.length > 0) {
+      filtered = filtered.filter(model =>
+        model.tags && model.tags.some(tag => this.tagFilter.includes(tag))
+      );
+    }
+
     this.filteredModels = filtered;
     this.applySorting();
   }
@@ -1200,6 +1211,10 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
           valueA = a.model.providerNameList.join(',');
           valueB = b.model.providerNameList.join(',');
           break;
+        case 'scope':
+          valueA = `${a.model.scopeInfo.scopeType}:${a.model.scopeInfo.scopeId}`;
+          valueB = `${b.model.scopeInfo.scopeType}:${b.model.scopeInfo.scopeId}`;
+          break;
         case 'context':
           valueA = a.model.maxContextTokens || 0;
           valueB = b.model.maxContextTokens || 0;
@@ -1207,6 +1222,14 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         case 'price':
           valueA = a.model.pricingHistory?.[0]?.inputPricePerUnit || 0;
           valueB = b.model.pricingHistory?.[0]?.inputPricePerUnit || 0;
+          break;
+        case 'releaseDate':
+          valueA = a.model.releaseDate ? new Date(a.model.releaseDate).getTime() : 0;
+          valueB = b.model.releaseDate ? new Date(b.model.releaseDate).getTime() : 0;
+          break;
+        case 'active':
+          valueA = a.model.isActive ? 1 : 0;
+          valueB = b.model.isActive ? 1 : 0;
           break;
         case 'updated':
           valueA = a.model.updatedAt;
@@ -1235,6 +1258,18 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.filteredModels = indexedModels.map(item => item.model);
   }
 
+  sortByColumn(column: string): void {
+    if (this.sortBy === column) {
+      // 同じ列をクリックした場合は方向を反転
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      // 新しい列の場合は昇順から開始
+      this.sortBy = column;
+      this.sortDirection = 'asc';
+    }
+    this.applySorting();
+  }
+
   toggleSortDirection(): void {
     this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     this.applySorting();
@@ -1244,6 +1279,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.searchFilter = '';
     this.providerFilter = [];
     this.statusFilter = '';
+    this.tagFilter = [];
     this.sortBy = null;
     this.sortDirection = 'desc';
     this.selectedModels = [];
@@ -1354,7 +1390,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       width: '600px',
       data: {
         selectedModels: this.selectedModels,
-        availableTags: this.availableTags,
+        availableTags: this.availableTagEntities,
         models: this.models
       }
     });
@@ -1444,9 +1480,20 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.availableProviders = Array.from(providers).sort();
   }
 
+  private updateAvailableTags(): void {
+    const tags = new Set<string>();
+    this.models.forEach(model => {
+      if (model.tags) {
+        model.tags.forEach(tag => tags.add(tag));
+      }
+    });
+    this.availableTags = Array.from(tags).sort();
+  }
+
   private updateFilteredModels(): void {
     this.filteredModels = [...this.models];
     this.updateAvailableProviders();
+    this.updateAvailableTags();
     // 初期化時は自動でソートを適用
     this.applyFilters();
   }

@@ -53,7 +53,7 @@
 
 /* タグボタン - シンプルに */
 .tag-item {
-    padding: 0 24px;
+    padding: 0 24px 0 36px;
 
     .tag-name {
         font-size: 14px;
@@ -130,6 +130,10 @@
             }
         }
     }
+}
+
+.model-desc {
+    color: var(--plain-color-area);
 }
 
 .model-card {
@@ -250,4 +254,8 @@
             color: var(--mat-sys-primary);
         }
     }
+}
+
+.model-content {
+    padding-right: 24px;
 }

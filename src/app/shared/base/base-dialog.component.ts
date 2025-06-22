@@ -113,6 +113,39 @@ export abstract class BaseDialogComponent<TData = any, TResult = any> {
   }
 
   /**
+   * 非同期処理を実行して結果を返す共通メソッド
+   * @param operation 実行する非同期処理
+   * @param successMessage 成功時のメッセージ
+   * @param errorMessage エラー時のメッセージ
+   * @returns Promise<T | null> 成功時は結果、失敗時はnull
+   */
+  protected async executeAsyncWithResult<T>(
+    operation: () => Promise<T>,
+    successMessage?: string,
+    errorMessage?: string
+  ): Promise<T | null> {
+    try {
+      this.clearError();
+      this.setSaving(true);
+      
+      const result = await operation();
+      
+      if (successMessage) {
+        console.log(successMessage);
+      }
+      
+      return result;
+    } catch (error) {
+      const message = errorMessage || this.getErrorMessage(error);
+      this.setError(message);
+      console.error('Dialog operation failed:', error);
+      return null;
+    } finally {
+      this.setSaving(false);
+    }
+  }
+
+  /**
    * エラーオブジェクトからメッセージを抽出
    * @param error エラーオブジェクト
    * @returns エラーメッセージ

@@ -384,6 +384,9 @@ export interface AIModelEntity extends BaseEntity {
   /** ライセンス URL */
   licenseUrl?: string | null;
 
+  /** モデル開発者 */
+  developer?: string | null;
+
   /** ナレッジカットオフ */
   knowledgeCutoff?: Date | null;
 
@@ -416,6 +419,8 @@ export interface AIModelEntityForView extends AIModelEntity {
   uiOrder: number;
 
   isGSearch: boolean;
+
+  effectiveTags?: string[]; // 有効なタグ一覧（表示用）
 }
 
 export type ModelCapability = 'text' | 'pdf' | 'image' | 'audio' | 'video' | 'tool' | 'embedding' | 'embedded';

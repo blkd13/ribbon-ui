@@ -1175,6 +1175,14 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
           valueA = a.provider.type;
           valueB = b.provider.type;
           break;
+        case 'scope':
+          valueA = `${a.provider.scopeInfo.scopeType}:${a.provider.scopeInfo.scopeId}`;
+          valueB = `${b.provider.scopeInfo.scopeType}:${b.provider.scopeInfo.scopeId}`;
+          break;
+        case 'active':
+          valueA = a.provider.isActive ? 1 : 0;
+          valueB = b.provider.isActive ? 1 : 0;
+          break;
         case 'updated':
           valueA = a.provider.updatedAt;
           valueB = b.provider.updatedAt;
@@ -1200,6 +1208,18 @@ export class AIProviderManagementComponent implements OnInit, OnDestroy {
     
     // ソート結果を元の配列に戻す
     this.filteredProviders = indexedProviders.map(item => item.provider);
+  }
+
+  sortByColumn(column: string): void {
+    if (this.sortBy === column) {
+      // 同じ列をクリックした場合は方向を反転
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      // 新しい列の場合は昇順から開始
+      this.sortBy = column;
+      this.sortDirection = 'asc';
+    }
+    this.applySorting();
   }
 
   toggleSortDirection(): void {

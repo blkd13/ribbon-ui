@@ -48,6 +48,18 @@
                         <mat-icon matSuffix>filter_list</mat-icon>
                     </mat-form-field>
 
+                    <!-- タグフィルター -->
+                    <mat-form-field appearance="outline" class="filter-field">
+                        <mat-select placeholder="Tags" [(value)]="tagFilter" (selectionChange)="applyFilters()" multiple
+                            panelWidth="400px">
+                            <mat-option value="">All Tags</mat-option>
+                            @for (tag of availableTags; track tag) {
+                            <mat-option [value]="tag">{{ getTagDisplayName(tag) }}</mat-option>
+                            }
+                        </mat-select>
+                        <mat-icon matSuffix>local_offer</mat-icon>
+                    </mat-form-field>
+
                     <!-- アクティブステータスフィルター -->
                     <mat-form-field appearance="outline" class="filter-field">
                         <mat-select placeholder="Status" [(value)]="statusFilter" (selectionChange)="applyFilters()">
@@ -57,26 +69,6 @@
                         </mat-select>
                         <mat-icon matSuffix>visibility</mat-icon>
                     </mat-form-field>
-
-                    <!-- ソート -->
-                    <mat-form-field appearance="outline" class="filter-field">
-                        <mat-label>Sort by...</mat-label>
-                        <mat-select [(value)]="sortBy" (selectionChange)="applySorting()">
-                            <mat-option [value]="null">Default Order</mat-option>
-                            <mat-option value="release">Release Date</mat-option>
-                            <mat-option value="name">Name</mat-option>
-                            <mat-option value="provider">Provider</mat-option>
-                            <mat-option value="context">Context Size</mat-option>
-                            <mat-option value="price">Price</mat-option>
-                            <mat-option value="updated">Last Updated</mat-option>
-                        </mat-select>
-                        <mat-icon matSuffix>sort</mat-icon>
-                    </mat-form-field>
-
-                    <button mat-icon-button (click)="toggleSortDirection()"
-                        [matTooltip]="sortDirection === 'asc' ? 'Sort Descending' : 'Sort Ascending'">
-                        <mat-icon>{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-                    </button>
 
                     <!-- フィルターリセット -->
                     <button mat-icon-button (click)="resetFilters()" matTooltip="Reset Filters">
@@ -127,165 +119,237 @@
 
             <div class="table-scroll-container">
                 <table class="data-table">
-                <thead>
-                    <tr>
-                        <th class="checkbox-column">
-                            <mat-checkbox [checked]="isAllSelected()" [indeterminate]="isSomeSelected()"
-                                (change)="toggleSelectAll($event)">
-                            </mat-checkbox>
-                        </th>
-                        <th>Provider</th>
-                        <th>Name</th>
-                        <th>Scope</th>
-                        <th>Context</th>
-                        <th>Price<span class="text-xs text-[#888] align-right">(in/out)</span></th>
-                        <th>Knowledge</th>
-                        <th>Modalities</th>
-                        <th>Tags</th>
-                        <th>Active</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (model of filteredModels; track $index) {
-                    <tr [class.selected]="form.value.id === model.id" [class.own-scope]="isModelsOwnScope(model)"
-                        [class.other-scope]="!isModelsOwnScope(model)"
-                        [class.bulk-selected]="isModelSelected(model.id)">
-                        <td class="checkbox-column" (click)="$event.stopPropagation()">
-                            <mat-checkbox [checked]="isModelSelected(model.id)"
-                                (change)="toggleModelSelection(model.id, $event)">
-                            </mat-checkbox>
-                        </td>
-                        <td (click)="selectModel(model)">
-                            {{ model.providerNameList.join(', ') }}
-                        </td>
-                        <td (click)="selectModel(model)">
-                            {{ model.name }}
-                            <div class="text-xs text-[#888] align-right">{{ model.providerModelId }}</div>
-                        </td>
-                        <td (click)="selectModel(model)">
-                            {{ scopeLabelsMap[`${model.scopeInfo.scopeType}:${model.scopeInfo.scopeId}`] }}
-                            <div class="text-xs text-[#888] align-right">{{ model.scopeInfo.scopeType }}</div>
-                        </td>
-                        <td class="text-right" (click)="selectModel(model)">
-                            {{ model.maxContextTokens | number }}
-                            <div class="text-xs text-[#888] align-right">{{ model.maxOutputTokens | number }}</div>
-                        </td>
-                        <td class="text-right" (click)="selectModel(model)">
-                            @if(model.pricingHistory && model.pricingHistory.length > 0){
-                            <div>
-                                {{model.pricingHistory[0].inputPricePerUnit|number:'0.2-2'}} /
-                                {{model.pricingHistory[0].outputPricePerUnit|number:'0.2-2'}}
-                            </div>
-                            <div class="text-xs text-[#888] align-right">{{model.pricingHistory[0].unit}}</div>
-                            } @else {--}
-                        </td>
-                        <td (click)="selectModel(model)">
-                            @if(model.knowledgeCutoff){
-                            {{ model.knowledgeCutoff | date: 'yyyy/MM/dd' }}
-                            } @else {
-                            <div class="text-xs text-[#888] align-right">N/A</div>
-                            }
-                            <div class="text-xs text-[#888] align-right">
+                    <thead>
+                        <tr>
+                            <th class="checkbox-column">
+                                <mat-checkbox [checked]="isAllSelected()" [indeterminate]="isSomeSelected()"
+                                    (change)="toggleSelectAll($event)">
+                                </mat-checkbox>
+                            </th>
+                            <th class="sortable-header" (click)="sortByColumn('name')">
+                                <div class="header-content">
+                                    <div class="flex flex-col">Name
+                                        <span class="text-xs text-[#888] align-right">Provider</span>
+                                    </div>
+                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'name'">
+                                        @if(sortBy === 'name') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                        } @else {
+                                        unfold_more
+                                        }
+                                    </mat-icon>
+                                </div>
+                            </th>
+                            <th class="sortable-header" (click)="sortByColumn('scope')">
+                                <div class="header-content">
+                                    Scope
+                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'scope'">
+                                        @if(sortBy === 'scope') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                        } @else {
+                                        unfold_more
+                                        }
+                                    </mat-icon>
+                                </div>
+                            </th>
+                            <th class="sortable-header" (click)="sortByColumn('context')">
+                                <div class="header-content">
+                                    <div class="flex flex-col">Context
+                                        <span class="text-xs text-[#888] align-right">Output</span>
+                                    </div>
+
+                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'context'">
+                                        @if(sortBy === 'context') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                        } @else {
+                                        unfold_more
+                                        }
+                                    </mat-icon>
+                                </div>
+                            </th>
+                            <th class="sortable-header" (click)="sortByColumn('price')">
+                                <div class="header-content">
+                                    Price<span class="text-xs text-[#888] align-right">(in/out)</span>
+                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'price'">
+                                        @if(sortBy === 'price') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                        } @else {
+                                        unfold_more
+                                        }
+                                    </mat-icon>
+                                </div>
+                            </th>
+                            <th class="sortable-header" (click)="sortByColumn('releaseDate')">
+                                <div class="header-content">
+                                    <div class="flex flex-col">Release
+                                        <span class="text-xs text-[#888] align-right">Knowledge</span>
+                                    </div>
+                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'releaseDate'">
+                                        @if(sortBy === 'releaseDate') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                        } @else {
+                                        unfold_more
+                                        }
+                                    </mat-icon>
+                                </div>
+                            </th>
+                            <th>Modalities</th>
+                            <th>Tags</th>
+                            <th class="sortable-header" (click)="sortByColumn('active')">
+                                <div class="header-content">
+                                    Sts
+                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'active'">
+                                        @if(sortBy === 'active') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                        } @else {
+                                        unfold_more
+                                        }
+                                    </mat-icon>
+                                </div>
+                            </th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (model of filteredModels; track $index) {
+                        <tr [class.selected]="form.value.id === model.id" [class.own-scope]="isModelsOwnScope(model)"
+                            [class.other-scope]="!isModelsOwnScope(model)"
+                            [class.bulk-selected]="isModelSelected(model.id)">
+                            <td class="checkbox-column" (click)="$event.stopPropagation()">
+                                <mat-checkbox [checked]="isModelSelected(model.id)"
+                                    (change)="toggleModelSelection(model.id, $event)">
+                                </mat-checkbox>
+                            </td>
+                            <td (click)="selectModel(model)">
+                                {{ model.name }}
+                                <div class="text-xs text-[#888] align-right">{{ model.providerNameList.join(', ') }}
+                                </div>
+                            </td>
+                            <td (click)="selectModel(model)">
+                                {{ scopeLabelsMap[`${model.scopeInfo.scopeType}:${model.scopeInfo.scopeId}`] }}
+                                <div class="text-xs text-[#888] align-right">{{ model.scopeInfo.scopeType }}</div>
+                            </td>
+                            <td class="text-right" (click)="selectModel(model)">
+                                {{ model.maxContextTokens | number }}
+                                <div class="text-xs text-[#888] align-right">{{ model.maxOutputTokens | number }}</div>
+                            </td>
+                            <td class="text-right" (click)="selectModel(model)">
+                                @if(model.pricingHistory && model.pricingHistory.length > 0){
+                                <div>
+                                    {{model.pricingHistory[0].inputPricePerUnit|number:'0.2-2'}} /
+                                    {{model.pricingHistory[0].outputPricePerUnit|number:'0.2-2'}}
+                                </div>
+                                <div class="text-xs text-[#888] align-right">{{model.pricingHistory[0].unit}}</div>
+                                } @else {--}
+                            </td>
+                            <td (click)="selectModel(model)">
                                 @if(model.releaseDate){
                                 {{ model.releaseDate | date: 'yyyy/MM/dd' }}
                                 } @else {
-                                N/A
+                                <div class="text-xs text-[#888] align-right">N/A</div>
                                 }
-                            </div>
-                        </td>
-                        <td (click)="selectModel(model)">
-                            @if(model.modalities && model.modalities.length > 0){
-                            @for(modality of model.modalities;track $index){
-                            <div class="tag">{{ modality }}</div>
-                            }
-                            } @else {
-                            <div class="text-xs text-[#888] align-right">N/A</div>
-                            }
-                        </td>
-                        <td (click)="selectModel(model)">
-                            @if(model.tags && model.tags.length > 0){
-                            @for(tagName of model.tags;track $index){
-                            <div class="tag" [style.background-color]="getTagColor(tagName)"
-                                [style.color]="getTagColor(tagName) ? 'white' : 'inherit'"
-                                [matTooltip]="getTagDisplayName(tagName)">
-                                {{ getTagDisplayName(tagName) }}
-                            </div>
-                            }
-                            } @else {
-                            <div class="text-xs text-[#888] align-right">N/A</div>
-                            }
-                        </td>
-                        <td (click)="selectModel(model)">
-                            <mat-icon class="status-icon">{{ model.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
-                        </td>
-                        <td class="actions-cell">
-                            @if (isModelsOwnScope(model)) {
-                            <!-- 自分のスコープの場合：通常の編集・複製・削除 -->
-                            @if (shouldShowEditButton(model)) {
-                            <button mat-icon-button class="mr-5" (click)="editModel(model); $event.stopPropagation();"
-                                matTooltip="Edit this model">
-                                <mat-icon>edit</mat-icon>
-                            </button>
-                            }
-
-                            @if (shouldShowDuplicateButton(model)) {
-                            <button mat-icon-button class="mr-5" (click)="duplicateModel(model, $event);"
-                                matTooltip="Duplicate this model">
-                                <mat-icon>file_copy</mat-icon>
-                            </button>
-                            }
-
-                            @if (shouldShowDeleteButton(model)) {
-                            <button mat-icon-button class="mr-5"
-                                (click)="deleteModel(model.id); $event.stopPropagation();"
-                                matTooltip="Delete this model">
-                                <mat-icon>delete</mat-icon>
-                            </button>
-                            } @else {
-                            <!-- スペース確保 -->
-                            <button mat-icon-button class="mr-5" style="visibility: hidden;">
-                                <mat-icon>delete</mat-icon>
-                            </button>
-                            }
-                            } @else {
-                            <!-- 他のスコープの場合：閲覧とオーバーライド -->
-                            <button mat-icon-button class="mr-5" (click)="viewModel(model); $event.stopPropagation();"
-                                matTooltip="View model details">
-                                <mat-icon>visibility</mat-icon>
-                            </button>
-
-                            @if (shouldShowOverrideButton(model)) {
-                            <button mat-icon-button class="mr-5 override-button" (click)="startOverride(model, $event);"
-                                matTooltip="Create override in your scope">
-                                <div class="icon-stack">
-                                    <mat-icon class="base-icon">content_copy</mat-icon>
-                                    <mat-icon class="overlay-icon">add_circle</mat-icon>
+                                <div class="text-xs text-[#888] align-right">
+                                    @if(model.knowledgeCutoff){
+                                    {{ model.knowledgeCutoff | date: 'yyyy/MM/dd' }}
+                                    } @else {
+                                    N/A
+                                    }
                                 </div>
-                            </button>
-                            } @else {
-                            <button mat-icon-button class="mr-5" disabled
-                                matTooltip="No permission to create overrides">
-                                <mat-icon>block</mat-icon>
-                            </button>
-                            }
+                            </td>
+                            <td (click)="selectModel(model)" class="wrapping-text">
+                                @if(model.modalities && model.modalities.length > 0){
+                                @for(modality of model.modalities;track $index){
+                                <div class="tag">{{ modality }}</div>
+                                }
+                                } @else {
+                                <div class="text-xs text-[#888] align-right">N/A</div>
+                                }
+                            </td>
+                            <td (click)="selectModel(model)">
+                                @if(model.tags && model.tags.length > 0){
+                                @for(tagName of model.tags;track $index){
+                                <div class="tag" [style.background-color]="getTagColor(tagName)"
+                                    [style.color]="getTagColor(tagName) ? 'white' : 'inherit'"
+                                    [matTooltip]="getTagDisplayName(tagName)">
+                                    {{ getTagDisplayName(tagName) }}
+                                </div>
+                                }
+                                } @else {
+                                <div class="text-xs text-[#888] align-right">N/A</div>
+                                }
+                            </td>
+                            <td (click)="selectModel(model)">
+                                <mat-icon class="status-icon">{{ model.isActive ? 'check_circle' : 'cancel'
+                                    }}</mat-icon>
+                            </td>
+                            <td class="actions-cell">
+                                @if (isModelsOwnScope(model)) {
+                                <!-- 自分のスコープの場合：通常の編集・複製・削除 -->
+                                @if (shouldShowEditButton(model)) {
+                                <button mat-icon-button class="mr-5"
+                                    (click)="editModel(model); $event.stopPropagation();" matTooltip="Edit this model">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
+                                }
 
-                            <!-- 削除は表示しない（スペース確保のため透明） -->
-                            <button mat-icon-button class="mr-5" style="visibility: hidden;">
-                                <mat-icon>delete</mat-icon>
-                            </button>
-                            }
-                        </td>
-                    </tr>
-                    } @empty {
-                    <tr>
-                        <td colspan="10" class="no-data">
-                            <mat-icon>info</mat-icon>
-                            <p>No models found</p>
-                        </td>
-                    </tr>
-                    }
-                </tbody>
+                                @if (shouldShowDuplicateButton(model)) {
+                                <button mat-icon-button class="mr-5" (click)="duplicateModel(model, $event);"
+                                    matTooltip="Duplicate this model">
+                                    <mat-icon>file_copy</mat-icon>
+                                </button>
+                                }
+
+                                @if (shouldShowDeleteButton(model)) {
+                                <button mat-icon-button class="mr-5"
+                                    (click)="deleteModel(model.id); $event.stopPropagation();"
+                                    matTooltip="Delete this model">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                                } @else {
+                                <!-- スペース確保 -->
+                                <button mat-icon-button class="mr-5" style="visibility: hidden;">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                                }
+                                } @else {
+                                <!-- 他のスコープの場合：閲覧とオーバーライド -->
+                                <button mat-icon-button class="mr-5"
+                                    (click)="viewModel(model); $event.stopPropagation();"
+                                    matTooltip="View model details">
+                                    <mat-icon>visibility</mat-icon>
+                                </button>
+
+                                @if (shouldShowOverrideButton(model)) {
+                                <button mat-icon-button class="mr-5 override-button"
+                                    (click)="startOverride(model, $event);" matTooltip="Create override in your scope">
+                                    <div class="icon-stack">
+                                        <mat-icon class="base-icon">content_copy</mat-icon>
+                                        <mat-icon class="overlay-icon">add_circle</mat-icon>
+                                    </div>
+                                </button>
+                                } @else {
+                                <button mat-icon-button class="mr-5" disabled
+                                    matTooltip="No permission to create overrides">
+                                    <mat-icon>block</mat-icon>
+                                </button>
+                                }
+
+                                <!-- 削除は表示しない（スペース確保のため透明） -->
+                                <button mat-icon-button class="mr-5" style="visibility: hidden;">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                                }
+                            </td>
+                        </tr>
+                        } @empty {
+                        <tr>
+                            <td colspan="10" class="no-data">
+                                <mat-icon>info</mat-icon>
+                                <p>No models found</p>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
                 </table>
             </div>
         </div>

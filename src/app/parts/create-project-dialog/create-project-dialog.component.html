@@ -1,12 +1,15 @@
-<form>
+<form [formGroup]="form" (ngSubmit)="registerProject()">
     <mat-form-field appearance="fill" class="full-width">
         <mat-label>プロジェクト名</mat-label>
-        <input matInput type="text" name="projectLabel" placeholder="プロジェクトの名前を決めてください。" [(ngModel)]="projectLabel">
+        <input matInput type="text" placeholder="プロジェクトの名前を決めてください。" formControlName="projectLabel">
+        @if (form.get('projectLabel')?.errors?.['required']) {
+        <mat-error>プロジェクト名は必須です</mat-error>
+        }
     </mat-form-field>
 
     <mat-form-field>
         <mat-label>共有範囲</mat-label>
-        <mat-select name="share" [(ngModel)]="share" [disabled]="!!targetTeam">
+        <mat-select formControlName="share" [disabled]="!!targetTeam">
             <mat-option value="Alone">自分だけ</mat-option>
             @if(teamWithoutAloneList.length>0){
             <mat-option value="Team">チーム内</mat-option>
@@ -18,20 +21,22 @@
 
     <mat-form-field>
         <mat-label>チーム</mat-label>
-        <mat-select name="selectedTeamId" [(ngModel)]="selectedTeamId" [disabled]="share!=='Team' || !!targetTeam">
+        <mat-select formControlName="selectedTeamId" [disabled]="form.get('share')?.value !== 'Team' || !!targetTeam">
             @for(team of teamWithoutAloneList; track team.id){
             <mat-option [value]="team.id">{{team.label}}</mat-option>
             }
         </mat-select>
+        @if (form.get('selectedTeamId')?.errors?.['required'] && form.get('share')?.value === 'Team') {
+        <mat-error>チームを選択してください</mat-error>
+        }
     </mat-form-field>
 
     <mat-form-field class="textarea-field">
         <mat-label>補足</mat-label>
-        <textarea matInput type="text" name="projectDescription" placeholder="補足"
-            [(ngModel)]="projectDescription"></textarea>
+        <textarea matInput type="text" placeholder="補足" formControlName="projectDescription"></textarea>
     </mat-form-field>
 
-    <button (click)="registerProject()">登録</button>
+    <button type="submit" [disabled]="form.invalid || isLoading">登録</button>
 </form>
 
 <style>

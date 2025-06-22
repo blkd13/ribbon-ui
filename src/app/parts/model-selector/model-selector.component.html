@@ -3,8 +3,25 @@
     <mat-icon>arrow_drop_down</mat-icon>
 </button>
 
+
 <!-- 1段目: カテゴリ + タグを平面表示 -->
 <mat-menu #rootMenu="matMenu" class="level-1 flat-menu">
+    @if(args().model; as modelName) {
+    @if(aiModelService.modelMap[modelName]; as model) {
+    <!-- 現在選択中のモデル -->
+    <div class="selected-model" mat-menu-item [matMenuTriggerFor]="detail">
+        <mat-icon class="current-check">check</mat-icon>
+        <div class="model-content">
+            <div class="model-name">{{ modelName || 'Select a model' }}</div>
+            <div class="model-desc">{{ model.description}}</div>
+        </div>
+    </div>
+    <mat-menu #detail="matMenu" class="level-3">
+        <ng-container *ngTemplateOutlet="modelCard; context: { model: buildModelObj(model) }"></ng-container>
+    </mat-menu>
+
+    <mat-divider></mat-divider>
+
     @for(category of data; track $index) {
 
     <!-- カテゴリヘッダー -->
@@ -17,7 +34,7 @@
 
     <!-- タグボタン -->
     <div mat-menu-item [matMenuTriggerFor]="tagMenu"
-        [class.selected]="aiModelService.modelMap[args().model] && aiModelService.modelMap[args().model].tags?.includes(tagGroup.tag?.name||'')">
+        [class.selected]="(model.effectiveTags || []).includes(tagGroup.tag?.name||'')">
         <div class="tag-item">
             <div class="tag-name">{{ tagGroup.tag?.label || tagGroup.tag?.name || 'No Tags' }}</div>
             <!-- <div class="model-count">{{ tagGroup.models.length }}</div> -->
@@ -27,91 +44,16 @@
 
     <!-- 2段目: タグ配下のモデル一覧 -->
     <mat-menu #tagMenu="matMenu" class="level-2">
-        @for(model of tagGroup.models; track $index) {
-        <div mat-menu-item [matMenuTriggerFor]="detail" (click)="menuTrigger.closeMenu(); selectModel(model)"
-            [class.selected]="args().model === model.name" [disabled]="model.disabled" class="model-item">
-            <div class="model-name">{{ model.name }}</div>
-            <div class="model-desc">{{ model.desc }}</div>
+        @for(_model of tagGroup.models; track $index) {
+        <div mat-menu-item [matMenuTriggerFor]="detail" (click)="menuTrigger.closeMenu(); selectModel(_model)"
+            [class.selected]="modelName === _model.name" [disabled]="_model.disabled" class="model-item">
+            <div class="model-name">{{ _model.name }}</div>
+            <div class="model-desc">{{ _model.desc }}</div>
         </div>
 
         <!-- 3段目: モデル詳細カード -->
         <mat-menu #detail="matMenu" class="level-3">
-            <mat-card class="model-card" (click)="selectModel(model)">
-                <mat-card-header>
-                    <mat-card-title>{{ model.name }}</mat-card-title>
-                    <mat-card-subtitle>{{ model.desc }}</mat-card-subtitle>
-                </mat-card-header>
-
-                <mat-divider></mat-divider>
-
-                <mat-card-content>
-                    <!-- 横並び: コスト -->
-                    <div class="detail-pair">
-                        <div class="detail-block">
-                            <div class="field-label">Input Price</div>
-                            <div class="field-value">
-                                ${{ (model.object.pricingHistory[0].inputPricePerUnit | number:'0.2-2')|| '—' }}
-                                <span class="field-description">{{model.object.pricingHistory[0].unit}}</span>
-                            </div>
-                        </div>
-                        <div class="detail-block">
-                            <div class="field-label">Output Price</div>
-                            <div class="field-value">
-                                ${{ (model.object.pricingHistory[0].outputPricePerUnit | number:'0.2-2')|| '—' }}
-                                <span class="field-description">{{model.object.pricingHistory[0].unit}}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 横並び: トークン数 -->
-                    <div class="detail-pair">
-                        <div class="detail-block">
-                            <div class="field-label">Max Context Tokens</div>
-                            <div class="field-value">{{ (model.object.maxContextTokens|number) || '—' }}</div>
-                        </div>
-                        <div class="detail-block">
-                            <div class="field-label">Max Output Tokens</div>
-                            <div class="field-value">{{ (model.object.maxOutputTokens|number) || '—' }}</div>
-                        </div>
-                    </div>
-
-                    <!-- 横並び: 日付ペア -->
-                    <div class="detail-pair">
-                        <div class="detail-block">
-                            <div class="field-label">Release Date</div>
-                            <div class="field-value">{{ (model.object.releaseDate | date:'yyyy-MM-dd') || '—' }}</div>
-                        </div>
-                        <div class="detail-block">
-                            <div class="field-label">Deprecation Date</div>
-                            <div class="field-value">{{ (model.object.deprecationDate | date:'yyyy-MM') || '—' }}</div>
-                        </div>
-                    </div>
-
-                    <!-- 横並び: 日付ペア -->
-                    <!--
-                    <div class="detail-pair">
-                        <div class="detail-block">
-                            <div class="field-label">Release Date</div>
-                            <div class="field-value">{{ (model.object.releaseDate | date:'yyyy-MM-dd') || '—' }}</div>
-                        </div>
-                        <div class="detail-block">
-                            <div class="field-label"></div>
-                            <div class="field-value"></div>
-                        </div>
-                    </div>
-                    -->
-
-                    <!-- 単項目表示 -->
-                    @for(field of extraFields; track $index) {
-                    <div class="detail-row">
-                        <div class="field-label">{{ field.label }}</div>
-                        <div class="field-value">{{ getModelFieldValue(model, field.key) || '—' }}</div>
-                    </div>
-                    }
-                </mat-card-content>
-            </mat-card>
-
-
+            <ng-container *ngTemplateOutlet="modelCard; context: { model: _model }"></ng-container>
         </mat-menu>
         }
     </mat-menu>
@@ -124,4 +66,86 @@
     <hr class="category-divider">
     }
     }
+
+    }
+    }
 </mat-menu>
+
+<ng-template #modelCard let-model="model">
+    <mat-card class="model-card" (click)="selectModel(model)">
+        <mat-card-header>
+            <mat-card-title>{{ model.name }}</mat-card-title>
+            <mat-card-subtitle>{{ model.desc }}</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-divider></mat-divider>
+
+        <mat-card-content>
+            @if(model.object){
+            <!-- 横並び: コスト -->
+            <div class="detail-pair">
+                <div class="detail-block">
+                    <div class="field-label">Input Price</div>
+                    <div class="field-value">
+                        ${{ (model.object.pricingHistory[0].inputPricePerUnit | number:'0.2-2')|| '—' }}
+                        <span class="field-description">{{model.object.pricingHistory[0].unit}}</span>
+                    </div>
+                </div>
+                <div class="detail-block">
+                    <div class="field-label">Output Price</div>
+                    <div class="field-value">
+                        ${{ (model.object.pricingHistory[0].outputPricePerUnit | number:'0.2-2')|| '—' }}
+                        <span class="field-description">{{model.object.pricingHistory[0].unit}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 横並び: トークン数 -->
+            <div class="detail-pair">
+                <div class="detail-block">
+                    <div class="field-label">Max Context Tokens</div>
+                    <div class="field-value">{{ (model.object.maxContextTokens|number) || '—' }}</div>
+                </div>
+                <div class="detail-block">
+                    <div class="field-label">Max Output Tokens</div>
+                    <div class="field-value">{{ (model.object.maxOutputTokens|number) || '—' }}</div>
+                </div>
+            </div>
+
+            <!-- 横並び: 日付ペア -->
+            <div class="detail-pair">
+                <div class="detail-block">
+                    <div class="field-label">Release Date</div>
+                    <div class="field-value">{{ (model.object.releaseDate | date:'yyyy-MM-dd') || '—' }}</div>
+                </div>
+                <div class="detail-block">
+                    <div class="field-label">Deprecation Date</div>
+                    <div class="field-value">{{ (model.object.deprecationDate | date:'yyyy-MM') || '—' }}</div>
+                </div>
+            </div>
+
+            <!-- 横並び: 日付ペア -->
+            <!--
+                    <div class="detail-pair">
+                        <div class="detail-block">
+                            <div class="field-label">Release Date</div>
+                            <div class="field-value">{{ (model.object.releaseDate | date:'yyyy-MM-dd') || '—' }}</div>
+                        </div>
+                        <div class="detail-block">
+                            <div class="field-label"></div>
+                            <div class="field-value"></div>
+                        </div>
+                    </div>
+                    -->
+
+            <!-- 単項目表示 -->
+            @for(field of extraFields; track $index) {
+            <div class="detail-row">
+                <div class="field-label">{{ field.label }}</div>
+                <div class="field-value">{{ getModelFieldValue(model, field.key) || '—' }}</div>
+            </div>
+            }
+            }
+        </mat-card-content>
+    </mat-card>
+</ng-template>

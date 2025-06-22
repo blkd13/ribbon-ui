@@ -68,6 +68,18 @@ export class ModelSelectorComponent {
     });
   }
 
+  buildModelObj(model: AIModelEntityForView): Model {
+    return {
+      key: model.providerModelId,
+      name: model.name,
+      desc: model.description || '',
+      details: this.buildModelDetails(model),
+      preview: false,
+      disabled: false,
+      object: model
+    };
+  }
+
   private processModelsAndTags(models: AIModelEntityForView[], tags: TagEntity[]) {
     // Prepare models
     models.forEach(model => {
@@ -93,15 +105,7 @@ export class ModelSelectorComponent {
     const categoryMap = new Map<string, Category>();
 
     models.forEach(model => {
-      const modelObj: Model = {
-        key: model.providerModelId,
-        name: model.name,
-        desc: model.description || '',
-        details: this.buildModelDetails(model),
-        preview: false,
-        disabled: false,
-        object: model,
-      };
+      const modelObj = this.buildModelObj(model);
 
       // Get model's active tags (filtered by effective tags)
       model.tags = model.tags || [];
@@ -109,6 +113,7 @@ export class ModelSelectorComponent {
       const effectiveTags = overrideTags.length > 0 ? overrideTags : model.tags;
 
       const modelActiveTags = model.tags?.filter(tagName => effectiveTags.includes(tagName)) || [];
+      model.effectiveTags = modelActiveTags;
 
       if (modelActiveTags.length === 0) {
         // Model has no active tags, add to "Uncategorized"

@@ -18,8 +18,17 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { map, switchMap, tap } from 'rxjs';
 import { safeForkJoin } from '../../utils/dom-utils';
 import { AIModelManagerService } from '../../services/model-manager.service';
+import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
 
 declare const _paq: any;
+
+export interface ParameterSettingDialogData {
+  threadGroup: ThreadGroup;
+}
+
+export interface ParameterSettingDialogResult {
+  threadGroup: ThreadGroup;
+}
 
 @Component({
   selector: 'app-parameter-setting-dialog',
@@ -31,18 +40,15 @@ declare const _paq: any;
   templateUrl: './parameter-setting-dialog.component.html',
   styleUrl: './parameter-setting-dialog.component.scss'
 })
-export class ParameterSettingDialogComponent {
+
+export class ParameterSettingDialogComponent extends BaseDialogComponent<ParameterSettingDialogData, ParameterSettingDialogResult> {
 
   readonly chatService: ChatService = inject(ChatService);
   readonly aIModelManagerService: AIModelManagerService = inject(AIModelManagerService);
   readonly projectService: ProjectService = inject(ProjectService);
   readonly threadService: ThreadService = inject(ThreadService);
   readonly messageService: MessageService = inject(MessageService);
-
   readonly dialog: MatDialog = inject(MatDialog);
-  readonly dialogRef: MatDialogRef<ParameterSettingDialogComponent> = inject(MatDialogRef);
-  readonly notificationService: NotificationService = inject(NotificationService);
-  readonly data = inject<{ threadGroup: ThreadGroup }>(MAT_DIALOG_DATA);
 
   threadGroup: ThreadGroup = Utils.clone(this.data.threadGroup);
   projectId: string = this.threadGroup.projectId;
@@ -52,6 +58,7 @@ export class ParameterSettingDialogComponent {
   maxMaxToken = 8192; // スライダーの最大値
 
   constructor() {
+    super();
     _paq.push(['trackEvent', 'チャットの設定', '設定画面を開く', 0]);
     this.reload();
   }
@@ -87,57 +94,66 @@ export class ParameterSettingDialogComponent {
   }
 
   saveAndSubmit() {
-    // 保存すると元IDが消えるので、元IDを保持しておく
-    const threadIdList = this.threadGroup.threadList.map(thread => thread.id);
+    this.executeAsync(async () => {
+      // 保存すると元IDが消えるので、元IDを保持しておく
+      const threadIdList = this.threadGroup.threadList.map(thread => thread.id);
 
-    // デフォルトプロジェクトにも保存。
-    this.projectService.getProjectList().subscribe(projects => {
-      const defaultProject = projects.find(p => p.visibility === ProjectVisibility.Default);
-      if (defaultProject) {
-        const threadGroup = Utils.clone(this.threadGroup);
-        (threadGroup.id as any) = undefined;
-        threadGroup.title = 'Default';
-        threadGroup.type = ThreadGroupType.Default;
-        threadGroup.threadList.forEach((thread) => {
-          (thread.id as any) = undefined;
-          thread.status = 'Normal';
-        });
-        this.threadService.upsertThreadGroup(defaultProject.id, threadGroup).pipe(
-          switchMap(savedThreadGroup => {
-            // システムプロンプトを保存する
+      // デフォルトプロジェクトにも保存。
+      const projects = await this.projectService.getProjectList().toPromise();
+      const defaultProject = projects?.find(p => p.visibility === ProjectVisibility.Default);
+      
+      if (!defaultProject) {
+        throw new Error('デフォルトプロジェクトが見つかりません');
+      }
 
-            // 元メッセージの0番目（システムプロンプト）を取得する 
-            const systemMessageGroupList = threadIdList.map(threadId => {
-              return this.messageService.messageGroupList.find(messageGroup => {
-                return messageGroup.threadId === threadId && messageGroup.role === 'system';
-              });
-            }).filter(messageGroup => !!messageGroup) as MessageGroupForView[];
-            // 元オブジェクトを破壊しないようにcloneしておく 
-            const forInsert = Utils.clone(systemMessageGroupList);
-            forInsert.forEach((messageGroup, index) => {
-              messageGroup.id = genDummyId('messageGroup'); // 新規作成なのでDummyIDを付与
-              messageGroup.threadId = savedThreadGroup.threadList[index].id;
-              messageGroup.messages.forEach(message => {
-                message.id = genDummyId('message'); // 新規作成なのでDummyIDを付与
-                message.cacheId = undefined; // キャッシュは消す 
-                message.messageGroupId = messageGroup.id; // 新規作成なのでDummyIDを付与
-                message.contents.forEach(content => {
-                  content.id = genDummyId('contentPart');
-                  content.messageId = message.id; // 新規作成なのでDummyIDを付与
-                });
-              });
-            });
-            // メッセージグループを保存する 
-            return safeForkJoin(forInsert.map(messageGroup =>
-              this.messageService.upsertSingleMessageGroup(messageGroup)
-            )).pipe(map(next => savedThreadGroup)); // メッセージグループを保存したらスレッドグループを返す
-          }),
-        ).subscribe((threadGroup) => {
-          this.notificationService.showSuccess('設定を保存しました');
-          Object.assign(this.threadGroup, threadGroup); // スレッドグループを上書きする
-          this.submit(true);
+      const threadGroup = Utils.clone(this.threadGroup);
+      (threadGroup.id as any) = undefined;
+      threadGroup.title = 'Default';
+      threadGroup.type = ThreadGroupType.Default;
+      threadGroup.threadList.forEach((thread) => {
+        (thread.id as any) = undefined;
+        thread.status = 'Normal';
+      });
+
+      const savedThreadGroup = await this.threadService.upsertThreadGroup(defaultProject.id, threadGroup).toPromise();
+      
+      if (!savedThreadGroup) {
+        throw new Error('スレッドグループの保存に失敗しました');
+      }
+
+      // システムプロンプトを保存する
+      const systemMessageGroupList = threadIdList.map(threadId => {
+        return this.messageService.messageGroupList.find(messageGroup => {
+          return messageGroup.threadId === threadId && messageGroup.role === 'system';
         });
-      } else {
+      }).filter(messageGroup => !!messageGroup) as MessageGroupForView[];
+      
+      // 元オブジェクトを破壊しないようにcloneしておく 
+      const forInsert = Utils.clone(systemMessageGroupList);
+      forInsert.forEach((messageGroup, index) => {
+        messageGroup.id = genDummyId('messageGroup');
+        messageGroup.threadId = savedThreadGroup.threadList[index].id;
+        messageGroup.messages.forEach(message => {
+          message.id = genDummyId('message');
+          message.cacheId = undefined;
+          message.messageGroupId = messageGroup.id;
+          message.contents.forEach(content => {
+            content.id = genDummyId('contentPart');
+            content.messageId = message.id;
+          });
+        });
+      });
+
+      // メッセージグループを保存する 
+      await safeForkJoin(forInsert.map(messageGroup =>
+        this.messageService.upsertSingleMessageGroup(messageGroup)
+      )).toPromise();
+
+      Object.assign(this.threadGroup, savedThreadGroup);
+      return savedThreadGroup;
+    }, '設定を保存しました', '設定の保存に失敗しました').then(result => {
+      if (result) {
+        this.submit(true);
       }
     });
   }
@@ -150,11 +166,11 @@ export class ParameterSettingDialogComponent {
         this.threadGroup.threadList[index].inDto.args.max_tokens = 0;
       } else { }
     });
-    this.dialogRef.close({ threadGroup: this.threadGroup, savedFlag });
+    this.close({ threadGroup: this.threadGroup });
   }
 
-  cancel() {
-    this.dialogRef.close();
+  override cancel() {
+    super.cancel();
   }
 
   init() {

@@ -113,10 +113,54 @@
                                 (change)="toggleSelectAll($event)">
                             </mat-checkbox>
                         </th>
-                        <th>Provider</th>
-                        <th>Label</th>
-                        <th>Scope</th>
-                        <th>Active</th>
+                        <th class="sortable-header" (click)="sortByColumn('name')">
+                            <div class="header-content">
+                                Provider
+                                <mat-icon class="sort-icon" [class.active]="sortBy === 'name'">
+                                    @if(sortBy === 'name') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                    } @else {
+                                        unfold_more
+                                    }
+                                </mat-icon>
+                            </div>
+                        </th>
+                        <th class="sortable-header" (click)="sortByColumn('label')">
+                            <div class="header-content">
+                                Label
+                                <mat-icon class="sort-icon" [class.active]="sortBy === 'label'">
+                                    @if(sortBy === 'label') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                    } @else {
+                                        unfold_more
+                                    }
+                                </mat-icon>
+                            </div>
+                        </th>
+                        <th class="sortable-header" (click)="sortByColumn('scope')">
+                            <div class="header-content">
+                                Scope
+                                <mat-icon class="sort-icon" [class.active]="sortBy === 'scope'">
+                                    @if(sortBy === 'scope') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                    } @else {
+                                        unfold_more
+                                    }
+                                </mat-icon>
+                            </div>
+                        </th>
+                        <th class="sortable-header" (click)="sortByColumn('active')">
+                            <div class="header-content">
+                                Active
+                                <mat-icon class="sort-icon" [class.active]="sortBy === 'active'">
+                                    @if(sortBy === 'active') {
+                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                                    } @else {
+                                        unfold_more
+                                    }
+                                </mat-icon>
+                            </div>
+                        </th>
                         <th>Actions</th>
                     </tr>
                 </thead>

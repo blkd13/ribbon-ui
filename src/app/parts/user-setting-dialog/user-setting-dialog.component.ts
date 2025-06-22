@@ -9,8 +9,15 @@ import { UserSettingService } from '../../services/user-setting.service';
 import { UserService } from '../../services/user.service';
 import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
+import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
 
 declare var _paq: any;
+
+export interface UserSettingData { }
+
+export interface UserSettingResult {
+  needsReload: boolean;
+}
 
 @Component({
   selector: 'app-user-setting-dialog',
@@ -20,9 +27,8 @@ declare var _paq: any;
   templateUrl: './user-setting-dialog.component.html',
   styleUrl: './user-setting-dialog.component.scss'
 })
-export class UserSettingDialogComponent {
+export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingData, UserSettingResult> {
 
-  readonly dialogRef: MatDialogRef<UserSettingDialogComponent> = inject(MatDialogRef<UserSettingDialogComponent>);
   readonly animationService: AnimationService = inject(AnimationService);
   readonly userService: UserService = inject(UserService);
 
@@ -34,6 +40,7 @@ export class UserSettingDialogComponent {
   historyCloseMode: 0 | 1 | 2;
 
   constructor() {
+    super();
     this.enterMode = this.userService.enterMode;
     this.theme = this.userService.theme;
     this.historyCloseMode = this.userService.historyCloseMode;
@@ -73,18 +80,23 @@ export class UserSettingDialogComponent {
   saveAndClose() {
     if (this.needsReload) {
       if (confirm('設定を反映するにはページをリロードする必要があります。よろしいですか？')) {
-        this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).subscribe({
-          complete: () => {
+        this.executeAsync(async () => {
+          return this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).toPromise();
+        }).then(success => {
+          if (success) {
             _paq.push(['trackEvent', 'ユーザー設定', 'アニメーション設定保存', this.current]);
             this.animationService.toggleAnimation(this.current);
+            this.close({ needsReload: true });
             window.location.reload();
           }
         });
-      } else { }
+      }
     } else {
-      this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).subscribe({
-        complete: () => {
-          this.dialogRef.close();
+      this.executeAsync(async () => {
+        return this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).toPromise();
+      }).then(success => {
+        if (success) {
+          this.close({ needsReload: false });
         }
       });
     }

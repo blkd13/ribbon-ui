@@ -62,8 +62,8 @@
         @for(item of webSearchDto.items;track $index){
         <mat-expansion-panel class="mb-4">
             <mat-expansion-panel-header style="height: 80px;">
-                <mat-panel-title>
-                    <div class="p-2 bg-white flex items-center rounded-lg shadow-md justify-center">
+                <mat-panel-title style="flex-grow: 0">
+                    <div class="p-2 bg-white flex items-center rounded-lg shadow-md justify-center w-10">
                         <img [src]="item.faviconUrl" class="w-6 h-6" alt="no image"
                             onerror="this.onerror=null; this.src='./image/fallback-globe.svg';" />
                     </div>

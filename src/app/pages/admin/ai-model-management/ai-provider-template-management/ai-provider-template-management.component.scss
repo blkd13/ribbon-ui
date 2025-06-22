@@ -138,11 +138,8 @@ h5 {
     display: flex;
     margin-bottom: 15px;
     background-color: #2c2c2c;
-    border-radius: 4px;
     overflow: hidden;
     position: sticky;
-    top: 51px;
-    z-index: 9;
 }
 
 .tab {
@@ -388,17 +385,17 @@ textarea.form-control {
     background-color: #2c2c2c;
     border-bottom: 1px solid #3a3a3a;
     font-size: 13px;
-    
+
     span {
         color: #aaa;
         margin-right: 8px;
     }
-    
+
     a {
         margin-right: 15px;
         color: #64b5f6;
         text-decoration: none;
-        
+
         &:hover {
             text-decoration: underline;
         }
