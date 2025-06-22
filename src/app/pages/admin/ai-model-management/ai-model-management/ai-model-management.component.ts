@@ -114,7 +114,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   // タグ関連（フィルター用）
   availableTags: string[] = [];
-  
+
   // タグエンティティ関連（タグ管理用）
   availableTagEntities: TagEntity[] = [];
   filteredTags: TagEntity[] = [];
@@ -1336,25 +1336,33 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
     if (!confirmed) return;
 
-    const updatePromises = this.selectedModels.map(id => {
-      const model = this.models.find(m => m.id === id);
-      if (model && this.isModelsOwnScope(model)) {
-        const updatedModel = { ...model, isActive };
-        return this.aiModelService.upsertAIModel(updatedModel);
-      }
-      return Promise.resolve();
-    });
+    const updateObservables = this.selectedModels
+      .map(id => {
+        const model = this.models.find(m => m.id === id);
+        if (model && this.isModelsOwnScope(model)) {
+          const updatedModel = { ...model, isActive };
+          return this.aiModelService.upsertAIModel(updatedModel);
+        }
+        return of(null);
+      })
+      .filter(obs => obs !== null);
 
-    Promise.all(updatePromises)
-      .then(() => {
-        this.snackBar.open(`${this.selectedModels.length} models ${isActive ? 'activated' : 'deactivated'}`, 'Close', { duration: 3000 });
+    if (updateObservables.length === 0) {
+      this.snackBar.open('No models to update', 'Close', { duration: 3000 });
+      return;
+    }
+
+    forkJoin(updateObservables).subscribe({
+      next: () => {
+        this.snackBar.open(`${updateObservables.length} models ${isActive ? 'activated' : 'deactivated'}`, 'Close', { duration: 3000 });
         this.selectedModels = [];
         this.loadModels();
-      })
-      .catch(error => {
+      },
+      error: (error) => {
         console.error('Bulk update failed:', error);
         this.snackBar.open('Bulk update failed', 'Close', { duration: 3000 });
-      });
+      }
+    });
   }
 
   bulkDelete(): void {
@@ -1425,51 +1433,67 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   bulkAddTags(tags: string[]): void {
     if (!this.canBulkEdit() || !tags.length) return;
 
-    const updatePromises = this.selectedModels.map(id => {
-      const model = this.models.find(m => m.id === id);
-      if (model && this.isModelsOwnScope(model)) {
-        const existingTags = model.tags || [];
-        const newTags = [...new Set([...existingTags, ...tags])]; // 重複除去
-        const updatedModel = { ...model, tags: newTags };
-        return this.aiModelService.upsertAIModel(updatedModel);
-      }
-      return Promise.resolve();
-    });
+    const updateObservables = this.selectedModels
+      .map(id => {
+        const model = this.models.find(m => m.id === id);
+        if (model && this.isModelsOwnScope(model)) {
+          const existingTags = model.tags || [];
+          const newTags = [...new Set([...existingTags, ...tags])]; // 重複除去
+          const updatedModel = { ...model, tags: newTags };
+          return this.aiModelService.upsertAIModel(updatedModel);
+        }
+        return of(null);
+      })
+      .filter(obs => obs !== null);
 
-    Promise.all(updatePromises)
-      .then(() => {
-        this.snackBar.open(`Tags added to ${this.selectedModels.length} models`, 'Close', { duration: 3000 });
+    if (updateObservables.length === 0) {
+      this.snackBar.open('No models to update', 'Close', { duration: 3000 });
+      return;
+    }
+
+    forkJoin(updateObservables).subscribe({
+      next: () => {
+        this.snackBar.open(`Tags added to ${updateObservables.length} models`, 'Close', { duration: 3000 });
         this.selectedModels = [];
         this.loadModels();
-      })
-      .catch(error => {
+      },
+      error: (error) => {
         console.error('Bulk tag update failed:', error);
         this.snackBar.open('Bulk tag update failed', 'Close', { duration: 3000 });
-      });
+      }
+    });
   }
 
   bulkSetProviders(providers: string[]): void {
     if (!this.canBulkEdit() || !providers.length) return;
 
-    const updatePromises = this.selectedModels.map(id => {
-      const model = this.models.find(m => m.id === id);
-      if (model && this.isModelsOwnScope(model)) {
-        const updatedModel = { ...model, providerNameList: providers };
-        return this.aiModelService.upsertAIModel(updatedModel);
-      }
-      return Promise.resolve();
-    });
+    const updateObservables = this.selectedModels
+      .map(id => {
+        const model = this.models.find(m => m.id === id);
+        if (model && this.isModelsOwnScope(model)) {
+          const updatedModel = { ...model, providerNameList: providers };
+          return this.aiModelService.upsertAIModel(updatedModel);
+        }
+        return of(null);
+      })
+      .filter(obs => obs !== null);
 
-    Promise.all(updatePromises)
-      .then(() => {
-        this.snackBar.open(`Providers updated for ${this.selectedModels.length} models`, 'Close', { duration: 3000 });
+    if (updateObservables.length === 0) {
+      this.snackBar.open('No models to update', 'Close', { duration: 3000 });
+      return;
+    }
+
+    forkJoin(updateObservables).subscribe({
+      next: () => {
+        this.snackBar.open(`Providers updated for ${updateObservables.length} models`, 'Close', { duration: 3000 });
         this.selectedModels = [];
         this.loadModels();
-      })
-      .catch(error => {
+      },
+      error: (error) => {
         console.error('Bulk provider update failed:', error);
         this.snackBar.open('Bulk provider update failed', 'Close', { duration: 3000 });
-      });
+      }
+    });
   }
 
   private updateAvailableProviders(): void {
