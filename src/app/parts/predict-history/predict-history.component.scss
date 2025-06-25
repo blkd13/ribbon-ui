@@ -8,6 +8,46 @@ h1 {
     display: inline;
 }
 
+.monthly-summary {
+    .monthly-scroll-container {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background-color: var(--plain-background);
+            z-index: 10;
+            
+            th {
+                background-color: var(--plain-background);
+                border-bottom: 1px solid var(--border-color);
+                padding: 8px 10px;
+            }
+        }
+    }
+}
+
+.history-container {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    
+    .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .history-note {
+        margin-bottom: 10px;
+    }
+    
+}
+
 table {
     width: 100%;
 
@@ -26,5 +66,74 @@ table {
 
     td {
         padding: 5px 10px;
+    }
+}
+
+.paginator-container {
+    margin-top: 20px;
+    
+    .paginator-with-jump {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        
+        mat-paginator {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .page-jump-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            
+            label {
+                font-weight: 500;
+                font-size: 14px;
+                color: var(--mat-text-secondary, #666);
+            }
+            
+            .page-input {
+                width: 60px;
+                padding: 6px 8px;
+                border: 1px solid var(--mat-divider-color, #e0e0e0);
+                border-radius: 4px;
+                text-align: center;
+                font-size: 14px;
+                
+                &:focus {
+                    outline: none;
+                    border-color: var(--mat-primary-color, #1976d2);
+                    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+                }
+            }
+            
+            .page-total {
+                color: var(--mat-text-secondary, #666);
+                font-size: 14px;
+            }
+            
+            .go-button {
+                min-width: 50px;
+                height: 32px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            flex-direction: column;
+            align-items: stretch;
+            
+            mat-paginator {
+                min-width: unset;
+            }
+            
+            .page-jump-controls {
+                justify-content: center;
+            }
+        }
     }
 }

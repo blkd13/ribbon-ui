@@ -1,29 +1,33 @@
 <div class="flex flex-col h-full relative w-full">
     <p>{{member?.name}}</p>
-    <div class="monthly-summary min-h-0 mb-5">
+    <div class="monthly-summary mb-5">
         <h1>月次集計</h1>
-        <table>
-            <tr>
-                <th>月</th>
-                <th>総コスト[円]</th>
-                <th>総入力トークン</th>
-                <th>総出力トークン</th>
-                <th>利用回数</th>
-            </tr>
-            <tbody>
-                @for(summary of monthlySummary;track summary.month){
-                <tr>
-                    <td>{{summary.month}}</td>
-                    <td style="text-align: right;">{{summary.totalCost|number:'0.2-2'}}</td>
-                    <td style="text-align: right;">{{summary.totalReqTokens|number}}</td>
-                    <td style="text-align: right;">{{summary.totalResTokens|number}}</td>
-                    <td style="text-align: right;">{{summary.count}}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
+        <div class="monthly-scroll-container">
+            <table>
+                <thead class="sticky-header">
+                    <tr>
+                        <th>月</th>
+                        <th>総コスト[円]</th>
+                        <th>総入力トークン</th>
+                        <th>総出力トークン</th>
+                        <th>利用回数</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for(summary of monthlySummary;track summary.month){
+                    <tr>
+                        <td>{{summary.month}}</td>
+                        <td style="text-align: right;">{{summary.totalCost|number:'0.2-2'}}</td>
+                        <td style="text-align: right;">{{summary.totalReqTokens|number}}</td>
+                        <td style="text-align: right;">{{summary.totalResTokens|number}}</td>
+                        <td style="text-align: right;">{{summary.count}}</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
-    <div class="scroll-container custom-scroll flex-grow h-0">
+    <div class="history-container flex-grow">
         <div class="history-header">
             <h1>詳細履歴</h1>
             <div class="total-count">
@@ -34,7 +38,7 @@
             <small>※ 行をクリックすると詳細データを表示します</small>
         </div>
         <table class="history-table">
-            <tr class="sticky top-0">
+            <tr>
                 <th>No.</th>
                 <th>時刻</th>
                 <th>モデル</th>
@@ -63,9 +67,20 @@
             </tbody>
         </table>
         <div class="paginator-container">
-            <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
-                [pageIndex]="currentPage" (page)="onPageChange($event)" showFirstLastButtons>
-            </mat-paginator>
+            <div class="paginator-with-jump">
+                <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
+                    [pageIndex]="currentPage" (page)="onPageChange($event)" showFirstLastButtons>
+                </mat-paginator>
+                <div class="page-jump-controls">
+                    <label for="pageInput">ページ移動:</label>
+                    <input id="pageInput" type="number" [(ngModel)]="targetPage" 
+                           [min]="1" [max]="totalPages" 
+                           (keyup.enter)="goToPage()" 
+                           class="page-input">
+                    <span class="page-total">/ {{totalPages}}</span>
+                    <button mat-button (click)="goToPage()" class="go-button">移動</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>

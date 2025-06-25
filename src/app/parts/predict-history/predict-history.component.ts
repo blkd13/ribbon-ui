@@ -7,11 +7,13 @@ import { CommonModule } from '@angular/common';
 import { Utils } from '../../utils';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatButtonModule } from '@angular/material/button';
+import { FormsModule } from '@angular/forms';
 import { PredictDetailComponent } from '../predict-detail/predict-detail.component';
 
 @Component({
   selector: 'app-predict-history',
-  imports: [CommonModule, MatProgressSpinnerModule, MatPaginatorModule],
+  imports: [CommonModule, MatProgressSpinnerModule, MatPaginatorModule, MatButtonModule, FormsModule],
   templateUrl: './predict-history.component.html',
   styleUrl: './predict-history.component.scss'
 })
@@ -34,6 +36,11 @@ export class PredictHistoryComponent implements OnInit {
   pageSize = 20;
   currentPage = 0;
   pageSizeOptions = [10, 20, 50, 100];
+  targetPage = 1;
+
+  get totalPages(): number {
+    return Math.ceil(this.totalCount / this.pageSize);
+  }
 
   ngOnInit(): void {
     this.loadPredictHistory();
@@ -51,6 +58,7 @@ export class PredictHistoryComponent implements OnInit {
         this.departmentService.predictHistory(userId, offset, pageSize).subscribe(response => {
           this.predictHistory = response.predictHistory;
           this.totalCount = response.totalCount || 0;
+          this.targetPage = this.currentPage + 1;
           this.isLoading = false;
         });
       }
@@ -58,6 +66,7 @@ export class PredictHistoryComponent implements OnInit {
       this.authService.getPredictHistory(offset, pageSize).subscribe(response => {
         this.predictHistory = response.predictHistory;
         this.totalCount = response.totalCount || 0;
+        this.targetPage = this.currentPage + 1;
         this.isLoading = false;
       });
     }
@@ -73,7 +82,24 @@ export class PredictHistoryComponent implements OnInit {
   onPageChange(event: PageEvent): void {
     this.currentPage = event.pageIndex;
     this.pageSize = event.pageSize;
+    this.targetPage = this.currentPage + 1;
     this.loadPredictHistory(this.currentPage, this.pageSize);
+  }
+
+  goToPage(): void {
+    if (this.targetPage < 1 || this.targetPage > this.totalPages) {
+      this.snackBar.open(`ページ番号は1から${this.totalPages}の間で入力してください`, '閉じる', {
+        duration: 3000
+      });
+      this.targetPage = this.currentPage + 1;
+      return;
+    }
+    
+    const newPage = this.targetPage - 1;
+    if (newPage !== this.currentPage) {
+      this.currentPage = newPage;
+      this.loadPredictHistory(this.currentPage, this.pageSize);
+    }
   }
 
   // 詳細ダイアログを開く
