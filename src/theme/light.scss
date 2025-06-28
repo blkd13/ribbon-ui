@@ -2,6 +2,8 @@
 html>body.light-theme {
     --body-background-gradient: linear-gradient(135deg, #f0f0f0 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
     --body-background-gradient: linear-gradient(135deg, #fcfcfc 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
+    --body-modal-background-gradient: linear-gradient(135deg, #fcfcfc 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
+    
 
     --text-gradient-start: #08505a;
     --text-gradient-mid: #20474d;

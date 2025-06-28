@@ -165,9 +165,9 @@ select {
 .mdc-dialog--open .mat-mdc-dialog-surface,
 .mdc-dialog--closing .mat-mdc-dialog-surface {
     border-radius: var(--mdc-dialog-container-shape, 4px);
-    background-color: var(--mdc-dialog-container-color, --mat-sys-on-background);
-    background: linear-gradient(to bottom right, #192020 0%, #111515 50%, #080a0a 100%);
-    background: var(--body-background-gradient);
+    // background-color: var(--mdc-dialog-container-color, --mat-sys-on-background);
+    // background: linear-gradient(to bottom right, #192020 0%, #111515 50%, #080a0a 100%);
+    background: var(--body-modal-background-gradient);
 }
 
 
@@ -238,6 +238,15 @@ html>body {
             }
         }
     }
+
+
+    // .cdk-overlay-dark-backdrop,
+    .cdk-overlay-transparent-backdrop.cdk-overlay-backdrop-showing,
+    .cdk-high-contrast-active .cdk-overlay-transparent-backdrop {
+        opacity: 1;
+        background: rgba(0, 0, 0, .32);
+    }
+
 
     .mat-mdc-notch-piece.mdc-notched-outline__notch {
         border-right: none;

@@ -1,6 +1,8 @@
 // 
 html>body.dark-theme {
     --body-background-gradient: linear-gradient(135deg, #121212 0%, rgb(15, 24, 30) 80%, rgb(2, 2, 2) 100%);
+    --body-modal-background-gradient: linear-gradient(135deg, #222 0%, rgb(35, 45, 51) 80%, #111 100%);
+    --mat-menu-container-color: #2c2c2c;
 
     --text-gradient-start: rgb(175, 210, 219);
     --text-gradient-mid: rgb(236, 255, 255);

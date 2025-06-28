@@ -20,10 +20,9 @@
         <ng-container *ngTemplateOutlet="modelCard; context: { model: buildModelObj(model) }"></ng-container>
     </mat-menu>
 
-    <mat-divider></mat-divider>
-
     @for(category of data; track $index) {
 
+    <mat-divider></mat-divider>
     <!-- カテゴリヘッダー -->
     <div class="category-header" mat-menu-item [disabled]="true">
         <div class="category-name">{{ category.category }}</div>
@@ -59,7 +58,6 @@
     </mat-menu>
 
     }
-    <mat-divider></mat-divider>
 
     <!-- カテゴリ間の区切り線 -->
     @if(!$last) {
