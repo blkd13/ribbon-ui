@@ -6,7 +6,9 @@
     "start": "ng serve --proxy-config proxy-conf.js --host 0.0.0.0 --disable-host-check --serve-path /ribbon-ui/",
     "build": "ng build --base-href /ai/ribbon-ui/",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "deploy": "wrangler pages deploy dist/ribbon-ui/browser --project-name ribbon-ui",
+    "deploy:watch": "wrangler pages deploy dist/ribbon-ui/browser --project-name ribbon-ui --watch"
   },
   "private": true,
   "dependencies": {
@@ -56,6 +58,7 @@
     "@types/jasmine": "~5.1.7",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
+    "wrangler": "^3.0.0",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.4",
     "karma-chrome-launcher": "~3.2.0",

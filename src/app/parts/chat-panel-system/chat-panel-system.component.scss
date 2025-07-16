@@ -3,6 +3,7 @@
         .mat-expansion-panel.message .mat-expansion-panel-header-title {
             width: 346px;
             width: auto;
+            flex-grow: 0;
         }
     }
 }

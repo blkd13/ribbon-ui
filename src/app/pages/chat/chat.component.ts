@@ -408,7 +408,7 @@ export class ChatComponent implements OnInit {
       });
 
       // system-panelの状態も同期する
-      this.syncToolGroupStatesWithSystemPanels();
+      this.initializeToolGroupStates();
 
       this.cdr.detectChanges();
       this.rebuildThreadGroup();

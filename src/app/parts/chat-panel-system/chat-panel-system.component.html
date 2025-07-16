@@ -64,8 +64,10 @@
             -->
             }
         </mat-panel-title>
-        <mat-panel-description>
-            <!-- <div class="truncate">{{vm.messageGroup.messages[0].label}}</div> -->
+        <mat-panel-description style="width: 0;flex-grow: 1;">
+            @if(!vm.messageGroup.isExpanded){
+            <div class="truncate">{{vm.messageGroup.messages[0].label}}</div>
+            }
         </mat-panel-description>
         @if(tokenObject(); as tokenObject){
         @if(aiModelManagerService.modelMap[vm.thread.inDto.args.model]){

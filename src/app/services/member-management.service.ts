@@ -106,6 +106,7 @@ export class MemberManagementService {
      * Divisionメンバーの情報を更新
      */
     updateMember(divisionId: string, userId: string, request: MemberUpdateRequest): Observable<DivisionMember> {
+        (request as any).userId = userId; // Ensure userId is included in the request
         return this.http.patch<DivisionMember>(`/admin/division/${divisionId}/member/${userId}`, request);
     }
 

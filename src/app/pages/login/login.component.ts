@@ -36,7 +36,7 @@ export class LoginComponent {
   sendMailForm!: FormGroup;
   passwordResetForm!: FormGroup;
 
-  firstView = '/home';
+  firstView = '/chat';
 
   errorMessageList: string[] = [];
   hidePassword = true;
