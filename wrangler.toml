@@ -1,0 +1,10 @@
+name = "ribbon-ui-worker"
+main = "cf-worker/worker.ts"
+# compatibility_date = "2025-07-18"
+
+[site]
+bucket = "./dist/ribbon-ui/browser/"
+entry-point = "."
+
+[build]
+command = "npm run build" # Angular ビルドコマンド
