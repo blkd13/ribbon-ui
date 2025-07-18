@@ -23,8 +23,8 @@
     "@angular/platform-browser-dynamic": "^20.1.0",
     "@angular/router": "^20.1.0",
     "@angular/service-worker": "^20.1.0",
-    "@mattermost/client": "^9.11.0",
-    "@mattermost/types": "^10.5.0",
+    "@mattermost/client": "^10.8.0",
+    "@mattermost/types": "^10.8.0",
     "@ngx-translate/core": "^16.0.4",
     "@ngx-translate/http-loader": "^16.0.1",
     "chart.js": "^4.4.9",
@@ -38,7 +38,7 @@
     "mermaid": "^11.6.0",
     "ng2-charts": "^8.0.0",
     "ngx-indexed-db": "^19.3.3",
-    "ngx-markdown": "^19.1.0",
+    "ngx-markdown": "^20.0.0",
     "openai": "^4.87.1",
     "postcss": "^8.5.3",
     "prismjs": "^1.30.0",
@@ -58,13 +58,13 @@
     "@types/jasmine": "~5.1.7",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
-    "wrangler": "^3.0.0",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.4",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.1",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.8.2"
+    "typescript": "~5.8.2",
+    "wrangler": "^3.0.0"
   }
 }
