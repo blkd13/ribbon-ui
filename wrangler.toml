@@ -4,7 +4,6 @@ main = "cf-worker/worker.ts"
 
 [site]
 bucket = "./dist/ribbon-ui/browser/"
-entry-point = "."
 
-[build]
-command = "npm run build" # Angular ビルドコマンド
+# [build]
+# command = "npm run build" # Angular ビルドコマンド
