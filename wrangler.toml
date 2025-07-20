@@ -1,0 +1,5 @@
+name = "ribbon-ui-sample"
+compatibility_date = "2024-07-20"
+
+[site]
+bucket = "./dist"
