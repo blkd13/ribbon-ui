@@ -1,5 +1,11 @@
-name = "ribbon-ui-sample"
+# プロジェクト名（任意）
+name = "ribbon-ui"
 compatibility_date = "2024-07-20"
 
-[site]
-bucket = "./dist"
+# Cloudflare Pages 用のビルド設定
+[build]
+# 実行するビルドコマンド（package.json の scripts を呼び出す）
+command = "npm run build"
+
+# ビルド成果物の出力先（この中に ai/ribbon-ui フォルダがある）
+pages_build_output_dir = "./dist"
