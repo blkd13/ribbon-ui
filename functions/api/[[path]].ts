@@ -1,7 +1,14 @@
 // functions/api/[[path]].ts
 
-export async function onRequest(context) {
+export async function onRequest(context: {
+  request: Request;
+  env: {
+    API_BASE_URL: string; // 環境変数からAPIのベースURLを取得
+  };
+}): Promise<Response> {
+  console.log("onRequest called with context:", context);
   const { request, env } = context;
+  console.log("Request path:", request.url);
   const origin = env.API_BASE_URL;
   const url = new URL(request.url);
 
