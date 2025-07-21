@@ -29,6 +29,7 @@ export async function onRequest(context: {
   };
 
   try {
+    console.log("Forwarding request to:", target.toString());
     const upstreamResp = await fetch(target.toString(), init);
 
     // 必要に応じてヘッダ加工（CORS不要なら極力そのまま）
