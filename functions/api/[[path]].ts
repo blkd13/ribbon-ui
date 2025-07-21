@@ -18,7 +18,7 @@ export async function onRequest(context: {
   const apiPath = url.pathname;
 
   // 元のクエリはそのまま
-  const target = new URL(apiPath + url.search, origin);
+  const target = new URL(origin + apiPath + url.search);
 
   // 元リクエストをほぼそのまま転送（ヘッダ調整含む）
   const init: RequestInit = {
@@ -39,6 +39,7 @@ export async function onRequest(context: {
       headers: filterResponseHeaders(upstreamResp.headers),
     });
   } catch (e) {
+    console.error("Error during fetch:", e);
     // 障害時のフォールバック
     return new Response(
       JSON.stringify({ error: "Upstream fetch failed", detail: String(e) }),
