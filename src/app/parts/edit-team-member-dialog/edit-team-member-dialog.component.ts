@@ -15,9 +15,10 @@ import { User } from '../../models/models';
 import { Observer, Subscription } from 'rxjs';
 import { DialogComponent } from '../dialog/dialog.component';
 import { UserService } from '../../services/user.service';
+import { TranslateModule } from '@ngx-translate/core';
 @Component({
   selector: 'app-edit-team-member-dialog',
-  imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule],
+  imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule, TranslateModule],
   templateUrl: './edit-team-member-dialog.component.html',
   styleUrl: './edit-team-member-dialog.component.scss'
 })

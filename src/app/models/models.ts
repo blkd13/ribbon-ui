@@ -1,8 +1,8 @@
 // ./src/app/models.ts
 
 import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions';
-import { BaseEntity } from './project-models';
 import { ScopeInfo } from '../services/model-manager.service';
+import { BaseEntity } from './project-models';
 
 export enum UserStatus {
     // アクティブ系
@@ -76,7 +76,10 @@ export type GPTModels = 'gpt-4o'
     | 'claude-3-7-sonnet-thinking-20250219'
     | 'claude-3-7-sonnet@20250219'
     | 'claude-3-7-sonnet-thinking@20250219'
-    | 'gemini-2.0-flash-exp';
+    | 'gemini-2.0-flash-exp'
+    | 'gpt-5'
+    | 'claude-sonnet-4-20250514'
+    | 'gemini-2.5-flash-thinking';
 
 
 export interface CachedContent {

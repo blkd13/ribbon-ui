@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
+import { LoggerService } from '../../services/logger';
 
 export interface ErrorInfo {
   message: string;
@@ -13,6 +14,7 @@ export interface ErrorInfo {
  * エラーハンドリング共通ユーティリティ
  */
 export class ErrorHandlerUtil {
+  private static logger = new LoggerService();
 
   /**
    * HTTPエラーを統一フォーマットに変換
@@ -175,7 +177,7 @@ export class ErrorHandlerUtil {
         ? this.handleHttpError(error, operation)
         : this.handleGenericError(error, operation);
       
-      console.error('Operation failed:', errorInfo);
+      ErrorHandlerUtil.logger.error('Operation failed:', errorInfo);
       
       if (defaultValue !== undefined) {
         return new Observable(subscriber => {
@@ -279,16 +281,16 @@ export class ErrorHandlerUtil {
     // 重要度に応じてログレベルを変更
     switch (severity) {
       case 'critical':
-        console.error('CRITICAL ERROR:', logEntry);
+        ErrorHandlerUtil.logger.error('CRITICAL ERROR:', logEntry);
         break;
       case 'high':
-        console.error('HIGH SEVERITY ERROR:', logEntry);
+        ErrorHandlerUtil.logger.error('HIGH SEVERITY ERROR:', logEntry);
         break;
       case 'medium':
-        console.warn('MEDIUM SEVERITY ERROR:', logEntry);
+        ErrorHandlerUtil.logger.warn('MEDIUM SEVERITY ERROR:', logEntry);
         break;
       case 'low':
-        console.log('LOW SEVERITY ERROR:', logEntry);
+        ErrorHandlerUtil.logger.info('LOW SEVERITY ERROR:', logEntry);
         break;
     }
     

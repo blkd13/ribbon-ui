@@ -16,6 +16,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { Observable, map, startWith } from 'rxjs';
 import { TagService, TagEntity, TagCreateRequest } from '../../../../services/model-manager.service';
+import { TranslateModule } from '@ngx-translate/core';
 
 export interface TagManagementDialogData {
   tags: TagEntity[];
@@ -45,6 +46,7 @@ export interface TagDisplayItem {
     MatTooltipModule,
     MatCheckboxModule,
     MatAutocompleteModule,
+    TranslateModule,
   ],
   templateUrl: './tag-management-dialog.component.html',
   styleUrls: ['./tag-management-dialog.component.scss']

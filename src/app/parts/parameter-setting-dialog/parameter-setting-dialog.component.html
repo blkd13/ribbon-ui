@@ -1,12 +1,12 @@
 @if(threadGroup){
 <div class="container">
-  <h1>パラメータ設定</h1>
+  <h1>{{ 'PARAMETER_SETTINGS' | translate }}</h1>
 
   <div class="flex justify-between mb-5">
     <div class="flex justify-between gap-3">
-      <button mat-raised-button color="primary" (click)="init()">初期設定に戻す</button>
+      <button mat-raised-button color="primary" (click)="init()">{{ 'RESET_TO_DEFAULT' | translate }}</button>
     </div>
-    <button mat-raised-button (click)="appendModel()">追加</button>
+    <button mat-raised-button (click)="appendModel()">{{ 'ADD' | translate }}</button>
   </div>
 
   <div class="custom-scroll" style="
@@ -22,11 +22,12 @@
   </div>
 
   <div class="flex justify-between">
-    <button mat-raised-button (click)="cancel()">キャンセル</button>
+    <button mat-raised-button (click)="cancel()">{{ 'CANCEL' | translate }}</button>
     <div class="flex justify-between gap-3">
       <!-- <button mat-raised-button color="primary" (click)="saveAs()">名前を付けて保存</button> -->
-      <button mat-raised-button color="primary" (click)="saveAndSubmit()">設定（永続）</button>
-      <button mat-raised-button color="primary" (click)="submit(false)">設定（今回のみ）</button>
+      <button mat-raised-button color="primary" (click)="saveAndSubmit()">{{ 'APPLY_PERMANENT' | translate }}</button>
+      <button mat-raised-button color="primary" (click)="submit(false)">{{ 'APPLY_THIS_TIME_ONLY' | translate
+        }}</button>
     </div>
   </div>
 </div>
@@ -36,11 +37,11 @@
   <mat-divider></mat-divider>
   <div class="flex gap-4 justify-between items-center my-4">
     <button mat-raised-button color="primary" (click)="removeModel(index)"
-      [disabled]="threadGroup.threadList.length===1">削除</button>
+      [disabled]="threadGroup.threadList.length===1">{{ 'DELETE' | translate }}</button>
     <div class="w-0 grow">
       <div class="flex gap-4 justify-between items-baseline">
         <mat-form-field appearance="fill" class="w-0 grow">
-          <mat-label>モデル選択</mat-label>
+          <mat-label>{{ 'MODEL_SELECTION' | translate }}</mat-label>
           <mat-select [(ngModel)]="args.model">
             @for(option of aIModelManagerService.modelList;track $index){
             <mat-option [value]="option.name" [disabled]="!option.isActive">{{option.name}}</mat-option>

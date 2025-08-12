@@ -15,6 +15,7 @@ import { Cost, DepartmentService, DivisionEntity, DivisionMemberCost } from '../
 import { UserStatus } from '../../../models/models';
 import { DialogComponent, DialogData } from '../../../parts/dialog/dialog.component';
 import { PredictHistoryComponent } from '../../../parts/predict-history/predict-history.component';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 
 Chart.register(...registerables);
 
@@ -29,7 +30,8 @@ Chart.register(...registerables);
     MatFormFieldModule,
     MatIconModule,
     MatExpansionModule,
-    MatButtonModule
+    MatButtonModule,
+    TranslateModule
   ],
   templateUrl: './usage-stats-dashboard.component.html',
   styleUrl: './usage-stats-dashboard.component.scss'
@@ -40,6 +42,7 @@ export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDe
   readonly matDialog: MatDialog = inject(MatDialog);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly dialog: MatDialog = inject(MatDialog);
+  readonly translate: TranslateService = inject(TranslateService);
 
   @ViewChild('departmentCostChart', { static: false }) departmentCostChart!: ElementRef<HTMLCanvasElement>;
   @ViewChild('memberCostChart', { static: false }) memberCostChart!: ElementRef<HTMLCanvasElement>;
@@ -116,7 +119,7 @@ export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDe
       },
       error: err => {
         console.error('Error loading department data:', err);
-        this.snackBar.open('部門データの読み込みに失敗しました', 'OK', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('DEPARTMENT_DATA_LOAD_FAILED'), this.translate.instant('OK'), { duration: 3000 });
       }
     });
   }
@@ -128,21 +131,21 @@ export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDe
     if (deptCtx) {
       this.deptChart = new Chart(deptCtx!, {
         type: 'bar',
-        data: { labels: [], datasets: [{ label: 'コスト (円)', data: [] }] },
+        data: { labels: [], datasets: [{ label: this.translate.instant('COST_YEN'), data: [] }] },
         options: { responsive: true, scales: { y: { beginAtZero: true } } }
       });
     }
     if (trendCtx) {
       this.trendChart = new Chart(trendCtx!, {
         type: 'line',
-        data: { labels: [], datasets: [{ label: '月別コスト推移 (円)', data: [], fill: false, tension: 0.1 }] },
+        data: { labels: [], datasets: [{ label: this.translate.instant('MONTHLY_COST_TREND_YEN'), data: [], fill: false, tension: 0.1 }] },
         options: { responsive: true, scales: { y: { beginAtZero: true } } }
       });
     }
     if (mbrCtx) {
       this.mbrChart = new Chart(mbrCtx!, {
         type: 'pie',
-        data: { labels: [], datasets: [{ label: 'メンバー別コスト比率', data: [] }] },
+        data: { labels: [], datasets: [{ label: this.translate.instant('MEMBER_COST_RATIO'), data: [] }] },
         options: { responsive: true }
       });
     }
@@ -204,7 +207,7 @@ export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDe
 
     const labels = top.map(([name]) => name);
     const data = top.map(([, val]) => val);
-    if (otherTotal > 0) { labels.push('その他'); data.push(otherTotal); }
+    if (otherTotal > 0) { labels.push(this.translate.instant('OTHERS')); data.push(otherTotal); }
 
     const colors = labels.map((_, i) => this.pieColors[i]);
     const borderColors = Array(labels.length).fill('#FFFFFF');
@@ -225,9 +228,9 @@ export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDe
   }
 
   formatPeriod(yyyyMm: string): string {
-    if (yyyyMm === 'ALL') return '全期間';
+    if (yyyyMm === 'ALL') return this.translate.instant('ALL_PERIODS');
     const [year, month] = yyyyMm.split('-');
-    return `${year}年${parseInt(month, 10)}月`;
+    return this.translate.instant('YEAR_MONTH_FORMAT', { year, month: parseInt(month, 10) });
   }
 
   // ...（以下は既存の統計計算やその他メソッド）
@@ -302,12 +305,15 @@ export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDe
 
   updateUserStatus(member: DivisionMemberCost): void {
     if (!member) return;
-    const transMap: Record<string, string> = { Active: '有効', Suspended: '停止' };
+    const transMap: Record<string, string> = { 
+      Active: this.translate.instant('ACTIVE'), 
+      Suspended: this.translate.instant('SUSPENDED') 
+    };
     this.matDialog.open(DialogComponent, {
       data: {
-        title: '確認',
-        message: `${member.name}のステータスを「${transMap[member.status]}」に変更しますか?`,
-        options: ['キャンセル', 'OK'],
+        title: this.translate.instant('CONFIRM'),
+        message: this.translate.instant('CONFIRM_STATUS_CHANGE', { name: member.name, status: transMap[member.status] }),
+        options: [this.translate.instant('CANCEL'), this.translate.instant('OK')],
       } as DialogData
     }).afterClosed().subscribe(result => {
       if (result === 1) {
@@ -315,10 +321,10 @@ export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDe
           member.divisionId,
           { userId: member.id, role: member.role, status: member.status }
         ).subscribe({
-          next: () => this.snackBar.open('ステータスを変更しました', 'OK', { duration: 3000 }),
+          next: () => this.snackBar.open(this.translate.instant('STATUS_CHANGED'), this.translate.instant('OK'), { duration: 3000 }),
           error: error => {
             console.error('Status update error:', error);
-            this.snackBar.open('ステータスの変更に失敗しました', 'OK', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('STATUS_CHANGE_FAILED'), this.translate.instant('OK'), { duration: 3000 });
             member.status = member.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active;
           }
         });

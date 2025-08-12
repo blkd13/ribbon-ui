@@ -1,19 +1,20 @@
+import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterModule } from '@angular/router';
-import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { TranslateModule } from '@ngx-translate/core';
 import { ExtApiProviderAuthType, ExtApiProviderEntity, User, UserRoleType } from '../../models/models';
-import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { DepartmentService } from '../../services/department.service';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 
 @Component({
   selector: 'app-app-menu',
   imports: [
     CommonModule, RouterModule,
-    MatIconModule, MatMenuModule, MatButtonModule,
+    MatIconModule, MatMenuModule, MatButtonModule, TranslateModule,
   ],
   templateUrl: './app-menu.component.html',
   styleUrl: './app-menu.component.scss'
@@ -53,7 +54,6 @@ export class AppMenuComponent implements OnInit {
     });
   }
   ngOnInit(): void {
-
     // console.log('AppMenuComponent initialized'); 
   }
 }

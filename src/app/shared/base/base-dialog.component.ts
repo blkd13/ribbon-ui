@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { LoggerService } from '../../services/logger';
 
 /**
  * ダイアログコンポーネントの基底クラス
@@ -11,6 +12,7 @@ import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 export abstract class BaseDialogComponent<TData = any, TResult = any> {
   protected readonly dialogRef = inject(MatDialogRef<BaseDialogComponent<TData, TResult>>);
   protected readonly data = inject<TData>(MAT_DIALOG_DATA);
+  protected readonly logger = inject(LoggerService);
 
   protected isLoading = false;
   protected isSaving = false;
@@ -93,19 +95,19 @@ export abstract class BaseDialogComponent<TData = any, TResult = any> {
     try {
       this.clearError();
       this.setSaving(true);
-      
+
       const result = await operation();
-      
+
       if (successMessage) {
         // 成功メッセージの表示は具象クラスで実装
-        console.log(successMessage);
+        this.logger.debug(successMessage);
       }
-      
+
       return true;
     } catch (error) {
       const message = errorMessage || this.getErrorMessage(error);
       this.setError(message);
-      console.error('Dialog operation failed:', error);
+      this.logger.error('Dialog operation failed:', error);
       return false;
     } finally {
       this.setSaving(false);
@@ -127,18 +129,18 @@ export abstract class BaseDialogComponent<TData = any, TResult = any> {
     try {
       this.clearError();
       this.setSaving(true);
-      
+
       const result = await operation();
-      
+
       if (successMessage) {
-        console.log(successMessage);
+        this.logger.debug(successMessage);
       }
-      
+
       return result;
     } catch (error) {
       const message = errorMessage || this.getErrorMessage(error);
       this.setError(message);
-      console.error('Dialog operation failed:', error);
+      this.logger.error('Dialog operation failed:', error);
       return null;
     } finally {
       this.setSaving(false);
@@ -154,15 +156,15 @@ export abstract class BaseDialogComponent<TData = any, TResult = any> {
     if (typeof error === 'string') {
       return error;
     }
-    
+
     if (error?.error?.message) {
       return error.error.message;
     }
-    
+
     if (error?.message) {
       return error.message;
     }
-    
+
     return '操作中にエラーが発生しました';
   }
 

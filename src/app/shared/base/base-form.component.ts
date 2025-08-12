@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { FormGroup, AbstractControl, FormArray, FormControl, ValidatorFn } from '@angular/forms';
 import { NotificationService } from '../services/notification.service';
+import { TranslateService } from '@ngx-translate/core';
 
 /**
  * フォームコンポーネントの基底クラス
@@ -22,6 +23,7 @@ export interface ConditionalValidator {
 
 export abstract class BaseFormComponent {
   protected notificationService = inject(NotificationService);
+  protected translate = inject(TranslateService);
 
   protected abstract form: FormGroup;
   protected isLoading = false;
@@ -64,10 +66,10 @@ export abstract class BaseFormComponent {
     const errors = control.errors;
 
     if (errors['required']) {
-      return `${controlName}は必須です`;
+      return this.translate.instant('FIELD_IS_REQUIRED', { field: controlName });
     }
     if (errors['email']) {
-      return '正しいメールアドレスを入力してください';
+      return this.translate.instant('ENTER_VALID_EMAIL');
     }
     if (errors['minlength']) {
       const requiredLength = errors['minlength'].requiredLength;
@@ -190,7 +192,7 @@ export abstract class BaseFormComponent {
     this.clearError();
 
     if (!this.validateForm()) {
-      this.showError('入力内容を確認してください');
+      this.showError(this.translate.instant('CHECK_INPUT_CONTENT'));
       return false;
     }
 
@@ -443,7 +445,7 @@ export abstract class BaseFormComponent {
       return `${fieldName}は必須です`;
     }
     if (errors['email']) {
-      return '正しいメールアドレスを入力してください';
+      return this.translate.instant('ENTER_VALID_EMAIL');
     }
     if (errors['minlength']) {
       const requiredLength = errors['minlength'].requiredLength;
@@ -553,7 +555,7 @@ export abstract class BaseFormComponent {
    */
   protected canDeactivate(): boolean {
     if (this.hasUnsavedChanges()) {
-      return confirm('未保存の変更があります。このページを離れてもよろしいですか？');
+      return confirm(this.translate.instant('CONFIRM_LEAVE_UNSAVED'));
     }
     return true;
   }

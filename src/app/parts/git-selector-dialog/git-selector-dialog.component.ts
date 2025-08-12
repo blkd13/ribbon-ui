@@ -1,21 +1,21 @@
+import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { genDummyId, MessageService, ProjectService, TeamService, ThreadService } from '../../services/project.service';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ContentPartType, Project, Team, ThreadGroup } from '../../models/project-models';
-import { safeForkJoin } from '../../utils/dom-utils';
-import { ApiGitlabService, GitlabBranch, GitlabCommit, GitlabTag } from '../../services/api-gitlab.service';
-import { CommonModule } from '@angular/common';
 import { switchMap } from 'rxjs';
-import { ApiGiteaService, GiteaBranch, GiteaRepository, GiteaTag } from '../../services/api-gitea.service';
+import { ContentPartType, Project, Team, ThreadGroup } from '../../models/project-models';
 import { GitProject } from '../../pages/git/git.component';
+import { ApiGiteaService, GiteaBranch, GiteaRepository, GiteaTag } from '../../services/api-gitea.service';
+import { ApiGitlabService, GitlabBranch, GitlabCommit, GitlabTag } from '../../services/api-gitlab.service';
+import { genDummyId, MessageService, ProjectService, TeamService, ThreadService } from '../../services/project.service';
+import { safeForkJoin } from '../../utils/dom-utils';
 
 
 export type GitlabRefType = 'branches' | 'tags' | 'commits';
@@ -65,7 +65,7 @@ export class GitSelectorDialogComponent {
   ref = '';
 
   change(a: any): void {
-    console.log(a);
+    // console.log(a);
   }
 
   constructor() {
@@ -124,7 +124,7 @@ export class GitSelectorDialogComponent {
       : this.apiGiteaService.fetchCommit(this.data.provider, (this.data.gitProject as any as GiteaRepository).owner.login, gitProject.name, { projectId: this.projectId, }, refType, refId);
     service.subscribe({
       next: project => {
-        console.log(project);
+        // console.log(project);
 
         const threadGroup = this.threadService.genInitialThreadGroupEntity(this.projectId);
         threadGroup.title = this.data.gitProject.name;

@@ -55,7 +55,7 @@ export class DragDeltaDirective {
       } else if (positionValue === 'top' || positionValue === 'bottom') {
         appDragDelta.style.height = `${(this.startH + deltaY).toFixed(1)}px`;
       }
-      console.log(`${appDragDelta.style.width}`);
+      // console.log(`${appDragDelta.style.width}`);
       // 差分をEmitterで配信
       this.dragging.emit({ x: deltaX, y: deltaY });
       // console.log({ x: deltaX, y: deltaY });

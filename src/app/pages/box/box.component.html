@@ -6,17 +6,17 @@
         <a class="unstyled-link p-4" [routerLink]="['/','box',providerName,'folder','0']">
             <button mat-button>
                 <mat-icon>folder</mat-icon>
-                すべてのファイル
+                {{ 'ALL_FILES' | translate }}
             </button>
         </a>
 
         <!-- BoxのURLリンク解釈 -->
         <form class="flex items-center gap-2 p-2" (submit)="boxUrlMove()">
             <mat-form-field>
-                <mat-label>BoxのURL</mat-label>
+                <mat-label>{{ 'BOX_URL' | translate }}</mat-label>
                 <input matInput [(ngModel)]="boxUrl" type="text" name="boxUrl">
             </mat-form-field>
-            <button type="submit" mat-raised-button color="primary" style="width: 80px;">開く</button>
+            <button type="submit" mat-raised-button color="primary" style="width: 80px;">{{ 'OPEN' | translate }}</button>
         </form>
 
         <!-- コレクション一覧 -->
@@ -48,7 +48,7 @@
                     </a>
                     }
                     } @else {
-                    <div>データがありません</div>
+                    <div>{{ 'NO_DATA' | translate }}</div>
                     }
 
                     } @else {
@@ -63,18 +63,15 @@
         <!-- コレクション登録フォーム -->
         <div class="flex items-center gap-2 p-2">
             <mat-form-field>
-                <mat-label>コレクションID</mat-label>
+                <mat-label>{{ 'COLLECTION_ID' | translate }}</mat-label>
                 <input matInput [(ngModel)]="collectionId" type="text" (input)="checkCollectionId($event)">
             </mat-form-field>
             <button [disabled]="!enableCollectionId" mat-raised-button color="primary" (click)="registCollection()"
-                style="width: 80px;">登録</button>
+                style="width: 80px;">{{ 'REGISTER' | translate }}</button>
         </div>
 
         <div class="text-xs p-2">
-            ※コレクションはAPIでは取得できないため、<br />
-            自分でBoxのURLを見て登録してください。<br />
-            「https://*.box.com/collection/XXXXXXXXXX」<br />
-            ↑XXXXXXXXXXの部分がコレクションIDです。
+            {{ 'COLLECTION_NOTE' | translate }}<br />{{ 'COLLECTION_INSTRUCTION_1' | translate }}<br />{{ 'COLLECTION_INSTRUCTION_2' | translate }}<br />{{ 'COLLECTION_INSTRUCTION_3' | translate }}
         </div>
 
     </div>
@@ -86,8 +83,8 @@
                     <!-- 検索ボックス -->
                     <div class="flex items-center gap-2 p-2">
                         <mat-form-field>
-                            <mat-label>検索キーワード</mat-label>
-                            <input type="text" matInput placeholder="検索キーワード" [(ngModel)]="searchKeyword"
+                            <mat-label>{{ 'SEARCH_KEYWORD' | translate }}</mat-label>
+                            <input type="text" matInput [placeholder]="'SEARCH_KEYWORD' | translate" [(ngModel)]="searchKeyword"
                                 (input)="onSearch($event)">
                             <button mat-icon-button matSuffix (click)="searchKeyword='';boxSearchResult=undefined">
                                 <mat-icon>close</mat-icon>
@@ -158,14 +155,14 @@
                 </div>
                 <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
                     (change)="sort()">
-                    <mat-radio-button [value]="'name'">名前順</mat-radio-button>
-                    <mat-radio-button [value]="'timestamp'">時刻順</mat-radio-button>
-                    <mat-radio-button [value]="'size'">サイズ順</mat-radio-button>
+                    <mat-radio-button [value]="'name'">{{ 'SORT_BY_NAME' | translate }}</mat-radio-button>
+                    <mat-radio-button [value]="'timestamp'">{{ 'SORT_BY_TIME' | translate }}</mat-radio-button>
+                    <mat-radio-button [value]="'size'">{{ 'SORT_BY_SIZE' | translate }}</mat-radio-button>
                 </mat-radio-group>
                 <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortAscDesc"
                     class="relative bottom-3" (change)="sort()">
-                    <mat-radio-button [value]="'asc'">昇順</mat-radio-button>
-                    <mat-radio-button [value]="'desc'">降順</mat-radio-button>
+                    <mat-radio-button [value]="'asc'">{{ 'ASCENDING' | translate }}</mat-radio-button>
+                    <mat-radio-button [value]="'desc'">{{ 'DESCENDING' | translate }}</mat-radio-button>
                 </mat-radio-group>
             </div>
         </div>
@@ -260,8 +257,7 @@
             }
 
             } @else {
-            最初のファイルを追加して開始しましょう<br />
-            ドラッグ&ドロップでファイルやフォルダを追加できます。
+            {{ 'ADD_FIRST_FILE' | translate }}<br />{{ 'DRAG_DROP_INSTRUCTION' | translate }}
             }
 
             @if (loading) {
@@ -273,7 +269,7 @@
         </div>
 
         } @else if(!isFine){
-        お探しのページが見つかりません。
+        {{ 'PAGE_NOT_FOUND' | translate }}
         }
 
     </div>
@@ -324,7 +320,7 @@
     </div>
     <mat-menu #itemMenu="matMenu">
         <a mat-menu-item class="unstyled-link" (click)="remove(entry)" mat-menu-item>
-            <mat-icon>delete</mat-icon>ゴミ箱へ
+            <mat-icon>delete</mat-icon>{{ 'TO_TRASH' | translate }}
         </a>
     </mat-menu>
 </ng-template>

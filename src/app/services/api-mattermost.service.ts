@@ -1,18 +1,20 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, delay, from, concatMap, map, Observable, of, retry, Subject, switchMap, tap, timer, toArray } from 'rxjs';
 import { Client4, WebSocketClient, WebSocketMessage } from '@mattermost/client';
-import emojiData from 'emoji-datasource';
 import { CustomEmoji } from '@mattermost/types/emojis';
-import { Thread, ThreadGroup } from '../models/project-models';
-import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './file-manager.service';
+import emojiData from 'emoji-datasource';
+import { concatMap, from, map, Observable, of, retry, Subject, switchMap, tap, timer, toArray } from 'rxjs';
+import { ThreadGroup } from '../models/project-models';
 import { Utils } from '../utils';
+import { FullPathFile } from './file-manager.service';
 import { GService } from './g.service';
+import { LoggerService } from './logger';
 
 @Injectable({ providedIn: 'root' })
 export class ApiMattermostService {
 
   private readonly http: HttpClient = inject(HttpClient);
+  private readonly logger = inject(LoggerService);
   readonly g: GService = inject(GService);
 
   providerName = 'sample'; // OAuth2プロバイダ名
@@ -98,7 +100,7 @@ export class ApiMattermostService {
   }
   mattermostGetDrafts(teamId: string): Observable<MattermostPost[]> {
     const url = `${this.baseUrl}/users/me/teams/${teamId}/drafts`;
-    console.log(`drafst ${teamId}`);
+    this.logger.debug(`drafts ${teamId}`);
     return this.http.get<MattermostPost[]>(url);
   }
 
@@ -185,7 +187,7 @@ export class ApiMattermostService {
                 // 空白を削ってカンマで区切ってnameに入れる
                 // mmChannel.display_name = 'dummy';
                 mmChannel.display_name = mmChannel.display_name.replaceAll(/ /g, '').split(',').filter(username => username !== this.mmUser?.username).map(username => nameMas[username]?.nickname || nameMas[username]?.username || '').filter(name => name.trim()).join(', ');
-                // console.log(mmChannel.display_name);
+                // this.logger.debug(mmChannel.display_name);
               } else {
                 // グループ以外は無視
               }
@@ -198,7 +200,7 @@ export class ApiMattermostService {
                   mmChannel.display_name = 'dummy';
                   mmChannel.display_name = mmChannel.name.split('__').filter(id => id !== this.mmUser?.id).map(id => idMas[id].nickname || idMas[id].username || '').filter(name => name.trim()).join(', ');
                 }
-                // console.log(mmChannel.display_name);
+                // this.logger.debug(mmChannel.display_name);
               } else {
                 // ダイレクトチャネル以外は無視
               }
@@ -314,7 +316,7 @@ export class ApiMattermostService {
       const baseUrl = `/user/oauth/ws/proxy/${this.g.info.user.orgKey}/mattermost/${this.providerName}/api/v4`;
       this.wsClient.initialize(`/api${baseUrl}/websocket`, '');
       this.wsClient.addMessageListener((message: WebSocketMessage) => {
-        console.log(message);
+        this.logger.debug(message);
         this.isConnected = 2;
         this.listener.next(message);
       });

@@ -1,12 +1,12 @@
 <div class="container">
     <div class="header-section">
-        <h2>部門利用状況管理</h2>
+        <h2>{{ 'DEPARTMENT_USAGE_STATS_MANAGEMENT' | translate }}</h2>
 
         <div class="controls-section">
             <mat-form-field appearance="outline" class="period-selector">
-                <mat-label>集計期間</mat-label>
+                <mat-label>{{ 'AGGREGATION_PERIOD' | translate }}</mat-label>
                 <mat-select name="selectedTeamId" [(ngModel)]="selectYyyyMm" (selectionChange)="onPeriodChange()">
-                    <mat-option value="ALL">全期間</mat-option>
+                    <mat-option value="ALL">{{ 'ALL_PERIODS' | translate }}</mat-option>
                     @for(yyyyMm of yyyyMmList; track $index){
                     <mat-option [value]="yyyyMm">{{formatPeriod(yyyyMm)}}</mat-option>
                     }
@@ -23,8 +23,8 @@
                     <mat-icon>account_balance_wallet</mat-icon>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-value">{{ getTotalCost() | number:'1.0-0' }}円</div>
-                    <div class="stat-label">総コスト</div>
+                    <div class="stat-value">{{ getTotalCost() | number:'1.0-0' }}{{ 'YEN' | translate }}</div>
+                    <div class="stat-label">{{ 'TOTAL_COST' | translate }}</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -33,7 +33,7 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-value">{{ getTotalTokens() | number }}</div>
-                    <div class="stat-label">総利用量</div>
+                    <div class="stat-label">{{ 'TOTAL_USAGE' | translate }}</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -42,7 +42,7 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-value">{{ getForeignTokens() | number }}</div>
-                    <div class="stat-label">海外分</div>
+                    <div class="stat-label">{{ 'FOREIGN_PORTION' | translate }}</div>
                 </div>
             </div>
             <div class="stat-card">
@@ -51,7 +51,7 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-value">{{ getActiveDepartmentCount() }}</div>
-                    <div class="stat-label">部門数</div>
+                    <div class="stat-label">{{ 'DEPARTMENT_COUNT' | translate }}</div>
                 </div>
             </div>
         </div>
@@ -60,7 +60,7 @@
     <!-- チャートセクション -->
     <div class="chart-section">
         <div class="chart-container">
-            <h3>メンバー別コスト比較</h3>
+            <h3>{{ 'MEMBER_COST_COMPARISON' | translate }}</h3>
             <div class="chart-wrapper flex justify-center" style="max-height: 405px;">
                 <canvas #memberCostChart width="400" height="250"></canvas>
             </div>
@@ -74,14 +74,14 @@
         </div> -->
 
         <div class="chart-container">
-            <h3>期間別利用推移</h3>
+            <h3>{{ 'PERIOD_USAGE_TREND' | translate }}</h3>
             <div class="chart-wrapper">
                 <canvas #periodTrendChart width="400" height="250"></canvas>
             </div>
         </div>
     </div>
 
-    <!-- 部門別詳細 -->
+    <!-- Department details -->
     <div class="departments-section">
         <mat-accordion>
             @for(division of divisionMemberList; track $index){
@@ -91,26 +91,26 @@
                     <mat-panel-title>
                         <div class="department-info">
                             <h3>{{ division.division.label }}</h3>
-                            <span class="department-id">ID: {{ division.division.id }}</span>
+                            <span class="department-id">{{ 'ID' | translate }}: {{ division.division.id }}</span>
                         </div>
                     </mat-panel-title>
                     <mat-panel-description>
                         <div class="department-summary">
                             <div class="summary-item cost-summary">
                                 <div class="summary-value">{{ division.cost[selectYyyyMm].totalCost * 150 |
-                                    number:'1.0-0' }}円
+                                    number:'1.0-0' }}{{ 'YEN' | translate }}
                                 </div>
-                                <div class="summary-label">コスト総計</div>
+                                <div class="summary-label">{{ 'COST_TOTAL' | translate }}</div>
                             </div>
                             <div class="summary-item usage-summary">
                                 <div class="summary-value">{{ (division.cost[selectYyyyMm].totalReqToken +
                                     division.cost[selectYyyyMm].totalResToken) | number }}</div>
-                                <div class="summary-label">利用量</div>
+                                <div class="summary-label">{{ 'USAGE' | translate }}</div>
                             </div>
                             <div class="summary-item foreign-summary">
                                 <div class="summary-value">{{ (division.cost[selectYyyyMm].foreignModelReqToken +
                                     division.cost[selectYyyyMm].foreignModelResToken) | number }}</div>
-                                <div class="summary-label">海外分</div>
+                                <div class="summary-label">{{ 'FOREIGN_PORTION' | translate }}</div>
                             </div>
                         </div>
                     </mat-panel-description>
@@ -119,13 +119,13 @@
                 <!-- メンバーテーブル -->
                 <div class="members-table">
                     <div class="table-header">
-                        <div class="header-cell name-col">名前</div>
+                        <div class="header-cell name-col">{{ 'NAME' | translate }}</div>
                         <div class="header-cell id-col">ID</div>
-                        <div class="header-cell role-col">Role</div>
-                        <div class="header-cell status-col">ステータス</div>
-                        <div class="header-cell cost-col">コスト</div>
-                        <div class="header-cell usage-col">利用量</div>
-                        <div class="header-cell foreign-col">海外分</div>
+                        <div class="header-cell role-col">{{ 'ROLE' | translate }}</div>
+                        <div class="header-cell status-col">{{ 'STATUS' | translate }}</div>
+                        <div class="header-cell cost-col">{{ 'COST' | translate }}</div>
+                        <div class="header-cell usage-col">{{ 'USAGE' | translate }}</div>
+                        <div class="header-cell foreign-col">{{ 'FOREIGN_PORTION' | translate }}</div>
                     </div>
 
                     @for(member of division.members; track member.id){
@@ -147,15 +147,15 @@
                         <div class="table-cell status-col" (click)="eventCancel($event)">
                             <mat-radio-group [(ngModel)]="member.status" (change)="updateUserStatus(member)"
                                 class="status-radio">
-                                <mat-radio-button value="Active" class="status-active">有効</mat-radio-button>
-                                <mat-radio-button value="Suspended" class="status-suspended">停止</mat-radio-button>
+                                <mat-radio-button value="Active" class="status-active">{{ 'ACTIVE' | translate }}</mat-radio-button>
+                                <mat-radio-button value="Suspended" class="status-suspended">{{ 'SUSPENDED' | translate }}</mat-radio-button>
                             </mat-radio-group>
                         </div>
 
                         @if(member.cost && member.cost[selectYyyyMm]){
                         <div class="table-cell cost-col">
                             <span class="cost-value">{{ member.cost[selectYyyyMm].totalCost * 150 | number:'1.0-0'
-                                }}円</span>
+                                }}{{ 'YEN' | translate }}</span>
                         </div>
                         <div class="table-cell usage-col">
                             <div class="usage-breakdown">
@@ -190,7 +190,7 @@
                         }
                         } @else {
                         <div class="table-cell status-col">
-                            <span class="status-unregistered">未登録</span>
+                            <span class="status-unregistered">{{ 'UNREGISTERED' | translate }}</span>
                         </div>
                         <div class="table-cell cost-col">
                             <span class="no-data">-</span>
@@ -214,8 +214,8 @@
     @if(divisionMemberList.length === 0 || !hasDataForPeriod()) {
     <div class="empty-state">
         <mat-icon>assessment</mat-icon>
-        <h3>データがありません</h3>
-        <p>選択した期間のデータが見つかりません。</p>
+        <h3>{{ 'NO_DATA' | translate }}</h3>
+        <p>{{ 'NO_DATA_FOR_SELECTED_PERIOD' | translate }}</p>
     </div>
     }
 </div>

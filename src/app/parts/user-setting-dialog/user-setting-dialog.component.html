@@ -1,71 +1,67 @@
-<h2 mat-dialog-title>アプリケーション設定</h2>
+<h2 mat-dialog-title>{{ 'APPLICATION_SETTINGS' | translate }}</h2>
 
 <mat-dialog-content>
     <div class="settings-section">
-        <h3>アニメーション設定</h3>
+        <h3>{{ 'ANIMATION_SETTINGS' | translate }}</h3>
         <div class="setting-item">
             <mat-slide-toggle [checked]="current" (change)="toggleAnimation($event)">
-                アニメーションを有効にする
+                {{ 'ENABLE_ANIMATION' | translate }}
             </mat-slide-toggle>
             <p class="setting-description">
-                UIアニメーションの有効/無効を切り替えます。
-                変更を適用するにはページの再読み込みが必要です。
+                {{ 'ANIMATION_DESCRIPTION' | translate }}<br />{{ 'RELOAD_REQUIRED' | translate }}
             </p>
         </div>
     </div>
     <mat-divider></mat-divider>
     <div class="settings-section">
-        <h3>カラーテーマ</h3>
+        <h3>{{ 'COLOR_THEME' | translate }}</h3>
         <div class="setting-item">
             <mat-button-toggle-group [(value)]="theme" (change)="toggleTheme($event)">
-                <mat-button-toggle value="system">システム</mat-button-toggle>
-                <mat-button-toggle value="dark">ダーク</mat-button-toggle>
-                <mat-button-toggle value="light">ライト</mat-button-toggle>
+                <mat-button-toggle value="system">{{ 'SYSTEM' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="dark">{{ 'DARK' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="light">{{ 'LIGHT' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
             <p class="setting-description">
-                アプリケーションのカラーテーマを変更します。<br />
-                デフォルトはシステム設定と同じです。
+                {{ 'THEME_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_SYSTEM_THEME' | translate }}
             </p>
         </div>
     </div>
     <mat-divider></mat-divider>
     <div class="settings-section">
-        <h3>Ctrl+Enterで送信 or Enterで送信</h3>
+        <h3>{{ 'SEND_MODE_SETTING' | translate }}</h3>
         <div class="setting-item">
             <mat-radio-group [value]="enterMode" name="enter-mode" (change)="toggleEnterMode($event)">
-                <mat-radio-button value="Ctrl+Enter">Ctrl+Enterで送信</mat-radio-button>
+                <mat-radio-button value="Ctrl+Enter">{{ 'SEND_WITH_CTRL_ENTER' | translate }}</mat-radio-button>
                 <span class="inline-block min-w-10"></span>
-                <mat-radio-button value="Enter">Enterで送信</mat-radio-button>
+                <mat-radio-button value="Enter">{{ 'SEND_WITH_ENTER' | translate }}</mat-radio-button>
             </mat-radio-group>
             <p class="setting-description">
-                テキストボックスの入力完了時にEnterのみで送信するかEnter+Ctrlで送信するかを指定できます。<br />
-                デフォルトはCtrl+Enterです。
+                {{ 'SEND_MODE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_CTRL_ENTER' | translate }}
             </p>
         </div>
     </div>
     <mat-divider></mat-divider>
     <div class="settings-section">
-        <h3>履歴を閉じる設定</h3>
+        <h3>{{ 'HISTORY_CLOSE_SETTING' | translate }}</h3>
         <div class="setting-item">
             <mat-radio-group [value]="historyCloseMode" name="history-close-mode"
                 (change)="toggleHistoryCloseMode($event)">
-                <mat-radio-button [value]="0">閉じない</mat-radio-button>
+                <mat-radio-button [value]="0">{{ 'DONT_CLOSE' | translate }}</mat-radio-button>
                 <span class="inline-block min-w-10"></span>
-                <mat-radio-button [value]="1">ユーザープロンプトのみ閉じる</mat-radio-button>
+                <mat-radio-button [value]="1">{{ 'CLOSE_USER_PROMPT_ONLY' | translate }}</mat-radio-button>
                 <span class="inline-block min-w-10"></span>
-                <mat-radio-button [value]="2">両方閉じる</mat-radio-button>
+                <mat-radio-button [value]="2">{{ 'CLOSE_BOTH' | translate }}</mat-radio-button>
             </mat-radio-group>
             <p class="setting-description">
-                新しいメッセージが生成された際に、過去の履歴を自動的に閉じるかどうかを設定します。<br />
-                デフォルトは「閉じない」です。
+                {{ 'HISTORY_CLOSE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_DONT_CLOSE' | translate }}
             </p>
         </div>
     </div>
 </mat-dialog-content>
 
 <mat-dialog-actions>
-    <button mat-button mat-dialog-close>キャンセル</button>
+    <button mat-button mat-dialog-close>{{ 'CANCEL' | translate }}</button>
     <button mat-raised-button color="primary" (click)="saveAndClose()">
-        保存して閉じる
+        {{ 'SAVE_AND_CLOSE' | translate }}
     </button>
 </mat-dialog-actions>

@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
+import { adminScopeGuard } from './guard/admin.guard';
 import { loginGuardGenerator, oAuthGuardGenerator, projectGuard, teamGuard, threadGroupGuard } from './guard/chat.guard';
 import { UserRoleType } from './models/models';
-import { adminScopeGuard } from './guard/admin.guard';
 
 // console.dir(gitRoutes, { depth: null });
 export const routes: Routes = [

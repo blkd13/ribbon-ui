@@ -1,9 +1,10 @@
+import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { HttpErrorResponse, HttpEvent, HttpHandler, HttpHandlerFn, HttpInterceptor, HttpRequest } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Observable, catchError, finalize, throwError } from 'rxjs';
 import { environment } from '../environments/environment';
 import { GService } from './services/g.service';
-import { Router } from '@angular/router';
+import { LoggerService } from './services/logger';
 
 @Injectable()
 export class ApiInterceptor implements HttpInterceptor {
@@ -12,13 +13,14 @@ export class ApiInterceptor implements HttpInterceptor {
   // private lastRun: number = Date.now();
   readonly g: GService = inject(GService);
   readonly router: Router = inject(Router);
+  readonly logger: LoggerService = inject(LoggerService);
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     let url;
     // パスだけ取得？
     // let url = request.url.replace(/https?:\/\/[^/]+/g, '').replace('//', '/').replace(/^\//g, '');
     let method = request.method;
-    // console.log(`${method} ${url}`);
+    // this.logger.debug(`${method} ${url}`);
     // 開発環境の場合はローカルのjsonファイルに向ける
     // !environment.production ||
     if (request.url.endsWith('.json')) {
@@ -31,13 +33,13 @@ export class ApiInterceptor implements HttpInterceptor {
     } else if (request.url.startsWith('/')) {
       // 本番環境の場合は環境変数で指定したAPIのエンドポイントに向ける
       url = `${environment.apiUrl}/${request.url}`.replaceAll(/\/\/*/g, '/');
-      // console.log(`intercepted:${url}`);
+      // this.logger.debug(`intercepted:${url}`);
     } else {
       // request.headers.set('Authorization', 'xxx');
     }
 
     // url = `${location.origin}${location.pathname.replaceAll(/\/$/g, '')}${url}`;
-    // console.log(`intercepted:${url}`);
+    // this.logger.debug(`intercepted:${url}`);
     request = request.clone({ url, method, headers: request.headers.set('X-App-Version', this.g.version) });
 
     // // 同時リクエストが多くなるとブラウザエラーになることがあったので適当に遅延させる機能を付けた
@@ -45,7 +47,7 @@ export class ApiInterceptor implements HttpInterceptor {
     // let delayTime = 0;
     // if (Date.now() - this.lastRun < 10) {
     //     delayTime = Math.random() * 0;
-    //     // console.log(`delay ${delayTime}[ms]`); // tslint:disable-line:no-console
+    //     // this.logger.debug(`delay ${delayTime}[ms]`); // tslint:disable-line:no-console
     // } else { }
     // this.lastRun = Date.now();
     // return of(null).pipe(
@@ -91,12 +93,12 @@ export class ApiInterceptor implements HttpInterceptor {
               const [_0, _1, _2, _3, _4, _5, providerType, provierName] = request.url.split('/');
               // ログインページにリダイレクトする場合、リクエストURLを保存しておく
               location.href = `/api/public/oauth/${this.g.info.user.orgKey}/${providerType}-${provierName}/login?fromUrl=${fromUrl}`;
-              console.log(`redirect to login page: ${location.href}`);
+              this.logger.info(`redirect to login page: ${location.href}`);
             } else if (request.url.startsWith(`/api/user/oauth/account/`) && !request.url.includes('/logout') && !request.url.includes('/revoke')) { // logoutは除外する
               const [_0, _1, _2, _3, _4, providerType, provierName] = request.url.split('/');
               // ログインページにリダイレクトする場合、リクエストURLを保存しておく
               location.href = `/api/public/oauth/${this.g.info.user.orgKey}/${providerType}-${provierName}/login?fromUrl=${fromUrl}`;
-              console.log(`redirect to login page: ${location.href}`);
+              this.logger.info(`redirect to login page: ${location.href}`);
             } else {
               // 未認証の場合、ログインページにリダイレクト
               this.router.navigate(['/login']);

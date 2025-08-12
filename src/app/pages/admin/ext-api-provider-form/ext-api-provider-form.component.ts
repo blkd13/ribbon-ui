@@ -1,42 +1,45 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
-import { BaseFormComponent } from '../../../shared/base/base-form.component';
-import { ExtApiProviderService } from '../../../services/ext-api-provider.service';
-import {
-    ExtApiProviderEntity,
-    ExtApiProviderTemplateEntity,
-    ExtApiProviderAuthType,
-    ExtApiProviderPostType
-} from '../../../models/models';
-import { BaseEntityFields } from '../../../models/project-models';
-import { MakeOptional } from '../../../utils';
 import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { GService } from '../../../services/g.service';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatCheckboxModule, MatCheckboxChange } from '@angular/material/checkbox';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule } from '@ngx-translate/core';
+import {
+    ExtApiProviderAuthType,
+    ExtApiProviderEntity,
+    ExtApiProviderPostType,
+    ExtApiProviderTemplateEntity
+} from '../../../models/models';
+import { BaseEntityFields } from '../../../models/project-models';
+import { ExtApiProviderService } from '../../../services/ext-api-provider.service';
+import { GService } from '../../../services/g.service';
+import { LoggerService } from '../../../services/logger';
+import { BaseFormComponent } from '../../../shared/base/base-form.component';
+import { MakeOptional } from '../../../utils';
 
 @Component({
     selector: 'app-ext-api-provider-form',
     imports: [
-        CommonModule, 
-        ReactiveFormsModule, 
+        CommonModule,
+        ReactiveFormsModule,
         FormsModule,
-        MatIconModule, 
-        MatButtonModule, 
-        MatSnackBarModule, 
+        MatIconModule,
+        MatButtonModule,
+        MatSnackBarModule,
         MatButtonToggleModule,
         MatFormFieldModule,
         MatInputModule,
         MatSelectModule,
         MatCheckboxModule,
-        MatTooltipModule
+        MatTooltipModule,
+        TranslateModule
     ],
     templateUrl: './ext-api-provider-form.component.html',
     styleUrl: './ext-api-provider-form.component.scss'
@@ -48,6 +51,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
     readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
     readonly snackBar: MatSnackBar = inject(MatSnackBar);
     readonly g: GService = inject(GService);
+    readonly logger: LoggerService = inject(LoggerService);
 
     providers: ExtApiProviderEntity[] = [];
     filteredProviders: ExtApiProviderEntity[] = [];
@@ -85,14 +89,14 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
 
     // APIプロバイダーの読み込み
     loadProviders() {
-        console.log(this.g.info, this.g.orgKey);
+        this.logger.debug(this.g.info, this.g.orgKey);
         this.extApiProviderService.getApiProviders(true).subscribe({
             next: (providers) => {
                 this.providers = providers;
                 this.updateFilteredProviders();
             },
             error: (err) => {
-                console.error('Error fetching API Providers:', err);
+                this.logger.error('Error fetching API Providers:', err);
             }
         });
     }
@@ -108,7 +112,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
                 });
             },
             error: (err) => {
-                console.error('Error fetching API Provider Templates:', err);
+                this.logger.error('Error fetching API Provider Templates:', err);
             }
         });
     }
@@ -289,14 +293,14 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
         if (confirm('Are you sure you want to delete this provider?')) {
             this.extApiProviderService.deleteApiProvider(id).subscribe({
                 next: () => {
-                    console.log('API Provider deleted successfully');
+                    this.logger.debug('API Provider deleted successfully');
                     this.loadProviders();
                     if (this.form.value.id === id) {
                         this.closeForm();
                     }
                 },
                 error: (error) => {
-                    console.error('Error deleting API Provider:', error);
+                    this.logger.error('Error deleting API Provider:', error);
                 }
             });
         }
@@ -356,7 +360,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
             },
             error: (error) => {
                 this.afterSubmit(false, errorMessage);
-                console.error('Error with API Provider operation:', error);
+                this.logger.error('Error with API Provider operation:', error);
             }
         });
     }
@@ -368,8 +372,8 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
             if (control instanceof FormGroup) {
                 this.logInvalidControls(control);
             } else if (control?.invalid) {
-                console.log(`Invalid control: ${key}`);
-                console.log('Errors:', control.errors);
+                this.logger.debug(`Invalid control: ${key}`);
+                this.logger.error('Errors:', control.errors);
             }
         });
     }
@@ -414,7 +418,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
         // 検索フィルター
         if (this.searchFilter.trim()) {
             const search = this.searchFilter.toLowerCase();
-            filtered = filtered.filter(provider => 
+            filtered = filtered.filter(provider =>
                 provider.label.toLowerCase().includes(search) ||
                 provider.name.toLowerCase().includes(search) ||
                 provider.type.toLowerCase().includes(search)
@@ -423,7 +427,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
 
         // タイプフィルター
         if (this.typeFilter.length > 0) {
-            filtered = filtered.filter(provider => 
+            filtered = filtered.filter(provider =>
                 this.typeFilter.includes(provider.type)
             );
         }
@@ -435,7 +439,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
     applySorting(): void {
         // 安定ソートのために配列をインデックス付きで処理
         const indexedProviders = this.filteredProviders.map((provider, index) => ({ provider, index }));
-        
+
         indexedProviders.sort((a, b) => {
             let valueA: any;
             let valueB: any;
@@ -445,7 +449,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
                 case '':
                     // デフォルト順序：ラベル順
                     return a.provider.label.localeCompare(b.provider.label);
-                    
+
                 case 'label':
                     valueA = a.provider.label;
                     valueB = b.provider.label;
@@ -480,7 +484,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
                 return this.sortDirection === 'asc' ? result : -result;
             }
         });
-        
+
         // ソート結果を元の配列に戻す
         this.filteredProviders = indexedProviders.map(item => item.provider);
     }
@@ -544,7 +548,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
         const confirmed = confirm(`Are you sure you want to delete ${this.selectedProviders.length} providers? This action cannot be undone.`);
         if (!confirmed) return;
 
-        const deletePromises = this.selectedProviders.map(id => 
+        const deletePromises = this.selectedProviders.map(id =>
             this.extApiProviderService.deleteApiProvider(id)
         );
 
@@ -555,7 +559,7 @@ export class ExtApiProviderFormComponent extends BaseFormComponent implements On
                 this.loadProviders();
             })
             .catch(error => {
-                console.error('Bulk delete failed:', error);
+                this.logger.error('Bulk delete failed:', error);
                 this.snackBar.open('Bulk delete failed', 'Close', { duration: 3000 });
             });
     }

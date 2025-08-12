@@ -1,27 +1,29 @@
 // api-key-manager.component.ts
-import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Component, OnInit, inject } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatDialogModule, MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
-import { NotificationService } from '../../shared/services/notification.service';
-import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { AuthService, OAuthAccount } from '../../services/auth.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
+import { AuthService, OAuthAccount } from '../../services/auth.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { GService } from '../../services/g.service';
+import { LoggerService } from '../../services/logger';
+import { NotificationService } from '../../shared/services/notification.service';
 
 
 @Component({
   selector: 'app-api-key-manager-dialog',
   imports: [
-    CommonModule, FormsModule,
+    CommonModule, FormsModule, TranslateModule,
     ReactiveFormsModule, MatButtonModule, MatCardModule, MatDialogModule, MatFormFieldModule,
     MatInputModule, MatSelectModule, MatSnackBarModule, MatIconModule, MatTableModule,],
   templateUrl: './api-key-manager-dialog.component.html',
@@ -34,6 +36,8 @@ export class ApiKeyManagerDialogComponent implements OnInit {
   readonly g: GService = inject(GService);
   readonly authServices: AuthService = inject(AuthService);
   readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
+  readonly translate: TranslateService = inject(TranslateService);
+  readonly logger = inject(LoggerService);
 
   apiLabelForm!: FormGroup;
   apiKeyForm!: FormGroup;
@@ -69,12 +73,12 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           acc[type].push(apiProvider);
           return acc;
         }, {});
-        // console.log(this.apiProviderGroupedList);
-        console.log(apiProviderList);
+        // this.logger.debug(this.apiProviderGroupedList);
+        this.logger.debug(apiProviderList);
       },
       error: (error) => {
-        console.log(error);
-        this.notificationService.showError('APIプロバイダの取得に失敗しました');
+        this.logger.error(error);
+        this.notificationService.showError(this.translate.instant('API_PROVIDER_FETCH_ERROR'));
       },
       complete: () => {
         if (this.apiProviderGroupedKeys.length === 0) {
@@ -88,7 +92,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           provider: [this.firstProviderValue, Validators.required],
           key: ['', Validators.required]
         });
-        console.log('complete');
+        this.logger.debug('complete');
         this.loadApiKeys();
       }
     });
@@ -106,7 +110,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
         });
       },
       error: error => {
-        this.notificationService.showError('API鍵の取得に失敗しました');
+        this.notificationService.showError(this.translate.instant('API_KEY_FETCH_FAILED'));
       },
     });
   }
@@ -121,11 +125,11 @@ export class ApiKeyManagerDialogComponent implements OnInit {
 
   genAPIKey(): void {
     if (this.apiLabelForm.invalid || !this.apiLabelForm.value.label) {
-      this.notificationService.showValidationError('ラベルを入力してください');
+      this.notificationService.showValidationError(this.translate.instant('ENTER_LABEL'));
       return;
     }
     if (this.apiKeys.find(key => key.provider === `local-${this.apiLabelForm.value.label}`)) {
-      this.notificationService.showError(`${this.apiLabelForm.value.label}\n既に同名のAPI鍵が存在します。別のラベルを入力してください。`);
+      this.notificationService.showError(this.translate.instant('API_KEY_ALREADY_EXISTS', { label: this.apiLabelForm.value.label }));
       return;
     } else { }
     this.authServices.genApiKey(this.apiLabelForm.value.label).subscribe({
@@ -134,7 +138,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
         this.loadApiKeys();
       },
       error: error => {
-        this.notificationService.showError('API鍵の生成に失敗しました');
+        this.notificationService.showError(this.translate.instant('API_KEY_GENERATION_FAILED'));
       },
     });
   }
@@ -146,7 +150,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
       // TODO ここはいけてない。メッセージをsnackbarじゃなくて画面に載せた方が良い。
       this.authServices.registApiKey(formValue as any).subscribe({
         next: next => {
-          this.notificationService.showSuccess('API鍵を登録しました');
+          this.notificationService.showSuccess(this.translate.instant('API_KEY_REGISTERED'));
           this.loadApiKeys();
           // リセット時に初期値をセットすることで、バリデーションエラーを回避する
           this.apiKeyForm.reset({
@@ -158,20 +162,20 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           this.apiKeyForm.markAsUntouched();
         },
         error: error => {
-          this.notificationService.showLongError(error, 'API鍵登録エラー');
+          this.notificationService.showLongError(error, this.translate.instant('API_KEY_REGISTRATION_ERROR'));
         }
       });
     }
   }
 
   deleteApiKey(key: OAuthAccount): void {
-    if (confirm(`${key.provider}のAPI鍵を削除してもよろしいですか？`)) {
+    if (confirm(this.translate.instant('CONFIRM_DELETE_API_KEY', { provider: key.provider }))) {
       this.authServices.deleteApiKey(key.provider, key.id).subscribe({
         next: next => {
           // TODO: APIサービスでの削除処理に置き換え
           this.apiKeys = this.apiKeys.filter(k => k.id !== key.id);
 
-          this.notificationService.showOperationResult('API鍵を削除', true);
+          this.notificationService.showOperationResult(this.translate.instant('DELETE_API_KEY'), true);
           this.loadApiKeys();
         }
       });
@@ -182,12 +186,12 @@ export class ApiKeyManagerDialogComponent implements OnInit {
 @Component({
   selector: 'app-api-key-dialog',
   imports: [
-    CommonModule,
+    CommonModule, TranslateModule,
     MatButtonModule, MatIconModule, MatTableModule,
     MatDialogModule, MatSnackBarModule,
   ],
   template: `
-    <h2 mat-dialog-title>APIキー</h2>
+    <h2 mat-dialog-title>{{ 'API_KEY_DIALOG_TITLE' | translate }}</h2>
     <mat-dialog-content>
       <div style="display: flex; align-items: center;">
         <input readonly [value]="data.apiKey" style="width: 800px; background: black; font-size: 18pt; padding: 8px;"/>
@@ -195,22 +199,23 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           <mat-icon>content_copy</mat-icon>
         </button>
       </div>
-      <p>API鍵はこの画面を一度閉じると二度と表示されません。</p>
+      <p>{{ 'API_KEY_WARNING_MESSAGE' | translate }}</p>
     </mat-dialog-content>
     <mat-dialog-actions>
-      <button mat-button mat-dialog-close>閉じる</button>
+      <button mat-button mat-dialog-close>{{ 'CLOSE' | translate }}</button>
     </mat-dialog-actions>
   `,
 })
 export class ApiKeyDialogComponent implements OnInit {
   readonly data = inject<{ apiKey: string }>(MAT_DIALOG_DATA);
   private notificationService = inject(NotificationService);
+  private translate = inject(TranslateService);
 
   ngOnInit(): void { }
 
   copyToClipboard(): void {
     navigator.clipboard.writeText(this.data.apiKey).then(() => {
-      this.notificationService.showCopySuccess('APIキーをクリップボードにコピーしました');
+      this.notificationService.showCopySuccess(this.translate.instant('API_KEY_COPIED'));
     });
   }
 }

@@ -1,21 +1,21 @@
 import { Component, inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatSliderModule } from '@angular/material/slider';
-import { MatSelectModule } from '@angular/material/select';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatTabsModule } from '@angular/material/tabs';
 
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Project, Team } from '../../models/project-models';
 import { MattermostTimelineService, ToAiFilterType, ToAiIdType } from '../../services/api-mattermost.service';
 import { ProjectService, TeamService } from '../../services/project.service';
-import { Project, Team } from '../../models/project-models';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { safeForkJoin } from '../../utils/dom-utils';
 
 type ShortcutType = 'today' | 'fromYesterday' | 'yesterday' | 'thisWeek' | 'lastWeek';
@@ -60,7 +60,7 @@ export class MmMessageSelectorDialogComponent {
   countForm: FormGroup;
   timeForm: FormGroup;
   change(a: any): void {
-    console.log(a);
+    // console.log(a);
   }
 
   // ショートカットのオプション

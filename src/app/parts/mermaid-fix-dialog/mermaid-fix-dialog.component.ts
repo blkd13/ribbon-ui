@@ -1,18 +1,19 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { MatDialogModule } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatInputModule } from '@angular/material/input';
-import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
-import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
-import { AIModelEntity, AIModelManagerService } from '../../services/model-manager.service';
-import { ModelSelectorComponent } from "../model-selector/model-selector.component";
 import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
 import { MermaidValidatorService } from '../../services/mermaid-validator.service';
+import { AIModelEntity, AIModelManagerService } from '../../services/model-manager.service';
+import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
+import { ModelSelectorComponent } from "../model-selector/model-selector.component";
 
 export interface MermaidFixDialogData {
   errors: Array<{ code: string; error: string; startIndex: number; endIndex: number }>;
@@ -37,19 +38,20 @@ export interface MermaidFixDialogResult {
     MatInputModule,
     MatIconModule,
     ModelSelectorComponent,
+    TranslateModule,
   ],
   template: `
     <h2 mat-dialog-title class="flex items-center gap-2">
       <mat-icon class="text-red-500">error_outline</mat-icon>
-      Mermaid構文エラー検出
+      {{ 'MERMAID_SYNTAX_ERROR_DETECTED' | translate }}
     </h2>
     <mat-dialog-content class="min-w-96">
       <div class="mb-4">
-        <p class="mb-2">{{data.errors.length}}個のMermaidコードに構文エラーが見つかりました：</p>
+        <p class="mb-2">{{ 'MERMAID_ERRORS_FOUND' | translate: { count: data.errors.length } }}</p>
         <div class="max-h-32 overflow-y-auto">
           @for(error of data.errors; track $index) {
             <div class="error-message mb-2">
-              <div class="font-medium text-sm">エラー {{$index + 1}}:</div>
+              <div class="font-medium text-sm">{{ 'ERROR_NUMBER' | translate: { number: $index + 1 } }}</div>
               <div class="text-xs">{{error.error}}</div>
             </div>
           }
@@ -58,7 +60,7 @@ export interface MermaidFixDialogResult {
 
       <form [formGroup]="form">
         <div class="mb-4">
-          <mat-label>修正に使用するAIモデル</mat-label>
+          <mat-label>{{ 'AI_MODEL_FOR_CORRECTION' | translate }}</mat-label>
           <app-model-selector name="model-select" [args]="args" (argsChange)="changeModel($event)"></app-model-selector>
           @if (hasError('model')) {
             <div class="text-red-600 text-sm mt-1">{{ getErrorMessage('model') }}</div>
@@ -67,15 +69,15 @@ export interface MermaidFixDialogResult {
 
         <div class="mb-4">
           <mat-form-field appearance="outline" class="w-full">
-            <mat-label>カスタムプロンプト（オプション）</mat-label>
-            <textarea 
-              matInput 
+            <mat-label>{{ 'CUSTOM_PROMPT_OPTIONAL' | translate }}</mat-label>
+            <textarea
+              matInput
               formControlName="customPrompt"
-              placeholder="特定の修正指示がある場合は入力してください..."
+              [placeholder]="'CUSTOM_PROMPT_PLACEHOLDER' | translate"
               rows="3"
               class="resize-none">
             </textarea>
-            <mat-hint>空欄の場合はデフォルトのプロンプトを使用します</mat-hint>
+            <mat-hint>{{ 'DEFAULT_PROMPT_HINT' | translate }}</mat-hint>
           </mat-form-field>
         </div>
       </form>
@@ -88,16 +90,16 @@ export interface MermaidFixDialogResult {
     </mat-dialog-content>
     
     <mat-dialog-actions class="flex gap-2 justify-end">
-      <button mat-button (click)="onCancel()" [disabled]="isSaving">キャンセル</button>
-      <button 
-        mat-raised-button 
-        color="primary" 
+      <button mat-button (click)="onCancel()" [disabled]="isSaving">{{ 'CANCEL' | translate }}</button>
+      <button
+        mat-raised-button
+        color="primary"
         (click)="onFix()"
         [disabled]="!args.model || isSaving">
         @if (isSaving) {
-          修正実行中...
+          {{ 'CORRECTION_IN_PROGRESS' | translate }}
         } @else {
-          AI修正を実行
+          {{ 'EXECUTE_AI_CORRECTION' | translate }}
         }
       </button>
     </mat-dialog-actions>
@@ -126,6 +128,7 @@ export interface MermaidFixDialogResult {
 export class MermaidFixDialogComponent extends BaseDialogComponent<MermaidFixDialogData, MermaidFixDialogResult> implements OnInit {
   private readonly aiModelManager = inject(AIModelManagerService);
   private readonly mermaidValidatorService = inject(MermaidValidatorService);
+  readonly translate = inject(TranslateService);
 
   protected availableModels: AIModelEntity[] = [];
   protected args = {
@@ -161,7 +164,7 @@ export class MermaidFixDialogComponent extends BaseDialogComponent<MermaidFixDia
         }
 
         return this.availableModels;
-      }, undefined, 'モデル一覧の読み込みに失敗しました');
+      }, undefined, this.translate.instant('FAILED_TO_LOAD_MODEL_LIST'));
     } finally {
       this.setLoading(false);
     }
@@ -198,7 +201,7 @@ export class MermaidFixDialogComponent extends BaseDialogComponent<MermaidFixDia
 
   private validateForm(): boolean {
     if (!this.args.model) {
-      this.setError('AIモデルを選択してください。');
+      this.setError(this.translate.instant('PLEASE_SELECT_AI_MODEL'));
       return false;
     }
 
@@ -218,10 +221,10 @@ export class MermaidFixDialogComponent extends BaseDialogComponent<MermaidFixDia
 
     if (control.errors['required']) {
       if (controlName === 'model') {
-        return 'AIモデルの選択は必須です';
+        return this.translate.instant('AI_MODEL_SELECTION_REQUIRED');
       }
-      return `${controlName}は必須です`;
+      return this.translate.instant('FIELD_IS_REQUIRED', { field: controlName });
     }
-    return `${controlName}に入力エラーがあります`;
+    return this.translate.instant('INPUT_ERROR_IN_FIELD', { field: controlName });
   }
 }

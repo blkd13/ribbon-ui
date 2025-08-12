@@ -1,6 +1,6 @@
 @if(showInfo&&false){
 <div class="flex justify-center item-center" style="background-color: rgb(30, 109, 131);padding: 5px 10px;">
-  現在Googleの障害でgemini、claude系が使えません。gpt-4oかo1をご利用ください。
+  {{ 'GOOGLE_OUTAGE_MESSAGE' | translate }}
   <mat-icon class="cursor-pointer absolute right-3" (click)="showInfo=false">close</mat-icon>
 </div>
 }
@@ -15,11 +15,17 @@
   <div class="h-full w-52 pt-0 overflow-hidden left-pane relative" [ngStyle]="{width: showThreadList?'208px':'8px'}">
     <!-- スレッドリストを閉じるときに横幅が狭まるが、中身は狭めないようにするために一層設けておく -->
     <div class="h-full w-52 overflow-hidden relative flex flex-col">
+
+      @if(g.appType==='base'){
+      <div style="height: 30px;"></div>
+      } @else {
       <app-app-menu class="p-4"></app-app-menu>
       <div class="project-title" [title]="selectedProject.label">
         <label for="projectMenuTrigger" class="cursor-pointer gradient-text">{{selectedProject.label}}</label>
         <button id="projectMenuTrigger" [matMenuTriggerFor]="projectMenu"></button>
       </div>
+      }
+
       <mat-menu #projectMenu="matMenu" xPosition="before" [overlapTrigger]="false">
         @for(team of teamForViewList; track team.id) {
         <div class="gradient-text pl-3">{{team.label}}</div>
@@ -37,13 +43,18 @@
       <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Create new thread" (click)="clear()"
         [routerLink]="['/chat', selectedProject.id, 'new-thread']">
         <mat-icon class="mr-3">add_circle</mat-icon>
-        <div>新規チャット</div>
+        <div>{{ 'NEW_CHAT' | translate }}</div>
       </a>
+
+      @if(g.appType==='base'){
+      } @else {
       <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
         (change)="rebuildThreadGroupList(threadGroupList)">
-        <mat-radio-button [value]="1">時刻順</mat-radio-button>
-        <mat-radio-button [value]="2">名前順</mat-radio-button>
+        <mat-radio-button [value]="1">{{ 'SORT_BY_TIME' | translate }}</mat-radio-button>
+        <mat-radio-button [value]="2">{{ 'SORT_BY_NAME' | translate }}</mat-radio-button>
       </mat-radio-group>
+      }
+
       <!-- @for (threadGroup of threadGroupList; track threadGroup.id) {
             <div class="custom-scroll custom-scroll--thin h-full relative">
                 <div class="relative flex items-center justify-between" style="border-bottom: 1px solid;">
@@ -58,7 +69,7 @@
             class="relative flex items-center justify-between group"
             [ngClass]="{'thread-group':obj.threadGroup, 'selected':obj.threadGroup?.id===selectedThreadGroup.id}">
             @if(obj.header) {
-            <div class="thread-group-header"> {{ obj.header }}</div>
+            <div class="thread-group-header">{{ obj.header }}</div>
             }
 
             @if(obj.threadGroup; as threadGroup) {
@@ -75,7 +86,7 @@
             }
             @if(isCacheLive(threadGroup)){
             <mat-icon
-              matTooltip="コンテキストキャッシュ有効 expire:{{threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'YYYY-MM-dd HH:mm:ss'}}">cached</mat-icon>
+              [matTooltip]="('CONTEXT_CACHE_ACTIVE' | translate) + ' expire:' + (threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'yyyy-MM-dd HH:mm:ss')">cached</mat-icon>
             }
 
             <button mat-icon-button [matMenuTriggerFor]="threadMenu" class="opacity-0 group-hover:opacity-100">
@@ -85,35 +96,35 @@
             <mat-menu #threadMenu="matMenu">
               <button mat-menu-item (click)="renameThreadGroup($event, threadGroup, true, $index)">
                 <mat-icon>edit</mat-icon>
-                <span>名前変更</span>
+                <span>{{ 'EDIT' | translate }}</span>
               </button>
               <button mat-menu-item (click)="cloneThreadGroup($event, threadGroup.id)">
-                <mat-icon>file_copy</mat-icon>コピー
+                <mat-icon>file_copy</mat-icon>{{ 'COPY' | translate }}
               </button>
               @if(projectList.length>1){
               <button mat-menu-item [matMenuTriggerFor]="sendToProjesTemplate">
-                <mat-icon>move_item</mat-icon>送る
+                <mat-icon>move_item</mat-icon>{{ 'SEND' | translate }}
               </button>
               }
               <!--
               <button mat-menu-item (click)="duplicate($event, thread)">
                   <mat-icon>file_copy</mat-icon>
-                  <span>複製</span>
+                  <span>{{ 'DUPLICATE' | translate }}</span>
               </button>
               <button mat-menu-item (click)="export($index)">
                   <mat-icon>download</mat-icon>
-                  <span>エクスポート</span>
+                  <span>{{ 'EXPORT' | translate }}</span>
               </button>
               -->
               <button mat-menu-item (click)="contentsDownload($event,$index, threadGroup)">
                 <mat-icon>folder_zip</mat-icon>
-                <span>コードブロックダウンロード</span>
+                <span>{{ 'DOWNLOAD_CODE_BLOCKS' | translate }}</span>
               </button>
               <mat-divider></mat-divider>
               <mat-divider></mat-divider>
               <button mat-menu-item (click)="removeThreadGroup($event,$index, threadGroup)">
                 <mat-icon style="color: #FF6666">close</mat-icon>
-                <span style="color: #FF6666">削除</span>
+                <span style="color: #FF6666">{{ 'DELETE' | translate }}</span>
               </button>
             </mat-menu>
             <mat-menu #sendToProjesTemplate="matMenu">
@@ -163,23 +174,30 @@
           </div> |
         </div>
         <button mat-icon-button color="primary" (click)="userService.toggleChatTabLayout().subscribe()"
-          [disabled]="selectedThreadGroup.threadList.length===1" title="チャットパネルをタブ化">
+          [disabled]="selectedThreadGroup.threadList.length===1" [title]="'TABIFY_CHAT_PANELS' | translate">
           <mat-icon>@if(userService.chatTabLayout==='tabs') { view_column } @else { tab }</mat-icon>
         </button>
         <button mat-icon-button color="primary" (click)="userService.toggleChatLayout().subscribe()"
-          title="チャットパネルのレイアウト">
+          [title]="'CHAT_PANEL_LAYOUT' | translate">
           <mat-icon>@if(userService.chatLayout==='grid') { dashboard } @else { grid_view }</mat-icon>
         </button>
-        <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse()" title="チャットパネルの開閉">
+        <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse()"
+          [title]="'EXPAND_COLLAPSE_CHAT_PANELS' | translate">
           <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
         </button>
-        <button mat-icon-button color="primary" (click)="openSaveAsTemplateDialog()" title="名前を付けて保存">
+        <button mat-icon-button color="primary" (click)="openSaveAsTemplateDialog()"
+          [title]="'SAVE_AS_TEMPLATE' | translate">
           <mat-icon>save</mat-icon>
         </button>
-        <button mat-icon-button color="primary" (click)="openModelSetting()" title="設定">
+        <!--
+        <button mat-icon-button color="primary" (click)="openModelSetting()" [title]="'SETTINGS' | translate">
           <mat-icon>settings</mat-icon>
         </button>
+        -->
+        @if(g.appType==='base'){
+        } @else {
         <div class="mr-10"></div>
+        }
 
       </div>
     </div>
@@ -188,14 +206,14 @@
     @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&1>=messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length){
     <div class="absolute t-0 l-0 w-full flex justify-center items-center flex-col "
       style="z-index: 2;top: calc(50vh);transform: translate(0, -50%);">
-      <h1 style="font-size: 1.78rem;">スレッド数</h1>
+      <h1 style="font-size: 1.78rem;">{{ 'THREAD_COUNT' | translate }}</h1>
       <div class="w-full flex justify-center items-center gap-5">
         @for(index of [1, 2, 3, 4];track $index){
         <div class="course-panel" style="font-size: 24px;" (click)="loadPreset(index)"
           [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
         }
       </div>
-      <h1 style="font-size: 1.78rem;margin-top: 40px;">ツール</h1>
+      <h1 style="font-size: 1.78rem;margin-top: 40px;">{{ 'TOOLS' | translate }}</h1>
       <div class="w-full flex justify-center items-center gap-5 flex-wrap">
         @for(toolGroup of toolCallService.tools; track $index){
         <div class="course-panel text-center tool-group-panel" (click)="toggleToolGroup(toolGroup.group)"
@@ -214,7 +232,7 @@
         </div>
         }
       </div>
-      <h1 style="font-size: 1.78rem;margin-top: 40px;">モード</h1>
+      <h1 style="font-size: 1.78rem;margin-top: 40px;">{{ 'MODES' | translate }}</h1>
       <div class="w-full flex justify-center items-center gap-5 flex-wrap">
         @for(preset of chatService.presetDefs;track $index){
         <div class="course-panel text-center" (click)="selectPreset(preset)" [innerHTML]="preset.label"
@@ -238,31 +256,31 @@
         <mat-menu #templateMenu="matMenu">
           <button mat-menu-item (click)="editTemplateThreadGroup($event, item)">
             <mat-icon>edit</mat-icon>
-            <span>名前変更</span>
+            <span>{{ 'RENAME' | translate }}</span>
           </button>
           <button mat-menu-item (click)="cloneThreadGroup($event, item.id)">
             <mat-icon>file_copy</mat-icon>
-            <span>コピー</span>
+            <span>{{ 'COPY' | translate }}</span>
           </button>
           <button mat-menu-item [matMenuTriggerFor]="sendTemplateToProjesTemplate">
             <mat-icon>move_item</mat-icon>
-            <span>送る</span>
+            <span>{{ 'SEND' | translate }}</span>
           </button>
           @if(this.presetLabel===item.id){
           <button mat-menu-item (click)="saveAsTemplate(item.title, item.description, false, item.id)">
             <mat-icon>save</mat-icon>
-            <span>現在の設定で上書き</span>
+            <span>{{ 'OVERWRITE_WITH_CURRENT_SETTINGS' | translate }}</span>
           </button>
           }
           <!-- <button mat-menu-item (click)="editTemplateThreadGroup($event, item)" title="現在のチャット設定をこのモードに上書き保存します">
             <mat-icon>save</mat-icon>
-            <span>上書き</span>
+            <span>{{ 'OVERWRITE' | translate }}</span>
           </button> -->
           <mat-divider></mat-divider>
           <mat-divider></mat-divider>
           <button mat-menu-item (click)="removeTemplateThreadGroup($event, item)">
             <mat-icon style="color: #FF6666">close</mat-icon>
-            <span style="color: #FF6666">削除</span>
+            <span style="color: #FF6666">{{ 'DELETE' | translate }}</span>
           </button>
         </mat-menu>
 
@@ -280,7 +298,7 @@
         }
       </div>
 
-      <div class="text-sm mt-10 text-[#999]">スレッド数／定型文はオプションなので選ばなくてもよい。</div>
+      <div class="text-sm mt-10 text-[#999]">{{ 'THREAD_COUNT_TEMPLATES_OPTIONAL' | translate }}</div>
     </div>
     }
     <!-- チャットエリア -->
@@ -547,12 +565,13 @@
         @for(content of inputArea.content; track $index){
         @if(content.type==='text'){
         <textarea (keydown)="onKeyDown($event)" #textAreaElem
-          [placeholder]="appFileDrop()?.isHovered?'ファイルドロップ':(placeholder||'メッセージを入力...。 Shift+Enterで改行。 '+userService.enterMode+'で送信。 Drag＆Drop、ファイル貼り付け。')"
+          [placeholder]="appFileDrop()?.isHovered?('FILE_DROP' | translate):(placeholder||('MESSAGE_INPUT_DETAILED_PLACEHOLDER' | translate) + ' ' + userService.enterMode + ('SEND_INSTRUCTION' | translate))"
           [(ngModel)]="content.text" (change)="onChange()"></textarea>
 
         @if(chatStreamSubscriptionList[selectedThreadGroup.id]){
         <!-- 中断ボタン -->
-        <button mat-fab color="primary" aria-label="Cancel" matTooltip="回答を中断する" (click)="chatCancel()">
+        <button mat-fab color="primary" aria-label="Cancel" [matTooltip]="'INTERRUPT_RESPONSE' | translate"
+          (click)="chatCancel()">
           <mat-icon>cancel</mat-icon>
         </button>
         }@else{
@@ -586,19 +605,20 @@
             webkitdirectory directory>
           <button mat-menu-item (click)="openFileDialog(fileInput)">
             <mat-icon>attach_file</mat-icon>
-            <span>ファイル添付</span>
+            <span>{{ 'ATTACH_FILE' | translate }}</span>
           </button>
           <button mat-menu-item (click)="contextCacheControl(selectedThreadGroup)">
             <mat-icon>upload</mat-icon>
-            <span>コンテキストキャッシュ{{isCacheLive(selectedThreadGroup)?'削除':'作成'}}</span>
+            <span>{{ 'CONTEXT_CACHE' | translate }}{{isCacheLive(selectedThreadGroup)?(' ' + ('DELETE' | translate)):('
+              ' + ('CREATE' | translate))}}</span>
           </button>
           <a mat-menu-item target="_blank" href="/ai/gemini-cost-calculator/">
             <mat-icon>question_mark</mat-icon>
-            <span>コンテキストキャッシュとは？</span>
+            <span>{{ 'WHAT_IS_CONTEXT_CACHE' | translate }}</span>
           </a>
           <button mat-menu-item (click)="openBulk()">
             <mat-icon>fast_forward</mat-icon>
-            <span>一括実行</span>
+            <span>{{ 'BATCH_EXECUTION' | translate }}</span>
           </button>
         </mat-menu>
         } @else {
@@ -607,13 +627,15 @@
       </div>
 
       <div style="position: absolute;bottom: -25px;left: 32px;color: #a9a9a9;">
-        AIの回答は必ずしも正しいとは限りません。重要な情報は人の確認必須。機密情報・個人情報は入力禁止。
-        <a class="" href=" ./static/release-note.html" target="_blank">ガイドライン</a>
+        {{ 'AI_WARNING_MESSAGE' | translate }}
       </div>
 
     </div>
   </div>
+  @if(g.appType==='base'){
+  } @else {
   <app-user-mark></app-user-mark>
+  }
 </div>
 }
 

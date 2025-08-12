@@ -1,10 +1,10 @@
-import { AbstractControl, ValidationErrors, ValidatorFn, FormGroup } from '@angular/forms';
+import { AbstractControl, FormGroup, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 /**
  * フォームバリデーション共通ユーティリティ
  */
 export class FormValidationUtil {
-  
+
   /**
    * 日本語文字（ひらがな、カタカナ、漢字）のバリデータ
    */
@@ -13,14 +13,14 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       const japaneseRegex = /^[ひらがなカタカナ漢字ー\s]+$/;
       const value = control.value.toString();
-      
+
       if (!japaneseRegex.test(value)) {
         return { japanese: { value: control.value } };
       }
-      
+
       return null;
     };
   }
@@ -33,14 +33,14 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       const alphanumericRegex = /^[a-zA-Z0-9]+$/;
       const value = control.value.toString();
-      
+
       if (!alphanumericRegex.test(value)) {
         return { alphanumeric: { value: control.value } };
       }
-      
+
       return null;
     };
   }
@@ -53,14 +53,14 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       const zipCodeRegex = /^\d{3}-\d{4}$/;
       const value = control.value.toString();
-      
+
       if (!zipCodeRegex.test(value)) {
         return { zipCode: { value: control.value } };
       }
-      
+
       return null;
     };
   }
@@ -73,15 +73,15 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       // 03-1234-5678, 090-1234-5678, 0120-123-456等の形式に対応
       const phoneRegex = /^(\d{2,4}-\d{2,4}-\d{3,4}|\d{10,11})$/;
       const value = control.value.toString().replace(/[^\d-]/g, '');
-      
+
       if (!phoneRegex.test(value)) {
         return { phoneNumber: { value: control.value } };
       }
-      
+
       return null;
     };
   }
@@ -94,7 +94,7 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       try {
         new URL(control.value);
         return null;
@@ -113,22 +113,22 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       const value = control.value.toString();
       const hasLowerCase = /[a-z]/.test(value);
       const hasUpperCase = /[A-Z]/.test(value);
       const hasNumbers = /\d/.test(value);
       const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(value);
       const hasMinLength = value.length >= 8;
-      
+
       const errors: any = {};
-      
+
       if (!hasMinLength) errors.minLength = true;
       if (!hasLowerCase) errors.lowercase = true;
       if (!hasUpperCase) errors.uppercase = true;
       if (!hasNumbers) errors.numbers = true;
       if (!hasSpecialChar) errors.specialChar = true;
-      
+
       return Object.keys(errors).length > 0 ? { strongPassword: errors } : null;
     };
   }
@@ -141,21 +141,21 @@ export class FormValidationUtil {
       if (!control.value && control.value !== 0) {
         return null;
       }
-      
+
       const numValue = Number(control.value);
-      
+
       if (isNaN(numValue)) {
         return { numberRange: { value: control.value, error: 'notNumber' } };
       }
-      
+
       if (min !== undefined && numValue < min) {
         return { numberRange: { value: control.value, min, error: 'min' } };
       }
-      
+
       if (max !== undefined && numValue > max) {
         return { numberRange: { value: control.value, max, error: 'max' } };
       }
-      
+
       return null;
     };
   }
@@ -168,21 +168,21 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       const date = new Date(control.value);
-      
+
       if (isNaN(date.getTime())) {
         return { dateRange: { value: control.value, error: 'invalidDate' } };
       }
-      
+
       if (minDate && date < minDate) {
         return { dateRange: { value: control.value, minDate, error: 'min' } };
       }
-      
+
       if (maxDate && date > maxDate) {
         return { dateRange: { value: control.value, maxDate, error: 'max' } };
       }
-      
+
       return null;
     };
   }
@@ -195,25 +195,25 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       const file = control.value as File;
       if (!(file instanceof File)) {
         return { fileSize: { value: control.value, error: 'notFile' } };
       }
-      
+
       const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
-      
+
       if (file.size > maxSizeInBytes) {
-        return { 
-          fileSize: { 
-            value: control.value, 
+        return {
+          fileSize: {
+            value: control.value,
             maxSize: maxSizeInMB,
             actualSize: Math.round(file.size / 1024 / 1024 * 100) / 100,
-            error: 'tooLarge' 
-          } 
+            error: 'tooLarge'
+          }
         };
       }
-      
+
       return null;
     };
   }
@@ -226,26 +226,26 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       const file = control.value as File;
       if (!(file instanceof File)) {
         return { fileType: { value: control.value, error: 'notFile' } };
       }
-      
+
       const fileExtension = file.name.toLowerCase().split('.').pop();
       const normalizedTypes = allowedTypes.map(type => type.toLowerCase().replace('.', ''));
-      
+
       if (!fileExtension || !normalizedTypes.includes(fileExtension)) {
-        return { 
-          fileType: { 
-            value: control.value, 
+        return {
+          fileType: {
+            value: control.value,
             allowedTypes,
             actualType: fileExtension,
-            error: 'invalidType' 
-          } 
+            error: 'invalidType'
+          }
         };
       }
-      
+
       return null;
     };
   }
@@ -258,14 +258,14 @@ export class FormValidationUtil {
       if (!(formGroup instanceof FormGroup)) {
         return null;
       }
-      
+
       const password = formGroup.get(passwordField);
       const confirmPassword = formGroup.get(confirmPasswordField);
-      
+
       if (!password || !confirmPassword) {
         return null;
       }
-      
+
       if (password.value !== confirmPassword.value) {
         confirmPassword.setErrors({ passwordMatch: true });
         return { passwordMatch: true };
@@ -278,7 +278,7 @@ export class FormValidationUtil {
           }
         }
       }
-      
+
       return null;
     };
   }
@@ -291,21 +291,21 @@ export class FormValidationUtil {
       if (!control.value) {
         return null;
       }
-      
+
       if (!Array.isArray(control.value)) {
         return { arrayLength: { value: control.value, error: 'notArray' } };
       }
-      
+
       const length = control.value.length;
-      
+
       if (min !== undefined && length < min) {
         return { arrayLength: { value: control.value, min, actual: length, error: 'min' } };
       }
-      
+
       if (max !== undefined && length > max) {
         return { arrayLength: { value: control.value, max, actual: length, error: 'max' } };
       }
-      
+
       return null;
     };
   }
@@ -317,9 +317,9 @@ export class FormValidationUtil {
     if (!control.errors) {
       return '';
     }
-    
+
     const errors = control.errors;
-    
+
     if (errors['required']) {
       return `${fieldName}は必須です`;
     }
@@ -401,7 +401,7 @@ export class FormValidationUtil {
         return `${fieldName}は${arrayError.max}個以下で選択してください`;
       }
     }
-    
+
     return `${fieldName}に入力エラーがあります`;
   }
 
@@ -409,6 +409,6 @@ export class FormValidationUtil {
    * 日付フォーマットヘルパー
    */
   private static formatDate(date: Date): string {
-    return date.toLocaleDateString('ja-JP');
+    return date.toLocaleDateString(navigator.language || 'ja-JP');
   }
 }

@@ -42,6 +42,7 @@ import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
 import { UserService } from '../../services/user.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { ExtApiProviderEntity } from '../../models/models';
+import { TranslateModule } from '@ngx-translate/core';
 
 type InType = 'main' | 'thread';
 type InDtoSub = { message: string, fileList: FullPathFile[] };
@@ -54,7 +55,7 @@ type InDto = Record<InType, InDtoSub>;
     MatButtonModule, MatProgressSpinnerModule,
     MatExpansionModule, MatIconModule, MatCheckboxModule, MatBadgeModule, MatMenuModule, MatDividerModule, MatTooltipModule, MatRadioModule,
     MmTeamLogoComponent, DragDeltaDirective, UserMarkComponent, FileDropDirective, CursorPositionDirective,
-    AppMenuComponent
+    AppMenuComponent, TranslateModule
   ],
   templateUrl: './mattermost.component.html',
   styleUrl: './mattermost.component.scss'

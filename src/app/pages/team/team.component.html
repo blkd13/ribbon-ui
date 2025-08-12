@@ -1,16 +1,16 @@
 <div class="p-5">
     <div class="container">
-        <a class="flex cursor-pointer" (click)="back()"><mat-icon>home</mat-icon>ホームに戻る</a>
+        <a class="flex cursor-pointer" (click)="back()"><mat-icon>home</mat-icon>{{ 'BACK_TO_HOME' | translate }}</a>
         @if(team && team.projects && team.members){
 
         @if(editLabel){
         <!-- <h1 style="visibility:hidden">プロジェクト名</h1> -->
         <input [(ngModel)]="team.label" name="label" class="mb-5 mr-5" style="margin-top: 1.25em;font-size: 3.5em;"
-            placeholder="チーム名を入力してください" />
+            [placeholder]="'ENTER_TEAM_NAME' | translate" />
         <button mat-mini-fab color="primary">
             <mat-icon (click)="submitLabel()" class="cursor-pointer">check</mat-icon>
         </button>
-        <textarea [(ngModel)]="team.description" name="description" placeholder="説明を入力してください"></textarea>
+        <textarea [(ngModel)]="team.description" name="description" [placeholder]="'ENTER_DESCRIPTION' | translate"></textarea>
 
         } @else {
         <h1>{{team.label}}
@@ -23,7 +23,7 @@
         }
 
         @if(team.id!=='new-team'){
-        <h1>メンバー</h1>
+        <h1>{{ 'MEMBERS' | translate }}</h1>
         <!-- <h1>Projects</h1> -->
         <div class="recent-chats">
             @for(member of team.members;track $index){
@@ -32,10 +32,10 @@
                 <p>{{member.role}}：{{member.user.status}}</p>
             </button>
             }
-            <button class="panel chat-item" (click)="editMember()">メンバー追加</button>
+            <button class="panel chat-item" (click)="editMember()">{{ 'ADD_MEMBER' | translate }}</button>
         </div>
 
-        <h1>プロジェクト</h1>
+        <h1>{{ 'PROJECTS' | translate }}</h1>
         <!-- <h1>Projects</h1> -->
         <div class="recent-chats">
             @for(project of team.projects;track $index){
@@ -44,10 +44,10 @@
                     <h3>{{project.label}}</h3>
                     <p>{{project.description}}</p>
                 </div>
-                <p>最終利用: {{ project.updatedAt|relativeTime}}</p>
+                <p>{{ 'LAST_USED' | translate }}: {{ project.updatedAt|relativeTime}}</p>
             </button>
             }
-            <button class="panel chat-item" (click)="createProject()">新規作成</button>
+            <button class="panel chat-item" (click)="createProject()">{{ 'CREATE_NEW' | translate }}</button>
         </div>
 
         <button (click)="deleteTeam()" style="display: flex;
@@ -55,7 +55,7 @@
         margin-left: auto;
         margin-top: 100px;
         color: #660000;">
-            <mat-icon (click)="editLabel=true" class="cursor-pointer">delete</mat-icon>チームを削除する
+            <mat-icon (click)="editLabel=true" class="cursor-pointer">delete</mat-icon>{{ 'DELETE_TEAM' | translate }}
         </button>
 
         }

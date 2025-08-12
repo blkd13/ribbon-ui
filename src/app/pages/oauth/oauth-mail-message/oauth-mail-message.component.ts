@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
     selector: 'app-oauth-mail-message',
-    imports: [],
+    imports: [TranslateModule],
     templateUrl: './oauth-mail-message.component.html',
     styleUrl: './oauth-mail-message.component.scss'
 })

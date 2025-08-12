@@ -1,18 +1,18 @@
 <form [formGroup]="form" (ngSubmit)="registerProject()">
     <mat-form-field appearance="fill" class="full-width">
-        <mat-label>プロジェクト名</mat-label>
-        <input matInput type="text" placeholder="プロジェクトの名前を決めてください。" formControlName="projectLabel">
+        <mat-label>{{ 'PROJECT_NAME' | translate }}</mat-label>
+        <input matInput type="text" [placeholder]="'PROJECT_NAME_PLACEHOLDER' | translate" formControlName="projectLabel">
         @if (form.get('projectLabel')?.errors?.['required']) {
-        <mat-error>プロジェクト名は必須です</mat-error>
+        <mat-error>{{ 'PROJECT_NAME_REQUIRED' | translate }}</mat-error>
         }
     </mat-form-field>
 
     <mat-form-field>
-        <mat-label>共有範囲</mat-label>
+        <mat-label>{{ 'SHARING_SCOPE' | translate }}</mat-label>
         <mat-select formControlName="share" [disabled]="!!targetTeam">
-            <mat-option value="Alone">自分だけ</mat-option>
+            <mat-option value="Alone">{{ 'PRIVATE' | translate }}</mat-option>
             @if(teamWithoutAloneList.length>0){
-            <mat-option value="Team">チーム内</mat-option>
+            <mat-option value="Team">{{ 'TEAM_ONLY' | translate }}</mat-option>
             }
             <!-- <mat-option value="Login">ログインユーザー全員</mat-option>
             <mat-option value="Public">無制限（誰でも見られる）</mat-option> -->
@@ -20,23 +20,23 @@
     </mat-form-field>
 
     <mat-form-field>
-        <mat-label>チーム</mat-label>
+        <mat-label>{{ 'TEAM' | translate }}</mat-label>
         <mat-select formControlName="selectedTeamId" [disabled]="form.get('share')?.value !== 'Team' || !!targetTeam">
             @for(team of teamWithoutAloneList; track team.id){
             <mat-option [value]="team.id">{{team.label}}</mat-option>
             }
         </mat-select>
         @if (form.get('selectedTeamId')?.errors?.['required'] && form.get('share')?.value === 'Team') {
-        <mat-error>チームを選択してください</mat-error>
+        <mat-error>{{ 'SELECT_TEAM' | translate }}</mat-error>
         }
     </mat-form-field>
 
     <mat-form-field class="textarea-field">
-        <mat-label>補足</mat-label>
-        <textarea matInput type="text" placeholder="補足" formControlName="projectDescription"></textarea>
+        <mat-label>{{ 'NOTES' | translate }}</mat-label>
+        <textarea matInput type="text" [placeholder]="'NOTES' | translate" formControlName="projectDescription"></textarea>
     </mat-form-field>
 
-    <button type="submit" [disabled]="form.invalid || isLoading">登録</button>
+    <button type="submit" [disabled]="form.invalid || isLoading">{{ 'REGISTER' | translate }}</button>
 </form>
 
 <style>

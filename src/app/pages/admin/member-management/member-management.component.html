@@ -16,13 +16,13 @@
                 <div class="action-buttons">
                     <button mat-raised-button type="button" class="btn btn-sm btn-secondary" (click)="createDivision()"
                         [disabled]="!canCreateDivision()"
-                        [matTooltip]="!canCreateDivision() ? 'Division作成権限がありません' : ''">
+                        [matTooltip]="!canCreateDivision() ? ('NO_DIVISION_CREATE_PERMISSION' | translate) : ''">
                         <mat-icon>domain</mat-icon>
                         Create Division
                     </button>
                     <button mat-raised-button type="button" class="btn btn-sm btn-primary" (click)="openAddMemberForm()"
                         [disabled]="!selectedScope || !canAssignMembers()"
-                        [matTooltip]="!canAssignMembers() ? 'メンバー追加権限がありません' : ''">
+                        [matTooltip]="!canAssignMembers() ? ('NO_MEMBER_ADD_PERMISSION' | translate) : ''">
                         <mat-icon>person_add</mat-icon>
                         Add Member
                     </button>
@@ -135,7 +135,7 @@
                             </button>
                             } @else {
                             <button mat-icon-button class="mr-5" disabled
-                                [matTooltip]="member.userId === getCurrentUserId() ? '自分自身のロールは編集できません' : 'このメンバーを編集する権限がありません'">
+                                [matTooltip]="member.userId === getCurrentUserId() ? ('CANNOT_EDIT_OWN_ROLE' | translate) : ('NO_EDIT_MEMBER_PERMISSION' | translate)">
                                 <mat-icon>edit_off</mat-icon>
                             </button>
                             }
@@ -143,7 +143,7 @@
                             <!-- 削除ボタン - 自分自身は削除不可 -->
                             <button mat-icon-button color="warn"
                                 [matTooltip]="!canRemoveMember(member) ? 
-                                    (member.userId === getCurrentUserId() ? '自分自身は削除できません' : 'このメンバーを削除する権限がありません') : 'Remove'"
+                                    (member.userId === getCurrentUserId() ? ('CANNOT_DELETE_SELF' | translate) : ('NO_DELETE_MEMBER_PERMISSION' | translate)) : ('REMOVE' | translate)"
                                 (click)="removeMember(member); $event.stopPropagation()"
                                 [disabled]="!canRemoveMember(member) || isLoading">
                                 <mat-icon>{{ canRemoveMember(member) ? 'delete' : 'block' }}</mat-icon>
@@ -333,7 +333,7 @@
                     <!-- Info Message - 権限に関する説明 -->
                     <div class="info-message">
                         <mat-icon class="info-icon">info</mat-icon>
-                        <span>あなたが割り当て可能なロールのみが表示されています。自分より高い権限のロールは割り当てできません。</span>
+                        <span>{{ 'ASSIGNABLE_ROLES_ONLY_MESSAGE' | translate }}</span>
                     </div>
                 </div>
 
@@ -390,9 +390,9 @@
                         <mat-icon class="warning-icon">warning</mat-icon>
                         <span>
                             @if(selectedMember.userId === getCurrentUserId()) {
-                            自分自身のロールは編集できません。
+                            {{ 'CANNOT_EDIT_OWN_ROLE' | translate }}
                             } @else {
-                            このメンバーのロールを編集する権限がありません。
+                            {{ 'NO_EDIT_MEMBER_ROLE_PERMISSION' | translate }}
                             }
                         </span>
                     </div>

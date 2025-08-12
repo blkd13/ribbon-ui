@@ -10,7 +10,7 @@
       @if(vm.messageGroup.role==='system'){
       {{vm.messageGroup.role}}
       } @else if(vm.messageGroup.messages[0].cacheId){
-      キャッシュ
+      {{ 'CACHE' | translate }}
       } @else {
       <select [(ngModel)]="vm.messageGroup.role" (click)="stopPropagation($event)">
         <option value="user">user</option>
@@ -51,7 +51,7 @@
     <div class="flex-grow w-0 relative custom-scroll overflow-auto" [ngClass]="{'message-notediting': !message.editing}"
       [ngClass]="[vm.messageGroup.role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel', !message.editing ? 'message-notediting' : '']">
 
-      <!-- ファイル -->
+      <!-- File -->
       <!--
       @if(message.contents.length>1){
       <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
@@ -67,18 +67,18 @@
       }
       -->
 
-      <!-- メッセージ -->
+      <!-- Message -->
       @for(content of message.contents; track $index ; let cIndex=$index){
       @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket) : blankBracket;
       @if(content.type==='text'){
       <div class="chat-input" [hidden]="!message.editing">
         <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)" (blur)="onBlur($event)"
-          (load)="onLoad()" [ngStyle]="{height:height}" [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text"
-          (change)="onSubmit()"></textarea>
+          (load)="onLoad()" [ngStyle]="{height:height}" [placeholder]="'MESSAGE_INPUT_PLACEHOLDER' | translate"
+          [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
       </div>
       <div #textBodyElem>
         @if (['Waiting'].includes(message.status)) {
-        <div class="waiting-text">Waiting...</div>
+        <div class="waiting-text">{{ 'WAITING' | translate }}...</div>
         } @else if (message){
         <markdown #mdElem [hidden]="message.editing" katex mermaid clipboard (load)="onReady($event, 'onLoaded')"
           (ready)="onReady($event, 'onReady')" [data]="brackets.pre+content.text+brackets.post">
@@ -92,8 +92,8 @@
         <markdown katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post"></markdown>
       </div>
       } @else if(content.type==='file') {
-      <!-- text 以外はファイル -->
-      <!-- ファイル表示のグループ化 -->
+      <!-- Non-text content is file -->
+      <!-- File display grouping -->
       @if($index === 0 || message.contents[$index - 1].type !== content.type){
       <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
         @for(fileContent of getConsecutiveFiles(message.contents, $index); track fileContent.id){
@@ -102,7 +102,7 @@
         </app-doc-tag>
         }
       </div>
-      } @else {<!-- 最初の1個からループを掛けるのでここに来ることはない -->}
+      } @else {<!-- This should never be reached since we loop from the first one -->}
       } @else if(content.type==='tool') {
 
       <div class="inline-flex items-center flex-wrap gap-2">
@@ -125,13 +125,13 @@
           }
         </button>
         } @else {
-        <!-- TODO infoが無いのはおかしいのでこの判定は本来不用なはずだが、とりあえず今は暫定でこうしておく。なんかエラーの時にresultが独立して飛んできてしまっているのがいけないようではあるがなぜsresultが独立してしまったのかは分からない。 -->
+        <!-- TODO: It's strange that info is missing, so this check should be unnecessary, but for now it's a temporary fix. It seems that when there's an error, result comes independently, but I don't know why result became independent. -->
         <!-- {{toolCallSet|json}} -->
         }
         }
 
         <!-- @if(content.text; as info && info.isInteractive){
-        <button mat-icon-button (click)="toolExec($event, content)" title="実行">
+        <button mat-icon-button (click)="toolExec($event, content)" title="Execute">
           <mat-icon>{{content.meta.input?'refresh':'play_arrow'}}</mat-icon>
         </button>
         } -->
@@ -141,7 +141,7 @@
 
       @if(content.meta.groundingMetadata && content.meta.groundingMetadata.searchEntryPoint?.renderedContent){
       <div class="p-3 rounded-md quote-area">
-        参考リンク
+        {{ 'REFERENCE_LINKS' | translate }}
         <ol class="list-decimal pl-10 py-2">
           @for(chunk of content.meta.groundingMetadata.groundingChunks||[];track $index){
           @if(chunk.web){
@@ -170,40 +170,41 @@
       <div class="h-3"></div>
       }
 
-      } @else {<!-- text/error/file以外は無いのでここに来ることはない -->}
+      } @else {<!-- There are no other types besides text/error/file, so this should never be reached -->}
 
       }
 
       @if(isInteractive()){
       <div class="w-full">
         <div class="my-2">
-          このコマンドを実行してもよろしいですか？
+          {{ 'EXECUTE_COMMAND_CONFIRMATION' | translate }}
         </div>
         <div class="flex my-2 gap-6">
           <button class="w-56" mat-raised-button
-            (click)="toolExec($event, true, vm.messageGroup.messages.at(-1)?.contents?.at(-1))" title="実行">
+            (click)="toolExec($event, true, vm.messageGroup.messages.at(-1)?.contents?.at(-1))"
+            [title]="'EXECUTE' | translate">
             <mat-icon>play_arrow</mat-icon>
-            実行
+            {{ 'EXECUTE' | translate }}
           </button>
           <button class="w-56" mat-raised-button
-            (click)="toolExec($event, false, vm.messageGroup.messages.at(-1)?.contents?.at(-1))" title="キャンセル"
-            style="color: #000;background-color: #777;">
+            (click)="toolExec($event, false, vm.messageGroup.messages.at(-1)?.contents?.at(-1))"
+            [title]="'CANCEL' | translate" style="color: #000;background-color: #777;">
             <mat-icon>cancel</mat-icon>
-            キャンセル
+            {{ 'CANCEL' | translate }}
           </button>
         </div>
       </div>
       } @else {}
 
       @if(message.status==='Loading'){
-      <div class="waiting-text">Writting...</div>
+      <div class="waiting-text">{{ 'WRITING' | translate }}...</div>
       }
 
     </div>
   </div>
 
   <!-- Loading -->
-  <!-- アニメーションつけるかどうか [@fadeAnimation] -->
+  <!-- Whether to add animation [@fadeAnimation] -->
   <!-- 
   @if (['Waiting'].includes(message.status)) {
   <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10">
@@ -231,9 +232,9 @@
     [ngClass]="{'controller-bottom': position==='bottom', 'controller-bottom--hide': !exPanel.expanded && position==='bottom'}">
     <!-- style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"  -->
     @if(vm.messageGroup.type) {
-    <!-- 並列実行（バッチを想定） -->
+    <!-- Parallel execution (assuming batch) -->
     }@else if(vm.messageGroup.type==='Regenerated' && vm.messageGroup.messages.length>1) {
-    <!-- 再ラン -->
+    <!-- Re-run -->
     @for(message of vm.messageGroup.messages; track $index){
     {{$index}},
     }
@@ -241,27 +242,28 @@
     <!-- @if(messageGroup.type==='Single') { } -->
     }
 
-    <!-- Mermaidエラー修正ボタン -->
+    <!-- Mermaid error fix button -->
     @if(hasMermaidErrors){
-    <button mat-icon-button (click)="openMermaidFixDialog($event)" title="Mermaidエラーを修正" class="mermaid-error-btn"
-      [ngClass]="{running: isMermaidErrorFixing}">
+    <button mat-icon-button (click)="openMermaidFixDialog($event)" [title]="'FIX_MERMAID_ERROR' | translate"
+      class="mermaid-error-btn" [ngClass]="{running: isMermaidErrorFixing}">
       <mat-icon class="text-orange-500">error_outline</mat-icon>
     </button>
     }
-    <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）"
+    <button mat-icon-button (click)="downloadContent($event)" [title]="'DOWNLOAD_ZIP_CODE_BLOCKS' | translate"
       [ngStyle]="{visibility: vm.messageGroup.role==='assistant'?'visible':'hidden'}">
       <mat-icon>folder_zip</mat-icon>
     </button>
-    <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
+    <button mat-icon-button (click)="copyToClipboard($event)" [title]="'COPY_TO_CLIPBOARD' | translate">
       <mat-icon>content_copy</mat-icon>
     </button>
 
     @if(vm.messageGroup.role==='assistant') {
-    <button mat-icon-button (click)="onZoom($event)" title="拡大表示">
+    <button mat-icon-button (click)="onZoom($event)" [title]="'ZOOM_VIEW' | translate">
       <mat-icon>pan_zoom</mat-icon>
     </button>
     } @else {
-    <button mat-icon-button (click)="setEdit($event)" [title]="vm.messageGroup.messages[0].editing?'保存':'編集'"
+    <button mat-icon-button (click)="setEdit($event)"
+      [title]="vm.messageGroup.messages[0].editing ? ('SAVE' | translate) : ('EDIT' | translate)"
       [ngStyle]="{visibility: vm.messageGroup.messages[0].cacheId?'hidden':'visible'}">
       @if(vm.messageGroup.messages[0].editing){
       <mat-icon>check_circle</mat-icon>
@@ -274,16 +276,16 @@
     @if(vm.messageGroup.messages[0].cacheId || vm.messageGroup.role==='system'){
     <button mat-icon-button style="margin-right: 10px;visibility: hidden;"><mat-icon>close</mat-icon></button>
     } @else if(vm.messageGroup.role==='user'){
-    <button mat-icon-button (click)="remove($event)" title="削除" style="margin-right: 10px;">
+    <button mat-icon-button (click)="remove($event)" [title]="'DELETE' | translate" style="margin-right: 10px;">
       <mat-icon>close</mat-icon>
     </button>
     } @else if(vm.messageGroup.role==='assistant'){
     @if(['Waiting','Loading'].includes(vm.messageGroup.messages[mIndex].status)){
-    <button mat-icon-button (click)="cancel($event)" title="キャンセル" style="margin-right: 10px;">
+    <button mat-icon-button (click)="cancel($event)" [title]="'CANCEL' | translate" style="margin-right: 10px;">
       <mat-icon>cancel</mat-icon>
     </button>
     } @else {
-    <button mat-icon-button (click)="remove($event)" title="リトライ" style="margin-right: 10px;">
+    <button mat-icon-button (click)="remove($event)" [title]="'RETRY' | translate" style="margin-right: 10px;">
       <mat-icon>refresh</mat-icon>
     </button>
     }
@@ -291,7 +293,7 @@
 
     <!-- 'margin-right': position === 'bottom' ? '-6px' : '10px' -->
     @if(position==='bottom'){
-    <button mat-icon-button (click)="exPanel.close()" title="閉じる" style="margin-left: -17px"
+    <button mat-icon-button (click)="exPanel.close()" [title]="'CLOSE' | translate" style="margin-left: -17px"
       [ngStyle]="{visibility: vm.messageGroup.role==='assistant'?'visible':'hidden'}">
       <mat-icon>{{exPanel.opened ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}}</mat-icon>
     </button>

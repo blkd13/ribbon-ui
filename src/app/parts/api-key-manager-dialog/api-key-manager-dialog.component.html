@@ -1,20 +1,20 @@
 <div class="container max-w-4xl mx-auto" style="width: 72rem">
-    <h1 class="text-2xl mb-6">API鍵の管理</h1>
+    <h1 class="text-2xl mb-6">{{ 'API_KEY_MANAGEMENT' | translate }}</h1>
 
     <mat-card class="mb-6">
         <mat-card-header>
-            <mat-card-title>ribbon-uiのAPI鍵を作成する</mat-card-title>
+            <mat-card-title>{{ 'CREATE_APP_API_KEY' | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content style="padding-bottom: 0;">
             <form [formGroup]="apiLabelForm" (ngSubmit)="genAPIKey()" class="flex flex-col gap-4">
 
                 <div class="flex gap-4 items-center w-full">
                     <mat-form-field appearance="outline" class="w-0 flex-grow">
-                        <mat-label>ラベル</mat-label>
-                        <input matInput formControlName="label" placeholder="この鍵の用途を入力">
+                        <mat-label>{{ 'LABEL' | translate }}</mat-label>
+                        <input matInput formControlName="label" [placeholder]="'ENTER_KEY_PURPOSE' | translate">
                     </mat-form-field>
                     <button mat-raised-button color="primary" type="submit" [disabled]="!apiLabelForm.valid">
-                        作成
+                        {{ 'CREATE' | translate }}
                     </button>
                 </div>
                 <!--
@@ -30,12 +30,12 @@
     @if(apiProviderGroupedKeys.length > 0){
     <mat-card class="mb-6">
         <mat-card-header>
-            <mat-card-title>他システムのAPI鍵を登録する(登録時に暗号化されます)</mat-card-title>
+            <mat-card-title>{{ 'REGISTER_EXTERNAL_API_KEY' | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content style="padding-bottom: 0;">
             <form [formGroup]="apiKeyForm" (ngSubmit)="onSubmit()" class="flex gap-4 items-center">
                 <mat-form-field appearance="outline" class="w-80">
-                    <mat-label>プロバイダー</mat-label>
+                    <mat-label>{{ 'PROVIDER' | translate }}</mat-label>
                     <mat-select formControlName="provider">
                         @for(key of apiProviderGroupedKeys;track $index){
                         <mat-optgroup [label]="key">
@@ -55,18 +55,18 @@
                     </mat-form-field>
                     -->
                 <mat-form-field appearance="outline" class="w-0 flex-grow">
-                    <mat-label>API鍵</mat-label>
-                    <input matInput formControlName="key" [type]="hideKey ? 'password' : 'text'" placeholder="API鍵を入力">
+                    <mat-label>{{ 'API_KEY' | translate }}</mat-label>
+                    <input matInput formControlName="key" [type]="hideKey ? 'password' : 'text'" [placeholder]="'ENTER_API_KEY_PLACEHOLDER' | translate">
                     <button mat-icon-button matSuffix (click)="hideKey = !hideKey" type="button">
                         <mat-icon>{{hideKey ? 'visibility_off' : 'visibility'}}</mat-icon>
                     </button>
                 </mat-form-field>
                 <button mat-raised-button color="primary" type="submit" [disabled]="!apiKeyForm.valid">
-                    登録
+                    {{ 'REGISTER' | translate }}
                 </button>
             </form>
             <div>
-                API鍵発行ページ：
+                {{ 'API_KEY_ISSUANCE_PAGE' | translate }}
                 @for(providerGroup of apiProviderGroupedList|keyvalue;track $index){
                 @for(provider of providerGroup.value;track $index){
                 <a target="_blank" class="mr-2" [href]="provider.uriBase+provider.uriBaseAuth">{{provider.label}}</a>
@@ -79,29 +79,29 @@
 
     <mat-card>
         <mat-card-header>
-            <mat-card-title>登録済みAPI鍵一覧</mat-card-title>
+            <mat-card-title>{{ 'REGISTERED_API_KEY_LIST' | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content style="height: calc(100vh - 640px);" class="custom-scroll">
             <table mat-table [dataSource]="apiKeys" class="w-full">
                 <ng-container matColumnDef="provider">
-                    <th mat-header-cell *matHeaderCellDef>APIプロバイダー</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'API_PROVIDER' | translate }}</th>
                     <td mat-cell *matCellDef="let element">{{labelFormat(element)}}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="createdAt">
-                    <th mat-header-cell *matHeaderCellDef>登録日時</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'REGISTRATION_DATE' | translate }}</th>
                     <td mat-cell *matCellDef="let element">{{element.createdAt|date:'yyyy/MM/dd HH:mm:ss.SSS'}}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="updatedAt">
-                    <th mat-header-cell *matHeaderCellDef>最終更新</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'LAST_UPDATED' | translate }}</th>
                     <td mat-cell *matCellDef="let element">
-                        {{element.updatedAt ? (element.updatedAt|date:'yyyy/MM/dd HH:mm:ss.SSS') : '未使用'}}
+                        {{element.updatedAt ? (element.updatedAt|date:'yyyy/MM/dd HH:mm:ss.SSS') : ('UNUSED' | translate)}}
                     </td>
                 </ng-container>
 
                 <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef>削除</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'DELETE' | translate }}</th>
                     <td mat-cell *matCellDef="let element">
                         <button mat-icon-button (click)="deleteApiKey(element)">
                             <mat-icon class="text-red-300">delete</mat-icon>

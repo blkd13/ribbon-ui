@@ -1,7 +1,7 @@
 <div class="h-[80vh] w-[60vw] overflow-auto p-5">
     @if(isErrorRequest){
     <h1>Error</h1>
-    <h3>呼び出しSyntaxエラー</h3>
+    <h3>{{ 'SYNTAX_ERROR' | translate }}</h3>
     } @else {
 
     @if(toolCallSetList[index] && toolCallSetList[index].info; as info){
@@ -11,26 +11,26 @@
     @if(call.function.arguments){
     @let arguments = jsonParseToObject(call.function.arguments);
     @if(call.function.name.startsWith('mm_') && call.function.name.endsWith('_send_message')){
-    <!-- メッセージ送信用 -->
+    <!-- For message sending -->
     <div class="p-4 bg-gray-800 rounded-lg shadow-md">
-        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">送信先</div>
+        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">{{ 'DESTINATION' | translate }}</div>
         <div class="mb-4 pl-2 text-blue-400">
             {{arguments.channel_display_name}}
             <span class="text-gray-400 text-sm">({{arguments.channel_id}})</span>
         </div>
 
-        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">送信内容</div>
+        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">{{ 'MESSAGE_CONTENT' | translate }}</div>
         <div class="bg-gray-700 p-3 rounded border border-gray-600">
             <markdown clipboard [data]="arguments.message" class="prose prose-invert"></markdown>
         </div>
     </div>
 
     } @else if(call.function.name.startsWith('run_python_code')) {
-    <!-- コードインタープリター用 -->
+    <!-- For Code Interpreter -->
     <div>Python {{arguments.pythonVersion||'3.11'}}</div>
     @if(arguments.requirements && arguments.requirements.length>0){
     <div class="rounded-lg shadow-md mb-4">
-        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">requirements</div>
+        <div class="text-lg font-bold text-gray-200 mb-2 border-b border-gray-600 pb-1">{{ 'REQUIREMENTS' | translate }}</div>
         <pre class=""><code>{{arguments.requirements}}</code></pre>
     </div>
     }
@@ -46,15 +46,15 @@
     </mat-tab-group>
     <!-- <markdown clipboard [data]="'```json\n'+call.function.arguments+'\n```'"></markdown> -->
     } @else {
-    <!-- 通常 -->
-    <h3>arguments</h3>
+    <!-- Standard -->
+    <h3>{{ 'ARGUMENTS' | translate }}</h3>
     <markdown clipboard [data]="'```json\n'+call.function.arguments+'\n```'"></markdown>
     }
 
     @if(toolCallSetList[index].resultList.at(-1); as result){
     @if(result.content){
     <markdown>---</markdown>
-    <h3>result</h3>
+    <h3>{{ 'RESULT' | translate }}</h3>
     @if(['web_search','web_search_and_get_summary'].includes(call.function.name) && webSearchDto.items.length>0 &&
     !isErrorResponse){
     @if( ['MARKDOWN', 'TEXT', 'HTML','BODY'].includes(arguments.loadContentType)){
@@ -74,7 +74,7 @@
                 </div>
             </mat-expansion-panel-header>
             <div class="p-4 rounded-lg shadow-md">
-                リンク：<a [href]="item.link" [title]="item.link" target="_blank" class="text-blue-500 hover:underline">
+                {{ 'LINK' | translate }}：<a [href]="item.link" [title]="item.link" target="_blank" class="text-blue-500 hover:underline">
                     {{item.title}}
                 </a>
                 <div>
@@ -112,7 +112,7 @@
                 <img [src]="item.faviconUrl" class="w-4 h-4 inline-block mr-1" alt="" />
                 {{(item.title||'(no title)' | slice:0:20) + '...'}}
             </ng-template>
-            リンク： <h1 style="font-size:32px;display: inline-block;">
+            {{ 'LINK' | translate }}： <h1 style="font-size:32px;display: inline-block;">
                 <a [href]="item.url" [title]="item.url" target="_blank" class="hover:underline">{{item.title}}</a>
             </h1>
             @if(arguments.loadContentType==='MARKDOWN' || arguments.loadContentType==='TEXT'){
@@ -141,7 +141,7 @@
     }
 
     } @else {
-    <div>Loading...</div>
+    <div>{{ 'LOADING' | translate }}...</div>
     }
 
     }

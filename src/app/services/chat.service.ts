@@ -1,20 +1,21 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject, Subscriber, defer, finalize, first, forkJoin, from, map, switchMap, tap } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
 import { OpenAI } from 'openai';
 import { ChatCompletionCreateParamsStreaming } from 'openai/resources';
+import { BehaviorSubject, Observable, Subject, first, map, switchMap } from 'rxjs';
 
-import { CachedContent, ChatCompletionCreateParamsWithoutMessages, ChatCompletionStreamInDto, GenerateContentRequestForCache } from '../models/models';
-import { AuthService } from './auth.service';
-import { environment } from '../../environments/environment';
 import { v4 as uuidv4 } from 'uuid';
+import { environment } from '../../environments/environment';
+import { CachedContent, ChatCompletionCreateParamsWithoutMessages, ChatCompletionStreamInDto, GenerateContentRequestForCache } from '../models/models';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
 import { Utils } from '../utils';
-import { ToolCallPartCommand, ToolCallPartCommandBody, ToolCallService } from './tool-call.service';
+import { AuthService } from './auth.service';
 import { AIProviderType } from './model-manager.service';
+import { ToolCallPartCommand } from './tool-call.service';
 
 // 新しいチャットサービスのインポート
 import { ChatCoordinationService } from './chat/chat-coordination.service';
+import { LoggerService } from './logger';
 
 export interface ChatInputArea {
   role: OpenAI.ChatCompletionRole;
@@ -53,12 +54,14 @@ export type LlmModel = {
  */
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  
+
   // 新しいチャットサービスへの参照（段階的移行用）
   private readonly newChatService = inject(ChatCoordinationService);
-  
+
   // 移行フラグ（新しいサービスを使用するかどうか）
   private readonly USE_NEW_SERVICES = environment.useNewChatServices ?? false;
+
+  private readonly logger = inject(LoggerService);
 
   // /**
   //  * gemini は 1,000 [文字] あたりの料金
@@ -146,25 +149,26 @@ export class ChatService {
   // ];
   // modelMap: { [modelId: string]: LlmModel } = Object.fromEntries(this.modelList.map(model => [model.id, model]));
 
+  defaultSystemPrompt = '';
   // defaultSystemPrompt = 'AI アシスタント';
-  defaultSystemPrompt = Utils.trimLines(`
-    AI アシスタント
+  // defaultSystemPrompt = Utils.trimLines(`
+  //   AI アシスタント
 
 
-    ## 基本情報
-    - ユーザー名: \${user_name}
-    - 現在の日時: \${current_datetime}
+  //   ## 基本情報
+  //   - ユーザー名: \${user_name}
+  //   - 現在の日時: \${current_datetime}
 
 
-    ## 出力フォーマット
+  //   ## 出力フォーマット
 
-    特に指示がない限り以下のフォーマットで出力してください。
+  //   特に指示がない限り以下のフォーマットで出力してください。
 
-    - markdown形式
-    - ファイル出力する際はブロックの先頭にファイル名をフルパスで埋め込んでください（例：\`\`\`typescript src/app/filename.ts\n...\n\`\`\` ）
-    - 数式を書く際はインラインのLatexで書いて下さい（例：\$...\$ or \$\$...\$\$）。
-    - htmlを書く際は、コードブロックのキーワードはxmlではなく、htmlとしてください。svgの時も同様にsvgとしてください。
-  `);
+  //   - markdown形式
+  //   - ファイル出力する際はブロックの先頭にファイル名をフルパスで埋め込んでください（例：\`\`\`typescript src/app/filename.ts\n...\n\`\`\` ）
+  //   - 数式を書く際はインラインのLatexで書いて下さい（例：\$...\$ or \$\$...\$\$）。
+  //   - htmlを書く際は、コードブロックのキーワードはxmlではなく、htmlとしてください。svgの時も同様にsvgとしてください。
+  // `);
 
   protected connectionId!: string;
 
@@ -244,7 +248,7 @@ export class ChatService {
     if (this.USE_NEW_SERVICES) {
       return this.newChatService.getObserver(messageId);
     }
-    
+
     // 既存の実装
     const streamIdList = this.messageIdStreamIdMap[messageId];
     if (streamIdList) {
@@ -266,7 +270,7 @@ export class ChatService {
   private open(flag: boolean): Observable<string> {
     return new Observable<string>((observer) => {
       if (!flag) {
-        console.log('Already exists stream');
+        this.logger.debug('Already exists stream');
         observer.next(this.connectionId);
         observer.complete();
       } else {
@@ -281,10 +285,10 @@ export class ChatService {
         xhr.onreadystatechange = () => {
           if (xhr.readyState === XMLHttpRequest.OPENED) {
             // onopen のロジック
-            console.log('Connected on open');
+            this.logger.debug('Connected on open');
           } else if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
             // ヘッダー受信時のロジック
-            console.log('Connected on headers received');
+            this.logger.debug('Connected on headers received');
             observer.next(this.connectionId);
             observer.complete();
           } else if (xhr.readyState === XMLHttpRequest.LOADING) {
@@ -301,8 +305,8 @@ export class ChatService {
                       this.textMap[data.streamId] += data.content;
                     } catch (e) {
                       // json parse error. エラー吐いてとりあえず無視
-                      console.log(line);
-                      console.error(e);
+                      this.logger.debug(line);
+                      this.logger.error(e);
                     }
                   } else if (line.startsWith('[DONE] ')) {
 
@@ -313,7 +317,7 @@ export class ChatService {
                     const streamId = lineSplit[1];
 
                     // // ログ出力
-                    // console.log(this.textMap[streamId]);
+                    // this.logger.debug(this.textMap[streamId]);
 
                     // 終了通知
                     this.subjectMap[streamId].complete();
@@ -336,7 +340,7 @@ export class ChatService {
                     // 空行の場合は無視
                   } else {
                     // その他のメッセージ受信時
-                    console.log(line);
+                    this.logger.debug(line);
                   }
                 } else if (line.startsWith('error: ')) {
                   line = line.replace(/^error: /gm, '');
@@ -348,7 +352,7 @@ export class ChatService {
                   const streamId = lineSplit[0];
 
                   line = line.substring(streamId.length + 1);
-                  console.error(line);
+                  this.logger.error(line);
                   // エラー通知
                   this.subjectMap[streamId].error(line);
 
@@ -369,7 +373,7 @@ export class ChatService {
                   }
                 } else if (line) {
                   // その他のメッセージ受信時
-                  console.log(line);
+                  this.logger.debug(line);
                 } else {
                   // 空行の場合は無視
                 }
@@ -377,10 +381,10 @@ export class ChatService {
               cursor = xhr.responseText.length;
             } else {
               // \n\n で終わっていない場合は読み取り途中のためカーソルをそのままにしておく
-              console.log('not end with \\n\\n');
+              this.logger.debug('not end with \\n\\n');
             }
           } else if (xhr.readyState === XMLHttpRequest.DONE) {
-            console.log('Connected on done');
+            this.logger.debug('Connected on done');
             observer.next(this.connectionId);
             observer.complete();
             // リクエスト完了時のロジック（onerror または oncomplete）
@@ -392,7 +396,7 @@ export class ChatService {
               }
             });
           } else {
-            console.log('Connected on else');
+            this.logger.debug('Connected on else');
           }
         };
         xhr.send();

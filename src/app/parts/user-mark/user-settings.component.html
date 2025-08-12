@@ -1,5 +1,14 @@
-<div style="position: absolute;top: 0; right: 5px;z-index: 20;line-height: 0;">
-    <button mat-icon-button color="primary" [matMenuTriggerFor]="userMenu">
+<div [matMenuTriggerFor]="userMenu" class="fixed cursor-pointer" style="
+    bottom: 0;
+    width: 209px;
+    text-align: center;
+    height: 50px;
+    background: var(--background-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    ">
+    <button mat-icon-button color="primary">
         <mat-icon>circle</mat-icon>
     </button>
     <mat-menu #userMenu="matMenu">
@@ -22,4 +31,5 @@
             <span>{{ 'LOGOUT' | translate }}</span>
         </button>
     </mat-menu>
+    {{g.info.user.email}}
 </div>

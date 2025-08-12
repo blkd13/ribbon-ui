@@ -1,13 +1,14 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatTableModule } from '@angular/material/table';
+import { Component, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { AnnouncementsService } from '../../../services/announcements.service';
+import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTableModule } from '@angular/material/table';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { Announcement } from '../../../models/announcement';
+import { AnnouncementsService } from '../../../services/announcements.service';
 import { AnnouncementsEditComponent } from '../announcements-edit/announcements-edit.component';
 
 @Component({
@@ -20,7 +21,8 @@ import { AnnouncementsEditComponent } from '../announcements-edit/announcements-
     MatIconModule,
     MatMenuModule,
     MatChipsModule,
-    MatDialogModule
+    MatDialogModule,
+    TranslateModule
   ],
   templateUrl: './announcements-list.component.html',
   styleUrl: './announcements-list.component.scss'
@@ -31,8 +33,9 @@ export class AnnouncementsListComponent implements OnInit {
 
   constructor(
     private announcementsService: AnnouncementsService,
-    private dialog: MatDialog
-  ) {}
+    private dialog: MatDialog,
+    private translate: TranslateService
+  ) { }
 
   ngOnInit(): void {
     this.loadAnnouncements();
@@ -77,7 +80,7 @@ export class AnnouncementsListComponent implements OnInit {
   }
 
   deleteAnnouncement(announcement: Announcement): void {
-    if (confirm('このお知らせを削除してもよろしいですか？')) {
+    if (confirm(this.translate.instant('CONFIRM_DELETE_ANNOUNCEMENT'))) {
       this.announcementsService.deleteAnnouncement(announcement.id).subscribe(
         () => {
           this.loadAnnouncements();

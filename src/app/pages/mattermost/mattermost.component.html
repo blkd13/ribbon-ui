@@ -62,7 +62,7 @@
                         </button>
                         <mat-menu #onEditTimeline="matMenu">
                             <button mat-menu-item (click)="editTimeline(timeline)">
-                                <mat-icon>edit</mat-icon>編集
+                                <mat-icon>edit</mat-icon>{{ 'EDIT' | translate }}
                             </button>
                         </mat-menu>
                     </div>
@@ -70,7 +70,7 @@
                     @if(mmChannelMas[channel.channelId]){
                     <div class="relative flex channel-container"
                         title="[{{mmTeamMas[mmChannelMas[channel.channelId].team_id].display_name}}] {{mmChannelMas[channel.channelId].display_name||mmChannelMas[channel.channelId].name}}">
-                        <button mat-icon-button matTooltip="ミュート" matTooltipPosition="left"
+                        <button mat-icon-button [matTooltip]="'MUTE' | translate" matTooltipPosition="left"
                             (click)="setMute(channel, !channel.isMute)"
                             [ngStyle]="{visibility: (selectedTimeline?.id===timeline.id && radioSelectedId===timeline.id)?'visible':'hidden'}">
 
@@ -107,7 +107,7 @@
             </div>
             }
 
-            <button class="m-5" mat-raised-button (click)="createTimeline()">タイムラインを作る</button>
+            <button class="m-5" mat-raised-button (click)="createTimeline()">{{ 'CREATE_TIMELINE' | translate }}</button>
 
             } @else {
 
@@ -125,7 +125,7 @@
 
             @if(mmCate.channel_ids.length>directChannelViewCount){
             <button class="m-5" mat-raised-button
-                (click)="directChannelViewCount=directChannelViewCount+directChannelViewCountDelta">更に表示</button>
+                (click)="directChannelViewCount=directChannelViewCount+directChannelViewCountDelta">{{ 'SHOW_MORE' | translate }}</button>
             }
 
             }
@@ -146,12 +146,12 @@
             (filesDropped)="onFilesDropped('main', selectedChannelIds[0], $event)">
             <div class="absolute right-14 top-2 z-10">
                 <button mat-raised-button (click)="sendToAI(undefined)">
-                    <mat-icon>summarize</mat-icon>AI要約
+                    <mat-icon>summarize</mat-icon>{{ 'AI_SUMMARY' | translate }}
                 </button>
             </div>
             <div class="custom-scroll h-full w-full relative" #scroll (scroll)="onScroll($event)">
                 @if(viewPostCount>viewPostCountDelta){
-                <button type="button" class="scroll-to-bottom-button" (click)="scrollToBottom(true)">下端にスクロール</button>
+                <button type="button" class="scroll-to-bottom-button" (click)="scrollToBottom(true)">{{ 'SCROLL_TO_BOTTOM' | translate }}</button>
                 }
                 @for(postGroup of mmGroupedFilteredLimitedPostList;track $index){
 
@@ -234,7 +234,7 @@
             </div>
             <div class="absolute right-14 top-2">
                 <button mat-raised-button (click)="sendToAI(mmThread)">
-                    <mat-icon>summarize</mat-icon>AI要約
+                    <mat-icon>summarize</mat-icon>{{ 'AI_SUMMARY' | translate }}
                 </button>
             </div>
             <div class="custom-scroll" #rScroll>
@@ -345,7 +345,7 @@
         </button>
         <mat-menu #threadMenu="matMenu">
             <button mat-menu-item [matMenuTriggerFor]="sendToProjesTemplate">
-                <mat-icon>move_item</mat-icon>タイムラインにセットする
+                <mat-icon>move_item</mat-icon>{{ 'SET_TO_TIMELINE' | translate }}
             </button>
         </mat-menu>
         <mat-menu #sendToProjesTemplate="matMenu">
@@ -356,7 +356,7 @@
             }
             <mat-divider></mat-divider>
             <button mat-menu-item (click)="createTimeline(mmChannelMas[channelId])">
-                <mat-icon>add</mat-icon>新規タイムライン
+                <mat-icon>add</mat-icon>{{ 'NEW_TIMELINE' | translate }}
             </button>
         </mat-menu>
     </a>
@@ -398,18 +398,18 @@
                 src="/api{{apiMattermostService.baseUrl}}/emoji/x5ckjocskfy7ppc39kus45qu4a/image">
             <!-- <button (click)="emojiPicker()">Emoji</button> -->
             @if(selectedTimeline && selectedTimeline.channels && selectedTimeline.channels.length>1){
-            <button mat-icon-button color="primary" class="cursor-pointer" matTooltip="1チャネル表示にする"
+            <button mat-icon-button color="primary" class="cursor-pointer" [matTooltip]="'SHOW_SINGLE_CHANNEL' | translate"
                 (click)="setRadioSelectedId(radioSelectedId===selectedTimeline.channelIdMas[postGroup[0].channel_id].id ? selectedTimeline.id : selectedTimeline.channelIdMas[postGroup[0].channel_id].id )">
                 <mat-icon>filter_alt{{selectedChannelIds.length===1?'_off':''}}</mat-icon>
             </button>
             }
             <!-- mattermostウィンドウを作って毎回そこに向くようにリンクを貼る -->
-            <a target="mattermost" color="primary" mat-icon-button matTooltip="mattermostで開く"
+            <a target="mattermost" color="primary" mat-icon-button [matTooltip]="'OPEN_IN_MATTERMOST' | translate"
                 href="{{mattermostOriginUri}}/{{mmTeamMas[mmChannelMas[postGroup[0].channel_id].team_id].name}}/pl/{{postGroup[0].id}}">
                 <mat-icon>arrow_outward</mat-icon>
             </a>
             @if(!isThread){
-            <button mat-icon-button color="primary" (click)="viewThread(postGroup[0])" matTooltip="返信">
+            <button mat-icon-button color="primary" (click)="viewThread(postGroup[0])" [matTooltip]="'REPLY' | translate">
                 <mat-icon>reply</mat-icon>
             </button>
             }
@@ -419,22 +419,22 @@
             <mat-menu #threadMenu="matMenu">
                 <button mat-menu-item (click)="viewThread(postGroup[0])">
                     <mat-icon>reply</mat-icon>
-                    <span>返信</span>
+                    <span>{{ 'REPLY' | translate }}</span>
                 </button>
                 <button mat-menu-item
                     (click)="copyToClipBoard(mattermostOriginUri+'/'+mmTeamMas[mmChannelMas[postGroup[0].channel_id].team_id].name+'/pl/'+postGroup[0].id)">
                     <mat-icon>link</mat-icon>
-                    <span>リンクをコピー</span>
+                    <span>{{ 'COPY_LINK' | translate }}</span>
                 </button>
                 <button mat-menu-item (click)="copyToClipBoard(post.message)">
                     <mat-icon>content_copy</mat-icon>
-                    <span>メッセージをコピー</span>
+                    <span>{{ 'COPY_MESSAGE' | translate }}</span>
                 </button>
                 @if(post.user_id===mmUser.providerUserId){
                 <mat-divider></mat-divider>
                 <button mat-menu-item (click)="postDelete(post)" style="color: #ff9999;">
                     <mat-icon style="color: #ff9999;">delete</mat-icon>
-                    <span>削除</span>
+                    <span>{{ 'DELETE' | translate }}</span>
                 </button>
                 }
             </mat-menu>

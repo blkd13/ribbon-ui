@@ -1,7 +1,10 @@
+import { LoggerService } from '../services/logger';
+
 /**
  * Utilsクラスは、共通のユーティリティメソッドを提供するためのクラスです。
  */
 export class Utils {
+    private static logger = new LoggerService();
 
     /**
      * 文字列を kebab-case ケースに変換する関数
@@ -235,7 +238,7 @@ export class Utils {
                     // 既に見たオブジェクトは再帰参照なのでidに置換する
                     // idが無い場合はundefinedになると思う。。。
                     if (Array.isArray(value)) {
-                        console.log(key, value);
+                        Utils.logger.debug(key, value);
                         return value;
                     } else {
                         return { id: value.id };
@@ -245,7 +248,7 @@ export class Utils {
             } else { }
             return value;
         });
-        console.log(jsonString);
+        Utils.logger.debug(jsonString);
         return jsonString;
     }
 
@@ -310,8 +313,8 @@ export class Utils {
                     if (isSilent) {
                         // silent
                     } else {
-                        console.log(e2);
-                        console.log(`[${str}]`);
+                        Utils.logger.error(e2);
+                        Utils.logger.error(`[${str}]`);
                     }
                     throw e2;
                 }
@@ -543,7 +546,7 @@ export class Utils {
                     const obj = Utils.jsonToMarkdown0(value, layer + 1);
                     if (obj.hasBlock) {
                         hasBlock = true;
-                        console.log(`array: ${key} ${list.length}`);
+                        Utils.logger.debug(`array: ${key} ${list.length}`);
                         list.push({ layer, type: 'object', md: `${key}` });
                     } else {
                         list.push({ layer, type: 'array', md: `${key}` });

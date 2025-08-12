@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { GService } from './g.service';
-import { ScopeInfo, ScopeType } from './model-manager.service';
 import { UserRoleType } from '../models/models';
+import { GService } from './g.service';
+import { ScopeType } from './model-manager.service';
 
 export interface UserRoleContext {
   userId: string;
@@ -330,12 +330,12 @@ export class UserRolePermissionService {
    */
   generatePermissionErrorMessage(action: string, reason: string): string {
     const messages: Record<string, string> = {
-      'self_edit': '自分自身のロールは変更できません',
-      'insufficient_authority': 'この操作を実行する権限がありません',
-      'target_higher_authority': '自分より高い権限を持つユーザーは管理できません',
-      'target_same_authority': '同等の権限を持つユーザーは管理できません',
-      'role_not_assignable': 'このロールを割り当てる権限がありません',
-      'division_not_managed': 'このDivisionを管理する権限がありません'
+      self_edit: '自分自身のロールは変更できません',
+      insufficient_authority: 'この操作を実行する権限がありません',
+      target_higher_authority: '自分より高い権限を持つユーザーは管理できません',
+      target_same_authority: '同等の権限を持つユーザーは管理できません',
+      role_not_assignable: 'このロールを割り当てる権限がありません',
+      division_not_managed: 'このDivisionを管理する権限がありません'
     };
 
     return messages[reason] || `${action}を実行する権限がありません`;

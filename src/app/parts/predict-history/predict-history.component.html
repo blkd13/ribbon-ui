@@ -1,16 +1,16 @@
 <div class="flex flex-col h-full relative w-full">
     <p>{{member?.name}}</p>
     <div class="monthly-summary mb-5">
-        <h1>月次集計</h1>
+        <h1>{{ 'MONTHLY_SUMMARY' | translate }}</h1>
         <div class="monthly-scroll-container">
             <table>
                 <thead class="sticky-header">
                     <tr>
-                        <th>月</th>
-                        <th>総コスト[円]</th>
-                        <th>総入力トークン</th>
-                        <th>総出力トークン</th>
-                        <th>利用回数</th>
+                        <th>{{ 'MONTH' | translate }}</th>
+                        <th>{{ 'TOTAL_COST_YEN' | translate }}</th>
+                        <th>{{ 'TOTAL_INPUT_TOKENS' | translate }}</th>
+                        <th>{{ 'TOTAL_OUTPUT_TOKENS' | translate }}</th>
+                        <th>{{ 'USAGE_COUNT' | translate }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -29,30 +29,30 @@
     </div>
     <div class="history-container flex-grow">
         <div class="history-header">
-            <h1>詳細履歴</h1>
+            <h1>{{ 'DETAILED_HISTORY' | translate }}</h1>
             <div class="total-count">
-                総件数: {{totalCount}} 件
+                {{ 'TOTAL_COUNT' | translate }}: {{totalCount}} {{ 'ITEMS' | translate }}
             </div>
         </div>
         <div class="history-note">
-            <small>※ 行をクリックすると詳細データを表示します</small>
+            <small>{{ 'CLICK_ROW_FOR_DETAILS' | translate }}</small>
         </div>
         <table class="history-table">
             <tr>
                 <th>No.</th>
-                <th>時刻</th>
-                <th>モデル</th>
-                <th>コスト[円]</th>
-                <th>入力</th>
-                <th>出力</th>
-                <th>ステータス</th>
+                <th>{{ 'TIME' | translate }}</th>
+                <th>{{ 'MODEL' | translate }}</th>
+                <th>{{ 'COST_YEN' | translate }}</th>
+                <th>{{ 'INPUT' | translate }}</th>
+                <th>{{ 'OUTPUT' | translate }}</th>
+                <th>{{ 'STATUS' | translate }}</th>
             </tr>
             <tbody>
                 @for(predict of predictHistory;track $index){
                 <tr class="clickable-row" (click)="openPredictDetail(predict)"
-                    [title]="'クリックして詳細を表示: ' + predict.idempotency_key">
+                    [title]="('CLICK_FOR_DETAILS' | translate) + ': ' + predict.idempotency_key">
                     <td style="text-align: right;">{{currentPage * pageSize + $index + 1}}</td>
-                    <td>{{predict.created_at|date:'YYYY-MM-dd HH:mm:ss'}}</td>
+                    <td>{{predict.created_at|date:'yyyy-MM-dd HH:mm:ss'}}</td>
                     <td>{{predict.model}}</td>
                     <td style="text-align: right;">{{predict.cost*150|number:'0.2-2'}}</td>
                     <td style="text-align: right;">{{predict.req_token|number}}</td>
@@ -72,13 +72,13 @@
                     [pageIndex]="currentPage" (page)="onPageChange($event)" showFirstLastButtons>
                 </mat-paginator>
                 <div class="page-jump-controls">
-                    <label for="pageInput">ページ移動:</label>
+                    <label for="pageInput">{{ 'PAGE_NAVIGATION' | translate }}:</label>
                     <input id="pageInput" type="number" [(ngModel)]="targetPage" 
                            [min]="1" [max]="totalPages" 
                            (keyup.enter)="goToPage()" 
                            class="page-input">
                     <span class="page-total">/ {{totalPages}}</span>
-                    <button mat-button (click)="goToPage()" class="go-button">移動</button>
+                    <button mat-button (click)="goToPage()" class="go-button">{{ 'GO' | translate }}</button>
                 </div>
             </div>
         </div>

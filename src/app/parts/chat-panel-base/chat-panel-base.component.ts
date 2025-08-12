@@ -1,34 +1,32 @@
+import { animate, style, transition, trigger } from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, OnInit, ViewChild, ViewEncapsulation, computed, effect, inject, input, output, viewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnInit, computed, effect, inject, input, output, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { animate, style, transition, trigger } from '@angular/animations';
-import { Observable, of, tap } from 'rxjs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import OpenAI from 'openai';
+import { Observable, of, tap } from 'rxjs';
 
-import JSZip from 'jszip'; // JSZipのインポート
 import { saveAs } from 'file-saver'; // Blobファイルのダウンロードのためのライブラリ
+import JSZip from 'jszip'; // JSZipのインポート
 
-import { MessageService } from './../../services/project.service';
-import { ChatService } from '../../services/chat.service';
-import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
-import { ContentPart, ContentPartType, MessageForView, MessageGroupForView, Project, Thread } from '../../models/project-models';
-import { Utils } from '../../utils';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
-import { ToolCallPart, ToolCallPartBody, ToolCallPartCommand, ToolCallPartCommandBody, ToolCallPartInfo, ToolCallPartType, ToolCallSet } from '../../services/tool-call.service';
-import { MatDialog } from '@angular/material/dialog';
-import { MatDialogModule } from '@angular/material/dialog';
-import { ToolCallCallResultDialogComponent } from '../tool-call-call-result-dialog/tool-call-call-result-dialog.component';
-import { MatTabsModule } from '@angular/material/tabs';
-import { UserService } from '../../services/user.service';
-import { MarkdownService } from 'ngx-markdown';
-import { ChatPanelZoomDialogComponent } from '../chat-panel-zoom-dialog/chat-panel-zoom-dialog.component';
+import { ContentPart, ContentPartType, MessageForView, MessageGroupForView, Thread } from '../../models/project-models';
+import { ChatService } from '../../services/chat.service';
+import { LoggerService } from '../../services/logger';
 import { MermaidValidatorService } from '../../services/mermaid-validator.service';
+import { ToolCallPartCommand, ToolCallPartType, ToolCallSet } from '../../services/tool-call.service';
+import { UserService } from '../../services/user.service';
+import { Utils } from '../../utils';
+import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
+import { ChatPanelZoomDialogComponent } from '../chat-panel-zoom-dialog/chat-panel-zoom-dialog.component';
+import { ToolCallCallResultDialogComponent } from '../tool-call-call-result-dialog/tool-call-call-result-dialog.component';
+import { MessageService } from './../../services/project.service';
 
 
 @Component({
@@ -79,35 +77,6 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly layout = input.required<'flex' | 'grid'>();
 
-  mIndex = 0;
-  message!: MessageForView;
-  beforeScrollTop = -1;
-  autoscroll = false;
-  beforeText = '';
-  isShowTool: boolean[] = [];
-
-  readonly effectBitCounter = effect(() => {
-    this.bitCounter();
-    this.setMessageIndex(this.mIndex); // これが無いと復旧したときのmessageの実体が反映しない
-    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as OpenAI.ChatCompletionContentPartText);
-    if (this.beforeText === content?.text) {
-      // 変更なければ何もしない
-    } else {
-      // 変更あればスクロール
-      setTimeout(() => this.scroll(), 1);
-      this.beforeText = content?.text;
-      this.cdr.detectChanges();
-    }
-  });
-
-  readonly viewModel = computed(() => {
-    // console.log('viewModel');
-    return ({
-      messageGroup: this.messageGroup(),
-      thread: this.thread()
-    });
-  });
-
   readonly editEmitter = output<MessageGroupForView>({ alias: 'edit' });
 
   readonly removeEmitter = output<MessageGroupForView>({ alias: 'remove' });
@@ -124,68 +93,54 @@ export class ChatPanelBaseComponent implements OnInit {
 
   readonly expandedEmitter = output<boolean>({ alias: 'expanded' });
 
-  readonly readyEmitter = output<boolean>({ alias: 'ready' });
+  readonly readyEmitter = output<boolean>({ alias: 'ready' }); mIndex = 0;
+
+  readonly userService: UserService = inject(UserService);
+  readonly chatService: ChatService = inject(ChatService);
+  readonly messageService: MessageService = inject(MessageService);
+  readonly mermaidValidator: MermaidValidatorService = inject(MermaidValidatorService);
+  readonly logger: LoggerService = inject(LoggerService);
+  readonly snackBar: MatSnackBar = inject(MatSnackBar);
+  readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
+  readonly dialog: MatDialog = inject(MatDialog);
+
+  readonly effectBitCounter = effect(() => {
+    this.bitCounter();
+    this.setMessageIndex(this.mIndex); // これが無いと復旧したときのmessageの実体が反映しない
+    const content = (this.messageGroup().messages[0].contents.find(content => content.type === 'text') as OpenAI.ChatCompletionContentPartText);
+    if (this.beforeText === content?.text) {
+      // 変更なければ何もしない
+    } else {
+      // 変更あればスクロール
+      setTimeout(() => this.scroll(), 1);
+      this.beforeText = content?.text;
+      this.cdr.detectChanges();
+    }
+  });
+
+  readonly viewModel = computed(() => {
+    // this.logger.debug('viewModel');
+    return ({
+      messageGroup: this.messageGroup(),
+      thread: this.thread()
+    });
+  });
+
+  // Mermaidエラー状態を管理
+  mermaidErrors: Array<{ code: string; error: string; startIndex: number; endIndex: number }> = [];
+  hasMermaidErrors: boolean = false;
+
+  message!: MessageForView;
+  beforeScrollTop = -1;
+  autoscroll = false;
+  beforeText = '';
+  isShowTool: boolean[] = [];
 
   // Jsonの場合は```jsonで囲むための文字列
   bracketsList: { pre: '' | '```json\n', post: '' | '\n```' }[][] = [];
   blankBracket: { pre: '' | '```json\n', post: '' | '\n```' } = { pre: '', post: '' };
 
   isLoading = false;
-
-  isInteractive(): boolean {
-    // TODO ここは遅くなる元なのであってはならない。
-    let flag = false;
-    this.messageGroup().messages
-      .map(message => message.contents.filter(content => content.type === 'tool'))
-      .forEach(contents => {
-        if (contents.length === 0) return;
-        try {
-          const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCallSet[];
-          flag = flag || !!toolCallList.find(toolCall => toolCall.info.isInteractive && toolCall.commandList.length === 0 && !this.executedToolCallIdSet.has(toolCall.toolCallId));
-        } catch (err) {
-          // JSON parse失敗したら無視
-          console.log(contents[contents.length - 1].text);
-          console.log('JSON parse error', err);
-        }
-      });
-    // console.log(flag);
-    return flag;
-  }
-
-  executedToolCallIdSet: Set<string> = new Set<string>();
-  toolExec($event: MouseEvent, flag: boolean, content?: ContentPart): void {
-    $event.stopImmediatePropagation();
-    $event.preventDefault();
-    if (content && content.type === 'tool') {
-      try {
-        const toolCallPartCommandList = (JSON.parse(content.text || '[]') as ToolCallSet[])
-          .filter(tc => tc.info && tc.info.isInteractive && !this.executedToolCallIdSet.has(tc.toolCallId))
-          .map(tc => ({ type: ToolCallPartType.COMMAND, body: { command: flag ? 'execute' : 'cancel' }, toolCallId: tc.toolCallId })) as ToolCallPartCommand[];
-        // 実行/キャンセルに関わらず、指示済みのものはリストに追加
-        toolCallPartCommandList.forEach(tc => this.executedToolCallIdSet.add(tc.toolCallId));
-        this.toolExecEmitter.emit({ contentPart: content, toolCallPartCommandList });
-      } catch (err) {
-        console.log('toolExec error', err);
-      }
-    } else { }
-  }
-
-  jsonParseToArray(text: string): any[] {
-    const obj = JSON.parse(text || '[]') as any[];
-    return Array.isArray(obj) ? obj : [];
-  }
-
-  readonly userService: UserService = inject(UserService);
-  readonly chatService: ChatService = inject(ChatService);
-  readonly messageService: MessageService = inject(MessageService);
-  readonly mermaidValidator: MermaidValidatorService = inject(MermaidValidatorService);
-  readonly snackBar: MatSnackBar = inject(MatSnackBar);
-  readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
-  readonly dialog: MatDialog = inject(MatDialog);
-
-  // Mermaidエラー状態を管理
-  mermaidErrors: Array<{ code: string; error: string; startIndex: number; endIndex: number }> = [];
-  hasMermaidErrors: boolean = false;
 
   constructor() {
     // TODO シグナル式のやり方をとりあえず実装してみた。汚い気がするので後で直したい。シグナル使う必要無いと思う？？
@@ -207,13 +162,57 @@ export class ChatPanelBaseComponent implements OnInit {
     // } else {
     //   this.messageService.getMessageContentParts(message).subscribe({
     //     next: next => {
-    //       // console.log(next);
+    //       // this.logger.debug(next);
     //       message.contents = next;
     //     },
     //   });
     // }
     this.setBrackets();
   }
+
+  isInteractive(): boolean {
+    // TODO ここは遅くなる元なのであってはならない。
+    let flag = false;
+    this.messageGroup().messages
+      .map(message => message.contents.filter(content => content.type === 'tool'))
+      .forEach(contents => {
+        if (contents.length === 0) return;
+        try {
+          const toolCallList = JSON.parse(contents[contents.length - 1].text || '[]') as ToolCallSet[];
+          flag = flag || !!toolCallList.find(toolCall => toolCall.info.isInteractive && toolCall.commandList.length === 0 && !this.executedToolCallIdSet.has(toolCall.toolCallId));
+        } catch (err) {
+          // JSON parse失敗したら無視
+          this.logger.debug(contents[contents.length - 1].text);
+          this.logger.error('JSON parse error', err);
+        }
+      });
+    // this.logger.debug(flag);
+    return flag;
+  }
+
+  executedToolCallIdSet: Set<string> = new Set<string>();
+  toolExec($event: MouseEvent, flag: boolean, content?: ContentPart): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+    if (content && content.type === 'tool') {
+      try {
+        const toolCallPartCommandList = (JSON.parse(content.text || '[]') as ToolCallSet[])
+          .filter(tc => tc.info && tc.info.isInteractive && !this.executedToolCallIdSet.has(tc.toolCallId))
+          .map(tc => ({ type: ToolCallPartType.COMMAND, body: { command: flag ? 'execute' : 'cancel' }, toolCallId: tc.toolCallId })) as ToolCallPartCommand[];
+        // 実行/キャンセルに関わらず、指示済みのものはリストに追加
+        toolCallPartCommandList.forEach(tc => this.executedToolCallIdSet.add(tc.toolCallId));
+        this.toolExecEmitter.emit({ contentPart: content, toolCallPartCommandList });
+      } catch (err) {
+        this.logger.error('toolExec error', err);
+      }
+    } else { }
+  }
+
+  jsonParseToArray(text: string): any[] {
+    const obj = JSON.parse(text || '[]') as any[];
+    return Array.isArray(obj) ? obj : [];
+  }
+
   setBrackets(): void {
     this.messageGroup().messages.forEach((message, mIndex) => {
       this.bracketsList[mIndex] = [];
@@ -248,7 +247,7 @@ export class ChatPanelBaseComponent implements OnInit {
     // const textBodyElem = this.textBodyElem();
     // if (textBodyElem) {
     //   if (this.autoscroll) {
-    //     console.log(this.beforeScrollTop, textBodyElem.nativeElement.scrollTop);
+    //     this.logger.debug(this.beforeScrollTop, textBodyElem.nativeElement.scrollTop);
     //     if (this.beforeScrollTop <= textBodyElem.nativeElement.scrollTop) {
     //       this.beforeScrollTop = textBodyElem.nativeElement.scrollTop;
     //       DomUtils.scrollToBottomIfNeededSmooth(textBodyElem.nativeElement);
@@ -399,7 +398,7 @@ export class ChatPanelBaseComponent implements OnInit {
   openToolCallDialog($event: MouseEvent, toolCallSet: ToolCallSet): void {
     $event.stopImmediatePropagation();
     $event.preventDefault();
-    // console.log(content);
+    // this.logger.debug(content);
     this.dialog.open(ToolCallCallResultDialogComponent, {
       data: { toolCallGroupId: toolCallSet.toolCallGroupId, toolCallId: toolCallSet.toolCallId, index: 0 }
     });
@@ -498,7 +497,7 @@ export class ChatPanelBaseComponent implements OnInit {
   readonly mdElem = viewChild<ElementRef<HTMLTextAreaElement>>('mdElem');
 
   onReady($event: any, type: string): void {
-    // console.log($event, type);
+    // this.logger.debug($event, type);
     this.convertSvgToImage();
     this.checkMermaidSyntax();
     this.readyEmitter.emit(true);
@@ -532,11 +531,11 @@ export class ChatPanelBaseComponent implements OnInit {
       this.hasMermaidErrors = result.hasErrors;
 
       if (this.hasMermaidErrors) {
-        console.log(`Mermaidエラーが検出されました: ${this.mermaidErrors.length}件`);
+        this.logger.debug(`Mermaidエラーが検出されました: ${this.mermaidErrors.length}件`);
       }
 
     } catch (error) {
-      console.error('Mermaid構文チェックでエラーが発生しました:', error);
+      this.logger.error('Mermaid構文チェックでエラーが発生しました:', error);
     }
   }
 
@@ -581,7 +580,7 @@ export class ChatPanelBaseComponent implements OnInit {
               this.snackBar.open('Mermaidコードを修正しました', 'Close', { duration: 3000 });
             },
             error: (error) => {
-              console.error('Mermaid修正内容の保存に失敗しました:', error);
+              this.logger.error('Mermaid修正内容の保存に失敗しました:', error);
               this.snackBar.open('修正内容の保存に失敗しました', 'Close', { duration: 5000 });
             }
           });
@@ -589,7 +588,7 @@ export class ChatPanelBaseComponent implements OnInit {
       }
     } catch (error) {
       this.isMermaidErrorFixing = false;
-      console.error('Mermaid修正処理でエラーが発生しました:', error);
+      this.logger.error('Mermaid修正処理でエラーが発生しました:', error);
       this.snackBar.open('修正処理でエラーが発生しました', 'Close', { duration: 5000 });
     }
   }
@@ -661,7 +660,7 @@ export class ChatPanelBaseComponent implements OnInit {
                 resizeObserver.observe(iframeDoc.body);
               }
             } catch (e) {
-              console.error('iframe height adjustment failed:', e);
+              this.logger.error('iframe height adjustment failed:', e);
               // エラー時はデフォルト高さを設定
               iframe.height = '500px';
             }

@@ -1,33 +1,34 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatInputModule } from '@angular/material/input';
-import { MatTableModule } from '@angular/material/table';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatChipsModule } from '@angular/material/chips';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Observable, of, Subscription } from 'rxjs';
-import { tap, debounceTime, distinctUntilChanged, startWith, map } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs/operators';
 
+import { User, UserRoleType, UserStatus } from '../../../models/models';
 import { AdminScopeService } from '../../../services/admin-scope.service';
+import { GService } from '../../../services/g.service';
+import { LoggerService } from '../../../services/logger';
 import {
-    MemberManagementService,
-    DivisionMemberForView,
     Division,
+    DivisionMemberForView,
     MemberAssignmentRequest,
-    MemberUpdateRequest,
+    MemberManagementService,
     UserName
 } from '../../../services/member-management.service';
-import { User, UserRoleType, UserStatus } from '../../../models/models';
 import { ScopeInfo, ScopeType } from '../../../services/model-manager.service';
 import { UserRolePermissionService } from '../../../services/user-role-permission.service';
-import { GService } from '../../../services/g.service';
 
 // 型定義
 interface DivisionFormData {
@@ -70,6 +71,7 @@ interface ExtendedDivisionMemberForView extends Omit<DivisionMemberForView, 'rol
         MatTooltipModule,
         MatChipsModule,
         MatAutocompleteModule,
+        TranslateModule,
     ],
     templateUrl: './member-management.component.html',
     styleUrls: ['./member-management.component.scss']
@@ -81,6 +83,8 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
     readonly g = inject(GService);
     readonly snackBar = inject(MatSnackBar);
     readonly fb = inject(FormBuilder);
+    readonly translate = inject(TranslateService);
+    readonly logger = inject(LoggerService);
 
     // Data
     members: ExtendedDivisionMemberForView[] = [];
@@ -248,7 +252,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
                     this.availableUsers = users;
                 },
                 error: (error) => {
-                    console.error('Error loading available users:', error);
+                    this.logger.error('Error loading available users:', error);
                 }
             })
         );
@@ -298,7 +302,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
                         this.isLoading = false;
                     },
                     error: (error) => {
-                        console.error('Error loading members:', error);
+                        this.logger.error('Error loading members:', error);
                         this.snackBar.open('メンバーの読み込みに失敗しました', 'Close', { duration: 3000 });
                         this.isLoading = false;
                     }
@@ -319,7 +323,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
                     this.divisions = divisions;
                 },
                 error: (error) => {
-                    console.error('Error loading divisions:', error);
+                    this.logger.error('Error loading divisions:', error);
                 }
             })
         );
@@ -523,7 +527,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
     //                 this.isLoading = false;
     //             },
     //             error: (error) => {
-    //                 console.error('Error adding member:', error);
+    //                 this.logger.error('Error adding member:', error);
     //                 this.snackBar.open('メンバーの追加に失敗しました', 'Close', { duration: 3000 });
     //                 this.isLoading = false;
     //             }
@@ -551,7 +555,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
                     this.closeForm();
                 },
                 error: (error) => {
-                    console.error('Error creating division:', error);
+                    this.logger.error('Error creating division:', error);
                     this.snackBar.open('Failed to create division', 'Close', { duration: 3000 });
                 }
             })
@@ -579,7 +583,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
                     this.closeForm();
                 },
                 error: (error) => {
-                    console.error('Error updating division:', error);
+                    this.logger.error('Error updating division:', error);
                     this.snackBar.open('Failed to update division', 'Close', { duration: 3000 });
                 }
             })
@@ -605,7 +609,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
     //                 this.closeForm();
     //             },
     //             error: (error) => {
-    //                 console.error('Error updating member:', error);
+    //                 this.logger.error('Error updating member:', error);
     //                 this.snackBar.open('Failed to update member', 'Close', { duration: 3000 });
     //             }
     //         })
@@ -656,7 +660,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
     //                 this.loadMembers();
     //             },
     //             error: (error) => {
-    //                 console.error('Error removing member:', error);
+    //                 this.logger.error('Error removing member:', error);
     //                 this.snackBar.open('メンバーの削除に失敗しました', 'Close', { duration: 3000 });
     //             }
     //         })
@@ -714,7 +718,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
     //         this.selectedMembers.clear();
     //         this.loadMembers();
     //     }).catch(error => {
-    //         console.error('Error in bulk remove:', error);
+    //         this.logger.error('Error in bulk remove:', error);
     //         this.snackBar.open('一括削除に失敗しました', 'Close', { duration: 3000 });
     //     });
     // }
@@ -860,7 +864,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
                     this.isLoading = false;
                 },
                 error: (error) => {
-                    console.error('Error adding member:', error);
+                    this.logger.error('Error adding member:', error);
                     this.snackBar.open('メンバーの追加に失敗しました', 'Close', { duration: 3000 });
                     this.isLoading = false;
                 }
@@ -914,14 +918,14 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
                         [newRole],
                         this.selectedMember!.divisionId
                     );
-                    console.log('Role change logged:', logMetadata);
+                    this.logger.debug('Role change logged:', logMetadata);
 
                     this.snackBar.open('Member updated successfully', 'Close', { duration: 3000 });
                     this.loadMembers();
                     this.closeForm();
                 },
                 error: (error) => {
-                    console.error('Error updating member:', error);
+                    this.logger.error('Error updating member:', error);
                     this.snackBar.open('Failed to update member', 'Close', { duration: 3000 });
                 }
             })
@@ -949,7 +953,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
                     this.loadMembers();
                 },
                 error: (error) => {
-                    console.error('Error removing member:', error);
+                    this.logger.error('Error removing member:', error);
                     this.snackBar.open('メンバーの削除に失敗しました', 'Close', { duration: 3000 });
                 }
             })
@@ -994,7 +998,7 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
             this.selectedMembers.clear();
             this.loadMembers();
         }).catch(error => {
-            console.error('Error in bulk remove:', error);
+            this.logger.error('Error in bulk remove:', error);
             this.snackBar.open('一括削除に失敗しました', 'Close', { duration: 3000 });
         });
     }

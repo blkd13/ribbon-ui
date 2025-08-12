@@ -1,27 +1,28 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, Output, ViewChild, ViewEncapsulation, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatExpansionModule, MatExpansionPanel } from '@angular/material/expansion';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { MarkdownComponent } from 'ngx-markdown';
-import { DocTagComponent } from '../doc-tag/doc-tag.component';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { animate, style, transition, trigger } from '@angular/animations';
-import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
+import { TranslateModule } from '@ngx-translate/core';
+import { MarkdownComponent } from 'ngx-markdown';
+import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
+import { DocTagComponent } from '../doc-tag/doc-tag.component';
 
 @Component({
     selector: 'app-chat-panel-message',
     imports: [
         CommonModule, FormsModule, DocTagComponent,
         MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule, MatMenuModule,
-        MatTabsModule, MatButtonToggleModule,
+        MatTabsModule, MatButtonToggleModule, TranslateModule,
     ],
     templateUrl: './chat-panel-message.component.html',
     styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-message.component.scss',],

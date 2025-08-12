@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
+import { LoggerService } from './logger';
 
 declare var _paq: any;
 
@@ -16,6 +17,7 @@ export class UserService {
   private apiUrl = '/user/user-setting'; // バックエンドのエンドポイント
   readonly http: HttpClient = inject(HttpClient);
   readonly auth: AuthService = inject(AuthService);
+  readonly logger: LoggerService = inject(LoggerService);
 
   chatLayout: 'flex' | 'grid' = 'flex'; // チャットエリアのレイアウト
   chatTabLayout: 'tabs' | 'column' = 'column'; // チャットタブのレイアウト
@@ -99,7 +101,7 @@ export class UserService {
           this.historyCloseMode = setting.value.historyCloseMode || 0;
           this.applyTheme(this.theme);
         } else { }
-        // console.log(setting);
+        this.logger.debug('User setting retrieved:', setting);
       }),
       catchError(this.handleError)
     );
@@ -125,7 +127,7 @@ export class UserService {
    * @returns Observable<never>
    */
   private handleError(error: HttpErrorResponse): Observable<never> {
-    console.error('UserSettingService error:', error);
+    this.logger.error('UserSettingService error:', error);
     return throwError(() => new Error(error.message || 'サーバーエラーが発生しました'));
   }
 

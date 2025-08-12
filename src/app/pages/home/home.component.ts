@@ -1,51 +1,52 @@
-import { MatSnackBarModule } from '@angular/material/snack-bar';
-import { NotificationService } from '../../shared/services/notification.service';
-import { FullPathFile, FileUploadContent, FileManagerService } from './../../services/file-manager.service';
-import { MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
-import { Observable, tap, forkJoin, from, map, mergeMap, of, switchMap } from 'rxjs';
-import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSliderModule } from '@angular/material/slider';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatRadioModule } from '@angular/material/radio';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatGridListModule } from '@angular/material/grid-list';
-import { MatCardModule } from '@angular/material/card';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatGridListModule } from '@angular/material/grid-list';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { NgxIndexedDBService } from 'ngx-indexed-db';
 import { MarkdownModule } from 'ngx-markdown';
-import { TranslateModule } from '@ngx-translate/core';
+import { Observable, of, switchMap, tap } from 'rxjs';
 
-import { ChatService, } from '../../services/chat.service';
-import { FileDropDirective } from '../../parts/file-drop.directive';
-import { AuthService } from '../../services/auth.service';
+import { ChatCompletionCreateParamsWithoutMessages, ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
+import { Project, ProjectVisibility, Team, TeamForView, TeamType, ThreadGroup } from '../../models/project-models';
+import { CreateProjectDialogComponent } from '../../parts/create-project-dialog/create-project-dialog.component';
 import { DialogComponent } from '../../parts/dialog/dialog.component';
-import { Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupVisibility, UUID } from '../../models/project-models';
+import { FileDropDirective } from '../../parts/file-drop.directive';
+import { ModelSelectorComponent } from "../../parts/model-selector/model-selector.component";
+import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
 import { NewlineToBrPipe } from '../../pipe/newline-to-br.pipe';
 import { RelativeTimePipe } from '../../pipe/relative-time.pipe';
-import { Utils } from '../../utils';
-import { GService } from '../../services/g.service';
-import { CreateProjectDialogComponent } from '../../parts/create-project-dialog/create-project-dialog.component';
-import { ApiGitlabService } from '../../services/api-gitlab.service';
-import { ApiMattermostService, } from '../../services/api-mattermost.service';
 import { ApiBoxService } from '../../services/api-box.service';
 import { ApiGiteaService } from '../../services/api-gitea.service';
-import { UserMarkComponent } from '../../parts/user-mark/user-mark.component.js';
-import { UserService } from '../../services/user.service';
+import { ApiGitlabService } from '../../services/api-gitlab.service';
+import { ApiMattermostService, } from '../../services/api-mattermost.service';
+import { AuthService } from '../../services/auth.service';
+import { ChatService, } from '../../services/chat.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
-import { ChatCompletionCreateParamsWithoutMessages, ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
-import { ModelSelectorComponent } from "../../parts/model-selector/model-selector.component";
+import { GService } from '../../services/g.service';
+import { LoggerService } from '../../services/logger';
 import { AIModelManagerService } from '../../services/model-manager.service';
+import { UserService } from '../../services/user.service';
+import { NotificationService } from '../../shared/services/notification.service';
+import { Utils } from '../../utils';
+import { FileManagerService, FullPathFile } from './../../services/file-manager.service';
+import { MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 
 declare var _paq: any;
 @Component({
@@ -76,6 +77,8 @@ export class HomeComponent implements OnInit {
   readonly dbService: NgxIndexedDBService = inject(NgxIndexedDBService);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly router: Router = inject(Router);
+  readonly logger = inject(LoggerService);
+  readonly translate: TranslateService = inject(TranslateService);
   readonly notificationService: NotificationService = inject(NotificationService);
   readonly g: GService = inject(GService);
   readonly apiGitlabService: ApiGitlabService = inject(ApiGitlabService);
@@ -158,18 +161,18 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    document.title = `Ribbon UI`;
+    document.title = this.translate.instant('APP_TITLE');
 
     this.extApiProviderService.getApiProviders().subscribe({
       next: (apiProviderList) => {
         this.apiProviderList = apiProviderList.filter(apiProvider => apiProvider.authType === ExtApiProviderAuthType.OAuth2);
       },
       error: (error) => {
-        console.log(error);
+        this.logger.error(error);
         this.notificationService.showError('APIプロバイダの取得に失敗しました');
       },
       complete: () => {
-        console.log('complete');
+        this.logger.debug('complete');
       }
     });
 
@@ -194,7 +197,7 @@ export class HomeComponent implements OnInit {
       },
       error: err => {
         // エラーハンドリング
-        console.error(err);
+        this.logger.error(err);
       }
     })
   }
@@ -225,7 +228,11 @@ export class HomeComponent implements OnInit {
     return this.projectService.getProjectList().pipe(
       switchMap(projectList => {
         // デフォルトプロジェクト有無をチェック
-        const defaultProject = projectList.find(project => this.teamMap[project.teamId].teamType === TeamType.Alone && this.teamMap[project.teamId].createdBy === this.authService.getUserInfo().id && project.visibility === ProjectVisibility.Default);
+        const defaultProject = projectList.find(project =>
+          this.teamMap[project.teamId].teamType === TeamType.Alone
+          && this.teamMap[project.teamId].createdBy === this.authService.getUserInfo().id
+          && project.visibility === ProjectVisibility.Default
+        );
         return defaultProject ?
           // defaultProjectがあればそのまま使う。プロジェクトリストもそのままのものを返す。
           (this.defaultProject = defaultProject, of(projectList)) :
@@ -242,7 +249,11 @@ export class HomeComponent implements OnInit {
       tap(projectList => {
         this.projectList = projectList;
         // 個人用デフォルトプロジェクト以外のプロジェクトに絞る。
-        this.projectWithoutDefaultList = projectList.filter(project => !(this.teamMap[project.teamId].teamType === TeamType.Alone && this.teamMap[project.teamId].createdBy === this.authService.getUserInfo().id && project.visibility === ProjectVisibility.Default));
+        this.projectWithoutDefaultList = projectList.filter(project => !(
+          this.teamMap[project.teamId].teamType === TeamType.Alone
+          && this.teamMap[project.teamId].createdBy === this.authService.getUserInfo().id
+          && project.visibility === ProjectVisibility.Default
+        ));
       }),
     );
   }

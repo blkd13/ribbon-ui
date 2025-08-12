@@ -1,191 +1,199 @@
-<!-- 検索ボックス -->
-<!-- 
-<div class="search-box">
-    <input type="text" style="background-color: #666;" matInput placeholder="検索キーワード" [(ngModel)]="searchKeyword">
-    <button (click)="onSearch()">検索</button>
-</div>
--->
-<mat-tab-group class="h-screen overflow-hidden" [selectedIndex]="selectedTabIndex"
-    (selectedIndexChange)="selectedTabIndex = $event">
-    <mat-tab label="グループ">
-        <!-- <div class="search-box">
-            <input type="text" style="background-color: #666;" matInput placeholder="検索キーワード"
-                [(ngModel)]="searchKeyword[selectedTabIndex]">
-            <button (click)="onSearch()">検索</button>
-        </div> -->
-        @if(treeData.groups&&treeData.groups.length > 0){
-        <mat-tree #tree [dataSource]="treeData.groups" [childrenAccessor]="childrenAccessor">
-            <!-- This is the tree node template for leaf nodes -->
-            <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
-                <!-- use a disabled button to provide padding for tree leaf -->
+<div class="git-container">
+  <mat-tab-group class="h-full" [selectedIndex]="selectedTabIndex"
+      (selectedIndexChange)="selectedTabIndex = $event">
+    <mat-tab [label]="'GROUP' | translate">
+      <div class="tab-content">
+        @if(treeData.groups && treeData.groups.length > 0) {
+          <div class="tree-container">
+            <mat-tree #tree [dataSource]="treeData.groups" [childrenAccessor]="childrenAccessor">
+              <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding class="tree-leaf-node">
                 <button mat-icon-button disabled></button>
-                <div class="flex justify-between items-center w-full cursor-pointer">
-                    <a [href]="node.web_url || node.project_url" target="_blank">
-                        <div>{{node.id}}: {{node.name}}</div>
+                <div class="node-content">
+                  <div class="node-info">
+                    <a [href]="node.web_url || node.project_url" target="_blank" class="node-link">
+                      <span class="node-id">{{node.id}}</span>
+                      <span class="node-name">{{node.name}}</span>
                     </a>
-
-                    <div class="flex items-center gap-2">
-                        <div [innerHTML]="node.description"></div>
-                        <div> {{node.updated_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
-                        <a [href]="node.web_url || node.project_url" target="_blank">
-                            <button mat-icon-button color="primary">
-                                <mat-icon>open_in_new</mat-icon>
-                            </button>
-                        </a>
-                        <button mat-raised-button (click)="onSelectProject(node)">AI要約</button>
-                    </div>
-                </div>
-            </mat-tree-node>
-            <!-- This is the tree node template for expandable nodes -->
-            <mat-tree-node *matTreeNodeDef="let node;when: hasChild" matTreeNodePadding matTreeNodeToggle
-                [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
-                class="cursor-pointer">
-                <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.name">
-                    <mat-icon class="mat-icon-rtl-mirror">
-                        {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-                    </mat-icon>
-                </button>
-                <div>
-                    {{node.id}}: {{node.name}}
-                </div>
-            </mat-tree-node>
-        </mat-tree>
-        } @else {
-        明細無し
-        }
-    </mat-tab>
-    <mat-tab label="ユーザー">
-        <form class="search-box" (submit)="onSearch()">
-            <input type="text" matInput placeholder="検索キーワード" name="searchKeyword"
-                [(ngModel)]="searchKeyword[selectedTabIndex]">
-            <button type="submit">検索</button>
-        </form>
-        @if(treeData.users&&treeData.users.length > 0){
-        <mat-tree #tree [dataSource]="treeData.users" [childrenAccessor]="childrenAccessor">
-            <!-- This is the tree node template for leaf nodes -->
-            <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
-                <!-- use a disabled button to provide padding for tree leaf -->
-                <button mat-icon-button disabled></button>
-                <div class="flex justify-between items-center w-full cursor-pointer">
+                    <div class="node-description" [innerHTML]="node.description"></div>
+                  </div>
+                  <div class="node-actions">
+                    <span class="updated-date">{{node.updated_at | date:'yyyy-MM-dd HH:mm'}}</span>
                     <a [href]="node.web_url || node.project_url" target="_blank">
-                        <div>{{node.id}}: {{node.name}}</div>
+                      <button mat-icon-button color="primary" class="action-btn">
+                        <mat-icon>open_in_new</mat-icon>
+                      </button>
                     </a>
-
-                    <div class="flex items-center gap-2">
-                        <div [innerHTML]="node.description"></div>
-                        <div> {{node.updated_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</div>
-                        <a [href]="node.web_url || node.project_url" target="_blank">
-                            <button mat-icon-button color="primary">
-                                <mat-icon>open_in_new</mat-icon>
-                            </button>
-                        </a>
-                        <button mat-raised-button (click)="onSelectProject(node)">AI要約</button>
-                    </div>
+                    <button mat-raised-button color="accent" (click)="onSelectProject(node)" class="summary-btn">
+                      {{ 'AI_SUMMARY' | translate }}
+                    </button>
+                  </div>
                 </div>
-            </mat-tree-node>
-            <!-- This is the tree node template for expandable nodes -->
-            <mat-tree-node *matTreeNodeDef="let node;when: hasChild" matTreeNodePadding matTreeNodeToggle
-                [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
-                class="cursor-pointer">
+              </mat-tree-node>
+              <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding matTreeNodeToggle
+                  [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
+                  class="tree-parent-node">
                 <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.name">
-                    <mat-icon class="mat-icon-rtl-mirror">
-                        {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-                    </mat-icon>
+                  <mat-icon class="mat-icon-rtl-mirror">
+                    {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                  </mat-icon>
                 </button>
-                <div>
-                    {{node.id}}: {{node.name}}
+                <div class="parent-node-content">
+                  <span class="node-id">{{node.id}}</span>
+                  <span class="node-name">{{node.name}}</span>
                 </div>
-            </mat-tree-node>
-        </mat-tree>
+              </mat-tree-node>
+            </mat-tree>
+          </div>
         } @else {
-        明細無し
+          <div class="empty-state">
+            <mat-icon>folder_open</mat-icon>
+            <p>{{ 'NO_DETAILS' | translate }}</p>
+          </div>
         }
-        <!-- <div class="custom-scroll relative overflow-y-auto w-full m-2 h-full">
-        </div> -->
+      </div>
     </mat-tab>
-    <mat-tab label="リポジトリ" style="height: 100%;overflow: hidden;">
-        <form class="search-box" (submit)="onSearch()">
-            <input type="text" matInput placeholder="検索キーワード" name="searchKeyword"
-                [(ngModel)]="searchKeyword[selectedTabIndex]">
-            <button type="submit">検索</button>
-        </form>
-        <div class="custom-scroll relative overflow-y-auto w-full" (scroll)="onScroll($event)"
-            style="height: calc(100% - 24px);">
-
-            <table>
-                <thead>
-                    <tr class="sticky top-0 z-10 header">
-                        <th>id</th>
-                        <th>name</th>
-                        <th>path_with_namespace</th>
-                        <!-- <th>default_branch</th> -->
-                        <th>description</th>
-                        <th class="w-28">updated_at</th>
-                        <th class="w-28">action</th>
-                        <!-- <th>name_with_namespace</th>
-                <th>created_at</th>
-                <th>path</th>
-                <th>namespace</th> -->
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (project of projects; track $index) {
-                    <tr>
-                        <td>{{project.id}}</td>
-                        <td>{{project.name}}</td>
-                        <td>
-                            <a [href]="project.url" target="_blank">
-                                {{project.path_with_namespace}}
-                            </a>
-                        </td>
-                        <!-- <td (click)="stopImmediatePropagation($event)">
-                        {{project.default_branch}}
-                    </td> -->
-
-                        <!-- <select (click)="projectMap[project.id].branches.length > 0? null: onBranches(project.id)"
-                        [(ngModel)]="projectMap[project.id].selectedBranchId">
-                        @if(projectMap[project.id].branches.length > 0) {
-                        @for (branch of projectMap[project.id].branches; track $index) {
-                        <option [value]="branch.name">
-                            {{branch.name === project.default_branch?'*':' '}}
-                            {{branch.name}}
-                        </option>
-                        }
-                        } @else {
-                        <option [value]="project.default_branch"> * {{project.default_branch}}</option>
-                        }
-                    </select> -->
-
-                        <td>
-                            <div [innerHTML]="project.description"></div>
-                        </td>
-                        <td>{{project.updated_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
-                        <td>
-                            <button mat-raised-button (click)="onSelectProject(project)">AI要約</button>
-                        </td>
-                        <!-- <td>{{project.name_with_namespace}}</td>
-                <td>{{project.created_at|date:'yyyy-MM-dd hh:mm:ss.SSS'}}</td>
-                <td>{{project.path}}</td>
-                <td>{{project.namespace|json}}</td> -->
-                    </tr>
-                    }
-                </tbody>
-            </table>
+    
+    <mat-tab [label]="'USER' | translate">
+      <div class="tab-content">
+        <div class="search-section">
+          <form class="search-form" (submit)="onSearch()">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>{{ 'SEARCH_KEYWORD' | translate }}</mat-label>
+              <input matInput type="text" name="searchKeyword" [(ngModel)]="searchKeyword[selectedTabIndex]">
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+            <button mat-raised-button color="primary" type="submit" class="search-btn">
+              {{ 'SEARCH' | translate }}
+            </button>
+          </form>
         </div>
+        @if(treeData.users && treeData.users.length > 0) {
+          <div class="tree-container">
+            <mat-tree #tree [dataSource]="treeData.users" [childrenAccessor]="childrenAccessor">
+              <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding class="tree-leaf-node">
+                <button mat-icon-button disabled></button>
+                <div class="node-content">
+                  <div class="node-info">
+                    <a [href]="node.web_url || node.project_url" target="_blank" class="node-link">
+                      <span class="node-id">{{node.id}}</span>
+                      <span class="node-name">{{node.name}}</span>
+                    </a>
+                    <div class="node-description" [innerHTML]="node.description"></div>
+                  </div>
+                  <div class="node-actions">
+                    <span class="updated-date">{{node.updated_at | date:'yyyy-MM-dd HH:mm'}}</span>
+                    <a [href]="node.web_url || node.project_url" target="_blank">
+                      <button mat-icon-button color="primary" class="action-btn">
+                        <mat-icon>open_in_new</mat-icon>
+                      </button>
+                    </a>
+                    <button mat-raised-button color="accent" (click)="onSelectProject(node)" class="summary-btn">
+                      {{ 'AI_SUMMARY' | translate }}
+                    </button>
+                  </div>
+                </div>
+              </mat-tree-node>
+              <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding matTreeNodeToggle
+                  [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
+                  class="tree-parent-node">
+                <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.name">
+                  <mat-icon class="mat-icon-rtl-mirror">
+                    {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                  </mat-icon>
+                </button>
+                <div class="parent-node-content">
+                  <span class="node-id">{{node.id}}</span>
+                  <span class="node-name">{{node.name}}</span>
+                </div>
+              </mat-tree-node>
+            </mat-tree>
+          </div>
+        } @else {
+          <div class="empty-state">
+            <mat-icon>person_outline</mat-icon>
+            <p>{{ 'NO_DETAILS' | translate }}</p>
+          </div>
+        }
+      </div>
     </mat-tab>
-</mat-tab-group>
-<!-- 
-@if(isLoading){
-<div class="fixed top-0 left-0 flex items-center justify-center w-full h-full bg-black bg-opacity-50">
-    <mat-spinner></mat-spinner>
+    
+    <mat-tab [label]="'REPOSITORY' | translate">
+      <div class="tab-content">
+        <div class="search-section">
+          <form class="search-form" (submit)="onSearch()">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>{{ 'SEARCH_KEYWORD' | translate }}</mat-label>
+              <input matInput type="text" name="searchKeyword" [(ngModel)]="searchKeyword[selectedTabIndex]">
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+            <button mat-raised-button color="primary" type="submit" class="search-btn">
+              {{ 'SEARCH' | translate }}
+            </button>
+          </form>
+        </div>
+        
+        <div class="repository-container" (scroll)="onScroll($event)">
+          @if(projects && projects.length > 0) {
+            <div class="repository-grid">
+              @for (project of projects; track project.id) {
+                <mat-card class="repository-card">
+                  <mat-card-header>
+                    <div class="card-header-content">
+                      <div class="project-title">
+                        <span class="project-id">#{{project.id}}</span>
+                        <h3 class="project-name">{{project.name}}</h3>
+                      </div>
+                      <div class="project-actions">
+                        <a [href]="project.url" target="_blank" mat-icon-button color="primary" class="external-link-btn">
+                          <mat-icon>open_in_new</mat-icon>
+                        </a>
+                        <button mat-raised-button color="accent" (click)="onSelectProject(project)" class="summary-btn">
+                          {{ 'AI_SUMMARY' | translate }}
+                        </button>
+                      </div>
+                    </div>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <div class="project-info">
+                      <div class="project-path">
+                        <mat-icon class="path-icon">folder</mat-icon>
+                        <a [href]="project.url" target="_blank" class="path-link">
+                          {{project.path_with_namespace}}
+                        </a>
+                      </div>
+                      @if(project.description) {
+                        <div class="project-description">
+                          <div [innerHTML]="project.description"></div>
+                        </div>
+                      }
+                      <div class="project-meta">
+                        <div class="meta-item">
+                          <mat-icon class="meta-icon">schedule</mat-icon>
+                          <span class="meta-text">{{project.updated_at | date:'yyyy-MM-dd HH:mm'}}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              }
+            </div>
+          } @else {
+            <div class="empty-state">
+              <mat-icon>code</mat-icon>
+              <p>{{ 'NO_DETAILS' | translate }}</p>
+            </div>
+          }
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>
-}
- -->
-<!-- <button (click)="onTop()">トップへ移動</button> -->
-<!-- git.component.html の一例 -->
-<div class="fixed top-0 left-0 z-10">
+
+<div class="header-overlay">
+  <div class="header-left">
     <app-app-menu></app-app-menu>
-</div>
-<div class="fixed top-0 right-0 z-10">
+  </div>
+  <div class="header-right">
     <app-user-mark></app-user-mark>
+  </div>
 </div>

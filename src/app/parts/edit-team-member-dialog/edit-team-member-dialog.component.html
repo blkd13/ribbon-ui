@@ -2,18 +2,18 @@
     <h1>{{team.label}}</h1>
 
     <mat-form-field>
-        <mat-label>ロール</mat-label>
+        <mat-label>{{ 'ROLE' | translate }}</mat-label>
         <mat-select name="role" [(ngModel)]="teamMember.role">
             <!-- <mat-option value="Owner">自分だけ</mat-option> -->
-            <mat-option value="Admin">[Admin] 管理者</mat-option>
-            <mat-option value="Member">[Member] 通常</mat-option>
-            <mat-option value="Viewer">[Viewer] 参照専用</mat-option>
+            <mat-option value="Admin">[Admin] {{ 'ADMINISTRATOR' | translate }}</mat-option>
+            <mat-option value="Member">[Member] {{ 'REGULAR' | translate }}</mat-option>
+            <mat-option value="Viewer">[Viewer] {{ 'READ_ONLY' | translate }}</mat-option>
         </mat-select>
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="full-width">
-        <mat-label>ユーザー</mat-label>
-        <input type="text" placeholder="追加したいユーザーのID（メールアドレスの@の左側）" matInput [(ngModel)]="userName" name="userName"
+        <mat-label>{{ 'USER' | translate }}</mat-label>
+        <input type="text" [placeholder]="'ADD_USER_ID_PLACEHOLDER' | translate" matInput [(ngModel)]="userName" name="userName"
             [matAutocomplete]="auto" [disabled]="isEdit">
         <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete">
             @for (user of userListAll; track user.id) {
@@ -25,8 +25,8 @@
     </mat-form-field>
 
     <div class="flex justify-between">
-        <button type="button" (click)="removeTeamMember()">削除</button>
-        <button type="button" (click)="registMember()">登録</button>
+        <button type="button" (click)="removeTeamMember()">{{ 'DELETE' | translate }}</button>
+        <button type="button" (click)="registMember()">{{ 'REGISTER' | translate }}</button>
     </div>
 </form>
 

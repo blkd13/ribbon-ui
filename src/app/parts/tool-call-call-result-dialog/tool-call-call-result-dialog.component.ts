@@ -7,6 +7,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { DomSanitizer, SafeHtml, SafeUrl } from '@angular/platform-browser';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatCardModule } from '@angular/material/card';
+import { TranslateModule } from '@ngx-translate/core';
 
 
 /**
@@ -17,7 +18,7 @@ import { MatCardModule } from '@angular/material/card';
 
 @Component({
   selector: 'app-tool-call-call-result-dialog',
-  imports: [MarkdownModule, CommonModule, MatTabsModule, MatExpansionModule, MatCardModule],
+  imports: [MarkdownModule, CommonModule, MatTabsModule, MatExpansionModule, MatCardModule, TranslateModule],
   templateUrl: './tool-call-call-result-dialog.component.html',
   styleUrl: './tool-call-call-result-dialog.component.scss'
 })

@@ -1,18 +1,18 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subject, BehaviorSubject } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
 import { OpenAI } from 'openai';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
-
 import { environment } from '../../../environments/environment';
-import { AuthService } from '../auth.service';
-import { 
-  ChatStreamState, 
-  ChatConnectionState, 
-  ChatStreamingOptions,
-  TokenUsage 
-} from './chat-types';
 import { ErrorHandlerUtil } from '../../shared/utils/error-handler.util';
+import { AuthService } from '../auth.service';
+import { LoggerService } from '../logger';
+import {
+  ChatConnectionState,
+  ChatStreamState,
+  ChatStreamingOptions,
+  TokenUsage
+} from './chat-types';
 
 /**
  * チャット通信専用サービス
@@ -22,6 +22,7 @@ import { ErrorHandlerUtil } from '../../shared/utils/error-handler.util';
 export class ChatCommunicationService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly logger = inject(LoggerService);
 
   // 接続状態
   private connectionState: ChatConnectionState = {
@@ -57,9 +58,9 @@ export class ChatCommunicationService {
     const streamIdList = this.messageIdStreamIdMap[messageId];
     if (streamIdList?.length) {
       const streamId = `${streamIdList.at(-1)}|${messageId}`;
-      return { 
-        text: this.textMap[streamId] || '', 
-        observer: this.subjectMap[streamId] || null 
+      return {
+        text: this.textMap[streamId] || '',
+        observer: this.subjectMap[streamId] || null
       };
     }
     return { text: '', observer: null };
@@ -89,7 +90,7 @@ export class ChatCommunicationService {
   openConnection(forceReconnect = false): Observable<string> {
     return new Observable<string>((observer) => {
       if (!forceReconnect && this.communicationFlag && this.connectionState.isConnected) {
-        console.log('Connection already exists');
+        this.logger.debug('Connection already exists');
         observer.next(this.connectionState.connectionId);
         observer.complete();
         return;
@@ -106,7 +107,7 @@ export class ChatCommunicationService {
   private establishConnection(observer: any): void {
     const xhr = new XMLHttpRequest();
     const connectionId = uuidv4();
-    
+
     this.updateConnectionState({
       connectionId,
       isConnected: false,
@@ -133,7 +134,7 @@ export class ChatCommunicationService {
     };
 
     xhr.onabort = () => {
-      console.log('Connection aborted');
+      this.logger.debug('Connection aborted');
       this.updateConnectionState({
         ...this.connectionState,
         isConnected: false
@@ -157,11 +158,11 @@ export class ChatCommunicationService {
   private handleXhrStateChange(xhr: XMLHttpRequest, cursor: number, observer: any): void {
     switch (xhr.readyState) {
       case XMLHttpRequest.OPENED:
-        console.log('Connection opened');
+        this.logger.debug('Connection opened');
         break;
 
       case XMLHttpRequest.HEADERS_RECEIVED:
-        console.log('Headers received');
+        this.logger.debug('Headers received');
         this.updateConnectionState({
           ...this.connectionState,
           isConnected: true,
@@ -221,7 +222,7 @@ export class ChatCommunicationService {
     } else if (line.startsWith('[DONE] ')) {
       this.processStreamComplete(line);
     } else if (line.trim()) {
-      console.log('Unknown data format:', line);
+      this.logger.debug('Unknown data format:', line);
     }
   }
 
@@ -231,12 +232,12 @@ export class ChatCommunicationService {
    */
   private processJsonData(line: string): void {
     try {
-      const { data } = JSON.parse(line) as { 
-        data: { 
-          streamId: string, 
+      const { data } = JSON.parse(line) as {
+        data: {
+          streamId: string,
           content: OpenAI.ChatCompletionChunk,
-          usage?: TokenUsage 
-        } 
+          usage?: TokenUsage
+        }
       };
 
       const { streamId, content, usage } = data;
@@ -244,7 +245,7 @@ export class ChatCommunicationService {
       if (this.subjectMap[streamId]) {
         // チャンクデータを送信
         this.subjectMap[streamId].next(content);
-        
+
         // テキストを蓄積
         if (content.choices?.[0]?.delta?.content) {
           this.textMap[streamId] = (this.textMap[streamId] || '') + content.choices[0].delta.content;
@@ -262,7 +263,7 @@ export class ChatCommunicationService {
         }
       }
     } catch (error) {
-      console.error('JSON parse error:', error);
+      this.logger.error('JSON parse error:', error);
       ErrorHandlerUtil.logError(error, 'JSON parsing');
     }
   }
@@ -278,7 +279,7 @@ export class ChatCommunicationService {
     if (this.subjectMap[streamId]) {
       // ストリーム完了通知
       this.subjectMap[streamId].complete();
-      
+
       // ストリーム状態を更新
       this.updateStreamState(streamId, {
         isActive: false
@@ -298,12 +299,12 @@ export class ChatCommunicationService {
     const streamId = lineSplit[0];
     const errorMessage = line.substring(streamId.length + 1);
 
-    console.error('Stream error:', errorMessage);
+    this.logger.error('Stream error:', errorMessage);
 
     if (this.subjectMap[streamId]) {
       // エラー通知
       this.subjectMap[streamId].error(new Error(errorMessage));
-      
+
       // ストリーム状態を更新
       this.updateStreamState(streamId, {
         isActive: false,
@@ -360,7 +361,7 @@ export class ChatCommunicationService {
       text: '',
       error: undefined
     };
-    
+
     this.updateActiveStreams();
   }
 
@@ -409,7 +410,7 @@ export class ChatCommunicationService {
   private cleanupStream(streamId: string): void {
     // Subjectマップから削除
     delete this.subjectMap[streamId];
-    
+
     // 分割されたストリームIDも削除
     if (streamId.includes('|')) {
       const baseStreamId = streamId.split('|')[0];
@@ -457,8 +458,8 @@ export class ChatCommunicationService {
    * @param observer Observable observer
    */
   private handleConnectionError(error: any, observer: any): void {
-    console.error('Connection error:', error);
-    
+    this.logger.error('Connection error:', error);
+
     this.updateConnectionState({
       ...this.connectionState,
       isConnected: false
@@ -477,7 +478,7 @@ export class ChatCommunicationService {
    */
   private notifyTokenUsage(streamId: string, usage: TokenUsage): void {
     // 今後の実装でトークン使用量を別サービスに通知
-    console.log(`Token usage for ${streamId}:`, usage);
+    this.logger.debug(`Token usage for ${streamId}:`, usage);
   }
 
   /**
@@ -505,13 +506,13 @@ export class ChatCommunicationService {
     Object.keys(this.subjectMap).forEach(streamId => {
       this.subjectMap[streamId].complete();
     });
-    
+
     // 全てクリーンアップ
     this.subjectMap = {};
     this.textMap = {};
     this.streamStates = {};
     this.messageIdStreamIdMap = {};
-    
+
     this.updateActiveStreams();
     this.communicationFlag = false;
   }
@@ -534,7 +535,7 @@ export class ChatCommunicationService {
    * @returns 接続ID
    */
   reconnect(): Observable<string> {
-    console.log('Attempting to reconnect...');
+    this.logger.debug('Attempting to reconnect...');
     this.disconnect();
     return this.openConnection(true);
   }

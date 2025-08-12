@@ -1,30 +1,30 @@
 <div class="container">
-    <h2>API Providers</h2>
+    <h2>{{ 'API_PROVIDERS' | translate }}</h2>
     <div class="layout-container">
-        <!-- 左側：テーブル表示 -->
+        <!-- Left side: Table display -->
         <div class="table-container">
             <div class="table-header">
-                <h3>Providers</h3>
-                <button mat-raised-button type="button" color="primary" (click)="createNew()">新規登録</button>
+                <h3>{{ 'PROVIDERS' | translate }}</h3>
+                <button mat-raised-button type="button" color="primary" (click)="createNew()">{{ 'CREATE_NEW' | translate }}</button>
             </div>
 
-            <!-- フィルター・ソート・一括操作バー -->
+            <!-- Filter, Sort, Bulk Actions Bar -->
             <div class="filter-bar">
                 <div class="filter-controls">
-                    <!-- 検索フィルター -->
+                    <!-- Search Filter -->
                     <mat-form-field appearance="outline" class="filter-field">
-                        <mat-label>Search providers...</mat-label>
+                        <mat-label>{{ 'SEARCH_PROVIDERS' | translate }}...</mat-label>
                         <input matInput [(ngModel)]="searchFilter" (input)="applyFilters()">
                         <mat-icon matSuffix>search</mat-icon>
                     </mat-form-field>
 
-                    <!-- タイプフィルター -->
+                    <!-- Type Filter -->
                     <mat-form-field appearance="outline" class="filter-field">
-                        <mat-select placeholder="Type" 
+                        <mat-select [placeholder]="'TYPE' | translate" 
                                     [(value)]="typeFilter" 
                                     (selectionChange)="applyFilters()"
                                     multiple>
-                            <mat-option value="">All Types</mat-option>
+                            <mat-option value="">{{ 'ALL_TYPES' | translate }}</mat-option>
                             @for (type of availableTypes; track type) {
                             <mat-option [value]="type">{{ type }}</mat-option>
                             }
@@ -32,38 +32,38 @@
                         <mat-icon matSuffix>filter_list</mat-icon>
                     </mat-form-field>
 
-                    <!-- ソート -->
+                    <!-- Sort -->
                     <mat-form-field appearance="outline" class="filter-field">
-                        <mat-label>Sort by...</mat-label>
+                        <mat-label>{{ 'SORT_BY' | translate }}...</mat-label>
                         <mat-select [(value)]="sortBy" (selectionChange)="applySorting()">
-                            <mat-option [value]="null">Default Order</mat-option>
-                            <mat-option value="label">Label</mat-option>
-                            <mat-option value="type">Type</mat-option>
-                            <mat-option value="name">Provider Name</mat-option>
-                            <mat-option value="updated">Last Updated</mat-option>
+                            <mat-option [value]="null">{{ 'DEFAULT_ORDER' | translate }}</mat-option>
+                            <mat-option value="label">{{ 'LABEL' | translate }}</mat-option>
+                            <mat-option value="type">{{ 'TYPE' | translate }}</mat-option>
+                            <mat-option value="name">{{ 'PROVIDER_NAME' | translate }}</mat-option>
+                            <mat-option value="updated">{{ 'LAST_UPDATED' | translate }}</mat-option>
                         </mat-select>
                         <mat-icon matSuffix>sort</mat-icon>
                     </mat-form-field>
 
                     <button mat-icon-button (click)="toggleSortDirection()"
-                        [matTooltip]="sortDirection === 'asc' ? 'Sort Descending' : 'Sort Ascending'">
+                        [matTooltip]="sortDirection === 'asc' ? ('SORT_DESCENDING' | translate) : ('SORT_ASCENDING' | translate)">
                         <mat-icon>{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
                     </button>
 
-                    <!-- フィルターリセット -->
-                    <button mat-icon-button (click)="resetFilters()" matTooltip="Reset Filters">
+                    <!-- Filter Reset -->
+                    <button mat-icon-button (click)="resetFilters()" [matTooltip]="'RESET_FILTERS' | translate">
                         <mat-icon>clear</mat-icon>
                     </button>
                 </div>
 
-                <!-- 一括操作エリア -->
+                <!-- Bulk actions area -->
                 @if (selectedProviders.length > 0) {
                 <div class="bulk-actions">
-                    <span class="selected-count">{{ selectedProviders.length }} providers selected</span>
+                    <span class="selected-count">{{ selectedProviders.length }} {{ 'PROVIDERS_SELECTED' | translate }}</span>
                     <button mat-raised-button color="warn" (click)="bulkDelete()"
                         [disabled]="!canBulkEdit()">
                         <mat-icon>delete</mat-icon>
-                        Delete
+                        {{ 'DELETE' | translate }}
                     </button>
                 </div>
                 }
@@ -77,10 +77,10 @@
                                 (change)="toggleSelectAll($event)">
                             </mat-checkbox>
                         </th>
-                        <th>Label</th>
-                        <th>Type</th>
-                        <th>Provider</th>
-                        <th>Actions</th>
+                        <th>{{ 'LABEL' | translate }}</th>
+                        <th>{{ 'TYPE' | translate }}</th>
+                        <th>{{ 'PROVIDER' | translate }}</th>
+                        <th>{{ 'ACTIONS' | translate }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -111,11 +111,11 @@
             </table>
         </div>
 
-        <!-- 右側：編集フォーム -->
+        <!-- Right side: Edit form -->
         @if(isFormVisible){
         <div class="form-container">
             <div class="form-header">
-                <h3>{{ isEditMode ? 'Edit Provider' : 'New Provider' }}</h3>
+                <h3>{{ isEditMode ? ('EDIT_PROVIDER' | translate) : ('NEW_PROVIDER' | translate) }}</h3>
                 <button mat-icon-button type="button" (click)="closeForm()">
                     <mat-icon>close</mat-icon>
                 </button>
@@ -125,10 +125,10 @@
                 <form [formGroup]="form" (ngSubmit)="register()">
                 <!-- Type Selection from Templates -->
                 <div class="form-group">
-                    <label for="type">Type <span class="required">*</span></label>
+                    <label for="type">{{ 'TYPE' | translate }} <span class="required">*</span></label>
                     <select id="type" formControlName="type" class="form-control"
                         [ngClass]="{'invalid': hasError('type')}" (change)="onTemplateTypeChanged()">
-                        <option [value]="''">Select a template</option>
+                        <option [value]="''">{{ 'SELECT_TEMPLATE' | translate }}</option>
                         @for (template of providerTemplates; track $index) {
                         <option [value]="template.name">{{ template.name }}</option>
                         }
@@ -140,7 +140,7 @@
 
                 <!-- Name -->
                 <div class="form-group">
-                    <label for="name">Name<span class="required">*</span></label>
+                    <label for="name">{{ 'NAME' | translate }}<span class="required">*</span></label>
                     <input id="name" type="text" formControlName="name" class="form-control"
                         [ngClass]="{'invalid': hasError('name')}">
                     @if(hasError('name')){
@@ -150,7 +150,7 @@
 
                 <!-- Label -->
                 <div class="form-group">
-                    <label for="label">Label <span class="required">*</span></label>
+                    <label for="label">{{ 'LABEL' | translate }} <span class="required">*</span></label>
                     <input id="label" type="text" formControlName="label" class="form-control"
                         [ngClass]="{'invalid': hasError('label')}">
                     @if(hasError('label')){
@@ -160,7 +160,7 @@
 
                 <!-- URI Base -->
                 <div class="form-group">
-                    <label for="uriBase">URI Base <span class="required">*</span></label>
+                    <label for="uriBase">{{ 'URI_BASE' | translate }} <span class="required">*</span></label>
                     <input id="uriBase" type="text" formControlName="uriBase" class="form-control"
                         [ngClass]="{'invalid': hasError('uriBase')}">
                     @if(hasError('uriBase')){
@@ -170,7 +170,7 @@
 
                 <!-- Path User Info -->
                 <div class="form-group">
-                    <label for="pathUserInfo">Path User Info <span class="required">*</span></label>
+                    <label for="pathUserInfo">{{ 'PATH_USER_INFO' | translate }} <span class="required">*</span></label>
                     <input id="pathUserInfo" type="text" formControlName="pathUserInfo" class="form-control"
                         [ngClass]="{'invalid': hasError('pathUserInfo')}">
                     @if(hasError('pathUserInfo')){
@@ -180,7 +180,7 @@
 
                 <!-- AuthType Selection -->
                 <div class="form-group">
-                    <label for="authType">Authorization Type <span class="required">*</span></label>
+                    <label for="authType">{{ 'AUTHORIZATION_TYPE' | translate }} <span class="required">*</span></label>
                     <mat-button-toggle-group name="authType" aria-label="authType" formControlName="authType">
                         <mat-button-toggle [value]="'OAuth2'">OAuth2</mat-button-toggle>
                         <mat-button-toggle [value]="'APIKey'">APIKey</mat-button-toggle>
@@ -193,28 +193,28 @@
                 <!-- OAuth2 specific fields - conditionally displayed -->
                 @if(form.value.authType === 'OAuth2'){
                 <div class="oauth2-section">
-                    <h4>OAuth2 Configuration</h4>
+                    <h4>{{ 'OAUTH2_CONFIGURATION' | translate }}</h4>
 
                     <div formGroupName="oAuth2Config">
-                        <!-- プロバイダーサイトと連携するセクション -->
+                        <!-- Provider site synchronization section -->
                         <div class="provider-sync-section">
                             <div class="sync-section-header">
                                 <mat-icon class="sync-icon">sync</mat-icon>
-                                <span>Provider Synchronization Values</span>
+                                <span>{{ 'PROVIDER_SYNCHRONIZATION_VALUES' | translate }}</span>
                             </div>
                             <div class="sync-section-description">
-                                These values must be identical on both your application and the OAuth2 provider's site
+                                {{ 'OAUTH2_SYNC_DESCRIPTION' | translate }}
                             </div>
 
                             <!-- Redirect URI -->
                             <div class="form-group">
-                                <label for="redirectUri">Redirect URI <span class="required">*</span></label>
+                                <label for="redirectUri">{{ 'REDIRECT_URI' | translate }} <span class="required">*</span></label>
                                 <div class="copy-field-container">
                                     <input id="redirectUri" type="text" class="form-control sync-field"
                                         formControlName="redirectUri"
                                         [ngClass]="{'invalid': hasNestedError('oAuth2Config.redirectUri')}">
                                     <button type="button" class="copy-button" (click)="copyRedirectUri()"
-                                        matTooltip="Copy to clipboard">
+                                        [matTooltip]="'COPY_TO_CLIPBOARD' | translate">
                                         <mat-icon>content_copy</mat-icon>
                                     </button>
                                 </div>
@@ -225,7 +225,7 @@
 
                             <!-- Scope -->
                             <div class="form-group">
-                                <label for="scope">Scope <span class="required">*</span></label>
+                                <label for="scope">{{ 'SCOPE' | translate }} <span class="required">*</span></label>
                                 <input id="scope" type="text" formControlName="scope" class="form-control sync-field"
                                     [ngClass]="{'invalid': hasNestedError('oAuth2Config.scope')}">
                                 @if(hasNestedError('oAuth2Config.scope')){
@@ -235,7 +235,7 @@
                         </div>
 
                         <div class="divider-container">
-                            <span class="divider-label">API Configuration</span>
+                            <span class="divider-label">{{ 'API_CONFIGURATION' | translate }}</span>
                             <hr class="section-divider" />
                         </div>
 
@@ -274,7 +274,7 @@
                         </div>
 
                         <div class="divider-container">
-                            <span class="divider-label">OAuth Credentials</span>
+                            <span class="divider-label">{{ 'OAUTH_CREDENTIALS' | translate }}</span>
                             <hr class="section-divider" />
                         </div>
 
@@ -302,7 +302,7 @@
                         <div class="form-group checkbox-group">
                             <label for="requireMailAuth">
                                 <input id="requireMailAuth" type="checkbox" formControlName="requireMailAuth">
-                                Require Mail Authentication
+                                {{ 'REQUIRE_MAIL_AUTHENTICATION' | translate }}
                             </label>
                         </div>
                     </div>
@@ -327,16 +327,16 @@
 
                 <!-- Description (Optional) -->
                 <div class="form-group">
-                    <label for="description">Description</label>
+                    <label for="description">{{ 'DESCRIPTION' | translate }}</label>
                     <textarea id="description" formControlName="description" class="form-control"></textarea>
                 </div>
 
                 <div class="button-group">
                     <button type="submit" class="btn btn-primary" mat-raised-button>
-                        {{ isEditMode ? 'Update' : 'Register' }}
+                        {{ isEditMode ? ('UPDATE' | translate) : ('REGISTER' | translate) }}
                     </button>
                     <button type="button" class="btn btn-secondary" (click)="closeForm()" mat-raised-button>
-                        Cancel
+                        {{ 'CANCEL' | translate }}
                     </button>
                 </div>
                 </form>

@@ -1,13 +1,13 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
-import { Observable, Subscription, tap, catchError, throwError } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { saveAs } from 'file-saver';
+import { Observable, Subscription, catchError, tap, throwError } from 'rxjs';
 
-import { FileManagerService, FullPathFile } from '../../../../services/file-manager.service';
-import { MessageService } from '../../../../services/core/message.service';
-import { Utils } from '../../../../utils';
-import { Project, ContentPart } from '../../../../models/project-models';
+import { ContentPart, Project } from '../../../../models/project-models';
 import { ChatInputArea } from '../../../../services/chat.service';
+import { MessageService } from '../../../../services/core/message.service';
+import { FileManagerService, FullPathFile } from '../../../../services/file-manager.service';
+import { Utils } from '../../../../utils';
 
 @Component({
   selector: 'app-file-management',

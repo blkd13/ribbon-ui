@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { ChatPreset } from './chat-types';
 import { Utils } from '../../utils';
+import { GService } from '../g.service';
+import { ChatPreset } from './chat-types';
 
 /**
  * チャットプリセット管理サービス
@@ -13,6 +14,7 @@ import { Utils } from '../../utils';
 export class ChatPresetService {
   private presetsSubject = new BehaviorSubject<ChatPreset[]>([]);
   private selectedPresetSubject = new BehaviorSubject<string>('default');
+  private readonly g: GService = inject(GService);
 
   // Observable streams
   public presets$ = this.presetsSubject.asObservable();
@@ -336,7 +338,7 @@ export class ChatPresetService {
    * @returns 置換後のシステムプロンプト
    */
   interpolateSystemPrompt(systemPrompt: string, userName: string = ''): string {
-    const currentDateTime = new Date().toLocaleString('ja-JP', {
+    const currentDateTime = new Date().toLocaleString(this.g.locale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -358,7 +360,7 @@ export class ChatPresetService {
   exportPresets(presetIds?: string[]): Observable<{ presets: ChatPreset[], version: string }> {
     return this.presets$.pipe(
       map(presets => {
-        const targetPresets = presetIds 
+        const targetPresets = presetIds
           ? presets.filter(preset => presetIds.includes(preset.id))
           : presets.filter(preset => !preset.isDefault); // デフォルトプリセットは除外
 
@@ -391,7 +393,7 @@ export class ChatPresetService {
     exportData.presets.forEach(preset => {
       try {
         const existingIndex = newPresets.findIndex(p => p.id === preset.id);
-        
+
         if (existingIndex !== -1) {
           if (overwrite && !newPresets[existingIndex].isDefault) {
             // 既存の非デフォルトプリセットを上書き
@@ -440,7 +442,7 @@ export class ChatPresetService {
         const customPresets: ChatPreset[] = JSON.parse(stored);
         const currentPresets = this.presetsSubject.value;
         const defaultPresets = currentPresets.filter(preset => preset.isDefault);
-        
+
         this.presetsSubject.next([...defaultPresets, ...customPresets]);
       }
     } catch (error) {
@@ -463,7 +465,7 @@ export class ChatPresetService {
   reorderPresets(presetIds: string[]): Observable<boolean> {
     const currentPresets = this.presetsSubject.value;
     const presetMap = new Map(currentPresets.map(preset => [preset.id, preset]));
-    
+
     const reorderedPresets = presetIds
       .map(id => presetMap.get(id))
       .filter((preset): preset is ChatPreset => preset !== undefined);
@@ -494,7 +496,7 @@ export class ChatPresetService {
         }
 
         const lowerQuery = query.toLowerCase();
-        return presets.filter(preset => 
+        return presets.filter(preset =>
           preset.name.toLowerCase().includes(lowerQuery) ||
           preset.systemPrompt.toLowerCase().includes(lowerQuery)
         );

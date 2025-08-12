@@ -1,19 +1,20 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { 
-    ThreadGroupForView, 
-    Thread, 
-    ThreadGroupType, 
-    ThreadGroupVisibility,
-    ThreadGroupUpsertDto,
-    ThreadGroup
-} from '../../models/project-models';
-import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
-import { genInitialBaseEntity } from './project-utils';
-import { Utils } from '../../utils';
-import { NotificationService } from '../../shared/services/notification.service';
+import { Injectable, inject } from '@angular/core';
 import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions.mjs';
+import { Observable, tap } from 'rxjs';
+import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
+import {
+    Thread,
+    ThreadGroup,
+    ThreadGroupForView,
+    ThreadGroupType,
+    ThreadGroupUpsertDto,
+    ThreadGroupVisibility
+} from '../../models/project-models';
+import { NotificationService } from '../../shared/services/notification.service';
+import { Utils } from '../../utils';
+import { GService } from '../g.service';
+import { genInitialBaseEntity } from './project-utils';
 
 /**
  * スレッド管理サービス
@@ -23,7 +24,8 @@ import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completion
 export class ThreadService {
     private readonly http = inject(HttpClient);
     private readonly notificationService = inject(NotificationService);
-    
+    private readonly g = inject(GService);
+
     private threadListMas: { [threadGroupId: string]: ThreadGroupForView[] } = {};
 
     /**
@@ -33,7 +35,7 @@ export class ThreadService {
      * @returns 初期化されたスレッドグループ
      */
     genInitialThreadGroupEntity(projectId: string, template?: ThreadGroupForView): ThreadGroupForView {
-        const defaultThreadGroup = template || 
+        const defaultThreadGroup = template ||
             Object.keys(this.threadListMas)
                 .map(key => this.threadListMas[key].find(threadGroup => threadGroup.type === ThreadGroupType.Default))
                 .filter(threadGroup => threadGroup)[0];
@@ -43,17 +45,17 @@ export class ThreadService {
             const threadGroup = Utils.clone(defaultThreadGroup);
             threadGroup.createdAt = new Date(threadGroup.createdAt);
             threadGroup.updatedAt = new Date(threadGroup.updatedAt);
-            
+
             // ひな型なので要らない項目は消しておく
             Object.assign(threadGroup, genInitialBaseEntity('thread-group'));
             threadGroup.title = '';
             threadGroup.type = ThreadGroupType.Normal;
             threadGroup.description = '';
             threadGroup.visibility = ThreadGroupVisibility.Team;
-            threadGroup.threadList.forEach(thread => 
+            threadGroup.threadList.forEach(thread =>
                 Object.assign(thread, genInitialBaseEntity('thread'))
             );
-            
+
             return threadGroup;
         } else {
             // デフォルトスレッドグループがなければ新規作成
@@ -65,7 +67,7 @@ export class ThreadService {
                 visibility: ThreadGroupVisibility.Team,
                 threadList: [],
                 updatedDate: new Date().toLocaleDateString(
-                    navigator.language || 'ja-JP', 
+                    this.g.locale,
                     { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }
                 ),
                 ...genInitialBaseEntity('thread-group'),
@@ -98,7 +100,7 @@ export class ThreadService {
      */
     getInitialArgs(): ChatCompletionCreateParamsWithoutMessages {
         return {
-            model: 'gpt-4o',
+            model: 'gpt-5',
             max_tokens: 4096,
             temperature: 0.7,
             top_p: 1,
@@ -143,7 +145,7 @@ export class ThreadService {
                     threadGroup.createdAt = new Date(threadGroup.createdAt);
                     threadGroup.updatedAt = new Date(threadGroup.updatedAt);
                     threadGroup.updatedDate = threadGroup.updatedAt.toLocaleDateString(
-                        navigator.language || 'ja-JP',
+                        this.g.locale,
                         { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }
                     );
                 });
@@ -163,7 +165,7 @@ export class ThreadService {
                 threadGroup.createdAt = new Date(threadGroup.createdAt);
                 threadGroup.updatedAt = new Date(threadGroup.updatedAt);
                 threadGroup.updatedDate = threadGroup.updatedAt.toLocaleDateString(
-                    navigator.language || 'ja-JP',
+                    this.g.locale,
                     { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }
                 );
             })
@@ -269,8 +271,8 @@ export class ThreadService {
      * @returns 更新完了
      */
     updateThreadGroupOrder(projectId: string, threadGroupIds: string[]): Observable<void> {
-        return this.http.patch<void>(`/user/project/${projectId}/thread-groups/order`, { 
-            threadGroupIds 
+        return this.http.patch<void>(`/user/project/${projectId}/thread-groups/order`, {
+            threadGroupIds
         }).pipe(
             tap(() => {
                 this.notificationService.showSuccess('並び順を更新しました');

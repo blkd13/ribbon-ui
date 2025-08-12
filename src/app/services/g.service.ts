@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { User } from '../models/models';
 import { Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { User } from '../models/models';
 
-export type Lang = 'ja' | 'en';
+export type Lang = 'ja' | 'en' | 'zh';
+export type Locale = 'ja-JP' | 'en-US' | 'zh-CN';
 export type MultilingualPrompt = Record<Lang, string>;
 
 @Injectable({
@@ -11,7 +12,8 @@ export type MultilingualPrompt = Record<Lang, string>;
 })
 export class GService {
 
-  version = 'v20250628';
+  version = 'v20250812';
+  appType: string = environment.appType;
 
   // ローディング中のHTTP通信数
   httpConnectCount: Subject<number> = new Subject<number>();
@@ -54,7 +56,9 @@ export class GService {
     'application/pkix-cert',
   ];
 
-  lang: Lang;
+  lang!: Lang;
+  locale!: Locale;
+
   orgKey: string;
 
   info: { user: User } = { user: {} as User };
@@ -73,7 +77,5 @@ export class GService {
     // 組織キー
     this.orgKey = this.queries['orgKey'] || environment.defaultOrgKey;
 
-    // 言語設定
-    this.lang = this.queries['lang'] === 'en' ? 'en' : 'ja';
   }
 }

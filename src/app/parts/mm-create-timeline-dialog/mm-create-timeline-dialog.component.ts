@@ -1,22 +1,22 @@
-import { MattermostTimeline, MattermostTimelineService } from '../../services/api-mattermost.service';
-import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatIconModule } from '@angular/material/icon';
+import { MattermostTimeline, MattermostTimelineService } from '../../services/api-mattermost.service';
 
+import { MatButtonModule } from '@angular/material/button';
 import { ApiMattermostService, MattermostChannelForView, MattermostTeamForView } from '../../services/api-mattermost.service';
+import { Utils } from '../../utils';
 import { DialogComponent } from '../dialog/dialog.component';
 import { MmTeamLogoComponent } from '../mm-team-logo/mm-team-logo.component';
-import { Utils } from '../../utils';
-import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-mm-create-timeline-dialog',
@@ -75,7 +75,7 @@ export class MmCreateTimelineDialogComponent {
       if (result === 1 && this.id) {
         this.mattermostTimelineService.deleteTimeline(this.id).subscribe({
           next: next => {
-            console.log(next);
+            // console.log(next);
             this.dialogRef.close({ id: this.id, action: 'delete' });
           }
         });

@@ -1,21 +1,22 @@
-import { Component, inject } from '@angular/core';
-import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatCardModule } from '@angular/material/card';
-
-import { AuthService } from '../../services/auth.service';
-import { GService } from '../../services/g.service';
 import { CommonModule } from '@angular/common';
-import { DialogComponent } from '../../parts/dialog/dialog.component';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { TranslateModule } from '@ngx-translate/core';
-import { MatIconModule } from '@angular/material/icon';
-import { environment } from '../../../environments/environment';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
-import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { Component, inject } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+
+import { environment } from '../../../environments/environment';
+import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
+import { DialogComponent } from '../../parts/dialog/dialog.component';
+import { AuthService } from '../../services/auth.service';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { GService } from '../../services/g.service';
+import { LoggerService } from '../../services/logger';
 import { UserService } from '../../services/user.service';
 
 @Component({
@@ -53,12 +54,14 @@ export class LoginComponent {
   readonly dialog: MatDialog = inject(MatDialog);
   readonly g: GService = inject(GService);
   readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
+  readonly logger: LoggerService = inject(LoggerService);
+  readonly translate: TranslateService = inject(TranslateService);
 
   apiProviderKeys: string[] = [];
   apiProviderGroupedList: { [type: string]: ExtApiProviderEntity[] } = {};
 
   ngOnInit(): void {
-    document.title = `Ribbon UI`;
+    document.title = this.translate.instant('APP_TITLE');
 
     this.extApiProviderService.getApiProvidersNonAuth(this.g.orgKey).subscribe({
       next: (apiProviderList) => {
@@ -71,15 +74,14 @@ export class LoginComponent {
           acc[type].push(apiProvider);
           return acc;
         }, {});
-        // console.log(this.apiProviderGroupedList);
-        console.log(apiProviderList);
+        this.logger.debug('API provider list loaded:', apiProviderList);
       },
       error: (error) => {
-        console.log(error);
-        this.snackBar.open(`APIプロバイダの取得に失敗しました。`, 'close', { duration: 3000 });
+        this.logger.error('Failed to fetch API providers:', error);
+        this.snackBar.open(this.translate.instant('API_PROVIDER_FETCH_ERROR'), 'close', { duration: 3000 });
       },
       complete: () => {
-        console.log('complete');
+        this.logger.debug('API provider fetch completed');
       }
     });
 
@@ -89,10 +91,10 @@ export class LoginComponent {
       this.loginState = 'password-reset';
       this.authService.onetimeLogin('passwordReset', onetimeToken).subscribe({
         next: next => {
-          console.log(next);
+          this.logger.debug('Onetime login response:', next);
         },
         error: error => {
-          alert('このリンクは無効です。初めからやり直してください。');
+          alert(this.translate.instant('INVALID_LINK_ALERT'));
           this.router.navigate(['/login']);
         }
       });
@@ -100,15 +102,15 @@ export class LoginComponent {
       // 認証トークンが生きてたら自動ログイン
       this.authService.getUser().subscribe({
         next: next => {
-          console.log(next);
+          this.logger.info('User authenticated, redirecting to main view:', next);
           this.router.navigate([this.firstView]);
         },
         error: error => {
           // 未ログイン
-          // console.log(error);
+          this.logger.debug('User not authenticated:', error);
         },
         complete: () => {
-          // console.log('complete');
+          this.logger.debug('Authentication check completed');
         }
       });
     }
@@ -126,29 +128,35 @@ export class LoginComponent {
   }
 
   onSubmit(): void {
-    console.log(this.loginForm.value);
+    this.logger.debug('Login form submitted:', { email: this.loginForm.value.email });
 
     if (this.loginForm.valid) {
       this.authService.login(this.loginForm.value.email || '', this.loginForm.value.password || '').subscribe({
         next: (user) => {
-          console.log(user);
+          this.logger.info('Login successful, redirecting:', user);
           this.router.navigate([this.firstView]);
         },
         error: (error) => {
-          this.errorMessageList = ['認証に失敗しました。'];
-          console.log(error);
+          this.errorMessageList = [this.translate.instant('AUTHENTICATION_FAILED')];
+          this.logger.error('Login failed:', error);
         },
       });
     } else {
-      console.log('invalid');
+      this.logger.warn('Login form is invalid');
     }
   }
 
   guestLogin(): void {
     this.authService.guestLogin().subscribe({
       next: user => {
-        console.log(user);
-        this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `ゲストモードは全ての履歴が他のゲストと共有されます。\n使い終わったらスレッドを消すようにしてください。`, options: ['OK', 'キャンセル'] } }).afterClosed().subscribe({
+        this.logger.info('Guest login successful:', user);
+        this.dialog.open(DialogComponent, {
+          data: {
+            title: this.translate.instant('ALERT'),
+            message: this.translate.instant('GUEST_MODE_WARNING'),
+            options: [this.translate.instant('OK'), this.translate.instant('CANCEL')]
+          }
+        }).afterClosed().subscribe({
           next: next => {
             if (next === 0) {
               // OKならログイン
@@ -161,28 +169,28 @@ export class LoginComponent {
         });
       },
       error: (error) => {
-        this.errorMessageList = ['ゲストモードは現在停止中です。'];
-        console.log(error);
+        this.errorMessageList = [this.translate.instant('GUEST_MODE_UNAVAILABLE')];
+        this.logger.error('Guest login failed:', error);
       },
     });
   }
 
   onSend(): void {
-    console.log(this.loginForm.value);
+    this.logger.debug('Password reset email send requested:', { email: this.sendMailForm.value.email });
 
     if (this.sendMailForm.valid) {
       this.authService.requestForPasswordReset(this.sendMailForm.value.email).subscribe({
         next: (user) => {
-          console.log(user);
+          this.logger.info('Password reset email sent successfully:', user);
           this.loginState = 'sendmailfine';
         },
         error: (error) => {
-          this.snackBar.open(`無効なメールアドレスです。\n${JSON.stringify(error)}`, 'close', { duration: 3000 });
-          console.log(error);
+          this.snackBar.open(`${this.translate.instant('INVALID_EMAIL')}\n${JSON.stringify(error)}`, 'close', { duration: 3000 });
+          this.logger.error('Password reset email send failed:', error);
         },
       });
     } else {
-      console.log('invalid');
+      this.logger.warn('Password reset form is invalid');
     }
   }
 
@@ -191,12 +199,12 @@ export class LoginComponent {
     this.errorMessageList = [];
     if (this.passwordResetForm.value.password === this.passwordResetForm.value.passwordConfirm) {
     } else {
-      this.errorMessageList.push('パスワードが一致していません。');
+      this.errorMessageList.push(this.translate.instant('PASSWORD_MISMATCH'));
       return;
     }
     if (password.length >= 15) {
     } else {
-      this.errorMessageList.push('パスワードは15文字以上にしてください。');
+      this.errorMessageList.push(this.translate.instant('PASSWORD_TOO_SHORT'));
     }
 
     const hasUpperCase = /[A-Z]/.test(password);
@@ -205,16 +213,16 @@ export class LoginComponent {
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
     if (!hasUpperCase) {
-      this.errorMessageList.push('パスワードには少なくとも1つの大文字を含めてください。');
+      this.errorMessageList.push(this.translate.instant('PASSWORD_NEEDS_UPPERCASE'));
     }
     if (!hasLowerCase) {
-      this.errorMessageList.push('パスワードには少なくとも1つの小文字を含めてください。');
+      this.errorMessageList.push(this.translate.instant('PASSWORD_NEEDS_LOWERCASE'));
     }
     if (!hasNumbers) {
-      this.errorMessageList.push('パスワードには少なくとも1つの数字を含めてください。');
+      this.errorMessageList.push(this.translate.instant('PASSWORD_NEEDS_NUMBER'));
     }
     if (!hasSpecialChar) {
-      this.errorMessageList.push('パスワードには少なくとも1つの記号を含めてください。');
+      this.errorMessageList.push(this.translate.instant('PASSWORD_NEEDS_SPECIAL_CHAR'));
     }
 
     if (this.errorMessageList.length == 0) {
@@ -224,11 +232,11 @@ export class LoginComponent {
 
     this.authService.passwordReset(this.passwordResetForm.value.password, this.passwordResetForm.value.passwordConfirm).subscribe({
       next: (user) => {
-        console.log(user);
+        this.logger.info('Password reset successful, redirecting:', user);
         this.router.navigate([this.firstView]);
       },
       error: (error) => {
-        console.log(error);
+        this.logger.error('Password reset failed:', error);
         if (error.error && Array.isArray(error.error.errors)) {
           this.errorMessageList = error.error.errors;
         } else {

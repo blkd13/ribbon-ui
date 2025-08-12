@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface MenuItem {
   link: string;
@@ -17,7 +18,7 @@ interface MenuItem {
 
 @Component({
   selector: 'app-settings',
-  imports: [MatIconModule, MatButtonModule, MatFormFieldModule, MatSlideToggleModule, MatSelectModule, FormsModule, CommonModule, RouterModule],
+  imports: [MatIconModule, MatButtonModule, MatFormFieldModule, MatSlideToggleModule, MatSelectModule, FormsModule, CommonModule, RouterModule, TranslateModule],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss'
 })

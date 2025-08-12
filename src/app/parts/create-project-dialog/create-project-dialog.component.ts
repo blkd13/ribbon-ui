@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Utils } from '../../utils';
 import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
+import { TranslateModule } from '@ngx-translate/core';
 
 // import { DevelopmentStageType, DocumentSubType, DocumentType, Project, ProjectStatus } from 'src/app/models/project-model';
 
@@ -25,7 +26,7 @@ export interface CreateProjectDialogResult {
 
 @Component({
     selector: 'app-create-project-dialog',
-    imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule],
+    imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, TranslateModule],
     templateUrl: './create-project-dialog.component.html',
     styleUrl: './create-project-dialog.component.scss'
 })

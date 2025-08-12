@@ -17,6 +17,10 @@ import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 
 import { safeForkJoin } from '../../utils/dom-utils';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatCardModule } from '@angular/material/card';
+import { TranslateModule } from '@ngx-translate/core';
 
 /** ツリーに表示するノードの型 */
 export interface GitNode {
@@ -45,7 +49,8 @@ export type GitProject = {
   imports: [
     CommonModule, FormsModule,
     MatIconModule, MatButtonModule, MatTreeModule, MatTabsModule, MatProgressSpinnerModule,
-    AppMenuComponent, UserMarkComponent,
+    AppMenuComponent, UserMarkComponent, TranslateModule,
+    MatFormFieldModule, MatInputModule, MatCardModule,
   ],
   templateUrl: './git.component.html',
   styleUrl: './git.component.scss'

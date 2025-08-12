@@ -1,26 +1,95 @@
+<!-- save-thread-dialog.component.html -->
 <div class="p-10">
-    <h1 mat-dialog-title>Save As Mode</h1>
-    <p mat-dialog-content>現在のチャット設定を「モード」として保存します。</p>
-    
+    <h1 mat-dialog-title>{{ 'SAVE_MODE' | translate }}</h1>
+    <p mat-dialog-content>{{ 'SAVE_MODE_DESCRIPTION' | translate }}</p>
+
     <form [formGroup]="form" mat-dialog-content class="save-thread-dialog mt-10">
-        <mat-form-field appearance="fill" class="w-full">
-            <mat-label>モード名</mat-label>
-            <input matInput formControlName="threadName" placeholder="例：高機能エージェント" required>
-            @if (hasError('threadName')) {
-                <mat-error>{{ getErrorMessage('threadName') }}</mat-error>
+        <!-- Save Type Selection -->
+        <div class="save-type-section mb-6">
+            <mat-radio-group formControlName="saveType" class="save-type-options">
+                <div class="radio-option" [class.selected]="form.get('saveType')?.value === 'new'"
+                    (click)="setSaveType('new')">
+                    <mat-radio-button value="new" class="radio-button"></mat-radio-button>
+                    <div class="option-content">
+                        <h3 class="option-title">{{ 'CREATE_NEW' | translate }}</h3>
+                        <p class="option-description">{{ 'CREATE_NEW_MODE' | translate }}</p>
+                    </div>
+                </div>
+
+                <div class="radio-option" [class.selected]="form.get('saveType')?.value === 'update'"
+                    [class.disabled]="!hasExistingModes" (click)="setSaveType('update')">
+                    <mat-radio-button value="update" [disabled]="!hasExistingModes"
+                        class="radio-button"></mat-radio-button>
+                    <div class="option-content">
+                        <h3 class="option-title">{{ 'UPDATE_MODE' | translate }}</h3>
+                        <p class="option-description" [class.text-muted]="!hasExistingModes">
+                            {{ hasExistingModes ? ('UPDATE_EXISTING_MODE' | translate) : ('NO_MODES' | translate) }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="radio-option" [class.selected]="form.get('saveType')?.value === 'default'"
+                    (click)="setSaveType('default')">
+                    <mat-radio-button value="default" class="radio-button"></mat-radio-button>
+                    <div class="option-content">
+                        <h3 class="option-title">{{ 'DEFAULT_SETTINGS' | translate }}</h3>
+                        <p class="option-description">{{ 'NEW_CHAT_DEFAULT_SETTINGS' | translate }}</p>
+                    </div>
+                </div>
+            </mat-radio-group>
+        </div>
+
+        <!-- Existing mode selection -->
+        <mat-form-field appearance="fill" class="w-full mb-4"
+            [class.field-disabled]="form.get('saveType')?.value !== 'update'">
+            <mat-label>{{ 'MODE_TO_UPDATE' | translate }}</mat-label>
+            <mat-select formControlName="selectedThreadGroupId" [disabled]="form.get('saveType')?.value !== 'update'"
+                [required]="form.get('saveType')?.value === 'update'">
+                @for (threadGroup of data.templateThreadGroupList; track threadGroup.id) {
+                <mat-option [value]="threadGroup.id">{{ threadGroup.title }}</mat-option>
+                }
+            </mat-select>
+            @if (hasError('selectedThreadGroupId') && form.get('saveType')?.value === 'update') {
+            <mat-error>{{ getErrorMessage('selectedThreadGroupId') }}</mat-error>
             }
         </mat-form-field>
 
-        <mat-form-field appearance="fill" class="w-full mt-4">
-            <mat-label>説明</mat-label>
-            <textarea matInput rows="3" formControlName="description" placeholder="例：全ツールONのモード"></textarea>
+        <!-- Mode name input -->
+        <mat-form-field appearance="fill" class="w-full"
+            [class.field-disabled]="form.get('saveType')?.value === 'default'">
+            <mat-label>{{ 'MODE_NAME' | translate }}</mat-label>
+            <input matInput formControlName="threadName" [placeholder]="getPlaceholderText()"
+                [disabled]="form.get('saveType')?.value === 'default'"
+                [required]="form.get('saveType')?.value === 'new'">
+            @if (hasError('threadName') && form.get('saveType')?.value !== 'default') {
+            <mat-error>{{ getErrorMessage('threadName') }}</mat-error>
+            }
         </mat-form-field>
 
-        @if(!data.isRenameOnly && data.hasMessages) {
-        <mat-checkbox class="mt-4" formControlName="includeMessages">
-            回答履歴も含めて保存する
+        <mat-form-field appearance="fill" class="w-full mt-4"
+            [class.field-disabled]="form.get('saveType')?.value === 'default'">
+            <mat-label>{{ 'DESCRIPTION' | translate }}</mat-label>
+            <textarea matInput rows="3" formControlName="description"
+                [disabled]="form.get('saveType')?.value === 'default'"
+                [placeholder]="'MODE_DESCRIPTION_PLACEHOLDER' | translate"></textarea>
+        </mat-form-field>
+
+        <!-- Default settings description (always displayed, content changes dynamically) -->
+        <div class="info-box mb-4" [class.warning-box]="form.get('saveType')?.value === 'default'">
+            <mat-icon [class]="form.get('saveType')?.value === 'default' ? 'warning-icon' : 'info-icon'">
+                {{ form.get('saveType')?.value === 'default' ? 'warning' : 'info' }}
+            </mat-icon>
+            <div class="info-text" [class.warning-text]="form.get('saveType')?.value === 'default'">
+                {{ getInfoText() }}
+            </div>
+        </div>
+
+        <!-- History save option -->
+        <mat-checkbox class="mt-4" formControlName="includeMessages"
+            [class.field-disabled]="form.get('saveType')?.value === 'default' || data.isRenameOnly || !data.hasMessages"
+            [disabled]="form.get('saveType')?.value === 'default' || data.isRenameOnly || !data.hasMessages">
+            {{ 'INCLUDE_RESPONSE_HISTORY' | translate }}
         </mat-checkbox>
-        }
     </form>
 
     @if (error) {
@@ -30,12 +99,12 @@
     }
 
     <div mat-dialog-actions class="flex justify-between mt-4">
-        <button mat-button (click)="onCancel()" [disabled]="isSaving">キャンセル</button>
+        <button mat-button (click)="onCancel()" [disabled]="isSaving">{{ 'CANCEL' | translate }}</button>
         <button mat-raised-button color="primary" (click)="onSave()" [disabled]="isSaving">
             @if (isSaving) {
-                保存中...
+            {{ 'SAVING' | translate }}
             } @else {
-                保存
+            {{ getSaveButtonText() }}
             }
         </button>
     </div>

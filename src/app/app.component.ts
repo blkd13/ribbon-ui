@@ -1,17 +1,20 @@
+import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
-import { AuthService } from './services/auth.service';
-import { GService } from './services/g.service';
-import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { filter } from 'rxjs/operators';
-import { UserService } from './services/user.service';
-import { AnnouncementsService } from './services/announcements.service';
-import { UserSettingService } from './services/user-setting.service';
 import { NewFeatureDialogComponent } from './parts/new-feature-dialog/new-feature-dialog.component';
+import { UserSettingsComponent } from "./parts/user-mark/user-mark.component";
+import { AnnouncementsService } from './services/announcements.service';
+import { AuthService } from './services/auth.service';
+import { GService, Lang, Locale } from './services/g.service';
+import { LoggerService } from './services/logger';
+import { UserSettingService } from './services/user-setting.service';
+import { UserService } from './services/user.service';
 
 declare var _paq: any;
 
@@ -20,13 +23,15 @@ declare var _paq: any;
   imports: [
     RouterOutlet,
     MatIconModule,
-    MatDialogModule
+    MatDialogModule,
+    TranslateModule,
+    UserSettingsComponent,
+    CommonModule,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
 export class AppComponent implements OnInit {
-  title = 'Ribbon UI';
   isChecked = false;
   showInfo = true;
   readonly authService: AuthService = inject(AuthService);
@@ -37,10 +42,12 @@ export class AppComponent implements OnInit {
   readonly announcementsService: AnnouncementsService = inject(AnnouncementsService);
   readonly userSettingService: UserSettingService = inject(UserSettingService);
   readonly dialog: MatDialog = inject(MatDialog);
+  readonly logger: LoggerService = inject(LoggerService);
 
   private readonly swUpdate: SwUpdate = inject(SwUpdate);
   private readonly snackBar: MatSnackBar = inject(MatSnackBar);
 
+  title = this.translateService.instant('APP_TITLE');
   constructor() {
     // v1.0からv2.0への移行
     const v1 = localStorage.getItem('settings-v1.0');
@@ -64,7 +71,12 @@ export class AppComponent implements OnInit {
   }
 
   private initializeApp(): void {
-    this.translateService.setDefaultLang('ja');
+    let userLang = this.translateService.getBrowserLang() as Locale || 'ja-JP';
+    // userLang = 'en-US';
+    // userLang = 'zh-CN';
+    this.g.lang = userLang.split('-')[0] as Lang;
+    this.g.locale = userLang as Locale;
+    this.translateService.setDefaultLang(this.g.lang);
     this.g.autoRedirectToLoginPageIfAuthError = false;
     this.authService.getUser().subscribe({
       next: next => {
@@ -82,7 +94,7 @@ export class AppComponent implements OnInit {
             this.isChecked = true;
           },
           complete: () => {
-            // console.log('complete');
+            // this.logger.debug('complete');
           }
         });
       },
@@ -91,7 +103,7 @@ export class AppComponent implements OnInit {
         this.isChecked = true;
       },
       complete: () => {
-        // console.log('complete');
+        // this.logger.debug('complete');
       }
     });
   }
@@ -104,7 +116,7 @@ export class AppComponent implements OnInit {
         }
       },
       error => {
-        console.error('Failed to check unread announcements:', error);
+        this.logger.error('Failed to check unread announcements:', error);
       }
     );
   }
@@ -126,7 +138,7 @@ export class AppComponent implements OnInit {
       this.swUpdate.versionUpdates
         .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
         .subscribe(evt => {
-          const snack = this.snackBar.open('更新が利用可能です', '更新', {
+          const snack = this.snackBar.open(this.translateService.instant('UPDATE_AVAILABLE'), this.translateService.instant('UPDATE'), {
             duration: 6000,
           });
           this.isUpdated = true;

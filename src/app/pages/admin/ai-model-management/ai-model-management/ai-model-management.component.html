@@ -1,27 +1,27 @@
 <!-- Enhanced AI Model Management Template with Scope Management -->
 <div class="container">
-    <h2>AI Models</h2>
+    <h2>{{ 'AI_MODELS' | translate }}</h2>
     <div class="layout-container">
         <!-- 左側：モデル一覧 -->
         <div class="table-container">
             <div class="table-header">
-                <h3>Models</h3>
+                <h3>{{ 'MODELS' | translate }}</h3>
                 @if (selectedScope) {
                 <div class="scope-context">
-                    <small class="text-muted">Filtered by scope: <strong>{{ getScopeDisplayName(selectedScope)
+                    <small class="text-muted">{{ 'FILTERED_BY_SCOPE' | translate }}: <strong>{{ getScopeDisplayName(selectedScope)
                             }}</strong></small>
                 </div>
                 }
                 <div class="header-buttons">
-                    <button mat-raised-button type="button" (click)="openTagManagement()" matTooltip="Manage Tags">
+                    <button mat-raised-button type="button" (click)="openTagManagement()" [matTooltip]="'MANAGE_TAGS' | translate">
                         <mat-icon>local_offer</mat-icon>
-                        Tags
+                        {{ 'TAGS' | translate }}
                     </button>
                     <button mat-raised-button type="button" color="primary" (click)="createNew()"
                         [disabled]="!canCreateModel()"
-                        [matTooltip]="!canCreateModel() ? 'You do not have permission to create models in the current scope' : ''">
+                        [matTooltip]="!canCreateModel() ? ('NO_PERMISSION_CREATE_MODELS' | translate) : ''">
                         <mat-icon>add</mat-icon>
-                        新規登録
+                        {{ 'CREATE_NEW' | translate }}
                     </button>
                 </div>
             </div>
@@ -31,16 +31,16 @@
                 <div class="filter-controls">
                     <!-- 検索フィルター -->
                     <mat-form-field appearance="outline" class="filter-field">
-                        <input matInput placeholder="Search models..." [(ngModel)]="searchFilter"
+                        <input matInput [placeholder]="'SEARCH_MODELS' | translate" [(ngModel)]="searchFilter"
                             (input)="applyFilters()" [value]="searchFilter">
                         <mat-icon matSuffix>search</mat-icon>
                     </mat-form-field>
 
                     <!-- プロバイダーフィルター -->
                     <mat-form-field appearance="outline" class="filter-field">
-                        <mat-select placeholder="Provider" [(value)]="providerFilter" (selectionChange)="applyFilters()"
+                        <mat-select [placeholder]="'PROVIDER' | translate" [(value)]="providerFilter" (selectionChange)="applyFilters()"
                             multiple panelWidth="400px">
-                            <mat-option value="">All Providers</mat-option>
+                            <mat-option value="">{{ 'ALL_PROVIDERS' | translate }}</mat-option>
                             @for (provider of availableProviders; track provider) {
                             <mat-option [value]="provider">{{ provider }}</mat-option>
                             }
@@ -50,9 +50,9 @@
 
                     <!-- タグフィルター -->
                     <mat-form-field appearance="outline" class="filter-field">
-                        <mat-select placeholder="Tags" [(value)]="tagFilter" (selectionChange)="applyFilters()" multiple
+                        <mat-select [placeholder]="'TAGS' | translate" [(value)]="tagFilter" (selectionChange)="applyFilters()" multiple
                             panelWidth="400px">
-                            <mat-option value="">All Tags</mat-option>
+                            <mat-option value="">{{ 'ALL_TAGS' | translate }}</mat-option>
                             @for (tag of availableTags; track tag) {
                             <mat-option [value]="tag">{{ getTagDisplayName(tag) }}</mat-option>
                             }
@@ -62,16 +62,16 @@
 
                     <!-- アクティブステータスフィルター -->
                     <mat-form-field appearance="outline" class="filter-field">
-                        <mat-select placeholder="Status" [(value)]="statusFilter" (selectionChange)="applyFilters()">
-                            <mat-option value="">All Status</mat-option>
-                            <mat-option value="true">Active</mat-option>
-                            <mat-option value="false">Inactive</mat-option>
+                        <mat-select [placeholder]="'STATUS' | translate" [(value)]="statusFilter" (selectionChange)="applyFilters()">
+                            <mat-option value="">{{ 'ALL_STATUS' | translate }}</mat-option>
+                            <mat-option value="true">{{ 'ACTIVE' | translate }}</mat-option>
+                            <mat-option value="false">{{ 'INACTIVE' | translate }}</mat-option>
                         </mat-select>
                         <mat-icon matSuffix>visibility</mat-icon>
                     </mat-form-field>
 
                     <!-- フィルターリセット -->
-                    <button mat-icon-button (click)="resetFilters()" matTooltip="Reset Filters">
+                    <button mat-icon-button (click)="resetFilters()" [matTooltip]="'RESET_FILTERS' | translate">
                         <mat-icon>clear</mat-icon>
                     </button>
                 </div>
@@ -79,34 +79,34 @@
                 <!-- 一括操作エリア -->
                 @if (selectedModels.length > 0) {
                 <div class="bulk-actions">
-                    <span class="selected-count">{{ selectedModels.length }} models selected</span>
+                    <span class="selected-count">{{ selectedModels.length }} {{ 'MODELS_SELECTED' | translate }}</span>
                     <button mat-raised-button color="primary" (click)="bulkToggleStatus(true)"
                         [disabled]="!canBulkEdit()">
                         <mat-icon>visibility</mat-icon>
-                        Activate
+                        {{ 'ACTIVATE' | translate }}
                     </button>
                     <button mat-raised-button (click)="bulkToggleStatus(false)" [disabled]="!canBulkEdit()">
                         <mat-icon>visibility_off</mat-icon>
-                        Deactivate
+                        {{ 'DEACTIVATE' | translate }}
                     </button>
                     <button mat-raised-button (click)="openBulkTagDialog()" [disabled]="!canBulkEdit()">
                         <mat-icon>local_offer</mat-icon>
-                        Add Tags
+                        {{ 'ADD_TAGS' | translate }}
                     </button>
                     <button mat-raised-button (click)="openBulkProviderDialog()" [disabled]="!canBulkEdit()">
                         <mat-icon>settings</mat-icon>
-                        Set Providers
+                        {{ 'SET_PROVIDERS' | translate }}
                     </button>
                     <button mat-raised-button color="warn" (click)="bulkDelete()" [disabled]="!canBulkEdit()">
                         <mat-icon>delete</mat-icon>
-                        Delete
+                        {{ 'DELETE' | translate }}
                     </button>
                 </div>
                 }
             </div>
 
             <div class="source-links flex gap-2 p-4">
-                <span>Data Source:</span>
+                <span>{{ 'DATA_SOURCE' | translate }}:</span>
                 <a href="https://platform.openai.com/docs/models" target="_blank"
                     class="text-blue-500 hover:underline">OpenAI</a>
                 <a href="https://docs.anthropic.com/en/docs/about-claude/models/overview" target="_blank"
@@ -128,8 +128,8 @@
                             </th>
                             <th class="sortable-header" (click)="sortByColumn('name')">
                                 <div class="header-content">
-                                    <div class="flex flex-col">Name
-                                        <span class="text-xs text-[#888] align-right">Provider</span>
+                                    <div class="flex flex-col">{{ 'NAME' | translate }}
+                                        <span class="text-xs text-[#888] align-right">{{ 'PROVIDER' | translate }}</span>
                                     </div>
                                     <mat-icon class="sort-icon" [class.active]="sortBy === 'name'">
                                         @if(sortBy === 'name') {
@@ -142,7 +142,7 @@
                             </th>
                             <th class="sortable-header" (click)="sortByColumn('scope')">
                                 <div class="header-content">
-                                    Scope
+                                    {{ 'SCOPE' | translate }}
                                     <mat-icon class="sort-icon" [class.active]="sortBy === 'scope'">
                                         @if(sortBy === 'scope') {
                                         {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
@@ -154,8 +154,8 @@
                             </th>
                             <th class="sortable-header" (click)="sortByColumn('context')">
                                 <div class="header-content">
-                                    <div class="flex flex-col">Context
-                                        <span class="text-xs text-[#888] align-right">Output</span>
+                                    <div class="flex flex-col">{{ 'CONTEXT' | translate }}
+                                        <span class="text-xs text-[#888] align-right">{{ 'OUTPUT' | translate }}</span>
                                     </div>
 
                                     <mat-icon class="sort-icon" [class.active]="sortBy === 'context'">
@@ -169,7 +169,7 @@
                             </th>
                             <th class="sortable-header" (click)="sortByColumn('price')">
                                 <div class="header-content">
-                                    Price<span class="text-xs text-[#888] align-right">(in/out)</span>
+                                    {{ 'PRICE' | translate }}<span class="text-xs text-[#888] align-right">({{ 'IN_OUT' | translate }})</span>
                                     <mat-icon class="sort-icon" [class.active]="sortBy === 'price'">
                                         @if(sortBy === 'price') {
                                         {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
@@ -181,8 +181,8 @@
                             </th>
                             <th class="sortable-header" (click)="sortByColumn('releaseDate')">
                                 <div class="header-content">
-                                    <div class="flex flex-col">Release
-                                        <span class="text-xs text-[#888] align-right">Knowledge</span>
+                                    <div class="flex flex-col">{{ 'RELEASE' | translate }}
+                                        <span class="text-xs text-[#888] align-right">{{ 'KNOWLEDGE' | translate }}</span>
                                     </div>
                                     <mat-icon class="sort-icon" [class.active]="sortBy === 'releaseDate'">
                                         @if(sortBy === 'releaseDate') {
@@ -193,11 +193,11 @@
                                     </mat-icon>
                                 </div>
                             </th>
-                            <th>Modalities</th>
-                            <th>Tags</th>
+                            <th>{{ 'MODALITIES' | translate }}</th>
+                            <th>{{ 'TAGS' | translate }}</th>
                             <th class="sortable-header" (click)="sortByColumn('active')">
                                 <div class="header-content">
-                                    Sts
+                                    {{ 'STATUS' | translate }}
                                     <mat-icon class="sort-icon" [class.active]="sortBy === 'active'">
                                         @if(sortBy === 'active') {
                                         {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
@@ -207,7 +207,7 @@
                                     </mat-icon>
                                 </div>
                             </th>
-                            <th>Actions</th>
+                            <th>{{ 'ACTIONS' | translate }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -287,14 +287,14 @@
                                 <!-- 自分のスコープの場合：通常の編集・複製・削除 -->
                                 @if (shouldShowEditButton(model)) {
                                 <button mat-icon-button class="mr-5"
-                                    (click)="editModel(model); $event.stopPropagation();" matTooltip="Edit this model">
+                                    (click)="editModel(model); $event.stopPropagation();" [matTooltip]="'EDIT_MODEL' | translate">
                                     <mat-icon>edit</mat-icon>
                                 </button>
                                 }
 
                                 @if (shouldShowDuplicateButton(model)) {
                                 <button mat-icon-button class="mr-5" (click)="duplicateModel(model, $event);"
-                                    matTooltip="Duplicate this model">
+                                    [matTooltip]="'DUPLICATE_MODEL' | translate">
                                     <mat-icon>file_copy</mat-icon>
                                 </button>
                                 }
@@ -302,7 +302,7 @@
                                 @if (shouldShowDeleteButton(model)) {
                                 <button mat-icon-button class="mr-5"
                                     (click)="deleteModel(model.id); $event.stopPropagation();"
-                                    matTooltip="Delete this model">
+                                    [matTooltip]="'DELETE_MODEL' | translate">
                                     <mat-icon>delete</mat-icon>
                                 </button>
                                 } @else {
@@ -315,13 +315,13 @@
                                 <!-- 他のスコープの場合：閲覧とオーバーライド -->
                                 <button mat-icon-button class="mr-5"
                                     (click)="viewModel(model); $event.stopPropagation();"
-                                    matTooltip="View model details">
+                                    [matTooltip]="'VIEW_MODEL_DETAILS' | translate">
                                     <mat-icon>visibility</mat-icon>
                                 </button>
 
                                 @if (shouldShowOverrideButton(model)) {
                                 <button mat-icon-button class="mr-5 override-button"
-                                    (click)="startOverride(model, $event);" matTooltip="Create override in your scope">
+                                    (click)="startOverride(model, $event);" [matTooltip]="'CREATE_OVERRIDE' | translate">
                                     <div class="icon-stack">
                                         <mat-icon class="base-icon">content_copy</mat-icon>
                                         <mat-icon class="overlay-icon">add_circle</mat-icon>
@@ -329,7 +329,7 @@
                                 </button>
                                 } @else {
                                 <button mat-icon-button class="mr-5" disabled
-                                    matTooltip="No permission to create overrides">
+                                    [matTooltip]="'NO_PERMISSION_CREATE_OVERRIDES' | translate">
                                     <mat-icon>block</mat-icon>
                                 </button>
                                 }
@@ -345,7 +345,7 @@
                         <tr>
                             <td colspan="10" class="no-data">
                                 <mat-icon>info</mat-icon>
-                                <p>No models found</p>
+                                <p>{{ 'NO_MODELS_FOUND' | translate }}</p>
                             </td>
                         </tr>
                         }
@@ -371,15 +371,15 @@
                             </div>
                             <div class="banner-text">
                                 @if (isOverrideMode) {
-                                <strong>Creating Override</strong>
+                                <strong>{{ 'CREATING_OVERRIDE' | translate }}</strong>
                                 <p>You are creating an override of "{{ selectedModel.name }}"
                                     from {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}:{{
                                     getScopeLabel(selectedModel.scopeInfo) }}
                                     in your current scope {{ getScopeTypeLabel(selectedScope!.scopeType) }}:{{
                                     getScopeLabel(selectedScope!) }}.</p>
                                 } @else {
-                                <strong>Viewing {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}
-                                    Model</strong>
+                                <strong>{{ 'VIEWING' | translate }} {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}
+                                    {{ 'MODEL' | translate }}</strong>
                                 <p>This model belongs to {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType)
                                     }}:{{ getScopeLabel(selectedModel.scopeInfo) }}.
                                     You can view its configuration below.</p>
@@ -389,7 +389,7 @@
                             <div class="banner-actions">
                                 <button mat-raised-button color="accent" (click)="switchToOverrideMode()">
                                     <mat-icon>content_copy</mat-icon>
-                                    Create Override
+                                    {{ 'CREATE_OVERRIDE' | translate }}
                                 </button>
                             </div>
                             }
@@ -412,16 +412,15 @@
             <div class="form-content">
                 <form [formGroup]="form" (ngSubmit)="register()">
                     <div class="form-tabs">
-                        <div class="tab" [class.active]="activeTab === 'basic'" (click)="setActiveTab('basic')">Basic
-                            Info
+                        <div class="tab" [class.active]="activeTab === 'basic'" (click)="setActiveTab('basic')">{{ 'BASIC_INFO' | translate }}
                         </div>
                         <div class="tab" [class.active]="activeTab === 'capabilities'"
-                            (click)="setActiveTab('capabilities')">Capabilities</div>
+                            (click)="setActiveTab('capabilities')">{{ 'CAPABILITIES' | translate }}</div>
                         <div class="tab" [class.active]="activeTab === 'pricing'" (click)="setActiveTab('pricing')">
-                            Pricing
+                            {{ 'PRICING' | translate }}
                         </div>
                         <div class="tab" [class.active]="activeTab === 'advanced'" (click)="setActiveTab('advanced')">
-                            Advanced</div>
+                            {{ 'ADVANCED' | translate }}</div>
                     </div>
 
                     <!-- Basic Info Tab -->

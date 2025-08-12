@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of, from } from 'rxjs';
-import { map, catchError, switchMap, reduce } from 'rxjs/operators';
-import { ChatService } from './chat.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Observable, of } from 'rxjs';
+import { catchError, map, reduce, switchMap } from 'rxjs/operators';
+import { ChatService } from './chat.service';
 
 declare const mermaid: any;
 
@@ -26,54 +26,63 @@ export class MermaidValidatorService {
     private readonly chatService = inject(ChatService);
     private readonly snackBar = inject(MatSnackBar);
     private readonly dialog = inject(MatDialog);
+    private readonly logger = inject(LoggerService);
 
     defaultModel = 'claude-sonnet-4-20250514'; // デフォルトのAIモデル
     defaultSystemPrompt = Utils.trimLines(`
-        あなたはMermaidの専門家です。構文エラーのあるMermaidコードを修正してください。
+        You are a Mermaid expert. Please fix the Mermaid code that contains syntax errors.
 
-        ## 修正ルール：
-        1. 元のコードの意図を可能な限り保持する
-        2. 構文エラーを完全に修正する
-        3. 修正されたMermaidコードのみを返す
-        4. 説明やマークダウンのコードブロック記号は含めない
-        5. 正しいMermaid構文に従う
+        ## Correction Rules:
 
-        ## 段階的修正アプローチ：
-        1. まず最小限の修正で動作するバージョンを作成
-        2. 複雑な構文（par/alt/loop等）は一旦シンプルな順序構造に簡素化
-        3. エラーが解消されたら、必要に応じて段階的に機能を追加
+        1. Preserve the original intent of the code as much as possible
+        2. Completely fix any syntax errors
+        3. Return **only** the corrected Mermaid code
+        4. Do **not** include explanations or Markdown code block symbols
+        5. Follow correct Mermaid syntax
 
-        ## 図タイプ別の修正ガイドライン：
+        ## Step-by-Step Correction Approach:
 
-        ### シーケンス図：
-        - activate/deactivateの対応関係を確認（複雑になる場合は省略を推奨）
-        - par/alt/loopなどの複雑なネストは極力避け、シンプルな順序構造に変換
-        - ノード名やアクション名の不正文字（空白、アポストロフィ、特殊記号）はアンダースコアに置換
-        - 長いラベルは短縮化または簡潔な表現に変更
+        1. First, create a version that works with minimal changes
+        2. Simplify complex structures (such as \`par\`, \`alt\`, \`loop\`, etc.) into a basic sequential flow
+        3. Once the errors are resolved, incrementally reintroduce features as needed
 
-        ### フローチャート/グラフ：
-        - ノード名に空白や特殊文字を使用しない（アンダースコアや適切な文字に置換）
-        - 矢印記法の確認（-->、->>、---など）
-        - 引用符の統一（ダブルクォートを推奨）
+        ## Diagram-Specific Guidelines:
 
-        ### 共通の修正方針：
-        - Mermaidのバージョン依存構文に注意（古い/新しい記法の混在を避ける）
-        - 日本語ラベルは基本的に保持（構文の正しさを優先）
-        - 複雑すぎる構造は分割または単純化を検討
-        - 動作の安定性を最優先とする
+        ### Sequence Diagrams:
 
-        ## よくあるエラーパターンと対処法：
-        - activate後のdeactivate漏れ → 対応関係を確認または省略
-        - alt/par/loopの不完全なend → 正しく閉じるか、構造を単純化
-        - ノード名の不正文字 → アンダースコアや安全な文字に置換
-        - 矢印記法の間違い → 正しい矢印記法に修正
-        - 引用符の不整合 → ダブルクォートに統一
-        - アポストロフィ（'）を含む文字列 → 削除または別の文字に置換
+        * Check for proper pairing of \`activate\` / \`deactivate\` (omit if overly complex)
+        * Avoid deeply nested structures like \`par\`, \`alt\`, and \`loop\`; convert to simple sequences where possible
+        * Replace invalid characters in node/action names (spaces, apostrophes, special symbols) with underscores
+        * Shorten or simplify long labels
 
-        ## 修正の優先順位：
-        1. 構文エラーの解消（動作することが最優先）
-        2. 意図の保持（可能な限り元の構造を維持）
-        3. 可読性の向上（必要に応じて簡素化）
+        ### Flowcharts / Graphs:
+
+        * Do not use spaces or special characters in node names (replace with underscores or appropriate characters)
+        * Verify arrow notations (\`-->\`, \`->>\`, \`---\`, etc.)
+        * Standardize quotation marks (use double quotes)
+
+        ### Common Fixing Principles:
+
+        * Be aware of Mermaid version-specific syntax (avoid mixing old and new formats)
+        * Retain Japanese labels when possible (prioritize correct syntax)
+        * Consider splitting or simplifying overly complex structures
+        * Prioritize operational stability above all
+
+        ## Common Error Patterns and Solutions:
+
+        * Missing \`deactivate\` after \`activate\` → check the pairing or omit if needed
+        * Incomplete \`alt\` / \`par\` / \`loop\` blocks → properly close them or simplify structure
+        * Invalid characters in node names → replace with underscores or safe characters
+        * Incorrect arrow notation → fix to proper Mermaid syntax
+        * Inconsistent quotation marks → unify to double quotes
+        * Strings containing apostrophes (\`'\`) → remove or replace with other characters
+
+        ## Fixing Priorities:
+
+        1. Resolve syntax errors (ensuring the code runs is top priority)
+        2. Preserve the original intent (maintain original structure where possible)
+        3. Improve readability (simplify when necessary)
+        4. Ensure compatibility with the latest Mermaid version (avoid deprecated syntax)
     `);
 
 
@@ -85,7 +94,7 @@ export class MermaidValidatorService {
             try {
                 // Mermaidの構文チェック
                 const parsed = await mermaid.parse(code);
-                console.log('Mermaid code parsed successfully:', parsed);
+                this.logger.debug('Mermaid code parsed successfully:', parsed);
                 resolve({
                     isValid: true,
                     originalCode: code
@@ -155,7 +164,7 @@ export class MermaidValidatorService {
             reduce((acc: string, content: string) => acc + content, ''),
             map(fullContent => Utils.mdTrim(fullContent.trim())),
             catchError(error => {
-                console.error('AI修正でエラーが発生しました:', error);
+                this.logger.error('AI修正でエラーが発生しました:', error);
                 this.snackBar.open('AI修正に失敗しました', 'Close', { duration: 5000 });
                 return of(request.code); // 元のコードを返す
             })
@@ -217,7 +226,7 @@ export class MermaidValidatorService {
                         this.snackBar.open('Mermaidコードを修正しました', 'Close', { duration: 3000 });
                     }
                 } catch (error) {
-                    console.error('Mermaid修正エラー:', error);
+                    this.logger.error('Mermaid修正エラー:', error);
                     this.snackBar.open('Mermaid修正に失敗しました', 'Close', { duration: 5000 });
                 }
             }
@@ -246,7 +255,7 @@ export class MermaidValidatorService {
                             const fixResult = await this.fixMermaidInMarkdown(markdown, result.model, result.customPrompt);
                             resolve({ success: true, result: fixResult.result });
                         } catch (error) {
-                            console.error('Mermaid修正エラー:', error);
+                            this.logger.error('Mermaid修正エラー:', error);
                             this.snackBar.open('修正に失敗しました', 'Close', { duration: 5000 });
                             resolve({ success: false });
                         }
@@ -260,12 +269,12 @@ export class MermaidValidatorService {
 }
 
 // 確認ダイアログコンポーネント（簡易版）
-import { Component, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
+import { Component, Inject } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { Utils } from '../utils';
+import { LoggerService } from './logger';
 
 @Component({
     selector: 'app-mermaid-fix-confirm-dialog',

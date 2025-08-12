@@ -8,6 +8,7 @@ import { AIModelEntityForView, AIModelManagerService, TagService, TagEntity } fr
 import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
 import { forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 // -----------------------------------------------------------------------------
 // Updated interfaces for Category -> Tag -> Model structure
@@ -45,6 +46,7 @@ export const MODEL_CATEGORIES: Category[] = [];
     MatIconModule,
     MatButtonModule,
     MatDividerModule,
+    TranslateModule,
   ],
   templateUrl: './model-selector.component.html',
   styleUrl: './model-selector.component.scss'

@@ -1,24 +1,24 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { FormGroup, FormControl, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { ChatService } from '../../services/chat.service';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { NotificationService } from '../../shared/services/notification.service';
-import { MessageGroupForView, ProjectVisibility, Thread, ThreadGroup, ThreadGroupType } from '../../models/project-models';
-import { Utils } from '../../utils';
 import { MatSliderModule } from '@angular/material/slider';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { CommonModule } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import { genDummyId, MessageService, ProjectService, ThreadService } from '../../services/project.service';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DialogComponent } from '../dialog/dialog.component';
-import { map, switchMap, tap } from 'rxjs';
-import { safeForkJoin } from '../../utils/dom-utils';
+import { TranslateModule } from '@ngx-translate/core';
+
+import { MessageGroupForView, ProjectVisibility, ThreadGroup, ThreadGroupType } from '../../models/project-models';
+import { ChatService } from '../../services/chat.service';
 import { AIModelManagerService } from '../../services/model-manager.service';
+import { genDummyId, MessageService, ProjectService, ThreadService } from '../../services/project.service';
 import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
+import { Utils } from '../../utils';
+import { safeForkJoin } from '../../utils/dom-utils';
+import { DialogComponent } from '../dialog/dialog.component';
 
 declare const _paq: any;
 
@@ -33,7 +33,7 @@ export interface ParameterSettingDialogResult {
 @Component({
   selector: 'app-parameter-setting-dialog',
   imports: [
-    CommonModule, FormsModule,
+    CommonModule, FormsModule, TranslateModule,
     MatButtonModule, MatFormFieldModule, MatSelectModule, MatSliderModule, MatCheckboxModule,
     MatDividerModule, MatTooltipModule, MatDialogModule,
   ],
@@ -101,7 +101,7 @@ export class ParameterSettingDialogComponent extends BaseDialogComponent<Paramet
       // デフォルトプロジェクトにも保存。
       const projects = await this.projectService.getProjectList().toPromise();
       const defaultProject = projects?.find(p => p.visibility === ProjectVisibility.Default);
-      
+
       if (!defaultProject) {
         throw new Error('デフォルトプロジェクトが見つかりません');
       }
@@ -116,7 +116,7 @@ export class ParameterSettingDialogComponent extends BaseDialogComponent<Paramet
       });
 
       const savedThreadGroup = await this.threadService.upsertThreadGroup(defaultProject.id, threadGroup).toPromise();
-      
+
       if (!savedThreadGroup) {
         throw new Error('スレッドグループの保存に失敗しました');
       }
@@ -127,7 +127,7 @@ export class ParameterSettingDialogComponent extends BaseDialogComponent<Paramet
           return messageGroup.threadId === threadId && messageGroup.role === 'system';
         });
       }).filter(messageGroup => !!messageGroup) as MessageGroupForView[];
-      
+
       // 元オブジェクトを破壊しないようにcloneしておく 
       const forInsert = Utils.clone(systemMessageGroupList);
       forInsert.forEach((messageGroup, index) => {

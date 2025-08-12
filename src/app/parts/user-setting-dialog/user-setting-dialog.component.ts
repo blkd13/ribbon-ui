@@ -10,6 +10,7 @@ import { UserService } from '../../services/user.service';
 import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 
 declare var _paq: any;
 
@@ -23,6 +24,7 @@ export interface UserSettingResult {
   selector: 'app-user-setting-dialog',
   imports: [CommonModule,
     MatDialogModule, MatDividerModule, MatSlideToggleModule, MatButtonModule, MatRadioModule, MatButtonToggleModule,
+    TranslateModule,
   ],
   templateUrl: './user-setting-dialog.component.html',
   styleUrl: './user-setting-dialog.component.scss'
@@ -31,6 +33,7 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
 
   readonly animationService: AnimationService = inject(AnimationService);
   readonly userService: UserService = inject(UserService);
+  readonly translate: TranslateService = inject(TranslateService);
 
   isAnimationEnabled$ = this.animationService.animationEnabled$;
   needsReload = false;
@@ -58,13 +61,13 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
   }
 
   toggleAnimation(event: MatSlideToggleChange) {
-    _paq.push(['trackEvent', 'ユーザー設定', 'アニメーション切替', this.current]);
+    _paq.push(['trackEvent', this.translate.instant('USER_SETTINGS'), this.translate.instant('ANIMATION_TOGGLE'), this.current]);
     this.needsReload = true;
     this.current = event.checked;
   }
 
   toggleTheme(event: MatButtonToggleChange) {
-    _paq.push(['trackEvent', 'ユーザー設定', 'テーマ切替', event.value]);
+    _paq.push(['trackEvent', this.translate.instant('USER_SETTINGS'), this.translate.instant('THEME_TOGGLE'), event.value]);
     this.theme = event.value;
     this.userService.applyTheme(event.value);
   }
@@ -79,12 +82,12 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
 
   saveAndClose() {
     if (this.needsReload) {
-      if (confirm('設定を反映するにはページをリロードする必要があります。よろしいですか？')) {
+      if (confirm(this.translate.instant('CONFIRM_RELOAD_FOR_SETTINGS'))) {
         this.executeAsync(async () => {
           return this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).toPromise();
         }).then(success => {
           if (success) {
-            _paq.push(['trackEvent', 'ユーザー設定', 'アニメーション設定保存', this.current]);
+            _paq.push(['trackEvent', this.translate.instant('USER_SETTINGS'), this.translate.instant('ANIMATION_SETTINGS_SAVED'), this.current]);
             this.animationService.toggleAnimation(this.current);
             this.close({ needsReload: true });
             window.location.reload();

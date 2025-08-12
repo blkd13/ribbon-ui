@@ -9,6 +9,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { DepartmentService, PredictTransaction } from './../../services/department.service';
 import { AuthService } from './../../services/auth.service';
 import { MarkdownModule } from 'ngx-markdown';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-predict-detail',
@@ -19,6 +20,7 @@ import { MarkdownModule } from 'ngx-markdown';
     MatButtonModule,
     MatIconModule,
     MarkdownModule,
+    TranslateModule,
   ],
   templateUrl: './predict-detail.component.html',
   styleUrl: './predict-detail.component.scss'
@@ -30,6 +32,7 @@ export class PredictDetailComponent implements OnInit {
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly departmentService: DepartmentService = inject(DepartmentService);
   readonly authService: AuthService = inject(AuthService);
+  readonly translate: TranslateService = inject(TranslateService);
 
   predict?: PredictTransaction;
   predictDetail?: PredictDetail;
@@ -56,7 +59,7 @@ export class PredictDetailComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error loading predict detail:', error);
-          this.snackBar.open('詳細データの取得に失敗しました', '閉じる', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('DETAILED_DATA_FETCH_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
           this.isLoading = false;
         }
       });
@@ -69,7 +72,7 @@ export class PredictDetailComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error loading predict detail:', error);
-          this.snackBar.open('詳細データの取得に失敗しました', '閉じる', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('DETAILED_DATA_FETCH_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
           this.isLoading = false;
         }
       });
@@ -109,10 +112,10 @@ export class PredictDetailComponent implements OnInit {
 
   copyToClipboard(text: string, type: string): void {
     navigator.clipboard.writeText(text).then(() => {
-      this.snackBar.open(`${type}をクリップボードにコピーしました`, '閉じる', { duration: 2000 });
+      this.snackBar.open(this.translate.instant('COPIED_TO_CLIPBOARD', { type }), this.translate.instant('CLOSE'), { duration: 2000 });
     }).catch(err => {
       console.error('Failed to copy text: ', err);
-      this.snackBar.open('コピーに失敗しました', '閉じる', { duration: 2000 });
+      this.snackBar.open(this.translate.instant('COPY_FAILED'), this.translate.instant('CLOSE'), { duration: 2000 });
     });
   }
 

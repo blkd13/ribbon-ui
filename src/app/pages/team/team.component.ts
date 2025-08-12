@@ -1,27 +1,27 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { AuthService } from '../../services/auth.service';
-import { ProjectService, TeamService } from '../../services/project.service';
-import { MatDialog } from '@angular/material/dialog';
-import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { GService } from '../../services/g.service';
-import { Project, Team, TeamForView, TeamMember, TeamType } from '../../models/project-models';
-import { safeForkJoin } from '../../utils/dom-utils';
-import { Observable } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RelativeTimePipe } from '../../pipe/relative-time.pipe';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TeamForView, TeamMember, TeamType } from '../../models/project-models';
 import { CreateProjectDialogComponent } from '../../parts/create-project-dialog/create-project-dialog.component';
 import { EditTeamMemberDialogComponent } from '../../parts/edit-team-member-dialog/edit-team-member-dialog.component';
+import { RelativeTimePipe } from '../../pipe/relative-time.pipe';
+import { AuthService } from '../../services/auth.service';
+import { GService } from '../../services/g.service';
+import { LoggerService } from '../../services/logger';
+import { ProjectService, TeamService } from '../../services/project.service';
 import { Utils } from '../../utils';
 
 @Component({
-    selector: 'app-team',
-    imports: [CommonModule, FormsModule, RouterModule, RelativeTimePipe, MatIconModule, MatButtonModule],
-    templateUrl: './team.component.html',
-    styleUrl: './team.component.scss'
+  selector: 'app-team',
+  imports: [CommonModule, FormsModule, RouterModule, RelativeTimePipe, MatIconModule, MatButtonModule, TranslateModule],
+  templateUrl: './team.component.html',
+  styleUrl: './team.component.scss'
 })
 export class TeamComponent implements OnInit {
   readonly authService: AuthService = inject(AuthService);
@@ -32,6 +32,8 @@ export class TeamComponent implements OnInit {
   readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly g: GService = inject(GService);
+  readonly translate: TranslateService = inject(TranslateService);
+  readonly logger: LoggerService = inject(LoggerService);
 
   team!: TeamForView;
   editLabel = false;
@@ -76,14 +78,14 @@ export class TeamComponent implements OnInit {
       this.team.name = this.team.name || ('team-' + Utils.formatDate(new Date(), 'yyyyMMddHHmmssSSS'));
       this.teamService.createTeam(this.team).subscribe({
         next: next => {
-          console.log(next);
+          this.logger.debug(next);
           this.teamChangeHandler(next.id);
         }
       });
     } else {
       this.teamService.updateTeam(this.team.id, this.team).subscribe({
         next: next => {
-          console.log(next);
+          this.logger.debug(next);
           // this.teamChangeHandler(this.team.id);
         }
       });
@@ -96,7 +98,7 @@ export class TeamComponent implements OnInit {
       data: { team: this.team, teamMember }
     }).afterClosed().subscribe({
       next: next => {
-        console.log(next);
+        this.logger.debug(next);
         if (next) {
           this.teamChangeHandler(this.team.id);
         }
@@ -111,14 +113,14 @@ export class TeamComponent implements OnInit {
     });
   }
   deleteTeam(): void {
-    if (confirm('チームを削除しますか？')) {
+    if (confirm(this.translate.instant('CONFIRM_DELETE_TEAM'))) {
       this.teamService.deleteTeam(this.team.id).subscribe({
         next: () => {
-          this.snackBar.open('チームを削除しました。', 'OK', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('TEAM_DELETED'), this.translate.instant('OK'), { duration: 3000 });
           this.router.navigate(['home']);
         },
         error: () => {
-          this.snackBar.open('チームの削除に失敗しました。', 'OK', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('TEAM_DELETE_FAILED'), this.translate.instant('OK'), { duration: 3000 });
         }
       });
     }

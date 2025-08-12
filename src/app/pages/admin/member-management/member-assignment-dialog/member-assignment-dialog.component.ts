@@ -11,6 +11,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, of, Subscription } from 'rxjs';
 import { startWith, map } from 'rxjs/operators';
+import { TranslateModule } from '@ngx-translate/core';
 
 import {
     MemberManagementService,
@@ -43,6 +44,7 @@ export interface MemberAssignmentDialogData {
         MatSnackBarModule,
         MatAutocompleteModule,
         MatIconModule,
+        TranslateModule,
     ],
     templateUrl: './member-assignment-dialog.component.html',
     styleUrls: ['./member-assignment-dialog.component.scss']

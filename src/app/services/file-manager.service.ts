@@ -1,8 +1,9 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 import { from, Observable, of } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { CountTokensResponse } from './chat.service';
+import { LoggerService } from './logger';
 
 export interface FileUploadContent {
     filePath: string;
@@ -67,6 +68,7 @@ export type FullPathFile = { fullPath: string, file: File, base64String: string,
 export class FileManagerService {
 
     private readonly http: HttpClient = inject(HttpClient);
+    private readonly logger = inject(LoggerService);
 
     /***
      * API通信しない、画面上でファイルを取ってくる関数もここに纏めてしまう。
@@ -77,7 +79,7 @@ export class FileManagerService {
         // inputタグで選択した場合は最初からディレクトリ配下のフルパスが全部取れてるので、形変更だけ
         const files: FullPathFile[] = [];
         for (let i = 0; i < items.length; i++) {
-            console.log(`${items[i].webkitRelativePath}`);
+            this.logger.debug(`${items[i].webkitRelativePath}`);
             const file = items[i];
             files.push({ fullPath: `${file.webkitRelativePath}/${file.name}`, file, base64String: '' });
         }
@@ -91,7 +93,7 @@ export class FileManagerService {
         const files: FullPathFile[] = [];
         const promises = [];
         for (let i = 0; i < items.length; i++) {
-            console.log(i + ":" + items.length);
+            this.logger.debug(`${i}:${items.length}`);
             const item = items[i].webkitGetAsEntry();
             if (item) {
                 promises.push(this.traverseFileTree(files, item));
@@ -113,7 +115,7 @@ export class FileManagerService {
         if (item.isFile) {
             const file = await new Promise<File>((resolve) => item.file(resolve));
             const fullPath = `${path}/${item.name}`.replaceAll(/^\//g, '');
-            console.log(fullPath);
+            this.logger.debug(fullPath);
             // 先頭の/は外す。
             files.push({ fullPath, file, base64String: '' });
         } else if (item.isDirectory) {
@@ -121,7 +123,7 @@ export class FileManagerService {
             let entries = await this.readEntries(dirReader);
             while (entries.length > 0) {
                 for (let i = 0; i < entries.length; i++) {
-                    // console.log(i + ":" + entries.length);
+                    // this.logger.debug(`${i}:${entries.length}`);
                     await this.traverseFileTree(files, entries[i], `${path}/${item.name}`);
                 }
                 entries = await this.readEntries(dirReader);
@@ -225,7 +227,7 @@ export class FileManagerService {
     }
 
     private handleError(error: any): Observable<never> {
-        console.error('An error occurred:', error);
+        this.logger.error('An error occurred:', error);
         throw error;
     }
 }

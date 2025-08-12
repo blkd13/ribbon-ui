@@ -1,13 +1,14 @@
+import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ExtApiProviderService } from '../../../services/ext-api-provider.service';
-import { ExtApiProviderTemplateEntity, ExtApiProviderAuthType, ExtApiProviderPostType } from '../../../models/models';
-import { BaseEntityFields } from '../../../models/project-models';
-import { MakeOptional } from '../../../utils';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { ExtApiProviderAuthType, ExtApiProviderPostType, ExtApiProviderTemplateEntity } from '../../../models/models';
+import { BaseEntityFields } from '../../../models/project-models';
+import { ExtApiProviderService } from '../../../services/ext-api-provider.service';
+import { LoggerService } from '../../../services/logger';
+import { MakeOptional } from '../../../utils';
 
 @Component({
   selector: 'app-ext-api-provider-template-form',
@@ -20,6 +21,7 @@ export class ExtApiProviderTemplateFormComponent implements OnInit {
   private fb: FormBuilder = inject(FormBuilder);
 
   readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
+  readonly logger: LoggerService = inject(LoggerService);
 
   providerTemplates: ExtApiProviderTemplateEntity[] = [];
   providerTemplateMap: { [key: string]: ExtApiProviderTemplateEntity } = {};
@@ -47,7 +49,7 @@ export class ExtApiProviderTemplateFormComponent implements OnInit {
         });
       },
       error: (err) => {
-        console.error('Error fetching API Providers:', err);
+        this.logger.error('Error fetching API Providers:', err);
       }
     });
   }
@@ -185,14 +187,14 @@ export class ExtApiProviderTemplateFormComponent implements OnInit {
     if (confirm('Are you sure you want to delete this provider template?')) {
       this.extApiProviderService.deleteApiProviderTemplate(id).subscribe({
         next: () => {
-          console.log('API Provider Template deleted successfully');
+          this.logger.debug('API Provider Template deleted successfully');
           this.loadProviderTemplates();
           if (this.form.value.id === id) {
             this.closeForm();
           }
         },
         error: (error) => {
-          console.error('Error deleting API Provider Template:', error);
+          this.logger.error('Error deleting API Provider Template:', error);
         }
       });
     }
@@ -240,24 +242,24 @@ export class ExtApiProviderTemplateFormComponent implements OnInit {
       // 更新処理
       this.extApiProviderService.updateApiProviderTemplate(apiProviderTemplate as ExtApiProviderTemplateEntity).subscribe({
         next: (response) => {
-          console.log('API Provider Template updated successfully:', response);
+          this.logger.debug('API Provider Template updated successfully:', response);
           this.loadProviderTemplates();
           this.closeForm();
         },
         error: (error) => {
-          console.error('Error updating API Provider Template:', error);
+          this.logger.error('Error updating API Provider Template:', error);
         }
       });
     } else {
       // 新規登録処理 
       this.extApiProviderService.createApiProviderTemplate(apiProviderTemplate).subscribe({
         next: (response) => {
-          console.log('API Provider Template created successfully:', response);
+          this.logger.debug('API Provider Template created successfully:', response);
           this.loadProviderTemplates();
           this.closeForm();
         },
         error: (error) => {
-          console.error('Error creating API Provider Template:', error);
+          this.logger.error('Error creating API Provider Template:', error);
         }
       });
     }

@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, concat, concatMap, EMPTY, filter, from, map, merge, Observable, of, startWith, switchMap, tap, throwError, toArray } from 'rxjs';
 import { BoxApiCollection, BoxApiCollectionItem, BoxApiCollectionList, BoxApiEventResponse, BoxApiFileItemEntry, BoxApiFolder, BoxApiFolderItemEntry, BoxApiFolderItemListResponse, BoxApiItemEntry, BoxApiPathCollection, BoxApiSearchResults, BoxMkdirErrorResponse } from '../pages/box/box-interface';
 import { FullPathFile } from './file-manager.service';
+import { LoggerService } from './logger';
 
 const ITEM_QUERY = `fields=name,modified_at,modified_by,created_at,content_modified_at,shared_link,size,extension,lock,classification,permissions,version_number,url`; //,file_version,sequence_id,etag,representations //,files_count,filesCount,inviteRestrictionCode,invite_restriction_code
 
@@ -28,6 +29,7 @@ export class ApiBoxService {
   collectionStore: { [itemId: string]: BoxApiCollectionItem } = localStorage.getItem(this.storageKey) ? JSON.parse(localStorage.getItem(this.storageKey) as string) : {};
 
   private readonly http: HttpClient = inject(HttpClient);
+  private readonly logger = inject(LoggerService);
 
   boxMe(): Observable<any> {
     const url = `${this.proxyBasePath}/2.0/users/me`;
@@ -55,14 +57,14 @@ export class ApiBoxService {
     const request$ = this.http.get<BoxApiCollectionItem>(`${url}?offset=${offset}&limit=${limit}&fromcache=true`).pipe(
       catchError(error => of(null)), // ここのエラーはキャッシュヒット有無でしかないのでエラーとして扱わずに握りつぶす。
       concatMap(firstResponse => {
-        console.log('First API response:', firstResponse);
+        this.logger.debug('First API response:', firstResponse);
         // 初回レスポンスと直接API呼び出しを連結して処理
         return concat(
           of(firstResponse),
           // ここは普通のAPI呼出
           this.http.get<BoxApiCollectionItem>(url).pipe(
             tap(secondResponse => {
-              console.log('Fallback API response:', secondResponse);
+              this.logger.debug('Fallback API response:', secondResponse);
               // 最新結果が取れたらキャッシュを更新
               this.collectionStore[id] = secondResponse;
             }),
@@ -122,23 +124,23 @@ export class ApiBoxService {
 
     const request$ = this.http.get<BoxApiFolder>(`${url}?offset=${offset}&limit=${limit}&fromcache=true`).pipe(
       catchError(error => {
-        console.log('Initial API call failed, falling back to direct API:', url);
+        this.logger.error('Initial API call failed, falling back to direct API:', url);
         // 初回失敗時はエラーを握りつぶして直接API呼び出しを試みる
         return this.http.get<BoxApiFolder>(`${url}`);
       }),
       concatMap(firstResponse => {
-        console.log('First API response:', firstResponse);
+        this.logger.debug('First API response:', firstResponse);
         // 初回レスポンスと直接API呼び出しを連結して処理
         return concat(
           of(firstResponse),
           this.http.get<BoxApiFolder>(url).pipe(
             catchError(error => {
-              console.error('Fallback API call failed:', error);
+              this.logger.error('Fallback API call failed:', error);
               // エラー時には空の値を返して処理を継続
               return of(null as unknown as BoxApiFolder);
             }),
             tap(secondResponse => {
-              console.log('Fallback API response:', secondResponse);
+              this.logger.debug('Fallback API response:', secondResponse);
               // キャッシュを更新
               this.store[storeKey] = secondResponse;
               if (chache0.entries.length > 0) {
@@ -169,7 +171,7 @@ export class ApiBoxService {
       cached ? request$.pipe(startWith(cached)) : request$,
       this.boxFolders(id, offset, limit).pipe(
         map(response => {
-          console.log('Folder items:', response);
+          this.logger.debug('Folder items:', response);
           chache0.entries = response.entries;
           if (this.store[storeKey]) {
             this.store[storeKey].item_collection.entries = response.entries as any;
@@ -276,7 +278,7 @@ export class ApiBoxService {
     const direMap: { [pare: string]: string } = {};
     return from(directoryList).pipe(
       concatMap((dire, index) => {
-        console.log(dire);
+        this.logger.debug(dire);
         const split = dire.split('/');
         const name = split.pop() || '';
         const id = direMap[split.join('/')] || itemId;

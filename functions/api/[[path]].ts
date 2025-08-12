@@ -6,9 +6,9 @@ export async function onRequest(context: {
     API_BASE_URL: string; // 環境変数からAPIのベースURLを取得
   };
 }): Promise<Response> {
-  console.log("onRequest called with context:", context);
+  // console.log("onRequest called with context:", context);
   const { request, env } = context;
-  console.log("Request path:", request.url);
+  // console.log("Request path:", request.url);
   const origin = env.API_BASE_URL;
   const url = new URL(request.url);
 
@@ -29,7 +29,7 @@ export async function onRequest(context: {
   };
 
   try {
-    console.log("Forwarding request to:", target.toString());
+    // console.log("Forwarding request to:", target.toString());
     const upstreamResp = await fetch(target.toString(), init);
 
     // 必要に応じてヘッダ加工（CORS不要なら極力そのまま）
@@ -39,7 +39,7 @@ export async function onRequest(context: {
       headers: filterResponseHeaders(upstreamResp.headers),
     });
   } catch (e) {
-    console.error("Error during fetch:", e);
+    // console.error("Error during fetch:", e);
     // 障害時のフォールバック
     return new Response(
       JSON.stringify({ error: "Upstream fetch failed", detail: String(e) }),

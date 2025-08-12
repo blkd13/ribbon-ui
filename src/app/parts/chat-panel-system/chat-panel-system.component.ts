@@ -20,6 +20,7 @@ import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { ModelSelectorComponent } from "../model-selector/model-selector.component";
 import { AIModelEntityForView, AIModelManagerService } from '../../services/model-manager.service';
 import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-chat-panel-system',
@@ -27,7 +28,7 @@ import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
     CommonModule, FormsModule, DocTagComponent,
     MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
     MatDialogModule, MatRadioModule, MatCheckboxModule,
-    ModelSelectorComponent
+    ModelSelectorComponent, TranslateModule
   ],
   templateUrl: './chat-panel-system.component.html',
   styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss']

@@ -15,6 +15,7 @@ import { AuthService, ScopeLabelsResponseItem } from '../../services/auth.servic
 import { tap, filter, map, switchMap, takeUntil, Subject } from 'rxjs'; // filter, map, switchMap, takeUntil, Subject を追加
 import { GroupByPipe } from '../../pipe/group-by.pipe';
 import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
+import { TranslateModule } from '@ngx-translate/core';
 
 interface MenuItem {
   link: string;
@@ -29,7 +30,8 @@ interface MenuItem {
     CommonModule, RouterModule,
     MatIconModule, MatButtonModule, MatFormFieldModule, MatSlideToggleModule, MatSelectModule, FormsModule,
     GroupByPipe,
-    AppMenuComponent
+    AppMenuComponent,
+    TranslateModule
 ],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'

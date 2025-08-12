@@ -6,28 +6,30 @@ import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
 import { UserRoleType } from '../models/models';
 import { GService } from '../services/g.service';
+import { LoggerService } from '../services/logger';
 
 export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanActivateFn => {
   const guardFunc: CanActivateFn = (route, state) => {
     const authService: AuthService = inject(AuthService);
     const g: GService = inject(GService);
-    console.log(route);
+    const logger: LoggerService = inject(LoggerService);
+    logger.debug(route);
     const providerName = route.paramMap.get('providerName') as string;
     const provider = `${oAuthProviderType}-${providerName}`;
     return authService.getOAuthAccount(oAuthProviderType, providerName).pipe(
       // getOAuthAccount の結果が返ってきたら
       // isOAuth2Connected を呼び出して結果を返すまで待つ
       switchMap(oAuthAccount => {
-        console.log(route);
+        logger.debug(route);
         return authService.isOAuth2Connected(oAuthProviderType, providerName, 'user-info', route.url.toString()).pipe(
           map(res => {
-            console.log(res);
+            logger.debug(res);
             // 成功時にはtrueを返す
             return true;
           }),
           catchError(err => {
-            console.log(location.href);
-            console.error(err);
+            logger.info(location.href);
+            logger.error(err);
             // 飛ばす機能をinterceptorに実装したので飛ばさない。本当にこれでいいかは再考。
             // // ログインされていなかったらOAuth2のログイン画面に飛ばす
             // location.href = `/api/public/oauth/${g.info.user.orgKey}/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
@@ -36,10 +38,10 @@ export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanA
         );
       }),
       catchError(err => {
-        console.log('OAuth2ログインが必要です');
+        logger.info('OAuth2ログインが必要です');
         // getOAuthAccount 自体が失敗した場合もログイン画面へ飛ばす
         location.href = `/api/public/oauth/${g.info.user.orgKey}/${provider}/login?fromUrl=${encodeURIComponent(location.href)}`;
-        console.error(err);
+        logger.error(err);
         return of(false);
       }),
     );

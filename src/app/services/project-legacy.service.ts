@@ -5,18 +5,15 @@
  */
 
 // 新しい分離されたサービスを再エクスポート
-export { TeamService } from './core/team.service';
-export { ProjectCoreService as ProjectService } from './core/project-core.service';
-export { ThreadService } from './core/thread.service';
 export { MessageService } from './core/message.service';
+export { ProjectCoreService as ProjectService } from './core/project-core.service';
+export { TeamService } from './core/team.service';
+export { ThreadService } from './core/thread.service';
 
 // ユーティリティ関数を再エクスポート
-export { 
-    genDummyId, 
-    genInitialBaseEntity, 
-    resetCounter,
-    genUpdateInfo,
-    genCreateInfo 
+export {
+    genCreateInfo, genDummyId,
+    genInitialBaseEntity, genUpdateInfo, resetCounter
 } from './core/project-utils';
 
 // ThreadMessageService は削除予定のため、一時的に空の実装を提供

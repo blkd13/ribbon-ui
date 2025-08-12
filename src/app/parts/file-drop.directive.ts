@@ -1,5 +1,6 @@
-import { Directive, HostListener, HostBinding, inject, output } from '@angular/core';
+import { Directive, HostBinding, HostListener, inject, output } from '@angular/core';
 import { FileManagerService, FullPathFile } from '../services/file-manager.service';
+import { LoggerService } from '../services/logger';
 
 @Directive({
   selector: '[appFileDrop]',
@@ -8,6 +9,7 @@ import { FileManagerService, FullPathFile } from '../services/file-manager.servi
 export class FileDropDirective {
 
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
+  readonly logger = inject(LoggerService);
 
   readonly filesDropped = output<FullPathFile[]>();
   readonly filesHovered = output<boolean>();
@@ -39,7 +41,7 @@ export class FileDropDirective {
 
     const fileItems = [];
     for (let i = 0; i < items.length; i++) {
-      console.log(i + ":" + items.length);
+      this.logger.debug(`Item ${i}: kind=${items[i].kind}, type=${items[i].type}`);
       if (items[i].kind === 'string' && (items[i].type === 'text/plain' || items[i].type === 'text/html')) {
         // テキストファイルは無視する。
       } else {

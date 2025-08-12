@@ -5,11 +5,11 @@
 <mat-menu #appMenu="matMenu">
     <a mat-menu-item [routerLink]="['/home']">
         <mat-icon>home</mat-icon>
-        <span>ホーム</span>
+        <span>{{ 'HOME' | translate }}</span>
     </a>
     <a mat-menu-item [routerLink]="['/chat']">
         <mat-icon>chat</mat-icon>
-        <span>AIチャット</span>
+        <span>{{ 'AI_CHAT' | translate }}</span>
     </a>
     @for(key of groupKeys; track $index) {
     @if(key === 'git') {
@@ -17,7 +17,7 @@
         <mat-icon>
             <img src="./vsc-material-icons/icons/git.svg">
         </mat-icon>
-        <span>Gitリポジトリ</span>
+        <span>{{ 'GIT_REPOSITORY' | translate }}</span>
     </button>
     } @else {
 
@@ -36,7 +36,7 @@
     @if(isAdmin){
     <a mat-menu-item [routerLink]="['/', 'admin']">
         <mat-icon>settings</mat-icon>
-        <span>管理者メニュー</span>
+        <span>{{ 'ADMIN_MENU' | translate }}</span>
     </a>
     }
 </mat-menu>

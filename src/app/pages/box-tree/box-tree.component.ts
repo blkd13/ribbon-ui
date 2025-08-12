@@ -1,27 +1,28 @@
-import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTreeModule } from '@angular/material/tree';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
+import { ApiBoxService } from '../../services/api-box.service';
 import { AuthService } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
-import { ApiBoxService } from '../../services/api-box.service';
 
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 
-import { CollectionViewer, SelectionChange, DataSource } from '@angular/cdk/collections';
+import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/collections';
 import { FlatTreeControl } from '@angular/cdk/tree';
-import { OnInit, Component, Injectable, inject } from '@angular/core';
-import { BehaviorSubject, merge, Observable, Subject } from 'rxjs';
-import { map, single, startWith, tap } from 'rxjs/operators';
+import { Component, inject, Injectable, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BehaviorSubject, merge, Observable } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
+import { LoggerService } from '../../services/logger';
 
 // フラットなノード構造の定義
 export class DynamicFlatNode {
@@ -265,6 +266,7 @@ export class BoxComponent implements OnInit {
   // readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
   readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
   readonly http: HttpClient = inject(HttpClient);
+  readonly logger = inject(LoggerService);
   // readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
 
   boxSearchResult!: BoxResponse;
@@ -276,7 +278,7 @@ export class BoxComponent implements OnInit {
     });
     // this.http.get<any>(`/user/oauth/api/proxy/box/2.0/users/me`).subscribe({
     //   next: next => {
-    //     console.log(next);
+    //     this.logger.debug(next);
     //     this.onTop();
     //   }
     // });
@@ -291,7 +293,7 @@ export class BoxComponent implements OnInit {
       // this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/0/items`).subscribe({
       next: next => {
         // this.boxSearchResult = next;
-        console.log(next);
+        this.logger.debug(next);
 
         // // 初期データの設定
         // this.dataSource.data = this.database.getInitialData(next);
@@ -305,7 +307,7 @@ export class BoxComponent implements OnInit {
     if (node.type === 'file') {
       this.database.downloadFile(node.id, node.name).subscribe({
         error: (error) => {
-          console.error('Download failed:', error);
+          this.logger.error('Download failed:', error);
           // エラー時の処理（例：エラーメッセージの表示）
         }
       });
@@ -317,14 +319,14 @@ export class BoxComponent implements OnInit {
     this.http.get<any>(`/user/oauth/api/proxy/box/2.0/search?query=${this.searchKeyword}&type=file`).subscribe({
       next: next => {
         this.boxSearchResult = next;
-        console.log(next);
+        this.logger.debug(next);
 
         // // 初期データの設定
         // this.dataSource.data = this.database.getInitialData(next);
         this.dataSource.data = next;
       },
       error: error => {
-        console.error(error);
+        this.logger.error(error);
       },
     });
   }

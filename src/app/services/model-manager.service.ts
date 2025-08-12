@@ -1,9 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, map, Observable, of, tap } from 'rxjs';
-import { BaseEntity } from '../models/project-models';
 import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
-import { UserRoleType } from '../models/models';
+import { BaseEntity } from '../models/project-models';
 
 export enum AIProviderType {
   OPENAI = 'openai',

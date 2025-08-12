@@ -1,57 +1,56 @@
-import { ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, QueryList, TemplateRef, inject, viewChildren, viewChild, Input } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, NgModel, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router';
-import OpenAI from 'openai';
-import { DomSanitizer } from '@angular/platform-browser';
-
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatIconModule } from '@angular/material/icon';
+import { ChangeDetectorRef, Component, ElementRef, inject, NgZone, OnInit, viewChild, viewChildren } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSliderModule } from '@angular/material/slider';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
-import { ScrollingModule } from '@angular/cdk/scrolling';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { DomSanitizer } from '@angular/platform-browser';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
-import { concatMap, from, map, mergeMap, of, Subscription, switchMap, Observer, BehaviorSubject, filter, defaultIfEmpty, catchError, throwError, EMPTY, forkJoin } from 'rxjs';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { saveAs } from 'file-saver';
+import OpenAI from 'openai';
+import { ChatCompletionTool } from 'openai/resources/index.mjs';
+import { BehaviorSubject, catchError, concatMap, EMPTY, filter, forkJoin, from, map, Observable, Observer, of, Subscription, switchMap, tap, throwError, toArray } from 'rxjs';
 
-import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
-import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
-import { genDummyId, genInitialBaseEntity, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 import { CachedContent, ChatCompletionCreateParamsWithoutMessages, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
-import { ChatContent, ChatInputArea, ChatService, CountTokensResponse, CountTokensResponseForView, PresetDef } from '../../services/chat.service';
-import { FileDropDirective } from '../../parts/file-drop.directive';
-import { NgxIndexedDBService } from 'ngx-indexed-db';
-import { Observable, tap, toArray } from 'rxjs';
-import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
-import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
-import { AuthService } from '../../services/auth.service';
-import { DialogComponent } from '../../parts/dialog/dialog.component';
-import { BaseEntity, ContentPart, ContentPartType, Message, MessageClusterType, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupVisibility, UUID } from '../../models/project-models';
-import { GService } from '../../services/g.service';
-import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
-import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-run-setting/bulk-run-setting.component';
-import { Utils } from '../../utils';
-import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-dialog/parameter-setting-dialog.component';
-import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
-import { UserService } from '../../services/user.service';
+import { ContentPart, ContentPartType, MessageForView, MessageGroup, MessageGroupForView, MessageStatusType, Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupVisibility } from '../../models/project-models';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
-import { ToolCallPart, ToolCallPartBody, ToolCallPartInfoBody, ToolCallPartCallBody, ToolCallPartCommandBody, ToolCallPartResultBody, ToolCallPartType, ToolCallPartInfo, ToolCallPartCall, ToolCallPartCommand, ToolCallPartResult, ToolCallService, MyToolType, } from '../../services/tool-call.service';
-import { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/index.mjs';
+import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-run-setting/bulk-run-setting.component';
+import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
+import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
+import { DialogComponent } from '../../parts/dialog/dialog.component';
+import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
+import { FileDropDirective } from '../../parts/file-drop.directive';
+import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-dialog/parameter-setting-dialog.component';
 import { SaveThreadData, SaveThreadDialogComponent } from '../../parts/save-thread-dialog/save-thread-dialog.component';
-import { MatBadgeModule } from '@angular/material/badge';
-import { AIModelManagerService } from '../../services/model-manager.service';
+import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
+import { AuthService } from '../../services/auth.service';
+import { ChatContent, ChatInputArea, ChatService, CountTokensResponseForView, PresetDef } from '../../services/chat.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { GService } from '../../services/g.service';
+import { LoggerService } from '../../services/logger';
+import { AIModelManagerService } from '../../services/model-manager.service';
+import { ToolCallPartBody, ToolCallPartCall, ToolCallPartCallBody, ToolCallPartCommand, ToolCallPartInfo, ToolCallPartInfoBody, ToolCallPartResult, ToolCallPartResultBody, ToolCallPartType, ToolCallService } from '../../services/tool-call.service';
+import { UserService } from '../../services/user.service';
+import { Utils } from '../../utils';
+import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
+import { FileManagerService, FullPathFile } from './../../services/file-manager.service';
+import { genDummyId, genInitialBaseEntity, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 
 declare var _paq: any;
 
@@ -62,7 +61,7 @@ declare var _paq: any;
     MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule, MatTooltipModule,
     MatSliderModule, MatMenuModule, MatDialogModule, MatRadioModule, MatSelectModule,
     MatSnackBarModule, MatDividerModule, MatCheckboxModule, MatProgressSpinnerModule,
-    MatBadgeModule, MatTabsModule, ScrollingModule,
+    MatBadgeModule, MatTabsModule, ScrollingModule, TranslateModule,
     UserMarkComponent,
     ChatPanelMessageComponent, ChatPanelSystemComponent, AppMenuComponent,
   ],
@@ -86,8 +85,32 @@ export class ChatComponent implements OnInit {
   // スクロール制御用のアンカー
   readonly anchor = viewChildren<ElementRef<HTMLDivElement>>('anchor');
 
-
   readonly appFileDrop = viewChild(FileDropDirective);
+
+  readonly authService: AuthService = inject(AuthService);
+  readonly chatService: ChatService = inject(ChatService);
+
+  readonly aiModelManagerService = inject(AIModelManagerService);
+  readonly extApiProviderService = inject(ExtApiProviderService);
+
+  readonly projectService: ProjectService = inject(ProjectService);
+  readonly teamService: TeamService = inject(TeamService);
+  readonly threadService: ThreadService = inject(ThreadService);
+  readonly messageService: MessageService = inject(MessageService);
+  readonly fileManagerService: FileManagerService = inject(FileManagerService);
+  readonly userService: UserService = inject(UserService);
+
+  readonly dialog: MatDialog = inject(MatDialog);
+  readonly router: Router = inject(Router);
+  readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
+  readonly snackBar: MatSnackBar = inject(MatSnackBar);
+  readonly g: GService = inject(GService);
+  readonly logger = inject(LoggerService);
+
+  readonly translate: TranslateService = inject(TranslateService);
+  readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
+  readonly ngZone: NgZone = inject(NgZone);
+  readonly sanitizer: DomSanitizer = inject(DomSanitizer);
 
   // スレッドリスト
   threadGroupList: ThreadGroupForView[] = [];
@@ -120,14 +143,14 @@ export class ChatComponent implements OnInit {
   teamForViewList: TeamForView[] = [];
 
   placeholder = '';
-  defaultPlaceholder = 'メッセージを入力...。Shift+Enterで改行。Ctrl+Enterで送信。Drag＆Drop、ファイル貼り付け。';
+  defaultPlaceholder = this.translate.instant('DEFAULT_CHAT_PLACEHOLDER');
   chatStreamSubscriptionList: { [threadGroupId: string]: { message: MessageForView, subscription: Subscription }[] } = {};
   cacheMap: { [key: string]: CachedContent } = {};
   editNameThreadId: string = '';
   private timeoutId: any;
   bulkRunSetting: BulkRunSettingData = {
     mode: 'parallel',
-    promptTemplate: `ありがとうございます。\nでは次は"\${value}"をお願いします。`,
+    promptTemplate: this.translate.instant('BULK_RUN_TEMPLATE'),
     contents: [],
     projectId: '',
   };
@@ -152,31 +175,8 @@ export class ChatComponent implements OnInit {
   tokenCounting = false;
   linkChain: boolean[] = [true]; // デフォルトはfalse
 
-  readonly authService: AuthService = inject(AuthService);
-  readonly chatService: ChatService = inject(ChatService);
-
-  readonly aiModelManagerService = inject(AIModelManagerService);
-  readonly extApiProviderService = inject(ExtApiProviderService);
-
-  readonly projectService: ProjectService = inject(ProjectService);
-  readonly teamService: TeamService = inject(TeamService);
-  readonly threadService: ThreadService = inject(ThreadService);
-  readonly messageService: MessageService = inject(MessageService);
-  readonly fileManagerService: FileManagerService = inject(FileManagerService);
-  readonly userService: UserService = inject(UserService);
-
-  readonly dbService: NgxIndexedDBService = inject(NgxIndexedDBService);
-  readonly dialog: MatDialog = inject(MatDialog);
-  readonly router: Router = inject(Router);
-  readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
-  readonly snackBar: MatSnackBar = inject(MatSnackBar);
-  readonly g: GService = inject(GService);
-  readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
-  readonly ngZone: NgZone = inject(NgZone);
-  readonly sanitizer: DomSanitizer = inject(DomSanitizer);
-
   ngOnInit(): void {
-    this.defaultPlaceholder = `メッセージを入力...。Shift+Enterで改行。${this.userService.enterMode}で送信。Drag＆Drop、ファイル貼り付け。`;
+    this.defaultPlaceholder = this.translate.instant('MESSAGE_INPUT_DETAILED_PLACEHOLDER') + this.translate.instant('SEND_INSTRUCTION').replace('Ctrl+Enter', this.userService.enterMode);
     document.title = `AI`;
     this.initializeToolGroupStates();
     of(0).pipe(
@@ -264,7 +264,7 @@ export class ChatComponent implements OnInit {
             },
             error: error => {
               this.isThreadGroupLoading = false;
-              console.error(error);
+              this.logger.error(error);
             },
           });
         } else {
@@ -275,7 +275,7 @@ export class ChatComponent implements OnInit {
   }
 
   readonly toolCallService: ToolCallService = inject(ToolCallService);
-  presetLabel = '通常';
+  presetLabel = this.translate.instant('NORMAL_MODE');
   // ツールグループ管理用
   toolGroupStates: { [groupName: string]: boolean } = {};
   // ツールグループのローディング状態管理用
@@ -283,14 +283,14 @@ export class ChatComponent implements OnInit {
 
   // ツールグループと外部プロバイダーのマッピング
   private readonly toolGroupProviderMapping: { [groupName: string]: string } = {
-    'mattermost': 'mattermost',
-    'box': 'box',
-    'gitlab': 'gitlab',
-    'gitea': 'gitea',
-    'web': '', // No external provider required
-    'tool': '', // No external provider required
-    'jira': 'API_KEY', // No external provider required
-    'confluence': 'API_KEY' // No external provider required
+    mattermost: 'mattermost',
+    box: 'box',
+    gitlab: 'gitlab',
+    gitea: 'gitea',
+    web: '', // No external provider required
+    tool: '', // No external provider required
+    jira: 'API_KEY', // No external provider required
+    confluence: 'API_KEY' // No external provider required
   };
 
   // 外部プロバイダーの接続性チェック
@@ -328,20 +328,20 @@ export class ChatComponent implements OnInit {
 
       return result !== null && result !== undefined;
     } catch (error) {
-      console.error('Provider connectivity check failed:', error);
+      this.logger.error('Provider connectivity check failed:', error);
       return false;
     }
   }
 
   // ユーザーに接続促進メッセージを表示
   private showConnectionPrompt(groupName: string, providerType: string): void {
-    const message = `${groupName}ツールを使用するには${providerType}の連携が必要です。右上のメニューからAPI連携を設定してください。`;
+    const message = this.translate.instant('PROVIDER_CONNECTION_REQUIRED_FULL', { groupName, providerType });
 
     // MatSnackBarまたは適切な通知機能を使用
-    // この例では単純にconsole.logを使用（実際の実装では適切な通知UIを使用）
-    console.warn(message);
+    // この例では単純にthis.logger.warnを使用（実際の実装では適切な通知UIを使用）
+    this.logger.warn(message);
 
-    this.snackBar.open(message, '閉じる', {
+    this.snackBar.open(message, this.translate.instant('CLOSE'), {
       duration: 5000,
       panelClass: ['mat-toolbar', 'mat-warn'],
       horizontalPosition: 'center',
@@ -545,7 +545,7 @@ export class ChatComponent implements OnInit {
 
         this.selectedThreadGroup.threadList = resDto;
 
-        // console.log(resDto);
+        // this.logger.debug(resDto);
         this.rebuildThreadGroup();
         this.onChange();
 
@@ -574,7 +574,7 @@ export class ChatComponent implements OnInit {
       }),
       catchError(error => {
         this.isThreadGroupLoading = false;
-        console.error(error);
+        this.logger.error(error);
         return EMPTY;
       }),
     ).subscribe();
@@ -613,7 +613,7 @@ export class ChatComponent implements OnInit {
   }
 
   modelCheck(argList: ChatCompletionCreateParamsWithoutMessages[] = []): boolean {
-    console.log(argList.map(arg => arg.model));
+    this.logger.debug(argList.map(arg => arg.model));
     // 空配列だったらスレッドグループ全体をチェック
     argList = argList.length === 0 ? this.selectedThreadGroup.threadList.map(thread => thread.inDto.args).filter(args => args) : argList;
     const mess = this.aiModelManagerService.validateModelAttributes(argList);
@@ -645,7 +645,7 @@ export class ChatComponent implements OnInit {
   threadGroupChangeHandler(project: Project, threadGroupList: ThreadGroupForView[], threadGroupId: string): void {
     let noSend = true;
     if (threadGroupId === 'new-thread') {
-      this.presetLabel = '通常';
+      this.presetLabel = this.translate.instant('NORMAL');
       this.messageService.clear(); // ストック情報を全消ししておく。
       document.title = `AI: new thread`;
       // 新規スレッド作成
@@ -665,7 +665,7 @@ export class ChatComponent implements OnInit {
         this.messageService.cloneThreadDry(baseThread),
       ]).subscribe({
         next: next => {
-          (['gpt-4.1', 'claude-sonnet-4-20250514', 'gemini-2.5-flash-thinking-preview-05-20'] as GPTModels[]).forEach((model, index) => {
+          (['gpt-5', 'claude-sonnet-4-20250514', 'gemini-2.5-flash-thinking'] as GPTModels[]).forEach((model, index) => {
             next[index].inDto.args.model = model;
           });
           this.presetThreadList = next;
@@ -687,7 +687,7 @@ export class ChatComponent implements OnInit {
         // this.messageList[0].contents[0].text = args.static.systemPrompt;
         this.placeholder = args.static.placeholder;
         this.selectedThreadGroup.threadList[0].inDto.args.model = args.model || this.selectedThreadGroup.threadList[0].inDto.args.model;
-        if (args.static.label === '普通のAIチャット') {
+        if (args.static.label === this.translate.instant('NORMAL_AI_CHAT')) {
           // home画面はドラッグアンドドロップに対応してないのでプレースホルダが異なる。
           this.placeholder = this.defaultPlaceholder;
         }
@@ -733,7 +733,7 @@ export class ChatComponent implements OnInit {
                 .map(thread => this.messageService.cloneThreadDry(this.selectedThreadGroup.threadList[0], thread.id))
             )),
             tap(resDto => {
-              // console.log(resDto);
+              // this.logger.debug(resDto);
               this.rebuildThreadGroup();
 
               // linkChainの設定
@@ -801,7 +801,7 @@ export class ChatComponent implements OnInit {
             },
             error: error => {
               this.isThreadGroupLoading = false;
-              console.error(error);
+              this.logger.error(error);
             },
           });
         } else {
@@ -986,7 +986,7 @@ export class ChatComponent implements OnInit {
         }
       },
       error: error => {
-        console.error(error);
+        this.logger.error(error);
         this.isThreadGroupLoading = false;
       },
     });
@@ -1055,7 +1055,7 @@ export class ChatComponent implements OnInit {
           this.isLock = false;
         },
         error: error => {
-          this.snackBar.open(`アップロードエラーです\n${JSON.stringify(error)}`, 'close', { duration: 30000 });
+          this.snackBar.open(this.translate.instant('UPLOAD_ERROR_MESSAGE', { error: JSON.stringify(error) }), this.translate.instant('CLOSE'), { duration: 30000 });
           this.isLock = false;
         },
       });
@@ -1076,7 +1076,7 @@ export class ChatComponent implements OnInit {
     const model = tokenObject.model;
     if (this.aiModelManagerService.modelMap[model]) {
     } else {
-      console.warn(`Model ${model} not found in modelMap.`);
+      this.logger.warn(`Model ${model} not found in modelMap.`);
       return 0; // モデルが見つからない場合はコストを0にする
     }
     if (model.startsWith('gemini-1.5')) {
@@ -1130,8 +1130,8 @@ export class ChatComponent implements OnInit {
         // threadIdListはdummyのIDだったものをちゃんと戻す
         threadIdList.length = 0;
         indexList.forEach(index => threadIdList.push(threadGroup.threadList[index].id));
-        console.log(indexList);
-        console.log(threadIdList);
+        this.logger.debug(indexList);
+        this.logger.debug(threadIdList);
       }), // 選択中のものを更新（これをしておかないとthreadGroupの参照が切れる）
       // initialのメッセージオブジェクト群（主にシステムプロンプト）をDB登録
       switchMap(threadGroup =>
@@ -1237,7 +1237,7 @@ export class ChatComponent implements OnInit {
         }
       }),
       // 発射準備完了。発射トリガーとなるメッセージIDを返す。とりあえずログ出力もしておく。
-      tap(messageGroupId => console.log('Message ID before chat completion:', messageGroupId)),
+      tap(messageGroupId => this.logger.debug('Message ID before chat completion:', messageGroupId)),
     );
   }
 
@@ -1280,7 +1280,7 @@ export class ChatComponent implements OnInit {
     // Chainされている場合はシンクロ
     const chainedList = this.getChainedMessageGroupList(group, 1);
     chainedList.forEach(group => {
-      console.log(group.id, selectedIndex, group.selectedIndex);
+      this.logger.debug(group.id, selectedIndex, group.selectedIndex);
       group.selectedIndex = Math.min(Math.max(0, selectedIndex), this.messageService.nextMessageGroupId[group.id].length - 1);
       const selectedMessageGroupId = this.messageService.nextMessageGroupId[group.id][group.selectedIndex];
       const messageGroup = this.messageService.messageGroupMas[selectedMessageGroupId];
@@ -1320,8 +1320,8 @@ export class ChatComponent implements OnInit {
   }[]> {
 
     if (this.isLock) {
-      this.snackBar.open(`メッセージ受信中は送信できません。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`, 'close', { duration: 3000 });
-      throw new Error(`メッセージ受信中は送信できません。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`);
+      this.snackBar.open(this.translate.instant('MESSAGE_RECEIVING_BLOCKED'), this.translate.instant('CLOSE'), { duration: 3000 });
+      throw new Error(this.translate.instant('MESSAGE_RECEIVING_BLOCKED'));
     } else { }
 
     if (type === undefined) {
@@ -1368,34 +1368,34 @@ export class ChatComponent implements OnInit {
 
       // バリデーションエラー
       if (!args.model || !model) {
-        this.snackBar.open(`${modelName}は利用できません。他のモデルに変更してください。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('MODEL_NOT_AVAILABLE', { modelName }), this.translate.instant('CLOSE'), { duration: 3000 });
         throw new Error('Model is not available.');
       } else if (this.tokenObjList[threadIndex] && this.tokenObjList[threadIndex].totalTokens > model.maxContextTokens) {
-        this.snackBar.open(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxContextTokens}以下にしてください。`, 'close', { duration: 3000 });
-        throw new Error(`トークンサイズオーバーです。「${modelName}」への入力トークンは ${model.maxContextTokens}以下にしてください。`);
+        this.snackBar.open(this.translate.instant('TOKEN_SIZE_OVER', { modelName, maxTokens: model.maxContextTokens }), this.translate.instant('CLOSE'), { duration: 3000 });
+        throw new Error(this.translate.instant('TOKEN_SIZE_OVER', { modelName, maxTokens: model.maxContextTokens }));
       } else if (args.isGoogleSearch && !this.aiModelManagerService.modelMap[args.model].isGSearch) {
-        this.snackBar.open(`Google検索統合は Gemini 系統以外では使えません。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('GOOGLE_SEARCH_GEMINI_ONLY'), this.translate.instant('CLOSE'), { duration: 3000 });
         args.isGoogleSearch = false;
         throw new Error(`Google search is not available for ${args.model}.`);
       } else if (tailMessageGroup.role === 'assistant' && this.inputArea.content[0].text.length === 0 && toolCallPartCommandList === undefined) { // toolCallCommandがある場合はツールからの入力とみなす
         if (this.inputArea.content.length > 1) {
-          this.snackBar.open(`ファイルだけでは送信できません。何かメッセージを入力してください。`, 'close', { duration: 3000 });
-          throw new Error('ファイルだけでは送信できません。何かメッセージを入力してください。');
+          this.snackBar.open(this.translate.instant('FILE_ONLY_NOT_ALLOWED'), this.translate.instant('CLOSE'), { duration: 3000 });
+          throw new Error(this.translate.instant('FILE_ONLY_NOT_ALLOWED'));
         } else {
-          this.snackBar.open(`メッセージを入力してください。`, 'close', { duration: 3000 });
-          // throw new Error('メッセージを入力してください。');
+          this.snackBar.open(this.translate.instant('PLEASE_ENTER_MESSAGE'), this.translate.instant('CLOSE'), { duration: 3000 });
+          // throw new Error(this.translate.instant('ENTER_MESSAGE_ERROR'));
         }
       }
 
       // 継続系
       if (modelName.startsWith('claude-') && (thread.inDto.args.temperature || 0) > 1) {
-        this.snackBar.open(`claude はtempertureを0～1.0の範囲で使ってください。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('CLAUDE_TEMPERATURE_RANGE_ERROR'), 'close', { duration: 3000 });
         thread.inDto.args.temperature = 1;
       } else { }
       const turnCount = Math.floor(this.messageGroupIdListMas[thread.id].length / 2);
       if (turnCount / 7 > 1 && turnCount % 7 % 2 === 0 && this.tokenObjList[threadIndex].totalTokens > 16384) {
         // 7問い合わせごとにアラート出す
-        this.snackBar.open(`チャット内のやり取りが長引いてきました。話題が変わった際は左上の「新規チャット」から新規チャットを始めることをお勧めします。\n（チャットが長くなるとAIの回答精度が落ちていきます）`, 'close', { duration: 6000 });
+        this.snackBar.open(this.translate.instant('LONG_CHAT_WARNING'), 'close', { duration: 6000 });
       } else { }
       threadIndex++;
     }
@@ -1404,8 +1404,8 @@ export class ChatComponent implements OnInit {
     // ロックチェックを修正
     for (const thread of threadList) {
       if (this.isThreadLocked(thread.id)) {
-        this.snackBar.open(`メッセージ受信中のスレッドがあります。途中でやめる場合は右下の✕ボタンでメッセージをキャンセルしてください。`, 'close', { duration: 3000 });
-        throw new Error(`メッセージ受信中のスレッドがあります。`);
+        this.snackBar.open(this.translate.instant('MESSAGE_RECEIVING_IN_PROGRESS'), this.translate.instant('CLOSE'), { duration: 3000 });
+        throw new Error(this.translate.instant('THREAD_RECEIVING_MESSAGE_ERROR'));
       }
     }
 
@@ -1430,7 +1430,7 @@ export class ChatComponent implements OnInit {
         // If expire time is within 10 minutes, update it to 10 minutes from now
         this.chatService.updateCacheByProjectModel(this.selectedThreadGroup.id, { ttl: { seconds: this.cacheTtlInSeconds, nanos: 0 } }).subscribe({
           next: next => {
-            // console.log(next);
+            // this.logger.debug(next);
             // キャッシュ更新はDB側で登録済みなのでこっちはinDtoに入れるだけにする。
             // this.inDto.argsList[0].cachedContent = next;
             inDto.args.cachedContent = next;
@@ -1446,7 +1446,7 @@ export class ChatComponent implements OnInit {
         // 対象スレッドをロック (dummy-idから本物のIDに変更する)
         beforeTreadIdList.forEach(threadId => this.threadLocks[threadId] = false);
         threadList.forEach(thread => this.threadLocks[thread.id] = true);
-        // console.log(`threadLocks`, this.threadLocks);
+        // this.logger.debug(`threadLocks`, this.threadLocks);
       }),
       switchMap(messageGroupIds =>
         safeForkJoin(messageGroupIds.filter(messageGroupId => {
@@ -1461,7 +1461,7 @@ export class ChatComponent implements OnInit {
             //   return idList.includes(this.messageService.messageMas[messageGroupId].messageGroupId);
             // } else if (type === 'contentPart') {
             //   const flag = idList.map(id => this.messageService.contentPartMas[id].messageId).map(messageId => this.messageService.messageMas[messageId].messageGroupId).includes(messageGroupId);
-            //   // console.log(`flag=${flag} idList=${idList} messageGroupId=${messageGroupId}`);
+            //   // this.logger.debug(`flag=${flag} idList=${idList} messageGroupId=${messageGroupId}`);
             //   return flag;
           } else {
             throw new Error('Not implemented');
@@ -1471,8 +1471,8 @@ export class ChatComponent implements OnInit {
           this.chatService.chatCompletionObservableStreamByProjectModel(threadList[index].inDto.args, 'messageGroup', messageGroupId, toolCallPartCommandList)
             .pipe(
               tap(resDto => {
-                // console.log('response-------------------------');
-                // console.log(resDto);
+                // this.logger.debug('response-------------------------');
+                // this.logger.debug(resDto);
                 // キャッシュを更新する
                 // 初回の戻りを受けてからメッセージリストにオブジェクトを追加する。こうしないとエラーの時にもメッセージが残ってしまう。
 
@@ -1497,7 +1497,7 @@ export class ChatComponent implements OnInit {
                     message.status = MessageStatusType.Waiting;
                     if (message.observer) {
                       this.chatStreamSubscriptionList[this.selectedThreadGroup.id].push({ message, subscription: message.observer.subscribe(this.chatStreamHandler(message)) });
-                      console.log(`Message ID before chat completion: ${message.id}`);
+                      this.logger.debug(`Message ID before chat completion: ${message.id}`);
                     } else { }
                   });
                 });
@@ -1539,7 +1539,7 @@ export class ChatComponent implements OnInit {
                         }
                       } else { }
 
-                      // console.log(`threadIndex=${threadIndex} containerIndex=${containerIndex} anchorIndex=${anchorIndex}`);
+                      // this.logger.debug(`threadIndex=${threadIndex} containerIndex=${containerIndex} anchorIndex=${anchorIndex}`);
                       const anchorElem = this.anchor().at(anchorIndex);
                       if (anchorElem && !isScrollFired) {
                         isScrollFired = true; // 複数回スクロールが発火すると逆にスクロールが止まるので
@@ -1549,7 +1549,7 @@ export class ChatComponent implements OnInit {
                   });
 
                 }, 100);
-                console.log(this.messageGroupIdListMas);
+                this.logger.debug(this.messageGroupIdListMas);
               }),
               catchError(error => {
                 // エラー時も必ず各スレッドのロックを解除する
@@ -1558,7 +1558,7 @@ export class ChatComponent implements OnInit {
               })
             ),
         )).pipe(tap(text => {
-          // console.log(`pipe---------------------${text}`);
+          // this.logger.debug(`pipe---------------------${text}`);
           // メッセージID紐づけ。
           this.rebuildThreadGroup();
 
@@ -1582,7 +1582,7 @@ export class ChatComponent implements OnInit {
       next: _next => {
         // ここのChatStreamにはContentPartが付与されているはず
         const next = _next as OpenAI.ChatCompletionChunk & { contentPart?: ContentPart };
-        // console.dir(next);
+        // this.logger.debug(next);
 
         let content: ContentPart;
         next.choices.forEach(choice => {
@@ -1603,7 +1603,7 @@ export class ChatComponent implements OnInit {
               }
               const text = choice.delta.content;
               content.text += text;
-              // console.log(`content[${content.id}]=${choice.delta.content}`);
+              // this.logger.debug(`content[${content.id}]=${choice.delta.content}`);
             } else { }
 
             const toolCallGroupId = message.contents.findLast(content => content.type === ContentPartType.TOOL)?.id || ''; // toolCallGroupIdは発番はされているが取ってくるのが難しいので一旦contentIdで代用。発行単位が同じなのでこれでも大丈夫だと思う。
@@ -1625,7 +1625,7 @@ export class ChatComponent implements OnInit {
                 }
               }
 
-              // console.log('tool_call', tool_call);
+              // this.logger.debug('tool_call', tool_call);
               // 最初の1行のみidが振られているので、それを使ってtoolCallを作る。
               const toolCallId = (choice.delta as { tool_call_id: string }).tool_call_id;
               const infoBody = JSON.parse(choice.delta.content || '{}') as ToolCallPartInfoBody;
@@ -1648,7 +1648,7 @@ export class ChatComponent implements OnInit {
             // tool_calls
             if (choice.delta.tool_calls && choice.delta.tool_calls.length > 0) {
               choice.delta.tool_calls.forEach(tool_call => {
-                // console.dir(choice.delta, { depth: null });
+                // this.logger.debug(choice.delta);
                 // 先頭行以外はtool_call.idがundefined
                 if (tool_call.id) {
                   const content = message.contents.findLast(content => content.type === ContentPartType.TOOL);
@@ -1675,11 +1675,11 @@ export class ChatComponent implements OnInit {
 
             // tool_result
             if (['tool', 'command', 'input'].includes(choice.delta.role || '')) {
-              // console.log('tool_result', choice.delta);
+              // this.logger.debug('tool_result', choice.delta);
               const tool_call_id = (choice.delta as { tool_call_id: string }).tool_call_id;
               const content = message.contents.find(content => content.type === ContentPartType.TOOL && content.id === toolCallGroupId);
               if (content && content.toolCallGroup) {
-                // console.log('tool_result', choice.delta);
+                // this.logger.debug('tool_result', choice.delta);
                 const toolCall = choice.delta as ToolCallPartBody;
                 if ('tool' === choice.delta.role) {
                   const toolCall = choice.delta as ToolCallPartResultBody;
@@ -1757,7 +1757,7 @@ export class ChatComponent implements OnInit {
           }
         });
 
-        // console.dir(message.contents);
+        // this.logger.debug(message.contents);
         if (message.contents.map(content => content.type === 'text' ? content.text : content.type === 'tool' ? content.text : content.type === 'meta' ? content.text : '').join('').trim().length > 0) {
           // 1文字以上あったらローディングカバーを外す
           message.status = MessageStatusType.Loading;
@@ -1772,7 +1772,7 @@ export class ChatComponent implements OnInit {
       complete: () => {
         // textなのに中身がないものは削除する。
         message.contents = message.contents.filter(content => !(content.type === ContentPartType.TEXT && !content.text));
-        // console.dir(message.contents);
+        // this.logger.debug(message.contents);
         this.chatAfterHandler(message);
       },
     }
@@ -1784,7 +1784,7 @@ export class ChatComponent implements OnInit {
    * @returns
    */
   chatAfterHandler(message: MessageForView): void {
-    // console.log(`after----------------`);
+    // this.logger.debug(`after----------------`);
     const threadId = this.messageService.messageGroupMas[message.messageGroupId].threadId;
     const threadGroup = this.threadGroupList.find(threadGroup => threadGroup.threadList.find(thread => thread.id === threadId));
     if (threadGroup) {
@@ -1838,15 +1838,15 @@ export class ChatComponent implements OnInit {
         } else {
 
         }
-        this.dialog.open(DialogComponent, { data: { title: 'ERROR', message: `原因不明のエラーです\n${JSON.stringify(error)}`, options: ['Close'] } });
+        this.dialog.open(DialogComponent, { data: { title: 'ERROR', message: this.translate.instant('UNKNOWN_ERROR', { error: JSON.stringify(error) }), options: ['Close'] } });
       }
     } else {
       if ((error as any).status === 401) {
         // 認証エラー。インターセプターでログイン画面に飛ばすようにしているのでここでは何もしない。
         // this.dialog.open(DialogComponent, { data: { title: 'ERROR', message: `認証エラー: ${error.message}`, options: ['Close'] } });
-        this.snackBar.open(`認証エラー: ${error.message}`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('AUTHENTICATION_ERROR', { message: error.message }), 'close', { duration: 3000 });
       } else {
-        this.dialog.open(DialogComponent, { data: { title: 'ERROR', message: `原因不明のエラーです\n${JSON.stringify(error)}`, options: ['Close'] } });
+        this.dialog.open(DialogComponent, { data: { title: 'ERROR', message: this.translate.instant('UNKNOWN_ERROR', { error: JSON.stringify(error) }), options: ['Close'] } });
       }
     }
   }
@@ -1947,7 +1947,7 @@ export class ChatComponent implements OnInit {
     // });
 
     safeForkJoin(this.selectedThreadGroup.threadList.map(thread => {
-      // console.log(this.messageGroupIdListMas[thread.id].at(-1));
+      // this.logger.debug(this.messageGroupIdListMas[thread.id].at(-1));
       const inDto: ChatInputArea[] = [];
       let tailMessageGroupId = '';
       this.messageGroupIdListMas[thread.id].map(messageGroupId => {
@@ -1979,7 +1979,7 @@ export class ChatComponent implements OnInit {
         this.tokenObjSummary = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
         this.tokenObjList = [];
         next.forEach((res, index) => {
-          const modelType = this.selectedThreadGroup.threadList[index].inDto.args.model.startsWith('gemini-') ? 'gemini-1.5-flash' : 'gpt-4o';
+          const modelType = this.selectedThreadGroup.threadList[index].inDto.args.model.startsWith('gemini-') ? 'gemini-1.5-flash' : 'gpt-5';
           const tokenObj: CountTokensResponseForView = { id: this.selectedThreadGroup.threadList[index].id, totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: this.selectedThreadGroup.threadList[index].inDto.args.model };
           const countedTokenObj = res[0][modelType] || { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
           tokenObj.totalTokens += countedTokenObj.totalTokens;
@@ -2015,7 +2015,7 @@ export class ChatComponent implements OnInit {
   contextCacheControl(threadGroup: ThreadGroup): void {
     if (threadGroup.threadList.length === 1) {
     } else {
-      alert('複数スレッドモードでのキャッシュは未対応です。そのうち対応予定です。');
+      alert(this.translate.instant('MULTI_THREAD_CACHE_NOT_SUPPORTED'));
       return;
     }
 
@@ -2031,7 +2031,7 @@ export class ChatComponent implements OnInit {
       })).subscribe({
         next: next => {
           if (next.length > 0) {
-            this.snackBar.open(`キャッシュが削除されました。`, 'close', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('CACHE_DELETED'), 'close', { duration: 3000 });
           } else { /** キャッシュ無し */ }
         },
       });
@@ -2056,17 +2056,17 @@ export class ChatComponent implements OnInit {
     safeForkJoin(threadGroup.threadList.map((thread, index) => {
       // 32768トークン以上ないとキャッシュ作成できない
       if (this.tokenObjList[index].totalTokens < 32768) {
-        const message = `コンテキストキャッシュを作るには 32,768 トークン以上必要です。\n現在 ${this.tokenObjList[index].totalTokens} トークンしかありません。`;
+        const message = this.translate.instant('CONTEXT_CACHE_TOKEN_REQUIREMENT', { currentTokens: this.tokenObjList[index].totalTokens });
         this.dialog.open(DialogComponent, { data: { title: 'alert', message, options: ['Close'] } });
         throw new Error(message);
       } else if (!threadGroup.threadList[0].inDto.args.model?.endsWith('-001') && !threadGroup.threadList[0].inDto.args.model?.endsWith('-002')) {
-        const message = `コンテキストキャッシュは末尾が「-001」か「-002」となっているモデルでしか利用できません。\n -002系がおすすめです。`;
+        const message = this.translate.instant('CONTEXT_CACHE_MODEL_RESTRICTION');
         this.dialog.open(DialogComponent, { data: { title: 'alert', message, options: ['Close'] } });
         throw new Error(message);
         // } else if (this.messageList.length === 0 || (!this.messageList.find(message => this.messageGroupMap[message.messageGroupId].role === 'user' && message.contents.find(content => content.type === 'text')) && !this.inputArea.contents[0].text.length)) {
       } else if (this.messageGroupIdListMas[thread.id].length === 0 || (!this.messageGroupIdListMas[thread.id].find(messageGroupId => this.messageService.messageGroupMas[messageGroupId].role === 'user' && this.messageService.messageGroupMas[messageGroupId].messages[0].contents.find(content => content.type === 'text'))) && !this.inputArea.content[0].text.length) {
         // ファイルだけだとダメ。テキスト入力が必須。
-        const message = `コンテキストキャッシュはファイルだけでは作成できません。短くても必ずテキストメッセージを入力してください。`;
+        const message = this.translate.instant('CONTEXT_CACHE_TEXT_REQUIRED');
         this.dialog.open(DialogComponent, { data: { title: 'alert', message, options: ['Close'] } });
         throw new Error(message);
       }
@@ -2093,7 +2093,7 @@ export class ChatComponent implements OnInit {
           this.rebuildThreadGroup();
           this.onChange();
           this.isLock = false;
-          this.snackBar.open(`メッセージがキャッシュされました。`, 'close', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('CACHE_CREATED'), this.translate.instant('CLOSE'), { duration: 3000 });
         },
         error: error => {
           this.snackBar.open(`ERROR: ${JSON.stringify(error)}`, 'close', { duration: 30000 });
@@ -2107,8 +2107,8 @@ export class ChatComponent implements OnInit {
     if (threadGroup) { } else { return false; }
 
     if (!threadGroup.threadList[0]) {
-      console.log(threadGroup.title);
-      console.log(threadGroup.threadList);
+      this.logger.debug(threadGroup.title);
+      this.logger.debug(threadGroup.threadList);
     } else {
       threadGroup.threadList[0].inDto.args.cachedContent = undefined;
     }
@@ -2119,8 +2119,8 @@ export class ChatComponent implements OnInit {
       if (threadGroup) {
         // 時間経過でキャッシュが有効期限切れになったら消しておく。
         if (!threadGroup.threadList[0]) {
-          console.log(threadGroup.title);
-          console.log(threadGroup.threadList);
+          this.logger.debug(threadGroup.title);
+          this.logger.debug(threadGroup.threadList);
         } else {
           threadGroup.threadList[0].inDto.args.cachedContent = undefined;
         }
@@ -2177,7 +2177,7 @@ export class ChatComponent implements OnInit {
     //         this.onChange();
     //       },
     //       error: error => {
-    //         this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+    //         this.snackBar.open(this.translate.instant('DELETE_ERROR'), 'close', { duration: 3000 });
     //       }
     //     });
     //   }
@@ -2195,7 +2195,7 @@ export class ChatComponent implements OnInit {
     const threadGroup = this.selectedThreadGroup;
     const thread = threadGroup.threadList.find(_thread => _thread.id === targetThread.id);
     if (thread && threadGroup.threadList.length > 1) {
-      this.dialog.open(DialogComponent, { data: { title: '削除', message: `このスレッドを削除しますか？\n「${thread.inDto.args.model}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
+      this.dialog.open(DialogComponent, { data: { title: this.translate.instant('DELETE'), message: this.translate.instant('DELETE_THREAD_CONFIRMATION', { model: thread.inDto.args.model }), options: [this.translate.instant('CANCEL'), this.translate.instant('DELETE')] } }).afterClosed().subscribe({
         next: next => {
           if (next === 1) {
             threadGroup.threadList.splice(threadGroup.threadList.indexOf(thread), 1);
@@ -2206,7 +2206,7 @@ export class ChatComponent implements OnInit {
                 next: next => {
                 },
                 error: error => {
-                  this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+                  this.snackBar.open(this.translate.instant('DELETE_ERROR'), this.translate.instant('CLOSE'), { duration: 3000 });
                 },
               });
             }
@@ -2215,7 +2215,7 @@ export class ChatComponent implements OnInit {
       });
     } else {
       // TODO 選択中のスレッドグループじゃないやつを消そうとしてる。現在はこれはエラー。
-      this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+      this.snackBar.open(this.translate.instant('DELETE_ERROR'), 'close', { duration: 3000 });
     }
   }
 
@@ -2236,7 +2236,7 @@ export class ChatComponent implements OnInit {
     } else { }
     this.getChainedMessageGroupList(messageGroup).forEach(messageGroup => {
       if (this.isThreadLocked(messageGroup.threadId)) {
-        this.snackBar.open(`現在処理中のため削除できません。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('CANNOT_DELETE_PROCESSING'), 'close', { duration: 3000 });
         return;
       } else { }
 
@@ -2265,7 +2265,7 @@ export class ChatComponent implements OnInit {
           }
         },
         error: error => {
-          this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('DELETE_ERROR'), 'close', { duration: 3000 });
         },
       });
     });
@@ -2284,7 +2284,7 @@ export class ChatComponent implements OnInit {
 
     const thread = this.selectedThreadGroup.threadList.find(thread => thread.id === messageGroup.threadId);
     if (!thread) {
-      this.snackBar.open(`エラーが起きてキャンセルできませんでした。`, 'close', { duration: 3000 });
+      this.snackBar.open(this.translate.instant('CANCEL_ERROR'), 'close', { duration: 3000 });
       return;
     } else { }
     _paq.push(['trackEvent', 'AIチャット', 'メッセージキャンセル-シングル', 1]);
@@ -2298,7 +2298,7 @@ export class ChatComponent implements OnInit {
   }
 
   toolExec(obj: { contentPart: ContentPart, toolCallPartCommandList: ToolCallPartCommand[] }): void {
-    console.log(obj);
+    this.logger.debug(obj);
     this.messageService.updateTimestamp('message-group', this.messageService.messageMas[obj.contentPart.messageId].messageGroupId).subscribe({
       next: next => {
         this.rebuildThreadGroup();
@@ -2307,7 +2307,7 @@ export class ChatComponent implements OnInit {
         this.send('messageGroup', [messageGroupId], obj.toolCallPartCommandList).subscribe();
       },
       error: error => {
-        this.snackBar.open(`エラーが起きて削除できませんでした。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('DELETE_ERROR'), 'close', { duration: 3000 });
       },
     });
   }
@@ -2345,7 +2345,7 @@ export class ChatComponent implements OnInit {
   messageGroupBitCounter: { [messageGroupId: string]: number } = {};
 
   editSystem(thread: Thread): void {
-    console.log(thread.inDto.args)
+    this.logger.debug(thread.inDto.args);
     if (this.linkChain[0]) {
       this.selectedThreadGroup.threadList.forEach(_thread => {
         if (_thread.id === thread.id) {
@@ -2355,7 +2355,7 @@ export class ChatComponent implements OnInit {
           _thread.inDto.args.tool_choice = thread.inDto.args.tool_choice;
           _thread.inDto.args.parallel_tool_calls = thread.inDto.args.parallel_tool_calls;
           this.messageGroupBitCounter[this.messageGroupIdListMas[_thread.id][0]] = (this.messageGroupBitCounter[this.messageGroupIdListMas[_thread.id][0]] || 0) + 1;
-          console.log(_thread.id)
+          this.logger.debug(_thread.id);
         }
       });
     } else {
@@ -2411,7 +2411,7 @@ export class ChatComponent implements OnInit {
         after(next);
       },
       error: error => {
-        this.snackBar.open(`メッセージ更新に失敗しました。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('MESSAGE_UPDATE_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
         after();
         // TODO メッセージ戻す処理が必要。
       }
@@ -2455,7 +2455,7 @@ export class ChatComponent implements OnInit {
 
   removeThreadGroup($event: MouseEvent, $index: number, threadGroup: ThreadGroupForView): void {
     // this.stopPropagation($event);
-    this.dialog.open(DialogComponent, { data: { title: 'チャット削除', message: `このチャットを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
+    this.dialog.open(DialogComponent, { data: { title: this.translate.instant('DELETE_CHAT'), message: this.translate.instant('DELETE_CHAT_CONFIRM', { title: threadGroup.title.replace(/\n/g, '') }), options: [this.translate.instant('CANCEL'), this.translate.instant('DELETE')] } }).afterClosed().subscribe({
       next: next => {
         if (next === 1) {
           this.threadService.deleteThreadGroup(threadGroup.id).subscribe({
@@ -2485,13 +2485,13 @@ export class ChatComponent implements OnInit {
               if (threadGroup.id === this.selectedThreadGroup.id) {
                 this.clear();
               } // 選択中のスレッドを移動した場合は選択解除
-              this.snackBar.open(`チャットを移動しました。`, 'close', { duration: 3000 });
+              this.snackBar.open(this.translate.instant('CHAT_MOVED'), 'close', { duration: 3000 });
             },
           });
         },
         error: error => {
-          console.error(error);
-          this.snackBar.open(`更新エラーです。\n${JSON.stringify(error)}`, 'close', { duration: 30000 });
+          this.logger.error(error);
+          this.snackBar.open(this.translate.instant('UPDATE_ERROR', { error: JSON.stringify(error) }), 'close', { duration: 30000 });
         }
       });
     }).bind(this);
@@ -2508,12 +2508,12 @@ export class ChatComponent implements OnInit {
 
     if (projectVisibility(project) !== projectVisibility(this.selectedProject) || project.teamId !== this.selectedProject.teamId) {
       const table = {
-        Default: '個人用デフォルト',
-        Team: 'チーム',
-        Login: 'ログインユーザー全員',
-        Public: '無制限',
+        Default: this.translate.instant('PERSONAL_DEFAULT'),
+        Team: this.translate.instant('TEAM'),
+        Login: this.translate.instant('ALL_LOGIN_USERS'),
+        Public: this.translate.instant('UNLIMITED'),
       }
-      this.dialog.open(DialogComponent, { data: { title: 'Alert', message: `共有範囲の異なるプロジェクトに送ります。\n[${table[this.selectedProject.visibility]}]${this.selectedProject.label}->[${table[project.visibility]}]${project.label}\nよろしいですか？`, options: ['キャンセル', 'OK',] } }).afterClosed().subscribe({
+      this.dialog.open(DialogComponent, { data: { title: 'Alert', message: this.translate.instant('MOVE_TO_DIFFERENT_VISIBILITY_PROJECT', { fromVisibility: table[this.selectedProject.visibility], fromLabel: this.selectedProject.label, toVisibility: table[project.visibility], toLabel: project.label }), options: [this.translate.instant('CANCEL'), 'OK'] } }).afterClosed().subscribe({
         next: next => {
           if (next === 1) {
             exec();
@@ -2532,7 +2532,7 @@ export class ChatComponent implements OnInit {
 
     if (this.inputArea.content[0].text) {
       // 一括実行するにはメッセージ入力エリアを空にしてください。
-      this.dialog.open(DialogComponent, { data: { title: 'alert', message: `一括実行するにはメッセージ入力エリアを空にしてください。`, options: ['Close'] } });
+      this.dialog.open(DialogComponent, { data: { title: 'alert', message: this.translate.instant('CLEAR_MESSAGE_AREA_FOR_BULK_EXECUTION'), options: ['Close'] } });
     } else {
       // メッセージエリアに何も書かれていなかったら一括実行モーダル開く
       this.dialog.open(BulkRunSettingComponent, {
@@ -2596,12 +2596,13 @@ export class ChatComponent implements OnInit {
 
     // 既存のスレッドグループが指定されていたら一旦削除してから再登録
     // TODO 本当は更新ロジックを作った方がいいけど面倒だから削除再登録にする
-    const cleanup = threadGroupId ? this.threadService.deleteThreadGroup(threadGroupId).pipe(
+    const cleanup = (threadGroupId && threadGroupId !== 'default') ? this.threadService.deleteThreadGroup(threadGroupId).pipe(
       tap(() => {
         replaceIndex = this.templateThreadGroupList.findIndex(tg => tg.id === threadGroupId);
         // this.templateThreadGroupList.splice(replaceIndex, 1);
       }),
     ) : of(undefined);
+
     ((() => {
       if (includeMessages) {
         const inputArea = this.inputArea;
@@ -2716,6 +2717,7 @@ export class ChatComponent implements OnInit {
       data: {
         templateThreadGroupList: this.templateThreadGroupList,
         threadGroupId, // 新規作成なのでundefined
+        currentThreadGroup: this.selectedThreadGroup,
         threadName: this.selectedThreadGroup.title || selectedTemplate.title,
         description: this.selectedThreadGroup.description || selectedTemplate.description,
         hasMessages: this.indexList.length > 1,
@@ -2725,7 +2727,12 @@ export class ChatComponent implements OnInit {
     }).beforeClosed().subscribe({
       next: (params: SaveThreadData) => {
         if (params) {
-          this.saveAsTemplate(params.threadName, params.description, params.includeMessages, params.threadGroupId);
+          if (params.threadGroupId === 'default') {
+            // デフォルトのスレッドグループ
+            this.snackBar.open(`デフォルトのスレッドグループを保存しました。`, 'close', { duration: 3000 });
+          } else {
+            this.saveAsTemplate(params.threadName, params.description, params.includeMessages, params.threadGroupId);
+          }
         } else { /** キャンセル */ }
       }
     });
@@ -2741,6 +2748,8 @@ export class ChatComponent implements OnInit {
     this.dialog.open(SaveThreadDialogComponent, {
       data: {
         templateThreadGroupList: this.templateThreadGroupList,
+        threadGroupId: threadGroup.id, // 既存のスレッドグループを編集するのでIDを指定
+        currentThreadGroup: threadGroup,
         threadName: threadGroup.title,
         description: threadGroup.description,
         hasMessages: false,

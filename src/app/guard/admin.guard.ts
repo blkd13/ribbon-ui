@@ -1,16 +1,18 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { AdminScopeService } from '../services/admin-scope.service';
-import { GService } from '../services/g.service';
+import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
+import { of, switchMap, take } from 'rxjs';
 import { UserRoleType } from '../models/models';
-import { ScopeInfo, ScopeType } from '../services/model-manager.service';
+import { AdminScopeService } from '../services/admin-scope.service';
 import { AuthService } from '../services/auth.service';
-import { map, of, switchMap, take, tap } from 'rxjs';
+import { GService } from '../services/g.service';
+import { ScopeInfo } from '../services/model-manager.service';
 
 export const adminScopeGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
     const adminScopeService = inject(AdminScopeService);
     const router = inject(Router);
     const g = inject(GService);
+    const translate = inject(TranslateService);
     const authService = inject(AuthService);    // ルートパラメータからスコープのタイプとIDを取得
     const scopeTypeParam = route.paramMap.get('scopeType');
     const scopeIdParam = route.paramMap.get('scopeId');
@@ -38,14 +40,14 @@ export const adminScopeGuard: CanActivateFn = (route: ActivatedRouteSnapshot, st
             const uniqueScopes = Array.from(new Map(availableScopesRaw.map(s => [`${s.scopeType}:${s.scopeId}`, s])).values());
             const availableScopes = uniqueScopes
                 .sort((a, b) => adminScopeService.getScopePriority(b.scopeType) - adminScopeService.getScopePriority(a.scopeType))
-                .map(s => ({ ...s, label: scopeLabelMap[`${s.scopeType}:${s.scopeId}`] || '(未設定)' }));
+                .map(s => ({ ...s, label: scopeLabelMap[`${s.scopeType}:${s.scopeId}`] || translate.instant('UNKNOWN_SCOPE') }));
 
             if (availableScopes.length === 0) {
                 // 利用可能なスコープがない場合はエラーページなどに遷移させるか、適切な処理を行う
                 console.error('No available scopes for admin.');
-                router.navigate(['/home']); // もしくはエラーページ
+                router.navigate(['/', 'home']); // もしくはエラーページ
                 return Promise.resolve(false);
-            }
+            } else { /**  */ }
 
             let targetScope: ScopeInfo | null = null;
 

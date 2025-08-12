@@ -9,11 +9,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 import { PredictDetailComponent } from '../predict-detail/predict-detail.component';
 
 @Component({
   selector: 'app-predict-history',
-  imports: [CommonModule, MatProgressSpinnerModule, MatPaginatorModule, MatButtonModule, FormsModule],
+  imports: [CommonModule, MatProgressSpinnerModule, MatPaginatorModule, MatButtonModule, FormsModule, TranslateModule],
   templateUrl: './predict-history.component.html',
   styleUrl: './predict-history.component.scss'
 })

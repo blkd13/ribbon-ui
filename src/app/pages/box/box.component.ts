@@ -1,41 +1,42 @@
-import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTreeModule } from '@angular/material/tree';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
+import { ApiBoxService } from '../../services/api-box.service';
 import { AuthService } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
-import { ApiBoxService } from '../../services/api-box.service';
 
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 
-import { OnInit, Component, inject, viewChild, HostListener } from '@angular/core';
+import { Component, HostListener, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { BoxApiCollection, BoxApiCollectionList, BoxApiEntry, BoxApiFolder, BoxApiItemEntry, BoxApiSearchResults, BoxMkdirErrorResponse, BoxUploadErrorResponse } from './box-interface';
-import { concatMap, Observable, Subscription, tap, switchMap, from, toArray, catchError, throwError, of, concat } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { MatMenu, MatMenuModule } from '@angular/material/menu';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { MatTabsModule } from '@angular/material/tabs';
-import { FileSizePipe } from '../../pipe/file-size.pipe';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatRadioModule } from '@angular/material/radio';
-import { FullPathFile } from '../../services/file-manager.service';
-import { FileDropDirective } from '../../parts/file-drop.directive';
-import { getFileIcon, getFolderIcon } from '../../ext/vscode-material-icon-theme/core';
-import { DialogComponent } from '../../parts/dialog/dialog.component';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { catchError, of, Subscription, tap } from 'rxjs';
+import { getFileIcon, getFolderIcon } from '../../ext/vscode-material-icon-theme/core';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
+import { DialogComponent } from '../../parts/dialog/dialog.component';
+import { FileDropDirective } from '../../parts/file-drop.directive';
+import { FileSizePipe } from '../../pipe/file-size.pipe';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { FullPathFile } from '../../services/file-manager.service';
+import { LoggerService } from '../../services/logger';
+import { BoxApiCollection, BoxApiCollectionList, BoxApiFolder, BoxApiItemEntry, BoxApiSearchResults } from './box-interface';
 
 @Component({
   selector: 'app-box',
@@ -44,7 +45,7 @@ import { ExtApiProviderService } from '../../services/ext-api-provider.service';
     MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
     MatMenuModule, MatFormFieldModule, MatInputModule, MatExpansionModule, MatAutocompleteModule,
     MatTabsModule, MatRadioModule, MatProgressSpinnerModule, MatTooltipModule,
-    FileSizePipe, FileDropDirective,
+    FileSizePipe, FileDropDirective, TranslateModule,
     UserMarkComponent, AppMenuComponent,
   ],
   templateUrl: './box.component.html',
@@ -64,6 +65,8 @@ export class BoxComponent implements OnInit {
   readonly apiBoxService: ApiBoxService = inject(ApiBoxService);
   readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
   readonly http: HttpClient = inject(HttpClient);
+  readonly translate: TranslateService = inject(TranslateService);
+  readonly logger = inject(LoggerService);
   // readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
 
   item?: BoxApiFolder;
@@ -85,24 +88,26 @@ export class BoxComponent implements OnInit {
   refreshCollection(): void {
     this.apiBoxService.getCollection().subscribe({
       next: (response) => {
-        // console.log('コレクション取得成功:', response);
+        // this.logger.log('コレクション取得成功:', response);
         this.collectionList = response;
       },
       error: (error) => {
-        console.error('コレクション取得失敗:', error);
-        this.snackBar.open('コレクション取得に失敗しました', '閉じる', { duration: 3000 });
+        this.logger.error('コレクション取得失敗:', error);
+        this.snackBar.open(this.translate.instant('COLLECTION_FETCH_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
       },
     });
   }
 
   providerName: string = 'sample';
   ngOnInit(): void {
+    this.dateFormat = this.translate.instant('DATE_FORMAT_FULL');
+
     this.activatedRoute.params.subscribe(params => {
       const { providerName, type, id } = params as { providerName: string, type: string, id: string };
 
       this.extApiProviderService.getApiProvider(`box-${providerName}`).subscribe({
         next: next => {
-          // console.log(next);
+          // this.logger.log(next);
           this.boxOriginUri = next.uriBase;
 
           // パラメータがない場合はルートフォルダを表示
@@ -119,8 +124,8 @@ export class BoxComponent implements OnInit {
           this.load(id);
         },
         error: error => {
-          console.error(error);
-          this.snackBar.open('APIプロバイダの取得に失敗しました', '閉じる', { duration: 3000 });
+          this.logger.error(error);
+          this.snackBar.open(this.translate.instant('API_PROVIDER_FETCH_ERROR'), this.translate.instant('CLOSE'), { duration: 3000 });
         },
       });
     });
@@ -179,9 +184,9 @@ export class BoxComponent implements OnInit {
     this.offset = 0;
     this.currentSubscription = this.apiBoxService.folder(itemId).pipe(
       tap(next => {
-        // console.log(`BOX-RES=${resCounter}`);
+        // this.logger.log(`BOX-RES=${resCounter}`);
         // resCounter++;
-        // console.log(next);
+        // this.logger.log(next);
         this.item = next;
         this.setTitle();
         this.sort();
@@ -214,7 +219,7 @@ export class BoxComponent implements OnInit {
           //   ].map(entry => this.apiBoxService.preLoadFolder(entry.id))
           // ).subscribe({
           //   next: next => {
-          //     // console.log(next.id);
+          //     // this.logger.log(next.id);
           //   }
           // });
         } else { }
@@ -225,12 +230,12 @@ export class BoxComponent implements OnInit {
   onOpenCollection(collection: BoxApiCollection): void {
     this.apiBoxService.collectionItem(collection.id).subscribe({
       next: (response) => {
-        // console.log('コレクション取得成功:', response);
+        // this.logger.log('コレクション取得成功:', response);
         collection.items = response;
       },
       error: (error) => {
-        console.error('コレクション取得失敗:', error);
-        this.snackBar.open('コレクション取得に失敗しました', '閉じる', { duration: 3000 });
+        this.logger.error('コレクション取得失敗:', error);
+        this.snackBar.open(this.translate.instant('COLLECTION_FETCH_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
       },
     });
   }
@@ -238,13 +243,13 @@ export class BoxComponent implements OnInit {
   historyView(): void {
     this.apiBoxService.boxEvents().subscribe({  // ファイルの更新履歴を取得
       next: next => {
-        // console.log(next);
+        // this.logger.log(next);
         next.entries.map(entry => {
-          // console.log(entry);
+          // this.logger.log(entry);
         });
       },
       error: error => {
-        console.error(error);
+        this.logger.error(error);
       },
     });
   }
@@ -266,12 +271,12 @@ export class BoxComponent implements OnInit {
     } else { }
     this.searchObserver = this.apiBoxService.boxSearch(($event as InputEvent).data || '').subscribe({
       next: next => {
-        // console.log(next);
+        // this.logger.log(next);
         this.boxSearchResult = next;
         this.isSearching = false;
       },
       error: error => {
-        console.error(error);
+        this.logger.error(error);
         this.isSearching = false;
       },
     });
@@ -280,7 +285,7 @@ export class BoxComponent implements OnInit {
   checkCollectionIdSubscription: Subscription | null = null;
   enableCollectionId: boolean = false;
   checkCollectionId($event: Event): void {
-    // console.log(this.collectionId);
+    // this.logger.log(this.collectionId);
     this.enableCollectionId = false;
     if (this.collectionId && Number(this.collectionId) > 0) {
       if (this.checkCollectionIdSubscription) {
@@ -288,37 +293,37 @@ export class BoxComponent implements OnInit {
       } else { }
       this.checkCollectionIdSubscription = this.apiBoxService.boxCollection(this.collectionId).subscribe({
         next: (response) => {
-          // console.log('コレクション取得成功:', response);
+          // this.logger.log('コレクション取得成功:', response);
           this.enableCollectionId = true;
         },
         error: (error) => {
-          console.error('コレクション取得失敗:', error);
-          this.snackBar.open('コレクション取得に失敗しました', '閉じる', { duration: 3000 });
+          this.logger.error('コレクション取得失敗:', error);
+          this.snackBar.open(this.translate.instant('COLLECTION_FETCH_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
         },
       });
     } else {
-      this.snackBar.open('コレクションIDを入力してください', '閉じる', { duration: 3000 });
+      this.snackBar.open(this.translate.instant('COLLECTION_ID_REQUIRED'), this.translate.instant('CLOSE'), { duration: 3000 });
     }
   }
 
   collectionId: string = '';
   registCollection(): void {
     if (!this.collectionId) {
-      this.snackBar.open('コレクションIDを入力してください', '閉じる', { duration: 3000 });
+      this.snackBar.open(this.translate.instant('COLLECTION_ID_REQUIRED'), this.translate.instant('CLOSE'), { duration: 3000 });
       return;
     }
 
     this.apiBoxService.registCollectionId(this.collectionId).subscribe({
       next: (response) => {
-        // console.log('コレクション登録成功:', response);
-        this.snackBar.open('コレクションが登録されました', '閉じる', { duration: 3000 });
+        // this.logger.log('コレクション登録成功:', response);
+        this.snackBar.open(this.translate.instant('COLLECTION_REGISTERED'), this.translate.instant('CLOSE'), { duration: 3000 });
         // 必要に応じて、登録後の処理（例：リストの更新）を追加
         this.collectionId = ''; // 入力フォームをクリア
         this.refreshCollection();
       },
       error: (error) => {
-        console.error('コレクション登録失敗:', error);
-        this.snackBar.open('コレクション登録に失敗しました', '閉じる', { duration: 3000 });
+        this.logger.error('コレクション登録失敗:', error);
+        this.snackBar.open(this.translate.instant('COLLECTION_REGISTRATION_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
       },
     });
   }
@@ -366,12 +371,12 @@ export class BoxComponent implements OnInit {
   }
 
   remove(entry: BoxApiItemEntry): void {
-    this.dialog.open(DialogComponent, { data: { title: 'Confirm', message: `本当に削除しますか？`, options: ['Cancel', 'OK'] } }).afterClosed().subscribe({
+    this.dialog.open(DialogComponent, { data: { title: this.translate.instant('CONFIRM'), message: this.translate.instant('CONFIRM_DELETE'), options: [this.translate.instant('CANCEL'), this.translate.instant('OK')] } }).afterClosed().subscribe({
       next: next => {
         if (next === 1) {
           this.apiBoxService.boxRemoveItem(entry).subscribe({
             next: next => {
-              this.snackBar.open('削除しました。', '閉じる', { duration: 3000 });
+              this.snackBar.open(this.translate.instant('DELETED'), this.translate.instant('CLOSE'), { duration: 3000 });
               if (this.item) {
                 const targetIndex = this.item.item_collection.entries.findIndex(e0 => e0.id === entry.id);
                 if (targetIndex >= 0) {
@@ -380,7 +385,7 @@ export class BoxComponent implements OnInit {
               } else { /** ここには来ない */ }
             },
             error: error => {
-              this.snackBar.open('削除に失敗しました。', '閉じる', { duration: 3000 });
+              this.snackBar.open(this.translate.instant('DELETE_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
             },
           });
         } else {/** キャンセル */ }
@@ -396,17 +401,17 @@ export class BoxComponent implements OnInit {
       this.apiBoxService.uploadFiles(this.item.id, files).subscribe({
         next: response => {
           response.entries.map(entry => {
-            console.log(entry);
+            this.logger.debug(entry);
           });
-          console.log('アップロード成功:', response);
-          this.snackBar.open('アップロード成功', '閉じる', { duration: 3000 });
+          this.logger.debug('アップロード成功:', response);
+          this.snackBar.open(this.translate.instant('UPLOAD_SUCCESS'), this.translate.instant('CLOSE'), { duration: 3000 });
           if (this.item) {
             this.load(this.item.id);
           }
         },
         error: error => {
-          console.error('アップロードエラー:', error);
-          this.snackBar.open('アップロードエラー', '閉じる', { duration: 3000 });
+          this.logger.error('アップロードエラー:', error);
+          this.snackBar.open(this.translate.instant('UPLOAD_ERROR'), this.translate.instant('CLOSE'), { duration: 3000 });
         }
       });
     } else {
@@ -468,7 +473,7 @@ export class BoxComponent implements OnInit {
     const nextOffset = this.offset + 100;
 
     // コンソールにログを出力して追跡しやすくする
-    console.log(`追加データを取得中: offset=${nextOffset}`);
+    this.logger.debug(`追加データを取得中: offset=${nextOffset}`);
 
     this.apiBoxService.folder(this.item.id, nextOffset).subscribe({
       next: (response) => {
@@ -479,7 +484,7 @@ export class BoxComponent implements OnInit {
             const existingIds = new Set(this.item.item_collection.entries.map(entry => entry.id));
             const newEntries = response.item_collection.entries.filter(entry => !existingIds.has(entry.id));
 
-            console.log(`新しいエントリー数: ${newEntries.length}`);
+            this.logger.debug(`新しいエントリー数: ${newEntries.length}`);
 
             // 新しいエントリーがある場合のみ追加
             if (newEntries.length > 0) {
@@ -488,27 +493,27 @@ export class BoxComponent implements OnInit {
               this.offset = nextOffset;
             } else {
               // 新しいエントリーがない場合はこれ以上のアイテムはない
-              console.log('これ以上新しいエントリーはありません');
+              this.logger.debug('これ以上新しいエントリーはありません');
               this.hasMoreItems = false;
             }
           } else {
             // エントリーが空の場合はこれ以上のアイテムはない
-            console.log('これ以上アイテムはありません（空の応答）');
+            this.logger.debug('これ以上アイテムはありません（空の応答）');
             this.hasMoreItems = false;
           }
         }
         this.loading = false;
       },
       error: (error) => {
-        console.error('追加データ取得に失敗しました:', error);
 
         // 404エラー（これ以上アイテムがない）の場合
         if (error.status === 404) {
-          console.log('404エラー: これ以上アイテムはありません');
+          this.logger.debug('404エラー: これ以上アイテムはありません');
           this.hasMoreItems = false;
-          this.snackBar.open('これ以上アイテムはありません', '閉じる', { duration: 3000 });
+          this.snackBar.open(this.translate.instant('NO_MORE_ITEMS'), this.translate.instant('CLOSE'), { duration: 3000 });
         } else {
-          this.snackBar.open('追加データの取得に失敗しました', '閉じる', { duration: 3000 });
+          this.logger.error('追加データ取得に失敗しました:', error);
+          this.snackBar.open(this.translate.instant('ADDITIONAL_DATA_FETCH_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
         }
 
         this.loading = false;
@@ -524,14 +529,14 @@ export class BoxComponent implements OnInit {
     // 必要に応じて、取得後の処理（例：リストの更新）を追加
     this.apiBoxService.registCollectionId(this.collectionId).subscribe({
       next: (response) => {
-        // console.log('コレクション登録成功:', response);
-        this.snackBar.open('コレクションが登録されました', '閉じる', { duration: 3000 });
+        // this.logger.debug('コレクション登録成功:', response);
+        this.snackBar.open(this.translate.instant('COLLECTION_REGISTERED'), this.translate.instant('CLOSE'), { duration: 3000 });
         // 必要に応じて、登録後の処理（例：リストの更新）を追加
         this.collectionId = ''; // 入力フォームをクリア
       },
       error: (error) => {
-        console.error('コレクション登録失敗:', error);
-        this.snackBar.open('コレクション登録に失敗しました', '閉じる', { duration: 3000 });
+        this.logger.error('コレクション登録失敗:', error);
+        this.snackBar.open(this.translate.instant('COLLECTION_REGISTRATION_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
       },
     });
   }

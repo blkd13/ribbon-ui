@@ -1,25 +1,26 @@
-import { MatDialog } from '@angular/material/dialog';
-import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
+import { ActivatedRoute, Router } from '@angular/router';
 
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTreeModule } from '@angular/material/tree';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
+import { ApiBoxService } from '../../services/api-box.service';
 import { AuthService } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
-import { ApiBoxService } from '../../services/api-box.service';
 
-import { CollectionViewer, SelectionChange, DataSource } from '@angular/cdk/collections';
+import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/collections';
 import { FlatTreeControl } from '@angular/cdk/tree';
-import { OnInit, Component, Injectable, inject } from '@angular/core';
+import { Component, inject, Injectable, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { BehaviorSubject, merge, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { FormsModule } from '@angular/forms';
+import { LoggerService } from '../../services/logger';
 
 // フラットなノード構造の定義
 export class DynamicFlatNode {
@@ -184,13 +185,13 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
 
 
 @Component({
-    selector: 'app-tree-selector',
-    imports: [
-        CommonModule, FormsModule,
-        MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
-    ],
-    templateUrl: './tree-selector.component.html',
-    styleUrl: './tree-selector.component.scss'
+  selector: 'app-tree-selector',
+  imports: [
+    CommonModule, FormsModule,
+    MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
+  ],
+  templateUrl: './tree-selector.component.html',
+  styleUrl: './tree-selector.component.scss'
 })
 export class TreeSelectorComponent implements OnInit {
 
@@ -215,6 +216,7 @@ export class TreeSelectorComponent implements OnInit {
   readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly g: GService = inject(GService);
+  readonly logger = inject(LoggerService);
   // readonly apiGitlabService: ApiGitlabService = inject(ApiGitlabService);
   // readonly apiMattermostService: ApiMattermostService = inject(ApiMattermostService);
   // readonly mattermostTimelineService: MattermostTimelineService = inject(MattermostTimelineService);
@@ -227,7 +229,7 @@ export class TreeSelectorComponent implements OnInit {
   ngOnInit(): void {
     this.http.get<any>(`/user/oauth/api/proxy/box/2.0/users/me`).subscribe({
       next: next => {
-        console.log(next);
+        this.logger.debug(next);
         this.onTop();
       }
     });
@@ -237,7 +239,7 @@ export class TreeSelectorComponent implements OnInit {
     this.http.get<BoxResponse>(`/user/oauth/api/proxy/box/2.0/folders/0/items`).subscribe({
       next: next => {
         this.boxSearchResult = next;
-        console.log(next);
+        this.logger.debug(next);
 
         // 初期データの設定
         this.dataSource.data = this.database.getInitialData(next);
@@ -250,7 +252,7 @@ export class TreeSelectorComponent implements OnInit {
     if (node.type === 'file') {
       this.database.downloadFile(node.id, node.name).subscribe({
         error: (error) => {
-          console.error('Download failed:', error);
+          this.logger.error('Download failed:', error);
           // エラー時の処理（例：エラーメッセージの表示）
         }
       });
@@ -262,13 +264,13 @@ export class TreeSelectorComponent implements OnInit {
     this.http.get<any>(`/user/oauth/api/proxy/box/2.0/search?query=${this.searchKeyword}&type=file`).subscribe({
       next: next => {
         this.boxSearchResult = next;
-        console.log(next);
+        this.logger.debug(next);
 
         // 初期データの設定
         this.dataSource.data = this.database.getInitialData(next);
       },
       error: error => {
-        console.error(error);
+        this.logger.error(error);
       },
     });
   }

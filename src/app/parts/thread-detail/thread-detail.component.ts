@@ -1,10 +1,10 @@
 import { DialogRef } from '@angular/cdk/dialog';
 import { Component, Inject } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { Thread } from '../../models/project-models';
 
 @Component({
@@ -30,9 +30,9 @@ export class ThreadDetailComponent {
 
   onSubmit() {
     if (this.threadForm.valid) {
-      console.log('Form Submitted!', this.threadForm.value);
-      console.log('Form Submitted!', this.threadForm.value.title);
-      console.log('Form Submitted!', this.threadForm.value.description);
+      // console.log('Form Submitted!', this.threadForm.value);
+      // console.log('Form Submitted!', this.threadForm.value.title);
+      // console.log('Form Submitted!', this.threadForm.value.description);
       // ここでフォームデータをサーバーに送信するなどの処理を行います。
     }
   }

@@ -1,16 +1,18 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map, Observable, of, switchMap, tap } from 'rxjs';
-import { AuthService } from './auth.service';
-import { BaseEntity, ContentPart, ContentPartType, MessageClusterType, Message, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, Project, ProjectCreateDto, ProjectUpdateDto, Team, TeamCreateDto, TeamMember, TeamMemberAddDto, TeamMemberUpdateDto, TeamUpdateDto, Thread, ThreadGroup, ThreadGroupUpsertDto, ThreadGroupVisibility, UUID, MessageStatusType, ThreadGroupType, ThreadGroupForView } from '../models/project-models';
+import { inject, Injectable } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import JSZip from 'jszip'; // JSZipのインポート
+import OpenAI from 'openai';
+import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions.mjs';
+import { map, Observable, of, switchMap, tap } from 'rxjs';
+
+import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
+import { BaseEntity, ContentPart, ContentPartType, Message, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectCreateDto, ProjectUpdateDto, Team, TeamCreateDto, TeamMember, TeamMemberAddDto, TeamMemberUpdateDto, TeamUpdateDto, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupUpsertDto, ThreadGroupVisibility } from '../models/project-models';
 import { Utils } from '../utils';
 import { safeForkJoin } from '../utils/dom-utils';
-import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
-import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions.mjs';
-import OpenAI from 'openai';
-import { DomSanitizer } from '@angular/platform-browser';
-
+import { AuthService } from './auth.service';
+import { GService, Locale } from './g.service';
+import { LoggerService } from './logger';
 @Injectable({ providedIn: 'root' })
 export class TeamService {
     private readonly authService: AuthService = inject(AuthService);
@@ -117,18 +119,20 @@ function threadFormat(thread: Thread): Thread {
     return thread;
 }
 
-function threadGroupResponseHandler(_threadGroup: ThreadGroup): ThreadGroupForView {
-    const threadGroup = _threadGroup as ThreadGroupForView;
-    threadGroup.threadList.forEach(thread => threadFormat(thread));
-    const date = new Date(threadGroup.updatedAt);
-    threadGroup.updatedDate = date.toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
-    return threadGroup;
+function threadGroupResponseHandlerGenerator(locale: Locale = 'ja-JP') {
+    return function threadGroupResponseHandler(_threadGroup: ThreadGroup): ThreadGroupForView {
+        const threadGroup = _threadGroup as ThreadGroupForView;
+        threadGroup.threadList.forEach(thread => threadFormat(thread));
+        const date = new Date(threadGroup.updatedAt);
+        threadGroup.updatedDate = date.toLocaleDateString(locale, { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+        return threadGroup;
+    }
 }
-
 @Injectable({ providedIn: 'root' })
 export class ThreadService {
 
     private readonly http: HttpClient = inject(HttpClient);
+    private readonly g: GService = inject(GService);
     private threadListMas: { [threadGroupId: string]: ThreadGroupForView[] } = {};
 
     genInitialThreadGroupEntity(projectId: string, template?: ThreadGroupForView): ThreadGroupForView {
@@ -155,7 +159,7 @@ export class ThreadService {
                 type: ThreadGroupType.Normal,
                 visibility: ThreadGroupVisibility.Team,
                 threadList: [],
-                updatedDate: new Date().toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }),
+                updatedDate: new Date().toLocaleDateString(this.g.locale, { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }),
                 ...genInitialBaseEntity('thread-group'),
             } as ThreadGroupForView;
 
@@ -210,7 +214,7 @@ export class ThreadService {
                 threadGroup.threadList[index].id = thread.id;
                 threadFormat(thread);
             });
-            ret.updatedDate = new Date(ret.updatedAt).toLocaleDateString(navigator.language || 'ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
+            ret.updatedDate = new Date(ret.updatedAt).toLocaleDateString(this.g.locale, { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' });
             return ret;
         }));
     }
@@ -220,7 +224,7 @@ export class ThreadService {
         if (force || !this.threadListMas[projectId]) {
             return this.http.get<ThreadGroup[]>(`/user/project/${projectId}/thread-group`).pipe(map(objList => {
                 // キャッシュ（threadListMas）に格納
-                this.threadListMas[projectId] = objList.map(threadGroupResponseHandler);
+                this.threadListMas[projectId] = objList.map(threadGroupResponseHandlerGenerator(this.g.locale));
                 // threadListを整形
                 return this.threadListMas[projectId];
             }));
@@ -231,7 +235,7 @@ export class ThreadService {
     }
 
     getThreadGroup(threadGroupId: string): Observable<ThreadGroupForView> {
-        return this.http.get<ThreadGroup>(`/user/thread-group/${threadGroupId}`).pipe(map(threadGroupResponseHandler));
+        return this.http.get<ThreadGroup>(`/user/thread-group/${threadGroupId}`).pipe(map(threadGroupResponseHandlerGenerator(this.g.locale)));
     }
 
     moveThreadGroup(threadGroupId: string, projectId: string): Observable<ThreadGroupForView> {
@@ -239,7 +243,7 @@ export class ThreadService {
     }
 
     cloneThreadGroup(threadGroupId: string, options?: { type: ThreadGroupType, title: string, description: string }): Observable<ThreadGroupForView> {
-        return this.http.post<ThreadGroupForView>(`/user/thread-group/clone/${threadGroupId}`, options || {}).pipe(map(threadGroupResponseHandler));
+        return this.http.post<ThreadGroupForView>(`/user/thread-group/clone/${threadGroupId}`, options || {}).pipe(map(threadGroupResponseHandlerGenerator(this.g.locale)));
     }
 
     // cloneThread(threadId: string): Observable<Thread> {
@@ -301,6 +305,7 @@ export class ThreadMessageService {
 export class MessageService {
     // private readonly authService: AuthService = inject(AuthService);
     private readonly http: HttpClient = inject(HttpClient);
+    private readonly logger: LoggerService = inject(LoggerService);
 
     messageGroupList: MessageGroupForView[] = [];
     messageList: MessageForView[] = [];
@@ -684,7 +689,7 @@ export class MessageService {
             return;
         } else {
             // dummy messageGroupではないので何もしない
-            console.error('dummy messageGroupではないので何もしない');
+            this.logger.error('Cannot remove non-dummy messageGroup - operation invalid');
         }
     }
 
@@ -824,38 +829,38 @@ export class MessageService {
     }
 
     languageExtensions = {
-        "typescript": "ts",
-        "typescriptx": "tsx", // TypeScript with JSX
-        "javascript": "js",
-        "python": "py",
-        "csharp": "cs",
-        "ruby": "rb",
-        "kotlin": "kt",
-        "bash": "sh",           // Bash scripts typically use .sh
-        "shell": "sh",          // General shell scripts
-        "perl": "pl",
-        "haskell": "hs",
-        "rust": "rs",
-        "objective-c": "m",
-        "matlab": "m",
-        "fortran": "f90",
-        "pascal": "pas",
-        "visualbasic": "vb",
-        "elixir": "ex",
-        "clojure": "clj",
-        "erlang": "erl",
-        "fsharp": "fs",
-        "yaml": "yml",
-        "markdown": "md",
-        "vhdl": "vhd",
-        "verilog": "v",
-        "julia": "jl",
-        "prolog": "pl",
-        "ocaml": "ml",
-        "scheme": "scm",
-        "rexx": "rex",
-        "smalltalk": "st",
-        "powershell": "ps1"     // PowerShell scripts
+        'typescript': 'ts',
+        'typescriptx': 'tsx', // TypeScript with JSX
+        'javascript': 'js',
+        'python': 'py',
+        'csharp': 'cs',
+        'ruby': 'rb',
+        'kotlin': 'kt',
+        'bash': 'sh',           // Bash scripts typically use .sh
+        'shell': 'sh',          // General shell scripts
+        'perl': 'pl',
+        'haskell': 'hs',
+        'rust': 'rs',
+        'objective-c': 'm',
+        'matlab': 'm',
+        'fortran': 'f90',
+        'pascal': 'pas',
+        'visualbasic': 'vb',
+        'elixir': 'ex',
+        'clojure': 'clj',
+        'erlang': 'erl',
+        'fsharp': 'fs',
+        'yaml': 'yml',
+        'markdown': 'md',
+        'vhdl': 'vhd',
+        'verilog': 'v',
+        'julia': 'jl',
+        'prolog': 'pl',
+        'ocaml': 'ml',
+        'scheme': 'scm',
+        'rexx': 'rex',
+        'smalltalk': 'st',
+        'powershell': 'ps1'     // PowerShell scripts
     } as { [key: string]: string };
 
     downloadContent(threadGroupId: string): Observable<JSZip> {

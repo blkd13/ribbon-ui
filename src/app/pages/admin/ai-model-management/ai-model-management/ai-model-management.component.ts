@@ -1,35 +1,36 @@
 // ai-model-management.component.ts - Enhanced version with scope management
+import { CommonModule } from '@angular/common';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, ValueChangeEvent, FormsModule } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
-import { AIModelManagerService, AIModelPricingService, ModelPricing, AIModelEntity, AIModelStatus, AIProviderType, Modality, AIModelEntityForView, AIProviderManagerService, AIProviderEntity, ScopeInfo, ScopeType } from '../../../../services/model-manager.service';
-import { forkJoin, of } from 'rxjs';
-import { map, catchError, switchMap, tap } from 'rxjs/operators';
-import { genInitialBaseEntity } from '../../../../services/project.service';
-import { JsonEditorComponent } from "../../../../parts/json-editor/json-editor.component";
-import { TrimTrailingZerosPipe } from '../../../../pipe/trim-trailing-zeros.pipe';
-import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatAutocompleteActivatedEvent, MatAutocompleteModule } from '@angular/material/autocomplete';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { AdminScopeService } from '../../../../services/admin-scope.service';
-import { MatSelectModule } from '@angular/material/select';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { TagService, TagEntity } from '../../../../services/model-manager.service';
-import { TagManagementDialogComponent } from '../tag-management-dialog/tag-management-dialog.component';
-import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../services/auth.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
-import { BulkTagDialogComponent } from '../bulk-tag-dialog/bulk-tag-dialog.component';
+import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+
+import { TranslateModule } from '@ngx-translate/core';
+import { forkJoin, of, Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
+
+import { JsonEditorComponent } from "../../../../parts/json-editor/json-editor.component";
+import { TrimTrailingZerosPipe } from '../../../../pipe/trim-trailing-zeros.pipe';
+import { AdminScopeService } from '../../../../services/admin-scope.service';
+import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../services/auth.service';
+import { AIModelEntity, AIModelEntityForView, AIModelManagerService, AIModelPricingService, AIModelStatus, AIProviderEntity, AIProviderManagerService, Modality, ModelPricing, ScopeInfo, ScopeType, TagEntity, TagService } from '../../../../services/model-manager.service';
+import { genInitialBaseEntity } from '../../../../services/project.service';
 import { BulkProviderDialogComponent } from '../bulk-provider-dialog/bulk-provider-dialog.component';
+import { BulkTagDialogComponent } from '../bulk-tag-dialog/bulk-tag-dialog.component';
+import { TagManagementDialogComponent } from '../tag-management-dialog/tag-management-dialog.component';
 
 @Component({
   selector: 'app-ai-model-management',
@@ -37,6 +38,7 @@ import { BulkProviderDialogComponent } from '../bulk-provider-dialog/bulk-provid
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
+    TranslateModule,
     MatAutocompleteModule,
     MatIconModule,
     MatButtonModule,

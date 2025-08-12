@@ -95,7 +95,7 @@
                 <mat-icon>content_copy</mat-icon>
             </button>
              -->
-            <button mat-icon-button (click)="setEdit($event)" [title]="vm.messageGroup.messages[0].editing?'保存':'編集'">
+            <button mat-icon-button (click)="setEdit($event)" [title]="vm.messageGroup.messages[0].editing?('SAVE' | translate):('EDIT' | translate)">
                 @if(vm.messageGroup.messages[0].editing){
                 <mat-icon>check_circle</mat-icon>
                 }@else{
@@ -103,7 +103,7 @@
                 }
             </button>
             <button mat-icon-button (click)="removeThread($event)" style="margin-right: 10px;"
-                [ngClass]="{invisible: !removable()}" title="スレッドを削除">
+                [ngClass]="{invisible: !removable()}" [title]="'DELETE_THREAD' | translate">
                 <mat-icon>delete</mat-icon>
             </button>
         </div>
@@ -111,10 +111,10 @@
     <div class="flex flex-col gap-10">
         <section>
             <div class="flex items-center gap-2 justify-between w-full">
-                <h4>システムプロンプト</h4>
-                <!-- トグルボタン（上部） -->
+                <h4>{{ 'SYSTEM_PROMPT' | translate }}</h4>
+                <!-- Toggle button (top) -->
                 <button class="toggle-button" (click)="showFullPrompt = !showFullPrompt">
-                    {{ showFullPrompt ? '折りたたむ' : '全て表示' }}
+                    {{ showFullPrompt ? ('COLLAPSE' | translate) : ('SHOW_ALL' | translate) }}
                 </button>
             </div>
             <div class="flex flex-col w-full">
@@ -141,7 +141,7 @@
                     <div class="chat-input" [hidden]="!message.editing">
                         <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
                             (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}"
-                            [placeholder]="'メッセージを入力...'" [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
+                            [placeholder]="'ENTER_MESSAGE' | translate" [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
                     </div>
                     <div class="custom-scroll system-prompt-container" [class.expanded]="showFullPrompt" #textBodyElem>
                         <markdown [hidden]="message.editing" katex mermaid clipboard
@@ -181,18 +181,19 @@
             </div>
         </section>
         <fieldset>
-            <legend>ツール使用設定</legend>
+            <legend>{{ 'TOOL_USAGE_SETTINGS' | translate }}</legend>
             <mat-radio-group [(ngModel)]="vm.thread.inDto.args.tool_choice" (change)="threadChange()">
 
                 @for(toolChoiceObj of toolChoiceMapper|keyvalue;track $index) {
                 <mat-radio-button [value]="toolChoiceObj.key" class="" color="primary">
-                    [{{toolChoiceObj.key}}] {{toolChoiceObj.value.label}}
+                    {{toolChoiceObj.key}}
+                    <!-- [{{toolChoiceObj.key}}] {{toolChoiceObj.value.label}} -->
                 </mat-radio-button>
                 }
             </mat-radio-group>
         </fieldset>
         <fieldset>
-            <legend>ツール一覧</legend>
+            <legend>{{ 'TOOL_LIST' | translate }}</legend>
             <!-- <mat-checkbox [(ngModel)]="vm.thread.inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
             <!-- @for(groupDef of this.toolCallService.tools;track $index) {
             <div>
@@ -221,17 +222,17 @@
                 <mat-expansion-panel
                     [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
                     <mat-expansion-panel-header>
-                        <mat-panel-title style="width: 100%;">
-                            <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;">
-                                <mat-icon class="group-check" (click)="toolGroupClick($event, groupDef)"
-                                    [ngClass]="{'group-check-checked': toolGroupCheckMas[groupDef.group]===2, 'group-check-bar': toolGroupCheckMas[groupDef.group]===1}">
-                                    {{['','remove','check'][toolGroupCheckMas[groupDef.group]]}}
-                                </mat-icon>
-                                <img [src]="'./image/'+groupDef.group.split('-')[0]+'-logo.svg'" alt="icon"
-                                    class="w-8 h-8" style="min-width: 30px;">
-                                {{providerMas[groupDef.group]?providerMas[groupDef.group].label:groupDef.group}}
-                            </div>
-                        </mat-panel-title>
+                        <!-- <mat-panel-title> -->
+                        <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;">
+                            <mat-icon class="group-check" (click)="toolGroupClick($event, groupDef)"
+                                [ngClass]="{'group-check-checked': toolGroupCheckMas[groupDef.group]===2, 'group-check-bar': toolGroupCheckMas[groupDef.group]===1}">
+                                {{['','remove','check'][toolGroupCheckMas[groupDef.group]]}}
+                            </mat-icon>
+                            <img [src]="'./image/'+groupDef.group.split('-')[0]+'-logo.svg'" alt="icon" class="w-8 h-8"
+                                style="min-width: 30px;">
+                            {{providerMas[groupDef.group]?providerMas[groupDef.group].label:groupDef.group}}
+                        </div>
+                        <!-- </mat-panel-title> -->
                     </mat-expansion-panel-header>
 
                     <div class="grid-container">
@@ -250,7 +251,7 @@
 
                 }
             </mat-accordion>
-            ※ツール使用には事前にAPI連携の登録が必要です。右上の〇からAPI鍵を登録してください。
+            <!-- ※ツール使用には事前にAPI連携の登録が必要です。右上の〇からAPI鍵を登録してください。 -->
         </fieldset>
     </div>
 </mat-expansion-panel>
