@@ -56,30 +56,30 @@ export interface TwoFactorAuthDetails {
     secret: string;
     qrCodeUrl: string;
 }
-
-export type GPTModels = 'gpt-4o'
-    | 'gpt-4o-mini'
-    | 'gpt-4'
-    | 'gpt-4.1'
-    | 'gpt-4-vision-preview'
-    | 'gemini-1.5-flash'
-    | 'gemini-1.5-pro'
-    | 'gemini-1.5-flash-001'
-    | 'gemini-1.5-pro-001'
-    | 'gemini-1.5-flash-002'
-    | 'gemini-1.5-pro-002'
-    | 'gemini-1.0-pro'
-    | 'gemini-1.0-pro-vision'
-    | 'claude-3-5-sonnet-v2@20241022'
-    | 'claude-3-7-sonnet'
-    | 'claude-3-7-sonnet-20250219'
-    | 'claude-3-7-sonnet-thinking-20250219'
-    | 'claude-3-7-sonnet@20250219'
-    | 'claude-3-7-sonnet-thinking@20250219'
-    | 'gemini-2.0-flash-exp'
-    | 'gpt-5'
-    | 'claude-sonnet-4-20250514'
-    | 'gemini-2.5-flash-thinking';
+export type GPTModels = string;
+// export type GPTModels = 'gpt-4o'
+//     | 'gpt-4o-mini'
+//     | 'gpt-4'
+//     | 'gpt-4.1'
+//     | 'gpt-4-vision-preview'
+//     | 'gemini-1.5-flash'
+//     | 'gemini-1.5-pro'
+//     | 'gemini-1.5-flash-001'
+//     | 'gemini-1.5-pro-001'
+//     | 'gemini-1.5-flash-002'
+//     | 'gemini-1.5-pro-002'
+//     | 'gemini-1.0-pro'
+//     | 'gemini-1.0-pro-vision'
+//     | 'claude-3-5-sonnet-v2@20241022'
+//     | 'claude-3-7-sonnet'
+//     | 'claude-3-7-sonnet-20250219'
+//     | 'claude-3-7-sonnet-thinking-20250219'
+//     | 'claude-3-7-sonnet@20250219'
+//     | 'claude-3-7-sonnet-thinking@20250219'
+//     | 'gemini-2.0-flash-exp'
+//     | 'gpt-5'
+//     | 'claude-sonnet-4-20250514'
+//     | 'gemini-2.5-flash-thinking';
 
 
 export interface CachedContent {

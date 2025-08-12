@@ -370,6 +370,10 @@ export class MessageService {
                 contentPart.createdAt = new Date(contentPart.createdAt);
                 contentPart.updatedAt = new Date(contentPart.updatedAt);
             });
+            if (list.length) {
+            } else {
+                list.push(this.initContentPart(message.id));
+            }
         }));
     }
 

@@ -658,65 +658,64 @@ export class ChatService {
     { label: '通常' },
     { label: 'エラー<br/>解説', userPrompt: `以下のエラーについて、日本語で内容を解説してください。\n\n` },
     { label: '要約', userPrompt: '要約してください。\n\n' },
-    {
-      label: 'Matter<br/>most',
-      tool_choice: 'auto',
-      tool_names: [],
-      tool_groups: ['mattermost'],
-      tool_clear: true,
-      modelSelection: [
-        { model: 'claude-sonnet-4@20250514', provider: AIProviderType.ANTHROPIC_VERTEXAI },
-        { model: 'gemini-2.0-pro-exp-02-05', provider: AIProviderType.VERTEXAI },
-        { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
-        { model: 'gemini-1.5-pro-002', provider: AIProviderType.VERTEXAI },
-      ],
-      systemLabel: `Mattermost`,
-      systemPrompt: Utils.trimLines(`
-        エージェントAI。
-        言われたことをするだけでなく、最高のパフォーマンスを出すために不明点があれば必要に応じてユーザーに質問し、付加価値の高い情報提供に努める。
-      `),
-      userPrompt: Utils.trimLines(`
-        メンションから私に関するタスクを抽出して分類して分かりやすく表形式で整理してください。
-        表の項目は以下の通りです。
-        ステータス、案件名、タイトル（投稿へのリンク）、投稿者：（投稿者の名前）、日時：（yyyy年MM月dd日 hh:mm）、内容（内容の要約）、分類：質問
-      `),
-      // ✅ ** mattermost検索が必要になった場合の注意
-      // - 基本的にはメンションされた投稿をソースとする。
-      // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
-      // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
-    },
-    {
-      label: `Box<br/>検索`,
-      tool_choice: 'auto',
-      tool_names: [],
-      tool_groups: ['box'],
-      tool_clear: true, // ツール選択状態をクリアしたうえで再設定するかどうか。
-      modelSelection: [
-        { model: 'claude-sonnet-4@20250514', provider: AIProviderType.ANTHROPIC_VERTEXAI },
-        { model: 'gemini-2.0-pro-exp-02-05', provider: AIProviderType.VERTEXAI },
-        { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
-        { model: 'gemini-1.5-pro-002', provider: AIProviderType.VERTEXAI },
-      ],
-      systemLabel: `Box`,
-      systemPrompt: Utils.trimLines(`
-        エージェントAI。
-        言われたことをするだけでなく、最高のパフォーマンスを出すために不明点があれば必要に応じてユーザーに質問し、付加価値の高い情報提供に努める。
-      `),
-      userPrompt: Utils.trimLines(``),
-      // ✅ ** mattermost検索が必要になった場合の注意
-      // - 基本的にはメンションされた投稿をソースとする。
-      // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
-      // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
-    },
+    // {
+    //   label: 'Matter<br/>most',
+    //   tool_choice: 'auto',
+    //   tool_names: [],
+    //   tool_groups: ['mattermost'],
+    //   tool_clear: true,
+    //   modelSelection: [
+    //     { model: 'claude-sonnet-4@20250514', provider: AIProviderType.ANTHROPIC_VERTEXAI },
+    //     { model: 'gemini-2.0-pro-exp-02-05', provider: AIProviderType.VERTEXAI },
+    //     { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
+    //     { model: 'gemini-1.5-pro-002', provider: AIProviderType.VERTEXAI },
+    //   ],
+    //   systemLabel: `Mattermost`,
+    //   systemPrompt: Utils.trimLines(`
+    //     エージェントAI。
+    //     言われたことをするだけでなく、最高のパフォーマンスを出すために不明点があれば必要に応じてユーザーに質問し、付加価値の高い情報提供に努める。
+    //   `),
+    //   userPrompt: Utils.trimLines(`
+    //     メンションから私に関するタスクを抽出して分類して分かりやすく表形式で整理してください。
+    //     表の項目は以下の通りです。
+    //     ステータス、案件名、タイトル（投稿へのリンク）、投稿者：（投稿者の名前）、日時：（yyyy年MM月dd日 hh:mm）、内容（内容の要約）、分類：質問
+    //   `),
+    //   // ✅ ** mattermost検索が必要になった場合の注意
+    //   // - 基本的にはメンションされた投稿をソースとする。
+    //   // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
+    //   // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
+    // },
+    // {
+    //   label: `Box<br/>検索`,
+    //   tool_choice: 'auto',
+    //   tool_names: [],
+    //   tool_groups: ['box'],
+    //   tool_clear: true, // ツール選択状態をクリアしたうえで再設定するかどうか。
+    //   modelSelection: [
+    //     { model: 'claude-sonnet-4@20250514', provider: AIProviderType.ANTHROPIC_VERTEXAI },
+    //     { model: 'gemini-2.0-pro-exp-02-05', provider: AIProviderType.VERTEXAI },
+    //     { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
+    //     { model: 'gemini-1.5-pro-002', provider: AIProviderType.VERTEXAI },
+    //   ],
+    //   systemLabel: `Box`,
+    //   systemPrompt: Utils.trimLines(`
+    //     エージェントAI。
+    //     言われたことをするだけでなく、最高のパフォーマンスを出すために不明点があれば必要に応じてユーザーに質問し、付加価値の高い情報提供に努める。
+    //   `),
+    //   userPrompt: Utils.trimLines(``),
+    //   // ✅ ** mattermost検索が必要になった場合の注意
+    //   // - 基本的にはメンションされた投稿をソースとする。
+    //   // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
+    //   // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
+    // },
     {
       label: `通訳`,
       placeholder: '翻訳の指示は要りません。英文／和文をそのまま貼ってください。',
       systemLabel: `通訳AI`,
       modelSelection: [
-        { model: 'gemini-1.5-flash-002', provider: AIProviderType.VERTEXAI },
-        { model: 'gemini-2.0-flash-lite-001', provider: AIProviderType.VERTEXAI },
-        { model: 'gemini-2.0-flash-001', provider: AIProviderType.VERTEXAI },
-        { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
+        { model: 'gemini-2.5-flash-lite', provider: AIProviderType.VERTEXAI },
+        { model: 'gpt-5-nano', provider: AIProviderType.VERTEXAI },
+        { model: 'claude-3-5-haiku@20241022', provider: AIProviderType.VERTEXAI },
       ],
       systemPrompt: Utils.trimLines(`
         あなたは **通訳** としてふるまい、次のルールに従って翻訳を行います。

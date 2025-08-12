@@ -95,7 +95,8 @@
                 <mat-icon>content_copy</mat-icon>
             </button>
              -->
-            <button mat-icon-button (click)="setEdit($event)" [title]="vm.messageGroup.messages[0].editing?('SAVE' | translate):('EDIT' | translate)">
+            <button mat-icon-button (click)="setEdit($event)"
+                [title]="vm.messageGroup.messages[0].editing?('SAVE' | translate):('EDIT' | translate)">
                 @if(vm.messageGroup.messages[0].editing){
                 <mat-icon>check_circle</mat-icon>
                 }@else{
@@ -141,7 +142,8 @@
                     <div class="chat-input" [hidden]="!message.editing">
                         <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
                             (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}"
-                            [placeholder]="'ENTER_MESSAGE' | translate" [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
+                            [placeholder]="'ENTER_MESSAGE' | translate" [(ngModel)]="content.text"
+                            (change)="onSubmit()"></textarea>
                     </div>
                     <div class="custom-scroll system-prompt-container" [class.expanded]="showFullPrompt" #textBodyElem>
                         <markdown [hidden]="message.editing" katex mermaid clipboard
