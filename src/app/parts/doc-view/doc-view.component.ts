@@ -1,19 +1,18 @@
-import { Component, inject, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MarkdownModule } from 'ngx-markdown';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { detect } from 'jschardet';
-import { ContentPart } from '../../models/project-models';
-import { FileEntity, FileEntityForView, FileGroupEntityForView, FileManagerService } from './../../services/file-manager.service';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { CommonModule } from '@angular/common';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
-import { SelectTreeComponent } from '../select-tree/select-tree.component';
-import { DragDeltaDirective } from '../drag-delta.directive';
+import { MatIconModule } from '@angular/material/icon';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { MarkdownModule } from 'ngx-markdown';
+import { ContentPart } from '../../models/project-models';
 import { GService } from '../../services/g.service';
+import { DragDeltaDirective } from '../drag-delta.directive';
+import { SelectTreeComponent } from '../select-tree/select-tree.component';
+import { FileEntityForView, FileGroupEntityForView, FileManagerService } from './../../services/file-manager.service';
 
 
 
@@ -337,7 +336,9 @@ export class DocViewComponent {
             }
 
             // 自動エンコーディングを使う
-            const detectedEncoding = detect(base64Binary);
+            // const detectedEncoding = detect(base64Binary);
+            // TODO jschardetがLGPLなので一旦使わずに固定値にする
+            const detectedEncoding = { encoding: 'UTF-8' };
             // console.log("Detected encoding:", detectedEncoding.encoding);
             this.encode = detectedEncoding.encoding as 'UTF-8' | 'SHIFT_JIS' | 'EUC-JP' | 'Windows-31J';
             if (detectedEncoding.encoding === 'ISO-8859-2') {

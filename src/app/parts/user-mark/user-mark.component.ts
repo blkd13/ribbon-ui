@@ -8,6 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { TranslateModule } from '@ngx-translate/core';
 import { GService } from '../../services/g.service';
 import { ApiKeyManagerDialogComponent } from '../api-key-manager-dialog/api-key-manager-dialog.component';
+import { LicenseViewerComponent } from '../license-viewer/license-viewer.component';
 import { PredictHistoryComponent } from '../predict-history/predict-history.component';
 import { UserSettingDialogComponent } from '../user-setting-dialog/user-setting-dialog.component';
 import { AuthService } from './../../services/auth.service';
@@ -33,6 +34,10 @@ export class UserMarkComponent {
 
   openApiKeyManager(): void {
     this.dialog.open(ApiKeyManagerDialogComponent);
+  }
+
+  openLicenseViewer(): void {
+    this.dialog.open(LicenseViewerComponent);
   }
 }
 

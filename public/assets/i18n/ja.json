@@ -571,5 +571,11 @@
     "UNUSED": "未使用",
     "API_KEY_DIALOG_TITLE": "APIキー",
     "API_KEY_WARNING_MESSAGE": "API鍵はこの画面を一度閉じると二度と表示されません。",
-    "ENTER_API_KEY_PLACEHOLDER": "API鍵を入力"
+    "ENTER_API_KEY_PLACEHOLDER": "API鍵を入力",
+    "LICENSE_INFORMATION": "ライセンス情報",
+    "LOADING_LICENSES": "ライセンス情報を読み込み中...",
+    "TOTAL_PACKAGES": "総パッケージ数",
+    "COPYRIGHT": "著作権",
+    "LICENSE_TEXT": "ライセンステキスト",
+    "ERROR_LOADING_LICENSES": "ライセンス情報の読み込みエラー"
 }

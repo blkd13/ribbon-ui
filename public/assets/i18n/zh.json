@@ -570,5 +570,11 @@
     "UNUSED": "未使用",
     "API_KEY_DIALOG_TITLE": "API密钥",
     "API_KEY_WARNING_MESSAGE": "一旦关闭此屏幕，API密钥将不会再次显示。",
-    "ENTER_API_KEY_PLACEHOLDER": "输入API密钥"
+    "ENTER_API_KEY_PLACEHOLDER": "输入API密钥",
+    "LICENSE_INFORMATION": "许可证信息",
+    "LOADING_LICENSES": "正在加载许可证信息...",
+    "TOTAL_PACKAGES": "总包数",
+    "COPYRIGHT": "版权",
+    "LICENSE_TEXT": "许可证文本",
+    "ERROR_LOADING_LICENSES": "加载许可证信息时出错"
 }

@@ -24,6 +24,10 @@
             <mat-icon>key</mat-icon>
             <span>{{ 'API_KEY_MANAGEMENT' | translate }}</span>
         </button>
+        <button mat-menu-item (click)="openLicenseViewer()">
+            <mat-icon>description</mat-icon>
+            <span>{{ 'LICENSE_INFORMATION' | translate }}</span>
+        </button>
         <mat-divider></mat-divider>
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="authService.logout()">

@@ -570,5 +570,11 @@
     "UNUSED": "Unused",
     "API_KEY_DIALOG_TITLE": "API Key",
     "API_KEY_WARNING_MESSAGE": "The API key will not be displayed again once this screen is closed.",
-    "ENTER_API_KEY_PLACEHOLDER": "Enter API key"
+    "ENTER_API_KEY_PLACEHOLDER": "Enter API key",
+    "LICENSE_INFORMATION": "License Information",
+    "LOADING_LICENSES": "Loading license information...",
+    "TOTAL_PACKAGES": "Total packages",
+    "COPYRIGHT": "Copyright",
+    "LICENSE_TEXT": "License Text",
+    "ERROR_LOADING_LICENSES": "Error loading license information"
 }
