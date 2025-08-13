@@ -18,7 +18,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
@@ -26,6 +26,7 @@ import { JsonEditorComponent } from "../../../../parts/json-editor/json-editor.c
 import { TrimTrailingZerosPipe } from '../../../../pipe/trim-trailing-zeros.pipe';
 import { AdminScopeService } from '../../../../services/admin-scope.service';
 import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../services/auth.service';
+import { GService } from '../../../../services/g.service';
 import { AIModelEntity, AIModelEntityForView, AIModelManagerService, AIModelPricingService, AIModelStatus, AIProviderEntity, AIProviderManagerService, Modality, ModelPricing, ScopeInfo, ScopeType, TagEntity, TagService } from '../../../../services/model-manager.service';
 import { genInitialBaseEntity } from '../../../../services/project.service';
 import { BulkProviderDialogComponent } from '../bulk-provider-dialog/bulk-provider-dialog.component';
@@ -69,6 +70,8 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   readonly aiProviderService: AIProviderManagerService = inject(AIProviderManagerService);
   readonly aiModelService: AIModelManagerService = inject(AIModelManagerService);
   readonly aiModelPricingService: AIModelPricingService = inject(AIModelPricingService);
+  readonly g = inject(GService);
+  readonly translate: TranslateService = inject(TranslateService);
   readonly tagService = inject(TagService);
   readonly authService = inject(AuthService);
 
@@ -982,7 +985,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   formatDate(date: Date | string): string {
     const d = date instanceof Date ? date : new Date(date);
-    return d.toLocaleDateString();
+    return d.toLocaleDateString(this.g.lang);
   }
 
   formatDateForInput(date: Date | string): string {

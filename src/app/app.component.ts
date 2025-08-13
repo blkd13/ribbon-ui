@@ -72,6 +72,7 @@ export class AppComponent implements OnInit {
 
   private initializeApp(): void {
     let userLang = this.translateService.getBrowserLang() as Locale || 'ja-JP';
+    // userLang = 'ja-JP';
     // userLang = 'en-US';
     // userLang = 'zh-CN';
     this.g.lang = userLang.split('-')[0] as Lang;
@@ -89,6 +90,13 @@ export class AppComponent implements OnInit {
         this.g.autoRedirectToLoginPageIfAuthError = true;
         this.userService.getUserSetting().subscribe({
           next: next => {
+            // ユーザーの言語設定を適用
+            const savedLanguage = this.userService.language;
+            if (savedLanguage && savedLanguage !== 'auto') {
+              this.translateService.use(savedLanguage);
+              this.g.lang = savedLanguage.split('-')[0] as Lang;
+              this.g.locale = savedLanguage as Locale;
+            }
             this.isChecked = true;
             this.checkForUnreadAnnouncements();
           },

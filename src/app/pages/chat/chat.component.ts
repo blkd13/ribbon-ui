@@ -1979,7 +1979,7 @@ export class ChatComponent implements OnInit {
         this.tokenObjSummary = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
         this.tokenObjList = [];
         next.forEach((res, index) => {
-          const modelType = this.selectedThreadGroup.threadList[index].inDto.args.model.startsWith('gemini-') ? 'gemini-1.5-flash' : 'gpt-5';
+          const modelType = this.selectedThreadGroup.threadList[index].inDto.args.model.startsWith('gemini-') ? 'gemini-1.5-flash' : 'gpt-4o';
           const tokenObj: CountTokensResponseForView = { id: this.selectedThreadGroup.threadList[index].id, totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: this.selectedThreadGroup.threadList[index].inDto.args.model };
           const countedTokenObj = res[0][modelType] || { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
           tokenObj.totalTokens += countedTokenObj.totalTokens;

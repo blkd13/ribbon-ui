@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>{{ 'APPLICATION_SETTINGS' | translate }}</h2>
+<!-- <h2 mat-dialog-title>{{ 'APPLICATION_SETTINGS' | translate }}</h2> -->
 
 <mat-dialog-content>
     <div class="settings-section">
@@ -54,6 +54,21 @@
             </mat-radio-group>
             <p class="setting-description">
                 {{ 'HISTORY_CLOSE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_DONT_CLOSE' | translate }}
+            </p>
+        </div>
+    </div>
+    <mat-divider></mat-divider>
+    <div class="settings-section">
+        <h3>{{ 'LANGUAGE_SETTING' | translate }}</h3>
+        <div class="setting-item">
+            <mat-button-toggle-group [(value)]="language" (change)="toggleLanguage($event)">
+                <mat-button-toggle value="auto">{{ 'SYSTEM' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="ja">{{ 'JAPANESE' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="en">{{ 'ENGLISH' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="zh">{{ 'CHINESE' | translate }}</mat-button-toggle>
+            </mat-button-toggle-group>
+            <p class="setting-description">
+                {{ 'LANGUAGE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_BROWSER_LANGUAGE' | translate }}
             </p>
         </div>
     </div>

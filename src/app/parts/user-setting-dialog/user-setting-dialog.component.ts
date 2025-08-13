@@ -1,16 +1,15 @@
-import { Component, inject } from '@angular/core';
-import { AnimationService } from '../../services/animation.service';
 import { CommonModule } from '@angular/common';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { UserSettingService } from '../../services/user-setting.service';
-import { UserService } from '../../services/user.service';
-import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
+import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { AnimationService } from '../../services/animation.service';
+import { UserService } from '../../services/user.service';
 import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
-import { TranslateService, TranslateModule } from '@ngx-translate/core';
 
 declare var _paq: any;
 
@@ -41,11 +40,13 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
   theme: 'system' | 'dark' | 'light';
   enterMode: 'Enter' | 'Ctrl+Enter';
   historyCloseMode: 0 | 1 | 2;
+  language: 'auto' | 'ja' | 'en' | 'zh';
 
   constructor() {
     super();
     this.enterMode = this.userService.enterMode;
     this.theme = this.userService.theme;
+    this.language = this.userService.language;
     this.historyCloseMode = this.userService.historyCloseMode;
     this.animationService.animationEnabled$.subscribe(enabled => {
       this.current = enabled;
@@ -54,8 +55,10 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
     this.dialogRef.beforeClosed().subscribe(() => {
       if (this.needsReload) {
       } else {
-        // キャンセルしたときにテーマを元に戻す
+        // キャンセルしたときにテーマと言語を元に戻す
         this.userService.applyTheme(this.userService.theme);
+        const savedLanguage = this.userService.language === 'auto' ? this.translate.getBrowserLang() || 'en' : this.userService.language;
+        this.translate.use(savedLanguage);
       }
     });
   }
@@ -80,11 +83,18 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
     this.historyCloseMode = event.value;
   }
 
+  toggleLanguage(event: MatButtonToggleChange) {
+    _paq.push(['trackEvent', this.translate.instant('USER_SETTINGS'), this.translate.instant('LANGUAGE_SETTING'), event.value]);
+    this.language = event.value;
+    // 言語変更は即座に適用して確認できるようにする
+    this.translate.use(event.value === 'auto' ? this.translate.getBrowserLang() || 'en' : event.value);
+  }
+
   saveAndClose() {
     if (this.needsReload) {
       if (confirm(this.translate.instant('CONFIRM_RELOAD_FOR_SETTINGS'))) {
         this.executeAsync(async () => {
-          return this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).toPromise();
+          return this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode, this.language).toPromise();
         }).then(success => {
           if (success) {
             _paq.push(['trackEvent', this.translate.instant('USER_SETTINGS'), this.translate.instant('ANIMATION_SETTINGS_SAVED'), this.current]);
@@ -96,7 +106,7 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
       }
     } else {
       this.executeAsync(async () => {
-        return this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode).toPromise();
+        return this.userService.saveSetting(this.theme, this.enterMode, this.historyCloseMode, this.language).toPromise();
       }).then(success => {
         if (success) {
           this.close({ needsReload: false });
