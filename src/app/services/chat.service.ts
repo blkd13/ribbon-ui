@@ -8,12 +8,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { environment } from '../../environments/environment';
 import { CachedContent, ChatCompletionCreateParamsWithoutMessages, ChatCompletionStreamInDto, GenerateContentRequestForCache } from '../models/models';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
-import { Utils } from '../utils';
 import { AuthService } from './auth.service';
 import { AIProviderType } from './model-manager.service';
 import { ToolCallPartCommand } from './tool-call.service';
 
 // 新しいチャットサービスのインポート
+import { TranslateService } from '@ngx-translate/core';
+import { Utils } from '../utils';
 import { ChatCoordinationService } from './chat/chat-coordination.service';
 import { LoggerService } from './logger';
 
@@ -184,6 +185,7 @@ export class ChatService {
 
   readonly http: HttpClient = inject(HttpClient);
   readonly authService: AuthService = inject(AuthService);
+  readonly translate: TranslateService = inject(TranslateService);
 
   // checkOkModels = new Set<string>();
 
@@ -655,9 +657,8 @@ export class ChatService {
   // }
 
   presetDefs: PresetDef[] = [
-    { label: '通常' },
-    { label: 'エラー<br/>解説', userPrompt: `以下のエラーについて、日本語で内容を解説してください。\n\n` },
-    { label: '要約', userPrompt: '要約してください。\n\n' },
+    { label: this.translate.instant('NORMAL') },
+    { label: this.translate.instant('SUMMARY'), userPrompt: this.translate.instant('PLEASE_SUMMARIZE') },
     // {
     //   label: 'Matter<br/>most',
     //   tool_choice: 'auto',
@@ -709,59 +710,18 @@ export class ChatService {
     //   // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
     // },
     {
-      label: `通訳`,
-      placeholder: '翻訳の指示は要りません。英文／和文をそのまま貼ってください。',
-      systemLabel: `通訳AI`,
+      label: this.translate.instant(`INTERPRETER`),
+      placeholder: this.translate.instant(`TRANSLATION_INSTRUCTION`),
+      systemLabel: this.translate.instant(`TRANSLATION_AI`),
       modelSelection: [
         { model: 'gemini-2.5-flash-lite', provider: AIProviderType.VERTEXAI },
         { model: 'gpt-5-nano', provider: AIProviderType.VERTEXAI },
         { model: 'claude-3-5-haiku@20241022', provider: AIProviderType.VERTEXAI },
       ],
-      systemPrompt: Utils.trimLines(`
-        あなたは **通訳** としてふるまい、次のルールに従って翻訳を行います。
-
-        #### **1. 翻訳のルール**
-
-        利用者は翻訳指示を入れてきません。
-        入力された文章が日本語であれば日本語→英語に、英語であれば英語→日本語に翻訳してください。
-
-        ✅ **英語 → 日本語**
-        - **TOEIC 400点台の人が理解しやすい訳を作成する。**
-        - できるだけシンプルで自然な表現にする。
-        - 難しい単語や慣用表現について **解説を付ける**（単語の意味や文法のポイントを解説）。
-
-        ✅ **日本語 → 英語**
-        - **英語話者にとって自然な表現を意識する。**
-        - **文化の違いを考慮し、意訳も行う。**
-        - **意訳をした場合は、日本語への「逆翻訳」も提示する。**
-
-        #### **2. 出力フォーマット（英語 → 日本語）**
-
-        \`\`\`
-        【翻訳】
-        （訳文をここに記述）
-
-        【解説】
-        * **英単語/表現**: 日本語で意味を説明
-        * **英単語/表現**: 日本語で意味を説明
-        \`\`\`
-
-        #### **3. 出力フォーマット（日本語 → 英語）**
-
-        \`\`\`
-        【英訳】
-        （英訳をここに記述）
-
-        【逆翻訳】
-        （英訳が日本語に戻るとどうなるかを記述）
-
-        【補足】
-        （文化の違いに関する補足や、英語話者に伝わりやすくするための意訳のポイント）
-        \`\`\`
-        `
-      ),
+      systemPrompt: Utils.trimLines(this.translate.instant(`TRANSLATION_SYSTEM_PROMPT`)),
       userPrompt: Utils.trimLines(``),
     },
+    // { label: this.translate.instant('ERROR_EXPLANATION'), userPrompt: this.translate.instant('ERROR_EXPLANATION_DETAIL') },
   ];
 
   // readonly toolCallService = inject(ToolCallService);
