@@ -84,6 +84,8 @@ export class AppComponent implements OnInit {
         _paq.push(['setUserId', next.id]);
 
         this.g.info.user = next;
+        this.g.info$.next({ user: next });
+
         this.g.autoRedirectToLoginPageIfAuthError = true;
         this.userService.getUserSetting().subscribe({
           next: next => {

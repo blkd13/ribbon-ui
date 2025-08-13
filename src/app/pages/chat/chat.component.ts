@@ -2422,6 +2422,9 @@ export class ChatComponent implements OnInit {
       if (messageGroup.role === 'system') {
         if (messageGroup.messages[0].id.startsWith('dummy-')) {
         } else {
+          messageGroup.messages[0].contents.forEach(content => {
+            content.id = undefined as any; // 無理矢理消す
+          });
           // system：システムプロンプトはツリーを変えたくないので単純にedit
           safeForkJoin(messageGroup.messages.map(message => this.messageService.editMessageWithContents(message))).pipe(
             map(next => {

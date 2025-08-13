@@ -1,8 +1,8 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
-import { User, TwoFactorAuthDetails, UserRoleType, UserRole } from '../models/models';
+import { TwoFactorAuthDetails, User, UserRole } from '../models/models';
 import { PredictTransaction } from './department.service';
 import { GService } from './g.service';
 import { ScopeType } from './model-manager.service';
@@ -57,6 +57,8 @@ export class AuthService {
       .pipe(map(response => {
         // localStorage.setItem('auth_token', response.token);
         this.user = response.user;
+        this.g.info.user = response.user;
+        this.g.info$.next({ user: response.user });
         return response.user;
       }));
   }
@@ -91,6 +93,7 @@ export class AuthService {
         }
       });
     };
+    this.g.info.user = undefined as any;
 
     // ログアウトはsubscribeまでやってしまう。
     // TODO ちょっと変な気もするので後で見直し。

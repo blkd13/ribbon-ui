@@ -62,6 +62,8 @@ export class GService {
   orgKey: string;
 
   info: { user: User } = { user: {} as User };
+  info$: Subject<{ user: User }> = new Subject<{ user: User }>();
+
   public queries: { [key: string]: string } = {};
 
   // 画面間遷移で大き目の情報受け渡したいとき用。
