@@ -53,7 +53,7 @@
         <div class="flex items-center" style="width: 150px;"
           [matTooltip]="aIModelManagerService.modelMap[args.model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini-1.5以外では使用できません。'"
           [ngStyle]="{opacity: aIModelManagerService.modelMap[args.model].isGSearch?1:0.5}">
-          <img src="./image/google-icon.svg" alt="Googleアイコン" class="w-8 h-8"
+          <img src="./image/google-logo.svg" alt="Googleアイコン" class="w-8 h-8"
             [ngStyle]="{opacity: args.isGoogleSearch ? 1 : 0.3}">
           <mat-checkbox [(ngModel)]="args.isGoogleSearch" color="primary"
             [disabled]="!aIModelManagerService.modelMap[args.model].isGSearch">Google<br />検索統合</mat-checkbox>

@@ -217,7 +217,7 @@
   }
 
   @if(vm.messageGroup.role==='assistant' && vm.messageGroup.source){
-  <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap" style="color: #908070;height: 0px;margin: 5px 0;">
+  <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap message-color-assistant-model-name" style="height: 0px;margin: 5px 0;">
     <!-- #BFAE9D -->
     by {{ vm.messageGroup.source }}
   </div>
@@ -228,7 +228,7 @@
 }
 
 <ng-template #controller let-exPanel="exPanel" let-position="position">
-  <div class="right-0 top-0 flex gap-2" style="padding-right: 0;"
+  <div class="right-0 top-0 flex gap-2" style="padding-right: 0;padding-left: 8px;"
     [ngClass]="{'controller-bottom': position==='bottom', 'controller-bottom--hide': !exPanel.expanded && position==='bottom'}">
     <!-- style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"  -->
     @if(vm.messageGroup.type) {

@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AnimationService } from '../../services/animation.service';
@@ -44,10 +44,10 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
 
   constructor() {
     super();
-    this.enterMode = this.userService.enterMode;
-    this.theme = this.userService.theme;
-    this.language = this.userService.language;
-    this.historyCloseMode = this.userService.historyCloseMode;
+    this.enterMode = this.userService.enterMode || 'Enter';
+    this.theme = this.userService.theme || 'system';
+    this.language = this.userService.language || 'auto';
+    this.historyCloseMode = this.userService.historyCloseMode || 0;
     this.animationService.animationEnabled$.subscribe(enabled => {
       this.current = enabled;
     });
@@ -61,6 +61,7 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
         this.translate.use(savedLanguage);
       }
     });
+    console.log(this.historyCloseMode);
   }
 
   toggleAnimation(event: MatSlideToggleChange) {
@@ -75,11 +76,11 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
     this.userService.applyTheme(event.value);
   }
 
-  toggleEnterMode(event: MatRadioChange) {
+  toggleEnterMode(event: MatButtonToggleChange) {
     this.enterMode = event.value;
   }
 
-  toggleHistoryCloseMode(event: MatRadioChange) {
+  toggleHistoryCloseMode(event: MatButtonToggleChange) {
     this.historyCloseMode = event.value;
   }
 

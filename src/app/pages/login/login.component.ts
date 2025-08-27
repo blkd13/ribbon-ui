@@ -231,8 +231,8 @@ export class LoginComponent {
     }
 
     this.authService.passwordReset(this.passwordResetForm.value.password, this.passwordResetForm.value.passwordConfirm).subscribe({
-      next: (user) => {
-        this.logger.info('Password reset successful, redirecting:', user);
+      next: (resDto) => {
+        this.logger.info('Password reset successful, redirecting:', resDto);
         this.router.navigate([this.firstView]);
       },
       error: (error) => {

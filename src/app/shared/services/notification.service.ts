@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { MatSnackBar, MatSnackBarConfig } from '@angular/material/snack-bar';
+import { TranslateService } from '@ngx-translate/core';
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
@@ -18,28 +19,29 @@ export interface NotificationConfig extends Partial<MatSnackBarConfig> {
 })
 export class NotificationService {
   private readonly snackBar = inject(MatSnackBar);
+  private readonly translate = inject(TranslateService);
 
   // デフォルト設定
   private readonly defaultConfigs: Record<NotificationType, NotificationConfig> = {
     success: {
       duration: 3000,
       panelClass: ['success-snackbar'],
-      action: '閉じる'
+      action: this.translate.instant('CLOSE'),
     },
     error: {
       duration: 5000,
       panelClass: ['error-snackbar'],
-      action: '閉じる'
+      action: this.translate.instant('CLOSE'),
     },
     warning: {
       duration: 4000,
       panelClass: ['warning-snackbar'],
-      action: '閉じる'
+      action: this.translate.instant('CLOSE'),
     },
     info: {
       duration: 3000,
       panelClass: ['info-snackbar'],
-      action: '閉じる'
+      action: this.translate.instant('CLOSE'),
     }
   };
 
@@ -87,9 +89,9 @@ export class NotificationService {
    * @param config 追加設定
    */
   showApiResult(
-    success: boolean, 
-    successMessage: string, 
-    errorMessage: string, 
+    success: boolean,
+    successMessage: string,
+    errorMessage: string,
     config?: Partial<NotificationConfig>
   ): void {
     if (success) {
@@ -106,7 +108,7 @@ export class NotificationService {
    */
   showLongError(error: any, title?: string): void {
     let message = title ? `${title}: ` : '';
-    
+
     if (typeof error === 'string') {
       message += error;
     } else if (error?.message) {
@@ -115,37 +117,10 @@ export class NotificationService {
       message += JSON.stringify(error);
     }
 
-    this.show(message, 'error', { 
+    this.show(message, 'error', {
       duration: 10000,
-      action: '閉じる'
+      action: this.translate.instant('CLOSE'),
     });
-  }
-
-  /**
-   * 操作確認後の結果通知
-   * @param operation 操作名
-   * @param success 成功かどうか
-   */
-  showOperationResult(operation: string, success: boolean): void {
-    if (success) {
-      this.showSuccess(`${operation}しました`);
-    } else {
-      this.showError(`${operation}に失敗しました`);
-    }
-  }
-
-  /**
-   * ファイル操作結果の通知
-   * @param operation 操作名（アップロード、ダウンロード等）
-   * @param fileName ファイル名
-   * @param success 成功かどうか
-   */
-  showFileOperationResult(operation: string, fileName: string, success: boolean): void {
-    if (success) {
-      this.showSuccess(`${fileName}を${operation}しました`);
-    } else {
-      this.showError(`${fileName}の${operation}に失敗しました`);
-    }
   }
 
   /**
@@ -153,7 +128,7 @@ export class NotificationService {
    * @param target コピー対象
    */
   showCopySuccess(target: string): void {
-    this.showSuccess(`${target}をコピーしました`, { duration: 2000 });
+    this.showSuccess(target, { duration: 2000 });
   }
 
   /**

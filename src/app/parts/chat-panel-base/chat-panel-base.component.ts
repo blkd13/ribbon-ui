@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import OpenAI from 'openai';
 import { Observable, of, tap } from 'rxjs';
 
@@ -34,6 +35,7 @@ import { MessageService } from './../../services/project.service';
   imports: [
     CommonModule, FormsModule,
     MatTooltipModule, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule, MatMenuModule, MatDialogModule,
+    TranslateModule,
   ],
   templateUrl: './chat-panel-base.component.html',
   styleUrl: './chat-panel-base.component.scss',
@@ -103,6 +105,7 @@ export class ChatPanelBaseComponent implements OnInit {
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
   readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   readonly dialog: MatDialog = inject(MatDialog);
+  readonly translateService: TranslateService = inject(TranslateService);
 
   readonly effectBitCounter = effect(() => {
     this.bitCounter();
@@ -301,10 +304,10 @@ export class ChatPanelBaseComponent implements OnInit {
           zip.generateAsync({ type: 'blob' }).then(content => {
             // Blobを利用してファイルをダウンロード
             saveAs(content, `ribbon-${Utils.formatDate(new Date(), 'yyyyMMddHHmmssSSS')}.zip`);
-            this.snackBar.open(`ダウンロードが完了しました。`, 'close', { duration: 1000 });
+            this.snackBar.open(this.translateService.instant('DOWNLOAD_COMPLETE'), this.translateService.instant('CLOSE'), { duration: 1000 });
           });
         } else {
-          this.snackBar.open(`コードブロックが含まれていないので何もしません。`, 'close', { duration: 3000 });
+          this.snackBar.open(this.translateService.instant('NO_CODE_BLOCKS'), this.translateService.instant('CLOSE'), { duration: 3000 });
         }
       },
     });
@@ -329,7 +332,7 @@ export class ChatPanelBaseComponent implements OnInit {
         });
         const text = textList.join('\n');
         DomUtils.copyToClipboard(text);
-        this.snackBar.open(`コピーしました。`, 'close', { duration: 1000 });
+        this.snackBar.open(this.translateService.instant('COPIED_TO_CLIPBOARD', { type: 'Text' }), this.translateService.instant('CLOSE'), { duration: 1000 });
         // const text = contents.filter(content => content.type === 'text').map(content => content.text).join('\n');
         // const textArea = document.createElement("textarea");
         // textArea.style.cssText = "position:absolute;left:-100%";
@@ -577,11 +580,11 @@ export class ChatPanelBaseComponent implements OnInit {
               this.hasMermaidErrors = false;
 
               this.cdr.detectChanges();
-              this.snackBar.open('Mermaidコードを修正しました', 'Close', { duration: 3000 });
+              this.snackBar.open(this.translateService.instant('MERMAID_CODE_FIXED'), this.translateService.instant('CLOSE'), { duration: 3000 });
             },
             error: (error) => {
               this.logger.error('Mermaid修正内容の保存に失敗しました:', error);
-              this.snackBar.open('修正内容の保存に失敗しました', 'Close', { duration: 5000 });
+              this.snackBar.open(this.translateService.instant('MERMAID_SAVE_FAILED'), this.translateService.instant('CLOSE'), { duration: 5000 });
             }
           });
         }
@@ -589,7 +592,7 @@ export class ChatPanelBaseComponent implements OnInit {
     } catch (error) {
       this.isMermaidErrorFixing = false;
       this.logger.error('Mermaid修正処理でエラーが発生しました:', error);
-      this.snackBar.open('修正処理でエラーが発生しました', 'Close', { duration: 5000 });
+      this.snackBar.open(this.translateService.instant('MERMAID_FIX_ERROR'), this.translateService.instant('CLOSE'), { duration: 5000 });
     }
   }
 

@@ -42,7 +42,7 @@
       }
       <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Create new thread" (click)="clear()"
         [routerLink]="['/chat', selectedProject.id, 'new-thread']">
-        <mat-icon class="mr-3">add_circle</mat-icon>
+        <mat-icon class="mr-3 mat-primary">add_circle</mat-icon>
         <div>{{ 'NEW_CHAT' | translate }}</div>
       </a>
 
@@ -212,6 +212,9 @@
         <div class="course-panel" style="font-size: 24px;" (click)="loadPreset(index)"
           [ngClass]="{selected:selectedThreadGroup.threadList.length===index}">{{index}}</div>
         }
+        <div class="course-panel" style="font-size: 24px;"
+          (click)="loadPreset(selectedThreadGroup.threadList.length+1)">+
+        </div>
       </div>
       <h1 style="font-size: 1.78rem;margin-top: 40px;">{{ 'TOOLS' | translate }}</h1>
       <div class="w-full flex justify-center items-center gap-5 flex-wrap">
@@ -298,7 +301,7 @@
         }
       </div>
 
-      <div class="text-sm mt-10 text-[#999]">{{ 'THREAD_COUNT_TEMPLATES_OPTIONAL' | translate }}</div>
+      <!-- <div class="text-sm mt-10 text-[#999]">{{ 'THREAD_COUNT_TEMPLATES_OPTIONAL' | translate }}</div> -->
     </div>
     }
     <!-- チャットエリア -->

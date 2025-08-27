@@ -56,7 +56,8 @@
                     -->
                 <mat-form-field appearance="outline" class="w-0 flex-grow">
                     <mat-label>{{ 'API_KEY' | translate }}</mat-label>
-                    <input matInput formControlName="key" [type]="hideKey ? 'password' : 'text'" [placeholder]="'ENTER_API_KEY_PLACEHOLDER' | translate">
+                    <input matInput formControlName="key" [type]="hideKey ? 'password' : 'text'"
+                        [placeholder]="'ENTER_API_KEY_PLACEHOLDER' | translate">
                     <button mat-icon-button matSuffix (click)="hideKey = !hideKey" type="button">
                         <mat-icon>{{hideKey ? 'visibility_off' : 'visibility'}}</mat-icon>
                     </button>
@@ -90,13 +91,20 @@
 
                 <ng-container matColumnDef="createdAt">
                     <th mat-header-cell *matHeaderCellDef>{{ 'REGISTRATION_DATE' | translate }}</th>
-                    <td mat-cell *matCellDef="let element">{{element.createdAt|date:'yyyy/MM/dd HH:mm:ss.SSS'}}</td>
+                    <td mat-cell *matCellDef="let element">{{element.createdAt|date:'yyyy/MM/dd HH:mm:ss'}}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="updatedAt">
                     <th mat-header-cell *matHeaderCellDef>{{ 'LAST_UPDATED' | translate }}</th>
                     <td mat-cell *matCellDef="let element">
-                        {{element.updatedAt ? (element.updatedAt|date:'yyyy/MM/dd HH:mm:ss.SSS') : ('UNUSED' | translate)}}
+                        {{element.updatedAt ? (element.updatedAt|date:'yyyy/MM/dd HH:mm:ss') : ('UNUSED' |
+                        translate)}}
+                    </td>
+                </ng-container>
+
+                <ng-container matColumnDef="tokenExpiresAt">
+                    <th mat-header-cell *matHeaderCellDef>{{ 'TOKEN_EXPIRES_AT' | translate }}</th>
+                    <td mat-cell *matCellDef="let element">{{element.tokenExpiresAt|date:'yyyy/MM/dd HH:mm:ss'}}
                     </td>
                 </ng-container>
 

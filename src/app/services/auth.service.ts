@@ -83,7 +83,7 @@ export class AuthService {
   logout(): void {
     const afterHandler = () => {
       // ログアウトはsubscribeまでやってしまう。
-      const url = `/public/logout`;
+      const url = `/user/logout`;
       this.http.get<void>(url).subscribe({
         next: next => {
           location.href = './';
@@ -154,19 +154,20 @@ export class AuthService {
    * @param passwordConfirm
    * @returns
    */
-  passwordReset(password: string, passwordConfirm: string): Observable<{ token: string, message: string }> {
+  passwordReset(password: string, passwordConfirm: string): Observable<{ message: string, user: User }> {
     if (password === passwordConfirm) {
     } else {
       throw new Error('Password does not match');
     }
     const url = `/invite/password-reset`;
-    return this.http.post<{ token: string, message: string, user: User }>(url,
+    return this.http.post<{ message: string, user: User }>(url,
       { password, passwordConfirm },
       { headers: new HttpHeaders({ 'Authorization': `Bearer ${sessionStorage.getItem('passwordReset_token')}` }) }
     ).pipe(map(response => {
       sessionStorage.removeItem('passwordReset_token');
-      localStorage.setItem('auth_token', response.token);
+      // localStorage.setItem('auth_token', response.token);
       this.user = response.user;
+      this.g.info.user = response.user;
       return response;
     }));
   }
@@ -175,17 +176,17 @@ export class AuthService {
    * AccessToken再生成（要は延長）
    * @returns
    */
-  genAccessToken(): Observable<{}> {
-    const url = `/user/access-token`;
-    return this.http.get<{}>(url);
+  refresh(): Observable<{}> {
+    const url = `/public/auth/refresh`;
+    return this.http.post<{}>(url, {});
   }
 
   /**
    * APIキーを生成する。
    * @returns
    */
-  genApiKey(label: string): Observable<{ apiToken: string }> {
-    return this.http.post<{ apiToken: string }>(`/user/api-token`, { label });
+  genApiKey(label: string): Observable<{ apiKey: string }> {
+    return this.http.post<{ apiKey: string }>(`/user/api-key`, { label });
   }
 
   // --- ここから下は普通にユーザー情報の取得とか更新とかの処理
@@ -196,6 +197,16 @@ export class AuthService {
    */
   getUser(): Observable<User> {
     const url = `/user/user`;
+    return this.http.get<{ user: User }>(url)
+      .pipe(tap(response => this.user = response.user), map(res => res.user));
+  }
+
+  /**
+   * ユーザー情報を取得する。
+   * @returns
+   */
+  isAuthorized(): Observable<User> {
+    const url = `/user/is-authorized`;
     return this.http.get<{ user: User }>(url)
       .pipe(tap(response => this.user = response.user), map(res => res.user));
   }

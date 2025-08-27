@@ -2,15 +2,15 @@
     #textBodyElem>
 
     @if(data && data.messageGroup && data.messageGroup.messages && data.messageGroup.messages.length>0) {
-    <div class="flex gap-4 items-center w-full mb-3">
+    <div class="flex gap-4 items-center w-full">
         <div class="flex-grow"></div>
-        <button mat-icon-button (click)="downloadContent($event)" title="zipダウンロード（コードブロックのみ）">
+        <button mat-icon-button (click)="downloadContent($event)" [title]="'DOWNLOAD_CODE_BLOCKS' | translate">
             <mat-icon>folder_zip</mat-icon>
         </button>
-        <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
+        <button mat-icon-button (click)="copyToClipboard($event)" [title]="'COPY_TO_CLIPBOARD' | translate">
             <mat-icon>content_copy</mat-icon>
         </button>
-        <button mat-icon-button (click)="closeDialog($event)" title="閉じる">
+        <button mat-icon-button (click)="closeDialog($event)" [title]="'CLOSE' | translate">
             <mat-icon>close</mat-icon>
         </button>
     </div>
@@ -21,8 +21,9 @@
     @for(content of message.contents; track $index ; let cIndex=$index){
     @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket) : blankBracket;
     @if(content.type==='text'){
-    <markdown #mdElem [hidden]="message.editing" katex mermaid clipboard (load)="onReady($event, 'onLoaded')"
-        (ready)="onReady($event, 'onReady')" [data]="brackets.pre+content.text+brackets.post">
+    <markdown #mdElem class="px-12 py-4 block" [hidden]="message.editing" katex mermaid clipboard
+        (load)="onReady($event, 'onLoaded')" (ready)="onReady($event, 'onReady')"
+        [data]="brackets.pre+content.text+brackets.post">
     </markdown>
     } @else if(content.type==='error') {
     <div class="text-red-500 overflow-auto">

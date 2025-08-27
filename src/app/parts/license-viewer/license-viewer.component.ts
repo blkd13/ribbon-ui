@@ -10,29 +10,29 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslateModule } from '@ngx-translate/core';
 
 export interface LicenseInfo {
-    name: string;
-    version: string;
-    licenses: string;
-    repository?: string;
-    description?: string;
-    licenseText?: string;
-    copyright?: string;
+  name: string;
+  version: string;
+  licenses: string;
+  repository?: string;
+  description?: string;
+  licenseText?: string;
+  copyright?: string;
 }
 
 @Component({
-    selector: 'app-license-viewer',
-    standalone: true,
-    imports: [
-        CommonModule,
-        MatDialogModule,
-        MatButtonModule,
-        MatIconModule,
-        MatCardModule,
-        MatExpansionModule,
-        MatProgressSpinnerModule,
-        TranslateModule
-    ],
-    template: `
+  selector: 'app-license-viewer',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCardModule,
+    MatExpansionModule,
+    MatProgressSpinnerModule,
+    TranslateModule
+  ],
+  template: `
     <div class="license-viewer-container">
       <div mat-dialog-title class="dialog-header">
         <mat-icon>description</mat-icon>
@@ -58,6 +58,18 @@ export interface LicenseInfo {
             <mat-expansion-panel *ngFor="let license of licenses; trackBy: trackByLicense" class="license-panel">
               <mat-expansion-panel-header>
                 <mat-panel-title>
+                  <div class="package-header w-full flex justify-between" style="">
+                    <div>
+                      <span class="package-name">{{ license.name }} [v{{ license.version }}]</span>
+                      <span class="package-version"></span>
+                    </div>
+                    <span class="license-type">{{ license.licenses }}</span>
+                  </div>
+                </mat-panel-title>
+              </mat-expansion-panel-header>
+              <!--               
+              <mat-expansion-panel-header>
+                <mat-panel-title>
                   <div class="package-header">
                     <span class="package-name">{{ license.name }}</span>
                     <span class="package-version">v{{ license.version }}</span>
@@ -67,7 +79,7 @@ export interface LicenseInfo {
                   <span class="license-type">{{ license.licenses }}</span>
                 </mat-panel-description>
               </mat-expansion-panel-header>
-              
+              -->
               <div class="license-details">
                 @if (license.description) {
                 <div class="license-field">
@@ -121,7 +133,7 @@ export interface LicenseInfo {
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .license-viewer-container {
       width: 800px;
       max-width: 90vw;
@@ -254,7 +266,7 @@ export interface LicenseInfo {
       padding: 16px;
       border-radius: 4px;
       white-space: pre-wrap;
-      max-height: 300px;
+      // max-height: 300px;
       overflow-y: auto;
       border: 1px solid var(--mat-divider-color);
     }
@@ -278,40 +290,40 @@ export interface LicenseInfo {
   `]
 })
 export class LicenseViewerComponent implements OnInit {
-    private readonly http = inject(HttpClient);
-    private readonly dialogRef = inject(MatDialogRef<LicenseViewerComponent>);
+  private readonly http = inject(HttpClient);
+  private readonly dialogRef = inject(MatDialogRef<LicenseViewerComponent>);
 
-    licenses: LicenseInfo[] = [];
-    loading = true;
-    error: string | null = null;
+  licenses: LicenseInfo[] = [];
+  loading = true;
+  error: string | null = null;
 
-    ngOnInit(): void {
-        this.loadLicenses();
+  ngOnInit(): void {
+    this.loadLicenses();
+  }
+
+  private async loadLicenses(): Promise<void> {
+    try {
+      this.loading = true;
+      this.error = null;
+
+      const response = await this.http.get<Record<string, LicenseInfo>>('./assets/licenses.json').toPromise();
+
+      if (response) {
+        this.licenses = Object.entries(response).map(([key, value]) => ({
+          ...value,
+          name: value.name || key.split('@')[0],
+          version: value.version || key.split('@')[1] || 'unknown'
+        })).sort((a, b) => a.name.localeCompare(b.name));
+      }
+    } catch (error) {
+      console.error('Error loading licenses:', error);
+      this.error = 'Failed to load license information';
+    } finally {
+      this.loading = false;
     }
+  }
 
-    private async loadLicenses(): Promise<void> {
-        try {
-            this.loading = true;
-            this.error = null;
-
-            const response = await this.http.get<Record<string, LicenseInfo>>('/assets/licenses.json').toPromise();
-
-            if (response) {
-                this.licenses = Object.entries(response).map(([key, value]) => ({
-                    ...value,
-                    name: value.name || key.split('@')[0],
-                    version: value.version || key.split('@')[1] || 'unknown'
-                })).sort((a, b) => a.name.localeCompare(b.name));
-            }
-        } catch (error) {
-            console.error('Error loading licenses:', error);
-            this.error = 'Failed to load license information';
-        } finally {
-            this.loading = false;
-        }
-    }
-
-    trackByLicense(index: number, license: LicenseInfo): string {
-        return `${license.name}@${license.version}`;
-    }
+  trackByLicense(index: number, license: LicenseInfo): string {
+    return `${license.name}@${license.version}`;
+  }
 }

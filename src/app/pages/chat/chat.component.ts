@@ -20,14 +20,14 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+
 import { saveAs } from 'file-saver';
 import OpenAI from 'openai';
 import { ChatCompletionTool } from 'openai/resources/index.mjs';
 import { BehaviorSubject, catchError, concatMap, EMPTY, filter, forkJoin, from, map, Observable, Observer, of, Subscription, switchMap, tap, throwError, toArray } from 'rxjs';
 
-import { CachedContent, ChatCompletionCreateParamsWithoutMessages, GPTModels, SafetyRating, safetyRatingLabelMap } from '../../models/models';
+import { CachedContent, ChatCompletionCreateParamsWithoutMessages, GPTModels, SafetyRating } from '../../models/models';
 import { ContentPart, ContentPartType, MessageForView, MessageGroup, MessageGroupForView, MessageStatusType, Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupVisibility } from '../../models/project-models';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
 import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-run-setting/bulk-run-setting.component';
@@ -658,14 +658,9 @@ export class ChatComponent implements OnInit {
 
       // presetスレッドようにスレッドコピーしておく。
       const baseThread = this.selectedThreadGroup.threadList[0];
-      safeForkJoin([
-        this.messageService.cloneThreadDry(baseThread),
-        this.messageService.cloneThreadDry(baseThread),
-        this.messageService.cloneThreadDry(baseThread),
-        this.messageService.cloneThreadDry(baseThread),
-      ]).subscribe({
+      safeForkJoin(Array.from({ length: 20 }, () => this.messageService.cloneThreadDry(baseThread))).subscribe({
         next: next => {
-          (['gpt-5', 'claude-sonnet-4-20250514', 'gemini-2.5-flash-thinking'] as GPTModels[]).forEach((model, index) => {
+          (['gpt-5', 'gemini-2.5-flash', 'claude-sonnet-4-20250514', 'gemini-2.5-flash-thinking', ...Array(16).fill('gemini-2.5-flash')] as GPTModels[]).forEach((model, index) => {
             next[index].inDto.args.model = model;
           });
           this.presetThreadList = next;
@@ -1166,11 +1161,11 @@ export class ChatComponent implements OnInit {
           this.chatService.chatCompletionObservableStreamNew({
             args: {
               max_tokens: 40,
-              model: 'gemini-1.5-flash',
+              model: 'gemini-2.5-flash-lite',
               messages: [
                 {
                   role: 'user',
-                  content: `この書き出しで始まるチャットにタイトルをつけてください。短く適当でいいです。タイトルだけを返してください。タイトル以外の説明などはつけてはいけません。\n\n\`\`\`markdown\n\n${mergeText}\n\`\`\``
+                  content: `${this.translate.instant('CHAT_TITLE_PROMPT')}\n\n\`\`\`markdown\n\n${mergeText}\n\`\`\``
                 }
               ],
               stream: true,
@@ -1825,7 +1820,7 @@ export class ChatComponent implements OnInit {
           const blocked = (errObj.candidate.safetyRatings as SafetyRating[]).find(rating => rating.blocked);
           if (blocked) {
             // alert(`このメッセージは安全性の理由でブロックされました。\n${blocked.category} （${safetyRatingLabelMap[blocked.category]}）\nprobability（該当度） ${blocked.probability} : ${blocked.probabilityScore}\nseverity（深刻度） ${blocked.severity} : ${blocked.severityScore}`);
-            this.dialog.open(DialogComponent, { data: { title: 'ERROR', message: `このメッセージは安全性の理由でブロックされました。\n${blocked.category} （${safetyRatingLabelMap[blocked.category]}）\nprobability（該当度） ${blocked.probability} : ${blocked.probabilityScore}\nseverity（深刻度） ${blocked.severity} : ${blocked.severityScore}`, options: ['Close'] } });
+            this.dialog.open(DialogComponent, { data: { title: 'ERROR', message: this.translate.instant('SAFETY_BLOCK_MESSAGE', { category: blocked.category, probability: blocked.probability, probabilityScore: blocked.probabilityScore, severity: blocked.severity, severityScore: blocked.severityScore }), options: ['Close'] } });
           } else {
             throw new Error(error);
           }
@@ -1979,7 +1974,7 @@ export class ChatComponent implements OnInit {
         this.tokenObjSummary = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
         this.tokenObjList = [];
         next.forEach((res, index) => {
-          const modelType = this.selectedThreadGroup.threadList[index].inDto.args.model.startsWith('gemini-') ? 'gemini-1.5-flash' : 'gpt-4o';
+          const modelType = this.selectedThreadGroup.threadList[index].inDto.args.model.startsWith('gemini-') ? 'gemini-2.5-flash' : 'gpt-5';
           const tokenObj: CountTokensResponseForView = { id: this.selectedThreadGroup.threadList[index].id, totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: this.selectedThreadGroup.threadList[index].inDto.args.model };
           const countedTokenObj = res[0][modelType] || { totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0 };
           tokenObj.totalTokens += countedTokenObj.totalTokens;
@@ -2702,11 +2697,11 @@ export class ChatComponent implements OnInit {
         }
         this.templateThreadGroupList = [...this.templateThreadGroupList].sort((a, b) => a.title.localeCompare(b.title));
         this.threadGroupListAll.unshift(newTemplate);
-        this.snackBar.open(`「${threadName}」モードを追加しました。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('TEMPLATE_ADDED', { threadName }), this.translate.instant('CLOSE'), { duration: 3000 });
         this.presetLabel = newTemplate.id;
       },
       error: error => {
-        this.snackBar.open(`エラーが起きて保存できませんでした。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('TEMPLATE_SAVE_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
       }
     });
   }
@@ -2732,7 +2727,7 @@ export class ChatComponent implements OnInit {
         if (params) {
           if (params.threadGroupId === 'default') {
             // デフォルトのスレッドグループ
-            this.snackBar.open(`デフォルトのスレッドグループを保存しました。`, 'close', { duration: 3000 });
+            this.snackBar.open(this.translate.instant('DEFAULT_THREAD_GROUP_SAVED'), this.translate.instant('CLOSE'), { duration: 3000 });
           } else {
             this.saveAsTemplate(params.threadName, params.description, params.includeMessages, params.threadGroupId);
           }
@@ -2770,10 +2765,10 @@ export class ChatComponent implements OnInit {
               // 元DTOは更新が完了してから反映する
               threadGroup.title = params.threadName;
               threadGroup.description = params.description;
-              this.snackBar.open(`「${params.threadName}」モードを更新しました。`, 'close', { duration: 3000 });
+              this.snackBar.open(this.translate.instant('TEMPLATE_UPDATED', { threadName: params.threadName }), this.translate.instant('CLOSE'), { duration: 3000 });
             },
             error: error => {
-              this.snackBar.open(`エラーが起きて保存できませんでした。`, 'close', { duration: 3000 });
+              this.snackBar.open(this.translate.instant('TEMPLATE_SAVE_FAILED'), this.translate.instant('CLOSE'), { duration: 3000 });
             },
           });
         } else { /** キャンセル */ }
@@ -2788,7 +2783,16 @@ export class ChatComponent implements OnInit {
    */
   removeTemplateThreadGroup($event: MouseEvent, threadGroup: ThreadGroupForView): void {
     // this.stopPropagation($event);
-    this.dialog.open(DialogComponent, { data: { title: 'モード削除', message: `このモードを削除しますか？\n「${threadGroup.title.replace(/\n/g, '')}」`, options: ['キャンセル', '削除'] } }).afterClosed().subscribe({
+    this.dialog.open(DialogComponent, {
+      data: {
+        title: this.translate.instant('REMOVE_TEMPLATE'),
+        message: this.translate.instant('REMOVE_TEMPLATE_CONFIRM', { title: threadGroup.title.replace(/\n/g, '') }),
+        options: [
+          this.translate.instant('CANCEL'),
+          this.translate.instant('REMOVE'),
+        ],
+      }
+    }).afterClosed().subscribe({
       next: next => {
         if (next === 1) {
           this.threadService.deleteThreadGroup(threadGroup.id).subscribe({

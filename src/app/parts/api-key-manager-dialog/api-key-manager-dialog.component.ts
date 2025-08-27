@@ -51,7 +51,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
 
   apiKeys: OAuthAccount[] = [];
   // displayedColumns: string[] = ['provider', 'label', 'createdAt', 'updatedAt', 'actions'];
-  displayedColumns: string[] = ['provider', 'createdAt', 'updatedAt', 'actions'];
+  displayedColumns: string[] = ['provider', 'createdAt', 'updatedAt', 'tokenExpiresAt', 'actions'];
 
   constructor() {
     this.apiLabelForm = this.fb.group({
@@ -106,7 +106,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
       next: next => {
         this.apiKeys = next.oauthAccounts;
         this.apiKeys.forEach(key => {
-          key.label = key.label || this.apiProviderMap[key.provider] ? this.apiProviderMap[key.provider].label : key.provider;
+          key.label = key.label || (this.apiProviderMap[key.provider] ? this.apiProviderMap[key.provider].label : key.provider);
         });
       },
       error: error => {
@@ -134,7 +134,7 @@ export class ApiKeyManagerDialogComponent implements OnInit {
     } else { }
     this.authServices.genApiKey(this.apiLabelForm.value.label).subscribe({
       next: next => {
-        this.dialog.open(ApiKeyDialogComponent, { data: { apiKey: next.apiToken } });
+        this.dialog.open(ApiKeyDialogComponent, { data: { apiKey: next.apiKey } });
         this.loadApiKeys();
       },
       error: error => {
@@ -175,8 +175,11 @@ export class ApiKeyManagerDialogComponent implements OnInit {
           // TODO: APIサービスでの削除処理に置き換え
           this.apiKeys = this.apiKeys.filter(k => k.id !== key.id);
 
-          this.notificationService.showOperationResult(this.translate.instant('DELETE_API_KEY'), true);
+          this.notificationService.showSuccess(this.translate.instant('DELETE_API_KEY'));
           this.loadApiKeys();
+        },
+        error: error => {
+          this.notificationService.showError(this.translate.instant('API_KEY_DELETION_FAILED'));
         }
       });
     }

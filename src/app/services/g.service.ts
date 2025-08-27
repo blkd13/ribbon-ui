@@ -18,8 +18,6 @@ export class GService {
   // ローディング中のHTTP通信数
   httpConnectCount: Subject<number> = new Subject<number>();
 
-  autoRedirectToLoginPageIfAuthError: boolean = true;
-
   globalEventHandlers: Subject<Event> = new Subject<Event>();
 
   invalidMimeTypes = [

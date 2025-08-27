@@ -5,7 +5,7 @@
 
 .message {
     line-height: 1.5;
-    background-color: var(--plain-background);
+    background: var(--message-background-system);
     border-radius: 5px;
 }
 
@@ -13,7 +13,7 @@
     select {
         padding: 2px 5px;
         border-radius: 4px;
-        background-color: var(--plain-background);
+        background: var(--message-background-system);
         cursor: pointer;
         margin-left: 2px;
     }
@@ -66,7 +66,7 @@
         /* resize: none; */
         min-height: 60px;
         /* max-height: 300px; */
-        background-color: var(--plain-background);
+        background: var(--plain-background);
     }
 }
 
@@ -74,10 +74,10 @@
     font-weight: bold;
 }
 
+// .user .message-header,
 .message.user,
-.user .message-header,
 .message.user .controller-bottom {
-    background-color: var(--message-background-user);
+    background: var(--message-background-user);
 
     .message-notediting {
         border: 1px solid var(--message-border-user);
@@ -94,10 +94,10 @@
     }
 }
 
+// .assistant .message-header,
 .message.assistant,
-.assistant .message-header,
 .message.assistant .controller-bottom {
-    background-color: var(--message-background-assistant);
+    background: var(--message-background-assistant);
 
     .message-notediting {
         border: 1px solid var(--message-border-assistant);

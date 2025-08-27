@@ -43,9 +43,9 @@
 
                     <mat-form-field appearance="outline" class="form-field">
                         <mat-label>{{ 'SORT_ORDER' | translate }}</mat-label>
-                        <input matInput type="number" formControlName="sortOrder" placeholder="0" min="0" step="1">
+                        <input matInput type="number" formControlName="uiOrder" placeholder="0" min="0" step="1">
                         <mat-hint>{{ 'SORT_ORDER_HINT' | translate }}</mat-hint>
-                        @if(tagForm.get('sortOrder')?.hasError('min')) {
+                        @if(tagForm.get('uiOrder')?.hasError('min')) {
                         <mat-error>{{ 'SORT_ORDER_ERROR' | translate }}</mat-error>
                         }
                     </mat-form-field>
@@ -158,12 +158,12 @@
                     </ng-container>
 
                     <!-- Sort Order Column -->
-                    <ng-container matColumnDef="sortOrder">
+                    <ng-container matColumnDef="uiOrder">
                         <th mat-header-cell *matHeaderCellDef>{{ 'ORDER' | translate }}</th>
                         <td mat-cell *matCellDef="let item" class="sort-order-cell">
                             @if(item.type === 'tag') {
                             <span class="sort-order-badge">
-                                {{ item.tag?.sortOrder || 0 }}
+                                {{ item.tag?.uiOrder || 0 }}
                             </span>
                             }
                         </td>

@@ -1,22 +1,22 @@
 // =================================
 // tag-management-dialog.component.ts
 // =================================
-import { Component, inject, OnInit, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, inject, Inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
-import { Observable, map, startWith } from 'rxjs';
-import { TagService, TagEntity, TagCreateRequest } from '../../../../services/model-manager.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { map, Observable, startWith } from 'rxjs';
+import { TagCreateRequest, TagEntity, TagService } from '../../../../services/model-manager.service';
 
 export interface TagManagementDialogData {
   tags: TagEntity[];
@@ -65,7 +65,7 @@ export class TagManagementDialogComponent implements OnInit {
   availableCategories: string[] = [];
   filteredCategories!: Observable<string[]>;
 
-  displayedColumns = ['tag', 'sortOrder', 'overrideOthers', 'usage', 'status', 'actions'];
+  displayedColumns = ['tag', 'uiOrder', 'overrideOthers', 'usage', 'status', 'actions'];
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: TagManagementDialogData
@@ -89,7 +89,7 @@ export class TagManagementDialogComponent implements OnInit {
       category: [''],
       description: [''],
       color: [''],
-      sortOrder: [0, [Validators.min(0)]],
+      uiOrder: [0, [Validators.min(0)]],
       overrideOthers: [false],
       isActive: [true]
     });
@@ -112,7 +112,7 @@ export class TagManagementDialogComponent implements OnInit {
   private loadTags() {
     this.tagService.getTags().subscribe({
       next: (tags) => {
-        // Sort tags by category, then sortOrder, then by name
+        // Sort tags by category, then uiOrder, then by name
         this.tags = tags.sort((a, b) => {
           // First sort by category
           const categoryA = a.category || '';
@@ -120,9 +120,9 @@ export class TagManagementDialogComponent implements OnInit {
           if (categoryA !== categoryB) {
             return categoryA.localeCompare(categoryB);
           }
-          // Then by sortOrder
-          if (a.sortOrder !== b.sortOrder) {
-            return (a.sortOrder || 0) - (b.sortOrder || 0);
+          // Then by uiOrder
+          if (a.uiOrder !== b.uiOrder) {
+            return (a.uiOrder || 0) - (b.uiOrder || 0);
           }
           // Finally by name
           return a.name.localeCompare(b.name);
@@ -169,14 +169,14 @@ export class TagManagementDialogComponent implements OnInit {
         type: 'category',
         category,
         tagCount: tags.length,
-        categoryActiveState
+        categoryActiveState,
       });
 
       // Add tags in this category
       for (const tag of tags) {
         this.displayTags.push({
           type: 'tag',
-          tag
+          tag,
         });
       }
     }
@@ -223,7 +223,7 @@ export class TagManagementDialogComponent implements OnInit {
       category: formValue.category || undefined,
       description: formValue.description || undefined,
       color: formValue.color || undefined,
-      sortOrder: formValue.sortOrder || 0,
+      uiOrder: formValue.uiOrder || 0,
       overrideOthers: formValue.overrideOthers || false,
       isActive: formValue.isActive
     };
@@ -258,7 +258,7 @@ export class TagManagementDialogComponent implements OnInit {
       category: tag.category || '',
       description: tag.description || '',
       color: tag.color || '',
-      sortOrder: tag.sortOrder || 0,
+      uiOrder: tag.uiOrder || 0,
       overrideOthers: tag.overrideOthers || false,
       isActive: tag.isActive
     });
@@ -272,7 +272,7 @@ export class TagManagementDialogComponent implements OnInit {
       category: '',
       description: '',
       color: '',
-      sortOrder: 0,
+      uiOrder: 0,
       overrideOthers: false,
       isActive: true
     });
@@ -298,17 +298,17 @@ export class TagManagementDialogComponent implements OnInit {
     }
   }
 
-  getNextSortOrder(): number {
+  getNextUiOrder(): number {
     if (this.tags.length === 0) return 1;
-    const maxOrder = Math.max(...this.tags.map(tag => tag.sortOrder || 0));
+    const maxOrder = Math.max(...this.tags.map(tag => tag.uiOrder || 0));
     return maxOrder + 1;
   }
 
   onOverrideOthersChange() {
-    // Auto-suggest next sort order when override is enabled
+    // Auto-suggest next UI order when override is enabled
     if (this.tagForm.get('overrideOthers')?.value && !this.editingTag) {
       this.tagForm.patchValue({
-        sortOrder: this.getNextSortOrder()
+        uiOrder: this.getNextUiOrder()
       });
     }
   }

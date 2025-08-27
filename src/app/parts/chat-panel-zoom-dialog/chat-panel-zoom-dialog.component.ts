@@ -1,27 +1,28 @@
 import { Component, ElementRef, inject, output, viewChild } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { ContentPartType, MessageGroupForView } from '../../models/project-models';
-import { MarkdownModule } from 'ngx-markdown';
-import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
-import { DomUtils } from '../../utils/dom-utils';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MarkdownModule } from 'ngx-markdown';
+import { ContentPartType, MessageGroupForView } from '../../models/project-models';
+import { DomUtils } from '../../utils/dom-utils';
 
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver'; // Blobファイルのダウンロードのためのライブラリ
-import { Utils } from '../../utils';
-import { MessageService } from '../../services/project.service';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { saveAs } from 'file-saver'; // Blobファイルのダウンロードのためのライブラリ
+import JSZip from 'jszip';
+import { MessageService } from '../../services/project.service';
+import { Utils } from '../../utils';
 
 @Component({
   selector: 'app-chat-panel-zoom-dialog',
-  imports: [MarkdownModule, MatSnackBarModule, MatIconModule, MatButtonModule],
+  imports: [MarkdownModule, MatSnackBarModule, MatIconModule, MatButtonModule, TranslateModule],
   templateUrl: './chat-panel-zoom-dialog.component.html',
   styleUrl: './chat-panel-zoom-dialog.component.scss'
 })
 export class ChatPanelZoomDialogComponent {
 
   readonly dialogRef: MatDialogRef<ChatPanelZoomDialogComponent> = inject(MatDialogRef<ChatPanelZoomDialogComponent>);
+  readonly translateService = inject(TranslateService);
   readonly data = inject<{ messageGroup: MessageGroupForView }>(MAT_DIALOG_DATA);
   readonly snackBar = inject(MatSnackBar);
   readonly messageService = inject(MessageService);
@@ -185,10 +186,10 @@ export class ChatPanelZoomDialogComponent {
         zip.generateAsync({ type: 'blob' }).then(content => {
           // Blobを利用してファイルをダウンロード
           saveAs(content, `ribbon-${Utils.formatDate(new Date(), 'yyyyMMddHHmmssSSS')}.zip`);
-          this.snackBar.open(`ダウンロードが完了しました。`, 'close', { duration: 1000 });
+          this.snackBar.open(this.translateService.instant('DOWNLOAD_COMPLETE'), 'close', { duration: 1000 });
         });
       } else {
-        this.snackBar.open(`コードブロックが含まれていないので何もしません。`, 'close', { duration: 3000 });
+        this.snackBar.open(this.translateService.instant('NO_CODE_BLOCKS'), 'close', { duration: 3000 });
       }
     });
 
@@ -211,7 +212,7 @@ export class ChatPanelZoomDialogComponent {
     });
     const text = textList.join('\n');
     DomUtils.copyToClipboard(text);
-    this.snackBar.open(`コピーしました。`, 'close', { duration: 1000 });
+    this.snackBar.open(this.translateService.instant('COPIED_TO_CLIPBOARD', { type: '' }), 'close', { duration: 1000 });
   }
 
   closeDialog($event: MouseEvent): void {

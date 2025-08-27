@@ -20,6 +20,10 @@
     --mat-expansion-header-collapsed-state-height: 38px;
 }
 
+.message-color-assistant-model-name {
+    color: var(--message-color-assistant-model-name);
+}
+
 .mermaid-error-btn {
 
     &:hover {

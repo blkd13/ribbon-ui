@@ -1,9 +1,9 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { AuthService } from './auth.service';
 import { inject, Injectable } from '@angular/core';
 import { Observable, of, tap } from 'rxjs';
 import { User, UserRoleType, UserStatus } from '../models/models';
 import { BaseEntity } from '../models/project-models';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class DepartmentService {

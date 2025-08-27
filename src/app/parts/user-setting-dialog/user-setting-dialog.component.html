@@ -30,11 +30,10 @@
     <div class="settings-section">
         <h3>{{ 'SEND_MODE_SETTING' | translate }}</h3>
         <div class="setting-item">
-            <mat-radio-group [value]="enterMode" name="enter-mode" (change)="toggleEnterMode($event)">
-                <mat-radio-button value="Ctrl+Enter">{{ 'SEND_WITH_CTRL_ENTER' | translate }}</mat-radio-button>
-                <span class="inline-block min-w-10"></span>
-                <mat-radio-button value="Enter">{{ 'SEND_WITH_ENTER' | translate }}</mat-radio-button>
-            </mat-radio-group>
+            <mat-button-toggle-group [(value)]="enterMode" (change)="toggleEnterMode($event)">
+                <mat-button-toggle value="Ctrl+Enter">{{ 'SEND_WITH_CTRL_ENTER' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="Enter">{{ 'SEND_WITH_ENTER' | translate }}</mat-button-toggle>
+            </mat-button-toggle-group>
             <p class="setting-description">
                 {{ 'SEND_MODE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_CTRL_ENTER' | translate }}
             </p>
@@ -44,14 +43,11 @@
     <div class="settings-section">
         <h3>{{ 'HISTORY_CLOSE_SETTING' | translate }}</h3>
         <div class="setting-item">
-            <mat-radio-group [value]="historyCloseMode" name="history-close-mode"
-                (change)="toggleHistoryCloseMode($event)">
-                <mat-radio-button [value]="0">{{ 'DONT_CLOSE' | translate }}</mat-radio-button>
-                <span class="inline-block min-w-10"></span>
-                <mat-radio-button [value]="1">{{ 'CLOSE_USER_PROMPT_ONLY' | translate }}</mat-radio-button>
-                <span class="inline-block min-w-10"></span>
-                <mat-radio-button [value]="2">{{ 'CLOSE_BOTH' | translate }}</mat-radio-button>
-            </mat-radio-group>
+            <mat-button-toggle-group [(value)]="historyCloseMode" (change)="toggleHistoryCloseMode($event)">
+                <mat-button-toggle [value]="0">{{ 'DONT_CLOSE' | translate }}</mat-button-toggle>
+                <mat-button-toggle [value]="1">{{ 'CLOSE_USER_PROMPT_ONLY' | translate }}</mat-button-toggle>
+                <mat-button-toggle [value]="2">{{ 'CLOSE_BOTH' | translate }}</mat-button-toggle>
+            </mat-button-toggle-group>
             <p class="setting-description">
                 {{ 'HISTORY_CLOSE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_DONT_CLOSE' | translate }}
             </p>

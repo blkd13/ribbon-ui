@@ -186,6 +186,7 @@ export class ThreadService {
             temperature: 1.0,
             max_tokens: 0,
             stream: true,
+            tool_choice: 'auto',
         };
     }
 

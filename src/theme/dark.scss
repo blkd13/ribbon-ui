@@ -25,7 +25,7 @@ html>body.dark-theme {
     --plain-color: #fff;
     --plain-color-area: #bbb;
     --plain-background: #2c2c2c;
-    --plain-background-area: #333;
+    --plain-background-area: #333333;
     --plain-background-hover: #404041;
     --plain-border-color: #3c4043;
     --plain-shadow: -3px -3px 8px rgba(255, 255, 255, 0.05), 3px 3px 8px rgba(0, 0, 0, 0.8);
@@ -36,6 +36,8 @@ html>body.dark-theme {
 
     --loading-cover-background: #00000088;
     --scroll-bar-color: rgb(59, 108, 121);
+    --scroll-bar-color: #222;
+    --scroll-bar-color-hover: #444;
 
     --message-border-user: color.mix(white, rgb(42, 50, 53), 7%);
     --message-border-assistant: color.mix(white, rgb(56, 53, 49), 7%);
@@ -44,8 +46,9 @@ html>body.dark-theme {
     --message-background-assistant: rgb(34, 33, 31);
     --message-color-user: #7bcfe6;
     --message-color-assistant: #BFAE9D;
-    // --message-background-system: rgb(237, 248, 255);
+    --message-background-system: var(--plain-background);
     // --message-background-error: #ffcccc;
+    --message-color-assistant-model-name: #908070;
 
     --link-color: lightblue;
 
@@ -55,6 +58,39 @@ html>body.dark-theme {
 
     --h2-color: #ffffff;
     --h3-color: #ffffff;
+
+
+
+    // // NEW
+    // --text-gradient: linear-gradient(to right, rgb(165, 180, 252), rgb(153, 246, 228));
+    // --body-background-gradient: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.25), transparent 45%),
+    //     radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.18), transparent 40%);
+    // --body-modal-background-gradient: linear-gradient(135deg, #222 0%, rgb(35, 41, 51) 80%, #111 100%);
+    // --body-background-color: rgb(2 6 23 / var(--tw-bg-opacity, 1));
+    // // --background-gradient: linear-gradient(to right bottom, rgb(129, 140, 248), rgb(94, 234, 212));
+    // // --background-gradient: radial-gradient(at 50% 0%, rgba(99, 102, 241, 0.25), rgba(0, 0, 0, 0) 45%), radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.18), rgba(0, 0, 0, 0) 40%);
+    // --badge-background-active: linear-gradient(to right, rgb(165, 180, 252), rgb(153, 246, 228));
+    // --badge-background: linear-gradient(to right bottom, rgba(99, 102, 241, 0.1), rgba(217, 70, 239, 0.1), rgba(52, 211, 153, 0.1));
+    // --badge-color-active: #2c2c2c;
+    // // --plain-border-color: rgb(229, 231, 235);
+
+    // --plain-background: #2c2c2c88;
+    // --plain-background-area: #33333388;
+    // --plain-background-hover: #40404188;
+    // // --background-gradient: rgba(2, 6, 23, 0.6);
+    // --message-background-system: rgba(44, 44, 44, 0.6);
+    // --message-background-user: rgba(40, 48, 46, 0.6);
+    // --message-background-assistant: rgba(30, 41, 59, 0.6);
+    // --message-color-user: rgb(122, 194, 167);
+    // --message-color-assistant: rgb(139, 190, 253); // --message-color-assistant: rgb(96 165 250 / var(--tw-text-opacity, 1));
+    // --message-color-assistant-model-name: rgba(188, 218, 255, 0.3);
+
+
+    // // backdrop-filter: blur(8px);
+    // // background-color: rgba(2, 6, 23, 0.6);
+    // // border-color: rgba(255, 255, 255, 0.05);
+    // // border-style: solid;
+    // // border-width: 1px;
 }
 
 html>body.dark-theme {
@@ -219,6 +255,22 @@ html>body.dark-theme {
 
     /* 新しいプライマリカラー */
     --mat-sys-primary: rgb(105 184 205);
+
+    // // NEW
+    // --mat-sys-primary: rgb(96 165 250);
+    // --mat-sys-primary-fixed: rgb(139, 190, 253);
+    // --mat-sys-primary-fixed-dim: rgb(59, 102, 155);
+    // --mat-sys-primary-container: rgb(20, 62, 153);
+    // --mat-sys-on-primary: rgb(20, 62, 153);
+    // --mat-sys-on-primary-container: rgb(96 165 250);
+    // --mat-sys-surface-tint: rgb(96 165 250);
+    // --mat-sys-surface-variant: rgb(28 40 57);
+    // --mat-sys-on-secondary-container: #ccd7e8;
+    // --mat-sys-secondary-container: #323d4b;
+    // --mat-sys-surface-container-low: #191a1c;
+    // --mat-sys-surface-container-lowest: #0b0c0f;
+    // // color: var(--mat-button-toggle-selected-state-text-color, var());
+    // // background-color: var(--mat-button-toggle-selected-state-background-color, var());
 }
 
 html>body.dark-theme {

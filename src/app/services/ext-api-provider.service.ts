@@ -1,9 +1,9 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 import { map, Observable, tap } from 'rxjs';
 import { ExtApiProviderEntity, ExtApiProviderTemplateEntity } from '../models/models';
-import { MakeOptional } from '../utils';
 import { BaseEntityFields } from '../models/project-models';
+import { MakeOptional } from '../utils';
 
 @Injectable({ providedIn: 'root' })
 export class ExtApiProviderService {

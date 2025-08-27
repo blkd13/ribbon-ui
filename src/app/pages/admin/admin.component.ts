@@ -1,21 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { Router, RouterModule, ActivatedRoute, NavigationEnd } from '@angular/router'; // ActivatedRoute, NavigationEnd を追加
+import { ActivatedRoute, NavigationEnd, Router, RouterModule } from '@angular/router'; // ActivatedRoute, NavigationEnd を追加
+import { TranslateModule } from '@ngx-translate/core';
+import { filter, map, Subject, switchMap, takeUntil, tap } from 'rxjs'; // filter, map, switchMap, takeUntil, Subject を追加
+import { UserRoleType } from '../../models/models';
+import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
+import { GroupByPipe } from '../../pipe/group-by.pipe';
+import { AdminScopeService } from '../../services/admin-scope.service';
+import { AuthService, ScopeLabelsResponseItem } from '../../services/auth.service'; // ScopeLabelsResponse を削除
 import { GService } from '../../services/g.service';
 import { ScopeInfo, ScopeInfoForView } from '../../services/model-manager.service';
-import { AdminScopeService } from '../../services/admin-scope.service';
-import { UserRoleType } from '../../models/models';
-import { AuthService, ScopeLabelsResponseItem } from '../../services/auth.service'; // ScopeLabelsResponse を削除
-import { tap, filter, map, switchMap, takeUntil, Subject } from 'rxjs'; // filter, map, switchMap, takeUntil, Subject を追加
-import { GroupByPipe } from '../../pipe/group-by.pipe';
-import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
-import { TranslateModule } from '@ngx-translate/core';
 
 interface MenuItem {
   link: string;
@@ -32,7 +32,7 @@ interface MenuItem {
     GroupByPipe,
     AppMenuComponent,
     TranslateModule
-],
+  ],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'
 })
@@ -52,6 +52,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     { icon: 'extension', label: 'AIプロバイダー', key: 'ai-provider-management' },
     { icon: 'extension', label: 'AIモデル', key: 'ai-model-management' },
     { icon: 'extension', label: 'API連携', key: 'ext-api-provider-form' },
+    { icon: 'extension', label: 'API連携雛型', key: 'ext-api-provider-template-form' },
     { icon: 'people', label: 'メンバー管理', key: 'member-management' },
     { icon: 'analytics', label: '利用状況', key: 'department' },
   ];

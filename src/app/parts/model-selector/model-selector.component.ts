@@ -1,14 +1,14 @@
-import { Component, ElementRef, inject, input, model, output, QueryList, signal, TemplateRef, viewChild, ViewChild, ViewChildren, ViewContainerRef } from '@angular/core';
-import { MatMenu, MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatButtonModule } from '@angular/material/button';
-import { AIModelEntityForView, AIModelManagerService, TagService, TagEntity } from '../../services/model-manager.service';
-import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
-import { forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { Component, inject, input, output } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { TranslateModule } from '@ngx-translate/core';
+import { forkJoin } from 'rxjs';
+import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
+import { AIModelEntityForView, AIModelManagerService, TagEntity, TagService } from '../../services/model-manager.service';
 
 // -----------------------------------------------------------------------------
 // Updated interfaces for Category -> Tag -> Model structure
@@ -143,8 +143,8 @@ export class ModelSelectorComponent {
     // Sort tag groups within each category
     this.data.forEach(category => {
       category.tagGroups.sort((a, b) => {
-        const orderA = a.tag?.sortOrder || 0;
-        const orderB = b.tag?.sortOrder || 0;
+        const orderA = a.tag?.uiOrder || 0;
+        const orderB = b.tag?.uiOrder || 0;
         if (orderA !== orderB) {
           return orderA - orderB;
         }
@@ -259,7 +259,7 @@ export class ModelSelectorComponent {
       return categoryName === 'Uncategorized' ? 999 : 500;
     }
 
-    const minSortOrder = Math.min(...categoryTags.map(tag => tag.sortOrder || 0));
+    const minSortOrder = Math.min(...categoryTags.map(tag => tag.uiOrder || 0));
     return minSortOrder;
   }
 

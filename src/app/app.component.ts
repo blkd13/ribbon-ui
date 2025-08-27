@@ -78,8 +78,7 @@ export class AppComponent implements OnInit {
     this.g.lang = userLang.split('-')[0] as Lang;
     this.g.locale = userLang as Locale;
     this.translateService.setDefaultLang(this.g.lang);
-    this.g.autoRedirectToLoginPageIfAuthError = false;
-    this.authService.getUser().subscribe({
+    this.authService.isAuthorized().subscribe({
       next: next => {
         /* matomoにUserIDを送る */
         _paq.push(['setUserId', next.id]);
@@ -87,7 +86,6 @@ export class AppComponent implements OnInit {
         this.g.info.user = next;
         this.g.info$.next({ user: next });
 
-        this.g.autoRedirectToLoginPageIfAuthError = true;
         this.userService.getUserSetting().subscribe({
           next: next => {
             // ユーザーの言語設定を適用
@@ -109,7 +107,6 @@ export class AppComponent implements OnInit {
         });
       },
       error: error => {
-        this.g.autoRedirectToLoginPageIfAuthError = true;
         this.isChecked = true;
       },
       complete: () => {

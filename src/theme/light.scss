@@ -3,7 +3,7 @@ html>body.light-theme {
     --body-background-gradient: linear-gradient(135deg, #f0f0f0 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
     --body-background-gradient: linear-gradient(135deg, #fcfcfc 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
     --body-modal-background-gradient: linear-gradient(135deg, #fcfcfc 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
-    
+
 
     --text-gradient-start: #08505a;
     --text-gradient-mid: #20474d;
@@ -47,8 +47,8 @@ html>body.light-theme {
     --radio-color-selected: #d0e4eb;
 
     --loading-cover-background: #ffffff88;
-    --scroll-bar-color: #6f79b1;
-    --scroll-bar-color: #348fe070;
+    --scroll-bar-color: #ccc;
+    --scroll-bar-color-hover: #999;
 
     // --message-border-user: rgb(165, 184, 192);
     // --message-border-user: #dbebf1;

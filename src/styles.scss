@@ -110,7 +110,8 @@ body {
     color: #e0e0e0;
     color: var(--mat-sys-on-background);
 
-    background: var(--body-background-gradient);
+    background-color: var(--body-background-color);
+    background-image: var(--body-background-gradient);
     background-attachment: fixed;
 }
 
@@ -142,7 +143,8 @@ select {
 //     z-index: -1;
 // }
 
-.mdc-icon-button.mat-mdc-icon-button.mat-primary.mat-mdc-button-base {
+.mdc-icon-button.mat-mdc-icon-button.mat-primary.mat-mdc-button-base,
+.mat-primary mat-icon {
     color: var(--mat-sys-primary);
 }
 
@@ -290,7 +292,7 @@ html,
 body,
 div {
     scrollbar-color: rgb(26, 54, 61) rgb(11, 18, 20);
-    scrollbar-color: var(--mat-sys-on-primary) var(--mat-sys-background);
+    scrollbar-color: var(--scroll-bar-color) var(--mat-sys-background);
 
     &::-webkit-scrollbar {
         width: 17px;
@@ -309,13 +311,13 @@ div {
         // background: rgb(6, 13, 15);
         border-radius: 10px;
         background-color: rgb(26, 54, 61);
-        background-color: var(--mat-sys-on-primary);
+        background-color: var(--scroll-bar-color);
         transition: background-color 0.3s 0.3s;
     }
 
     &:hover {
         scrollbar-color: rgb(59, 108, 121) rgb(11, 18, 20);
-        scrollbar-color: var(--scroll-bar-color) var(--mat-sys-background);
+        scrollbar-color: var(--scroll-bar-color-hover) var(--mat-sys-background);
 
         &::-webkit-scrollbar {}
 
@@ -326,7 +328,7 @@ div {
 
         &::-webkit-scrollbar-thumb {
             background-color: rgb(59, 108, 121);
-            background-color: var(--mat-sys-on-primary-fixed);
+            background-color: var(--scroll-bar-color);
         }
     }
 }
@@ -645,7 +647,7 @@ h1,
     // border: 1px solid var(--plain-border-color);
     margin: 10px 10px 10px 0;
 
-    background-color: var(--plain-background);
+    background: var(--plain-background);
     color: var(--plain-color);
     // color: var(--mat-sys-on-background);
 

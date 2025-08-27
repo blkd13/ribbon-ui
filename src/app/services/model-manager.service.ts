@@ -642,7 +642,7 @@ export interface TagEntity extends BaseEntity {
   description?: string;
   color?: string;
   category?: string; // タグのカテゴリ（オプション）
-  sortOrder?: number;
+  uiOrder?: number;
   overrideOthers?: boolean;
   usageCount: number;
   isActive: boolean;
@@ -655,7 +655,7 @@ export interface TagCreateRequest {
   category?: string; // タグのカテゴリ（オプション）
   color?: string;
   isActive?: boolean;
-  sortOrder?: number;
+  uiOrder?: number;
   overrideOthers?: boolean;
 }
 
@@ -676,12 +676,25 @@ export class TagService {
   private tagsSubject = new BehaviorSubject<TagEntity[]>([]);
   public tags$ = this.tagsSubject.asObservable();
 
+  sortTags<T extends Pick<TagEntity, 'name' | 'uiOrder'>>(tags: T[]): T[] {
+    return tags.sort((a, b) => {
+      // First priority: UI Order
+      const aOrder = (a.uiOrder as number) || 0;
+      const bOrder = (b.uiOrder as number) || 0;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+
+      // Second priority: Name (alphabetical order)
+      return a.name.localeCompare(b.name);
+    });
+  }
+
   /**
    * 全タグ一覧取得
    */
   getTags(includeOverridden: boolean = false): Observable<TagEntity[]> {
     return this.http.get<TagEntity[]>(`/user/tags?includeOverridden=${includeOverridden}`).pipe(
-      tap(tags => this.tagsSubject.next(tags))
+      tap(tags => this.tagsSubject.next(tags)),
+      map(tags => this.sortTags(tags)),
     );
   }
 

@@ -35,5 +35,5 @@
             <span>{{ 'LOGOUT' | translate }}</span>
         </button>
     </mat-menu>
-    {{g.info.user.email}}
+    <div class="overflow-hidden overflow-ellipsis" [title]="g.info.user.email">{{g.info.user.email}}</div>
 </div>

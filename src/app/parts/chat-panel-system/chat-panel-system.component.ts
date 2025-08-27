@@ -1,26 +1,26 @@
-import { Component, effect, inject, input, output } from '@angular/core';
-import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { CommonModule } from '@angular/common';
+import { Component, effect, inject, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DocTagComponent } from '../doc-tag/doc-tag.component';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MarkdownComponent } from 'ngx-markdown';
-import { Thread } from '../../models/project-models';
-import { MatDialogModule } from '@angular/material/dialog';
-import { CountTokensResponseForView, LlmModel } from '../../services/chat.service';
-import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
-import { MyToolType, ToolCallService } from '../../services/tool-call.service';
-import { ExtApiProviderService } from '../../services/ext-api-provider.service';
-import { ModelSelectorComponent } from "../model-selector/model-selector.component";
-import { AIModelEntityForView, AIModelManagerService } from '../../services/model-manager.service';
-import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule } from '@ngx-translate/core';
+import { MarkdownComponent } from 'ngx-markdown';
+import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
+import { Thread } from '../../models/project-models';
+import { CountTokensResponseForView } from '../../services/chat.service';
+import { ExtApiProviderService } from '../../services/ext-api-provider.service';
+import { AIModelManagerService } from '../../services/model-manager.service';
+import { MyToolType, ToolCallService } from '../../services/tool-call.service';
+import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
+import { DocTagComponent } from '../doc-tag/doc-tag.component';
+import { ModelSelectorComponent } from "../model-selector/model-selector.component";
 
 @Component({
   selector: 'app-chat-panel-system',
