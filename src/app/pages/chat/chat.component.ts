@@ -628,8 +628,15 @@ export class ChatComponent implements OnInit {
   presetThreadList: Thread[] = [];
   loadPreset(index: number): void {
     this.selectedThreadGroup.threadList = this.selectedThreadGroup.threadList.slice(0, index);
+    const head = this.selectedThreadGroup.threadList[0];
+    const headTools = head.inDto.args.tools ? Utils.clone<ChatCompletionTool[]>(head.inDto.args.tools) : undefined;
     while (this.selectedThreadGroup.threadList.length < index) {
-      this.selectedThreadGroup.threadList.push(this.presetThreadList[this.selectedThreadGroup.threadList.length - 1])
+      const tail = this.presetThreadList[this.selectedThreadGroup.threadList.length - 1];
+      tail.inDto.args.tool_choice = head.inDto.args.tool_choice;
+      if (headTools) {
+        tail.inDto.args.tools = headTools;
+      }
+      this.selectedThreadGroup.threadList.push(tail);
     }
     const modelCheckOK = this.modelCheck();
     this.rebuildThreadGroup();
