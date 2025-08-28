@@ -26,7 +26,7 @@
         @let provider=apiProviderGroupedList[key][0];
         @if(apiProviderGroupedList[key].length===1){
         <a class="login-button federation"
-            href="/api/public/oauth/{{g.orgKey}}/{{provider.type}}-{{provider.name}}/login">
+            href="{{curEnv.apiUrl}}/public/oauth/{{g.orgKey}}/{{provider.type}}-{{provider.name}}/login">
             <img src="./image/{{provider.type}}-logo.svg">[{{provider.type}}] {{provider.label}}
         </a>
         } @else {
@@ -37,7 +37,7 @@
             </mat-expansion-panel-header>
             @for(provider of apiProviderGroupedList[key];track $index){
             <a class="login-button federation"
-                href="/api/public/oauth/{{g.orgKey}}/{{provider.type}}-{{provider.name}}/login">
+                href="{{curEnv.apiUrl}}/public/oauth/{{g.orgKey}}/{{provider.type}}-{{provider.name}}/login">
                 <img src="./image/{{provider.type}}-logo.svg">{{provider.label}}
             </a>
             }
