@@ -198,7 +198,7 @@ export class ApiMattermostService {
                   mmChannel.display_name = this.mmUser?.nickname || this.mmUser?.username || '';
                 } else {
                   mmChannel.display_name = 'dummy';
-                  mmChannel.display_name = mmChannel.name.split('__').filter(id => id !== this.mmUser?.id).map(id => idMas[id].nickname || idMas[id].username || '').filter(name => name.trim()).join(', ');
+                  mmChannel.display_name = mmChannel.name.split('__').filter(id => id !== this.mmUser?.id).map(id => (idMas[id] ? (idMas[id].nickname || idMas[id].username) : id) || '').filter(name => name.trim()).join(', ');
                 }
                 // this.logger.debug(mmChannel.display_name);
               } else {

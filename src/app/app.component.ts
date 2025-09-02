@@ -48,13 +48,9 @@ export class AppComponent implements OnInit {
   private readonly snackBar: MatSnackBar = inject(MatSnackBar);
 
   title = this.translateService.instant('APP_TITLE');
+  isLoginpage = false;
+
   constructor() {
-    // v1.0からv2.0への移行
-    const v1 = localStorage.getItem('settings-v1.0');
-    if (v1 && JSON.parse(v1).model) {
-      // localStorage.removeItem('settings-v1.0');
-      localStorage.setItem('settings-v2.0', JSON.stringify([JSON.parse(v1)]));
-    } else { }
   }
 
   ngOnInit(): void {
@@ -66,6 +62,8 @@ export class AppComponent implements OnInit {
       if (event instanceof NavigationEnd) {
         _paq.push(['setCustomUrl', event.urlAfterRedirects]);
         _paq.push(['trackPageView']);
+        console.log('Tracking page view:', event.urlAfterRedirects);
+        this.isLoginpage = event.urlAfterRedirects === '/login';
       }
     });
   }

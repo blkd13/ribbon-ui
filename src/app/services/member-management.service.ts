@@ -46,6 +46,7 @@ export interface MemberAssignmentRequest {
 }
 
 export interface MemberUpdateRequest {
+    userId: string;
     role?: UserRoleType;
     priority?: number;
 }
@@ -106,7 +107,7 @@ export class MemberManagementService {
      * Divisionメンバーの情報を更新
      */
     updateMember(divisionId: string, userId: string, request: MemberUpdateRequest): Observable<DivisionMember> {
-        (request as any).userId = userId; // Ensure userId is included in the request
+        request.userId = userId;
         return this.http.patch<DivisionMember>(`/admin/division/${divisionId}/member/${userId}`, request);
     }
 

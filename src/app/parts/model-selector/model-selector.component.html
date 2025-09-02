@@ -44,14 +44,27 @@
     <!-- 2nd level: Model list under tags -->
     <mat-menu #tagMenu="matMenu" class="level-2">
         @for(_model of tagGroup.models; track $index) {
-        <div mat-menu-item [matMenuTriggerFor]="detail" (click)="menuTrigger.closeMenu(); selectModel(_model)"
-            [class.selected]="modelName === _model.name" [disabled]="_model.disabled" class="model-item">
-            <div class="model-name">{{ _model.name }}</div>
-            <div class="model-desc">{{ _model.desc }}</div>
+        <!-- メインのモデルアイテム -->
+        <div mat-menu-item (click)="menuTrigger.closeMenu(); selectModel(_model)"
+            [class.selected]="modelName === _model.name" [disabled]="_model.disabled">
+            <div class="model-item">
+                <div class="model-content">
+                    <div class="model-name">{{ _model.name }}</div>
+                    <div class="model-desc">{{ _model.desc }}</div>
+                </div>
+
+                <!-- 詳細ボタン -->
+                <button mat-icon-button #detailTrigger="matMenuTrigger" [matMenuTriggerFor]="detail"
+                    class="detail-button" (mouseenter)="openDetailMenu(detailTrigger)"
+                    (mouseleave)="closeDetailMenu(detailTrigger)"
+                    (click)="openDetailMenu(detailTrigger);$event.stopPropagation()">
+                    <mat-icon>description</mat-icon>
+                </button>
+            </div>
         </div>
 
         <!-- 3rd level: Model detail card -->
-        <mat-menu #detail="matMenu" class="level-3">
+        <mat-menu #detail="matMenu" class="level-3" [hasBackdrop]="false">
             <ng-container *ngTemplateOutlet="modelCard; context: { model: _model }"></ng-container>
         </mat-menu>
         }

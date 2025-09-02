@@ -18,8 +18,8 @@
         <div class="setting-item">
             <mat-button-toggle-group [(value)]="theme" (change)="toggleTheme($event)">
                 <mat-button-toggle value="system">{{ 'SYSTEM' | translate }}</mat-button-toggle>
-                <mat-button-toggle value="dark">{{ 'DARK' | translate }}</mat-button-toggle>
                 <mat-button-toggle value="light">{{ 'LIGHT' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="dark">{{ 'DARK' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
             <p class="setting-description">
                 {{ 'THEME_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_SYSTEM_THEME' | translate }}

@@ -85,7 +85,8 @@
 }
 
 .forgot-password {
-    display: block;
+    display: flex;
+    justify-content: end;
     margin-top: 20px;
     // color: #0099ff;
     // text-decoration: underline;
@@ -119,6 +120,19 @@
         .mat-content {
             justify-content: center;
         }
+    }
+}
+
+.terms-and-privacy {
+    width: 100%;
+    position: fixed;
+    bottom: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 36px;
+
+    .link {
+        display: flex;
     }
 }
 

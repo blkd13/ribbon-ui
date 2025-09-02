@@ -593,5 +593,8 @@
     "ERROR_LOADING_LICENSES": "ライセンス情報の読み込みエラー",
     "MERMAID_CODE_FIXED": "Mermaidコードを修正しました",
     "MERMAID_SAVE_FAILED": "修正内容の保存に失敗しました",
-    "MERMAID_FIX_ERROR": "修正処理でエラーが発生しました"
+    "MERMAID_FIX_ERROR": "修正処理でエラーが発生しました",
+    "TERMS_OF_SERVICE": "利用規約",
+    "PRIVACY_POLICY": "プライバシーポリシー",
+    "APP_INFO": "アプリ情報"
 }

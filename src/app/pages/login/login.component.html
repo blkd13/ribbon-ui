@@ -9,6 +9,7 @@
     </mat-card>
     }
 </ng-template>
+@if(!(g.info$ | async)?.user){
 <div class="login-container">
 
     <div class="flex items-center gap-5 mb-10 pb-7">
@@ -60,13 +61,13 @@
         </div>
         <button type="submit" class="login-button" [disabled]="loginForm.invalid">{{ 'LOGIN' | translate }}</button>
         <a href="javascript:void(0)" (click)="onChangeState('sendmail')" class="forgot-password">
-            {{ 'FORGOT_PASSWORD' | translate }}
+            {{ 'FORGOT_PASSWORD' | translate }}<mat-icon>arrow_forward</mat-icon>
         </a>
         <!-- <a href="javascript:void(0)" (click)="guestLogin()" class="forgot-password">
             {{ 'GUEST_USER' | translate }}
         </a> -->
         <a href="javascript:void(0)" (click)="onChangeState('sendmail')" class="forgot-password">
-            {{ 'SIGN_UP' | translate }}
+            {{ 'SIGN_UP' | translate }}<mat-icon>arrow_forward</mat-icon>
         </a>
     </form>
     }
@@ -136,4 +137,16 @@
     {{ 'DEFAULT_CASE' | translate }}
     }
     }
+
 </div>
+<!-- 利用規約とプライバシーポリシー -->
+<div class="terms-and-privacy">
+    <a target="_blank" href="./static/terms.html" class="link">
+        {{ 'TERMS_OF_SERVICE' | translate }}
+        <mat-icon>open_in_new</mat-icon></a>
+    <a target="_blank" href="./static/privacy.html" class="link">
+        {{ 'PRIVACY_POLICY' | translate }}
+        <mat-icon>open_in_new</mat-icon>
+    </a>
+</div>
+}

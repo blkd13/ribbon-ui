@@ -274,4 +274,20 @@ export class ModelSelectorComponent {
   getTotalModelsInCategory(category: Category): number {
     return category.tagGroups.reduce((total, tagGroup) => total + (tagGroup.models?.length || 0), 0);
   }
+
+  // 詳細メニュー制御用のメソッド
+  openDetailMenu(trigger: any) {
+    if (trigger && typeof trigger.openMenu === 'function') {
+      trigger.menuData = { hasBackdrop: false };
+      trigger.openMenu();
+    }
+  }
+
+  closeDetailMenu(trigger: any) {
+    setTimeout(() => {
+      if (trigger && typeof trigger.closeMenu === 'function') {
+        trigger.closeMenu();
+      }
+    }, 100); // 少し遅延を入れてメニューへの移動を許可
+  }
 }

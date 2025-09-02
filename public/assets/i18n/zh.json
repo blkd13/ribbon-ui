@@ -592,5 +592,8 @@
     "ERROR_LOADING_LICENSES": "加载许可证信息时出错",
     "MERMAID_CODE_FIXED": "已修正Mermaid代码",
     "MERMAID_SAVE_FAILED": "保存修正内容失败",
-    "MERMAID_FIX_ERROR": "修正过程中出现错误"
+    "MERMAID_FIX_ERROR": "修正过程中出现错误",
+    "TERMS_OF_SERVICE": "服务条款",
+    "PRIVACY_POLICY": "隐私政策",
+    "APP_INFO": "应用信息"
 }

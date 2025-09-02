@@ -69,6 +69,8 @@ export class BoxComponent implements OnInit {
   readonly logger = inject(LoggerService);
   // readonly apiGiteaService: ApiGiteaService = inject(ApiGiteaService);
 
+  showInfo=true;
+
   item?: BoxApiFolder;
   boxOriginUri: string = '';
 

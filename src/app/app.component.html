@@ -13,7 +13,7 @@
 <a class="fixed cursor-pointer bottom-3 left-4 px-8 py-2" href="./static/release-note.html"
     target="_blank">{{g.version}}</a>
 -->
-
+@if(!isLoginpage ){
 <div class="fixed cursor-pointer" style="
     bottom: 0;
     width: 209px;
@@ -28,4 +28,5 @@
     <app-user-settings></app-user-settings>
     <!-- {{g.info.user.email}} -->
 </div>
+}
 }

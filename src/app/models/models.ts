@@ -25,10 +25,10 @@ export enum UserRoleType {
     // Owner = 'Owner', // 所有者
     // BizAdmin = 'BizAdmin', // ビジネス管理者
     // SysAdmin = 'SysAdmin', // システム管理者
-    MemberManager = 'MemberManager', // メンバー管理者
-    AIManager = 'AIManager', // AI管理者
-    APIManager = 'APIManager', // API管理者
-    Auditor = 'Auditor', // 監査者
+    // MemberManager = 'MemberManager', // メンバー管理者
+    // AIManager = 'AIManager', // AI管理者
+    // APIManager = 'APIManager', // API管理者
+    // Auditor = 'Auditor', // 監査者
     Admin = 'Admin', // 管理者
     SuperAdmin = 'SuperAdmin', // スーパーユーザー
     // Member = 'Member', // メンバー

@@ -1,81 +1,5 @@
 :root,
-html>body.light-theme {
-    --body-background-gradient: linear-gradient(135deg, #f0f0f0 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
-    --body-background-gradient: linear-gradient(135deg, #fcfcfc 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
-    --body-modal-background-gradient: linear-gradient(135deg, #fcfcfc 0%, rgb(230, 240, 245) 80%, rgb(255, 255, 255) 100%);
-
-
-    --text-gradient-start: #08505a;
-    --text-gradient-mid: #20474d;
-    --text-gradient-deep: #5c8186;
-    --text-gradient-end: #172424;
-
-    --text-gradient-start: #1a5e99;
-    --text-gradient-mid: #0b3053;
-    --text-gradient-deep: #7599bb;
-    --text-gradient-end: #15334d;
-
-    --text-gradient: linear-gradient(135deg,
-            var(--text-gradient-start) 0%,
-            var(--text-gradient-mid) 8%,
-            var(--text-gradient-deep) 80%,
-            var(--text-gradient-end) 100%);
-
-    --background-gradient: linear-gradient(135deg,
-            #fff 0%,
-            #eee 100%);
-
-    --badge-background: linear-gradient(to bottom, #ddd, #fff);
-    --badge-background-active: linear-gradient(to bottom, #a3d6e4, #e3f5f7);
-    --badge-background-active: linear-gradient(to bottom,
-            #d9dff8 0%,
-            #d9e7fc 100%);
-    --badge-border: none;
-
-
-    --plain-color: #2c2c2c;
-    --plain-color-reverse: #fff;
-    --plain-color-area: #666;
-    --plain-background: #ffffff;
-    --plain-background-area: #f5f5f5;
-    --plain-background-hover: #e0e0e0;
-    --plain-border-color: #dcdcdc;
-    --plain-shadow: -3px -3px 8px rgba(255, 255, 255, 0.01), 3px 3px 8px rgba(0, 0, 0, 0.2);
-    // --plain-shadow: 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);
-    --plain-shadow: 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);
-
-    --textarea-background: #ffffff;
-
-    --radio-color-hover: #dfeff5;
-    --radio-group-color-selected: #dcecf1;
-    --radio-color-selected: #d0e4eb;
-
-    --loading-cover-background: #ffffff88;
-    --scroll-bar-color: #ccc;
-    --scroll-bar-color-hover: #999;
-
-    // --message-border-user: rgb(165, 184, 192);
-    // --message-border-user: #dbebf1;
-    // --message-border-assistant: rgb(201, 193, 183);
-    // --message-border-assistant: #efe6db;
-    --message-background-user: #f7fafb;
-    --message-background-assistant: #f8f7f6;
-    --message-color-user: #305058;
-    --message-color-assistant: #47413a;
-    // --message-background-system: rgb(237, 248, 255);
-    // --message-background-error: #ffcccc;
-
-    --link-color: #06c;
-
-    --tip-background: rgba(240, 240, 240, 0.5);
-    --tip-background-hover: rgba(240, 240, 240, 0.7);
-
-    --h2-color: #77797a;
-    --h3-color: #4d4f52;
-}
-
-:root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-background: #f9fbfb;
     --mat-sys-error: #ba1a1a;
     --mat-sys-error-container: #ffdad6;
@@ -133,43 +57,43 @@ html>body.light-theme {
     --mat-sys-outline: #c1cccc;
 
     --mat-sys-primary: #348fe0;
-    --mat-sys-secondary-container: #dfe7ef;
+    --mat-sys-secondary-container: #dfefe6;
     --mat-sys-surface-variant: #edf1f5;
     --mat-sys-neutral-variant20: #edf1f5;
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-level0: 0px 0px 0px 0px rgba(0, 0, 0, 0.2), 0px 0px 0px 0px rgba(0, 0, 0, 0.14), 0px 0px 0px 0px rgba(0, 0, 0, 0.12)
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-level1: 0px 2px 1px -1px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 1px 3px 0px rgba(0, 0, 0, 0.12)
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-level2: 0px 3px 3px -2px rgba(0, 0, 0, 0.2), 0px 3px 4px 0px rgba(0, 0, 0, 0.14), 0px 1px 8px 0px rgba(0, 0, 0, 0.12)
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-level3: 0px 3px 5px -1px rgba(0, 0, 0, 0.2), 0px 6px 10px 0px rgba(0, 0, 0, 0.14), 0px 1px 18px 0px rgba(0, 0, 0, 0.12)
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-level4: 0px 5px 5px -3px rgba(0, 0, 0, 0.2), 0px 8px 10px 1px rgba(0, 0, 0, 0.14), 0px 3px 14px 2px rgba(0, 0, 0, 0.12)
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-level5: 0px 7px 8px -4px rgba(0, 0, 0, 0.2), 0px 12px 17px 2px rgba(0, 0, 0, 0.14), 0px 5px 22px 4px rgba(0, 0, 0, 0.12)
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-body-large: 400 1rem / 1.5rem Roboto, 'Noto Sans JP';
     --mat-sys-body-large-font: Roboto, 'Noto Sans JP';
     --mat-sys-body-large-line-height: 1.5rem;
@@ -265,7 +189,7 @@ html>body.light-theme {
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-corner-extra-large: 28px;
     --mat-sys-corner-extra-large-top: 28px 28px 0 0;
     --mat-sys-corner-extra-small: 4px;
@@ -281,9 +205,87 @@ html>body.light-theme {
 }
 
 :root,
-html>body.light-theme {
+html>body.light-glass-theme {
     --mat-sys-dragged-state-layer-opacity: 0.16;
     --mat-sys-focus-state-layer-opacity: 0.12;
     --mat-sys-hover-state-layer-opacity: 0.08;
     --mat-sys-pressed-state-layer-opacity: 0.12
+}
+
+html>body.light-glass-theme {
+    /* ベースカラー */
+    --hap-deep: #2f7761;
+    --hap-mid: #6dbf9c;
+    --hap-light: #a8d5b3;
+    --hap-super-light: #dfefe6;
+    --bg-ivory: oklch(99.1% 0.00399 91.461);
+    --ink: #213931;
+
+    /* 背景 */
+
+    --body-background-gradient:
+        radial-gradient(ellipse at top, rgba(47, 119, 97, 0.18), transparent 45%),
+        radial-gradient(ellipse at bottom, rgba(201, 213, 168, 0.22), transparent 40%);
+    --body-background-gradient:
+        radial-gradient(1200px 600px at 10% -10%, rgba(109, 191, 156, 0.18), transparent 60%),
+        radial-gradient(1000px 520px at 110% 110%, rgba(168, 213, 179, 0.22), transparent 55%);
+    --body-modal-background-gradient: linear-gradient(135deg, #ffffff 0%, #f5f7f5 80%, #ececec 100%);
+    --body-background-color: var(--bg-ivory);
+
+    /* テキストグラデーション */
+    --text-gradient: linear-gradient(90deg,
+            var(--hap-deep) 0%,
+            var(--hap-mid) 80%,
+            var(--hap-light) 100%);
+    --plain-color: var(--ink);
+    --plain-color-reverse: #fff;
+
+    /* プレーン背景 */
+    --plain-background: rgba(255, 255, 255, 0.6);
+    --plain-background-area: rgba(250, 250, 250, 0.6);
+    --plain-background-hover: rgba(255, 255, 255, 0.8);
+    --plain-border-color: rgba(47, 119, 97, 0.2);
+    --plain-shadow: 0 10px 30px rgba(33, 57, 49, 0.06);
+
+    /* バッジ */
+    --badge-background: linear-gradient(to right bottom, rgba(168, 213, 179, 0.15), #f6d36508);
+    --badge-background-active: linear-gradient(to right bottom,
+            var(--hap-deep),
+            var(--hap-mid),
+            var(--hap-light));
+    --badge-color-active: #fff;
+    --badge-border: 1px solid rgba(33, 57, 49, 0.15);
+
+    /* メッセージ */
+    --message-background-system: rgba(255, 255, 255, 0.7);
+    --message-background-user: rgba(240, 247, 249, 0.6);
+    --message-background-assistant: rgba(233, 247, 239, 0.6);
+    --message-color-user: rgba(0, 28, 104, 0.521);
+    --message-color-assistant: var(--hap-deep);
+
+    /* スクロールバー */
+    --scroll-bar-color: rgba(109, 191, 156, 0.5);
+    --scroll-bar-color-hover: rgba(47, 119, 97, 0.7);
+
+    /* 見出し */
+    --h2-color: var(--hap-deep);
+    --h3-color: var(--hap-mid);
+
+    /* Tip背景 */
+    --tip-background: rgba(47, 119, 97, 0.08);
+    --tip-background-hover: rgba(47, 119, 97, 0.12);
+
+    --link-color: var(--hap-deep);
+
+    /* Material系 (軽く調整) */
+    --mat-sys-primary: var(--hap-mid);
+    --mat-sys-primary-container: var(--hap-super-light);
+    --mat-sys-on-primary: var(--ink);
+    --mat-sys-on-primary-container: var(--hap-deep);
+    --mat-sys-surface-tint: var(--hap-mid);
+    --mat-sys-surface: #ffffff;
+    --mat-sys-on-surface: var(--ink);
+    --mat-sys-surface-variant: #e8f4ee;
+    --mat-sys-on-surface-variant: #213931;
+    --mat-sys-secondary-container: var(--hap-super-light);
 }

@@ -1,3 +1,4 @@
+import { CdkTableModule } from "@angular/cdk/table";
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -43,7 +44,7 @@ export class UserMarkComponent {
 
 @Component({
   selector: 'app-user-settings',
-  imports: [CommonModule, MatMenuModule, MatDividerModule, MatIconModule, MatButtonModule, TranslateModule],
+  imports: [CommonModule, MatMenuModule, MatDividerModule, MatIconModule, MatButtonModule, TranslateModule, CdkTableModule],
   templateUrl: './user-settings.component.html',
   styleUrl: './user-mark.component.scss'
 })

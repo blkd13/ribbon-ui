@@ -357,26 +357,23 @@ export class ChatComponent implements OnInit {
 
     try {
       // ONにする場合は接続性チェックを実行
+      _paq.push(['trackEvent', 'AIチャット', `ツール選択:${!!newState}`, groupName]);
       if (newState) {
         const providerType = groupName.split('-')[0]; // グループ名からプロバイダーを取得
         const providerName = groupName.substring(groupName.indexOf('-') + 1); // グループ名からプロバイダー名を取得
         const requiredProvider = this.toolGroupProviderMapping[providerType]; // グループ名からプロバイダーを取得
-        if (requiredProvider === 'API_KEY') {
+        if (!requiredProvider) {
+          // プロバイダ不用の場合はチェックもしない
+        } else {
           // 接続されていない場合は警告を表示してONにしない
-          this.showConnectionPrompt(groupName, requiredProvider);
-          return;
-        } else if (requiredProvider) {
-          const isConnected = await this.checkProviderConnectivity(requiredProvider, providerName);
-
+          const isConnected = await this.checkProviderConnectivity(requiredProvider === 'API_KEY' ? providerType : requiredProvider, providerName);
           if (!isConnected) {
             // 接続されていない場合は警告を表示してONにしない
             this.showConnectionPrompt(groupName, requiredProvider);
             return;
+          } else { }
           }
-        } else {
-          // プロバイダーが必要ない場合はそのままONにする
-        }
-      }
+      } else { }
 
       // 接続確認が完了したらツールグループの状態を更新
       this.toolGroupStates[groupName] = newState;
@@ -456,7 +453,7 @@ export class ChatComponent implements OnInit {
     this.selectedThreadGroup.threadList.forEach((thread, tIndex) => {
       if (preset.modelSelection && preset.modelSelection[tIndex]) {
         thread.inDto.args.model = preset.modelSelection[tIndex].model;
-        thread.inDto.args.providerName = preset.modelSelection[tIndex].provider;
+        // thread.inDto.args.providerName = preset.modelSelection[tIndex].provider;
         isModelChange = true;
       } else { }
       const messageGroup = this.messageService.messageGroupMas[this.messageGroupIdListMas[thread.id][0]];
@@ -865,10 +862,12 @@ export class ChatComponent implements OnInit {
           const team = tmpTeamMapas[project.teamId];
           if (team) {
             team.projects.push(project);
-          } else {
+          } else if (this.teamMap[project.teamId]) {
             tmpTeamMapas[project.teamId] = this.teamMap[project.teamId] as TeamForView;
             tmpTeamMapas[project.teamId].projects = [project];
             this.teamForViewList.push(tmpTeamMapas[project.teamId]);
+          } else {
+            // 削除済みチームのスレッド
           }
         });
       }));

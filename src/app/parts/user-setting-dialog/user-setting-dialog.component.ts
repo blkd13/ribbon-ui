@@ -8,7 +8,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AnimationService } from '../../services/animation.service';
-import { UserService } from '../../services/user.service';
+import { ConfigKeys, UserService } from '../../services/user.service';
 import { BaseDialogComponent } from '../../shared/base/base-dialog.component';
 
 declare var _paq: any;
@@ -37,10 +37,10 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
   isAnimationEnabled$ = this.animationService.animationEnabled$;
   needsReload = false;
   current = false;
-  theme: 'system' | 'dark' | 'light';
-  enterMode: 'Enter' | 'Ctrl+Enter';
-  historyCloseMode: 0 | 1 | 2;
-  language: 'auto' | 'ja' | 'en' | 'zh';
+  theme: ConfigKeys.Theme = 'system';
+  enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter';
+  historyCloseMode: ConfigKeys.HistoryCloseMode = 0;
+  language: ConfigKeys.Language = 'auto';
 
   constructor() {
     super();

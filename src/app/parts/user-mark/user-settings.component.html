@@ -24,10 +24,28 @@
             <mat-icon>key</mat-icon>
             <span>{{ 'API_KEY_MANAGEMENT' | translate }}</span>
         </button>
-        <button mat-menu-item (click)="openLicenseViewer()">
+
+        <button mat-menu-item [matMenuTriggerFor]="legalMenu">
             <mat-icon>description</mat-icon>
-            <span>{{ 'LICENSE_INFORMATION' | translate }}</span>
+            <span>{{ 'APP_INFO' | translate }}</span>
         </button>
+        <mat-menu #legalMenu="matMenu">
+            <a mat-menu-item href="./static/terms-and-privacy/terms.html" target="_blank">
+                <!-- <mat-icon>gavel</mat-icon> -->
+                <span>{{ 'TERMS_OF_SERVICE' | translate }}</span>
+                <mat-icon>open_in_new</mat-icon>
+            </a>
+            <a mat-menu-item href="./static/terms-and-privacy/privacy.html" target="_blank">
+                <!-- <mat-icon>privacy_tip</mat-icon> -->
+                <span>{{ 'PRIVACY_POLICY' | translate }}</span>
+                <mat-icon>open_in_new</mat-icon>
+            </a>
+            <button mat-menu-item (click)="openLicenseViewer()">
+                <mat-icon>article</mat-icon>
+                <span>{{ 'LICENSE_INFORMATION' | translate }}</span>
+            </button>
+        </mat-menu>
+
         <mat-divider></mat-divider>
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="authService.logout()">

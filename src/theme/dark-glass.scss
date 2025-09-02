@@ -1,5 +1,5 @@
 // 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --body-background-gradient: linear-gradient(135deg, #121212 0%, rgb(15, 24, 30) 80%, rgb(2, 2, 2) 100%);
     --body-modal-background-gradient: linear-gradient(135deg, #222 0%, rgb(35, 45, 51) 80%, #111 100%);
     --mat-menu-container-color: #2c2c2c;
@@ -21,7 +21,7 @@ html>body.dark-theme {
 
     --badge-background: linear-gradient(to bottom, #444444, #222222);
     --badge-background-active: linear-gradient(to bottom, rgb(30, 109, 131), #19393b);
-    --badge-border: none;
+    --badge-border: 1px solid rgba(255, 255, 255, 0.1);
 
     --plain-color: #fff;
     --plain-color-area: #bbb;
@@ -61,9 +61,42 @@ html>body.dark-theme {
 
     --h2-color: #ffffff;
     --h3-color: #ffffff;
+
+
+
+    // NEW
+    --text-gradient: linear-gradient(to right, rgb(165, 180, 252), rgb(153, 246, 228));
+    --body-background-gradient: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.25), transparent 45%),
+        radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.18), transparent 40%);
+    --body-modal-background-gradient: linear-gradient(135deg, #222 0%, rgb(35, 41, 51) 80%, #111 100%);
+    --body-background-color: rgb(2 6 23 / var(--tw-bg-opacity, 1));
+    // --background-gradient: linear-gradient(to right bottom, rgb(129, 140, 248), rgb(94, 234, 212));
+    // --background-gradient: radial-gradient(at 50% 0%, rgba(99, 102, 241, 0.25), rgba(0, 0, 0, 0) 45%), radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.18), rgba(0, 0, 0, 0) 40%);
+    --badge-background-active: linear-gradient(to right, rgb(165, 180, 252), rgb(153, 246, 228));
+    --badge-background: linear-gradient(to right bottom, rgba(99, 102, 241, 0.1), rgba(217, 70, 239, 0.1), rgba(52, 211, 153, 0.1));
+    --badge-color-active: #2c2c2c;
+    // --plain-border-color: rgb(229, 231, 235);
+
+    --plain-background: #2c2c2c88;
+    --plain-background-area: #33333388;
+    --plain-background-hover: #40404188;
+    // --background-gradient: rgba(2, 6, 23, 0.6);
+    --message-background-system: rgba(44, 44, 44, 0.6);
+    --message-background-user: rgba(40, 48, 46, 0.6);
+    --message-background-assistant: rgba(30, 41, 59, 0.6);
+    --message-color-user: rgb(122, 194, 167);
+    --message-color-assistant: rgb(139, 190, 253); // --message-color-assistant: rgb(96 165 250 / var(--tw-text-opacity, 1));
+    --message-color-assistant-model-name: rgba(188, 218, 255, 0.3);
+
+
+    // backdrop-filter: blur(8px);
+    // background-color: rgba(2, 6, 23, 0.6);
+    // border-color: rgba(255, 255, 255, 0.05);
+    // border-style: solid;
+    // border-width: 1px;
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-background: #101414;
     --mat-sys-error: #ffb4ab;
     --mat-sys-error-container: #93000a;
@@ -125,133 +158,55 @@ html>body.dark-theme {
     /* 容器上のテキストやアイコン */
     --mat-sys-primary-fixed: #b7e8f2;
     --mat-sys-primary-fixed-dim: #69b8cd;
-    // --mat-sys-on-primary-fixed: #002b34;
-    // --mat-sys-on-primary-fixed-variant: #0c4e5a;
 
     --mat-sys-surface-tint: #69b8cd;
 
-    // --mat-sys-inverse-primary: #0c4e5a;            /* primary-containerと合わせて落ち着いた対比色に */
-
-    // --mat-sys-outline: #6e8f97;                    /* 線や境界の色も少しブルー系に */
-    // --mat-sys-outline-variant: #3c5a5f;
-
-    // --mat-sys-secondary: #a8c9ce;                  /* 優しい青みのあるグレー */
-    // --mat-sys-secondary-container: #355b61;
-    // --mat-sys-on-secondary: #ffffff;
-    // --mat-sys-on-secondary-container: #d4eef2;
     --mat-sys-secondary-fixed: #d4eef2;
     --mat-sys-secondary-fixed-dim: #a8c9ce;
-    // --mat-sys-on-secondary-fixed: #002e35;
-    // --mat-sys-on-secondary-fixed-variant: #355b61;
-
-    // --mat-sys-tertiary: #f7bfa4;                   /* 補色系：柔らかいオレンジでアクセント */
-    // --mat-sys-tertiary-container: #78442e;
-    // --mat-sys-on-tertiary: #ffffff;
-    // --mat-sys-on-tertiary-container: #ffeadf;
-    // --mat-sys-tertiary-fixed: #ffeadf;
-    // --mat-sys-tertiary-fixed-dim: #f7bfa4;
-    // --mat-sys-on-tertiary-fixed: #3b2015;
-    // --mat-sys-on-tertiary-fixed-variant: #78442e;
-    // 
-
-    // ------------------------------------------
-
-    // /* 基本カラー */
-    // --mat-sys-on-primary: #002830; /* プライマリカラー上のテキスト色（暗め） */
-    // --mat-sys-primary-container: #004854; /* プライマリコンテナ色（深め） */
-    // --mat-sys-on-primary-container: #b8eeff; /* プライマリコンテナ上のテキスト色 */
-    // --mat-sys-primary-fixed: #b8eeff; /* 固定プライマリ色 */
-    // --mat-sys-primary-fixed-dim: rgb(105 184 205); /* 固定プライマリ色（薄め） */
-
-    // /* セカンダリカラー - 少し調整してプライマリと調和させる */
-    // --mat-sys-secondary: #b0c9d0; /* セカンダリカラー（プライマリに合わせて調整） */
-    // --mat-sys-on-secondary: #1a3540; /* セカンダリカラー上のテキスト色 */
-    // --mat-sys-secondary-container: #324a54; /* セカンダリコンテナ色 */
-    // --mat-sys-on-secondary-container: #cce5ed; /* セカンダリコンテナ上のテキスト色 */
-    // --mat-sys-secondary-fixed: #cce5ed; /* 固定セカンダリ色 */
-    // --mat-sys-secondary-fixed-dim: #b0c9d0; /* 固定セカンダリ色（薄め） */
-
-    // /* 基本カラー（継続） */
-    // --mat-sys-on-primary-fixed: #002029; /* 固定プライマリ色上のテキスト色 */
-    // --mat-sys-on-primary-fixed-variant: #004a54; /* 固定プライマリバリアント上のテキスト色 */
-    // --mat-sys-on-secondary-fixed: #051f29; /* 固定セカンダリ色上のテキスト色 */
-    // --mat-sys-on-secondary-fixed-variant: #324b54; /* 固定セカンダリバリアント上のテキスト色 */
-
-    // /* ターシャリーカラー - アクセントとして維持 */
-    // --mat-sys-tertiary: #ffb787; /* 元の色を維持（良いアクセントになる） */
-    // --mat-sys-on-tertiary: #502400; /* 元の色を維持 */
-    // --mat-sys-tertiary-container: #723600; /* 元の色を維持 */
-    // --mat-sys-on-tertiary-container: #ffdcc7; /* 元の色を維持 */
-    // --mat-sys-tertiary-fixed: #ffdcc7; /* 元の色を維持 */
-    // --mat-sys-tertiary-fixed-dim: #ffb787; /* 元の色を維持 */
-    // --mat-sys-on-tertiary-fixed: #311300; /* 元の色を維持 */
-    // --mat-sys-on-tertiary-fixed-variant: #723600; /* 元の色を維持 */
-
-    // /* 背景・サーフェス系カラー */
-    // --mat-sys-background: #101418; /* 背景色（少し青みを加えた） */
-    // --mat-sys-on-background: #e0e3e6; /* 背景上のテキスト色 */
-    // --mat-sys-surface: #101418; /* サーフェス色 */
-    // --mat-sys-on-surface: #e0e3e6; /* サーフェス上のテキスト色 */
-    // --mat-sys-surface-variant: #3f4950; /* サーフェスバリアント色 */
-    // --mat-sys-on-surface-variant: #dae2e6; /* サーフェスバリアント上のテキスト色 */
-    // --mat-sys-inverse-surface: #e0e3e6; /* 反転サーフェス色 */
-    // --mat-sys-inverse-on-surface: #2d3136; /* 反転サーフェス上のテキスト色 */
-    // --mat-sys-inverse-primary: #00687a; /* 反転プライマリ色 */
-    // --mat-sys-surface-tint: rgb(105 184 205); /* サーフェスティント色 */
-
-    // /* サーフェスコンテナ */
-    // --mat-sys-surface-container-lowest: #0b0f14; /* サーフェスコンテナ（最も低い） */
-    // --mat-sys-surface-container-low: #191c22; /* サーフェスコンテナ（低い） */
-    // --mat-sys-surface-container: #1c2026; /* サーフェスコンテナ */
-    // --mat-sys-surface-container-high: #272b31; /* サーフェスコンテナ（高い） */
-    // --mat-sys-surface-container-highest: #31353b; /* サーフェスコンテナ（最も高い） */
-    // --mat-sys-surface-bright: #36393f; /* 明るいサーフェス */
-    // --mat-sys-surface-dim: #101418; /* 暗いサーフェス */
-
-    // /* エラー系カラー - 元の色を維持 */
-    // --mat-sys-error: #ffb4ab; /* 元の色を維持 */
-    // --mat-sys-on-error: #690005; /* 元の色を維持 */
-    // --mat-sys-error-container: #93000a; /* 元の色を維持 */
-    // --mat-sys-on-error-container: #ffdad6; /* 元の色を維持 */
-
-    // /* アウトライン・その他 */
-    // --mat-sys-outline: #889399; /* アウトライン色（プライマリに合わせて調整） */
-    // --mat-sys-outline-variant: #3f494f; /* アウトラインバリアント色 */
-    // --mat-sys-scrim: #000000; /* スクリム色 */
-    // --mat-sys-shadow: #000000; /* シャドウ色 */
-    // --mat-sys-neutral-variant20: #293237; /* ニュートラルバリアント20 */
-    // --mat-sys-neutral10: #191c22; /* ニュートラル10 */
-
 
     /* 新しいプライマリカラー */
     --mat-sys-primary: rgb(105 184 205);
+
+    // NEW
+    --mat-sys-primary: rgb(96 165 250);
+    --mat-sys-primary-fixed: rgb(139, 190, 253);
+    --mat-sys-primary-fixed-dim: rgb(59, 102, 155);
+    --mat-sys-primary-container: rgb(20, 62, 153);
+    --mat-sys-on-primary: rgb(20, 62, 153);
+    --mat-sys-on-primary-container: rgb(96 165 250);
+    --mat-sys-surface-tint: rgb(96 165 250);
+    --mat-sys-surface-variant: rgb(28 40 57);
+    --mat-sys-on-secondary-container: #ccd7e8;
+    --mat-sys-secondary-container: #323d4b;
+    --mat-sys-surface-container-low: #191a1c;
+    --mat-sys-surface-container-lowest: #0b0c0f;
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-level0: 0px 0px 0px 0px rgba(0, 0, 0, 0.2), 0px 0px 0px 0px rgba(0, 0, 0, 0.14), 0px 0px 0px 0px rgba(0, 0, 0, 0.12)
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-level1: 0px 2px 1px -1px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 1px 3px 0px rgba(0, 0, 0, 0.12)
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-level2: 0px 3px 3px -2px rgba(0, 0, 0, 0.2), 0px 3px 4px 0px rgba(0, 0, 0, 0.14), 0px 1px 8px 0px rgba(0, 0, 0, 0.12)
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-level3: 0px 3px 5px -1px rgba(0, 0, 0, 0.2), 0px 6px 10px 0px rgba(0, 0, 0, 0.14), 0px 1px 18px 0px rgba(0, 0, 0, 0.12)
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-level4: 0px 5px 5px -3px rgba(0, 0, 0, 0.2), 0px 8px 10px 1px rgba(0, 0, 0, 0.14), 0px 3px 14px 2px rgba(0, 0, 0, 0.12)
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-level5: 0px 7px 8px -4px rgba(0, 0, 0, 0.2), 0px 12px 17px 2px rgba(0, 0, 0, 0.14), 0px 5px 22px 4px rgba(0, 0, 0, 0.12)
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-body-large: 400 1rem / 1.5rem Roboto, 'Noto Sans JP';
     --mat-sys-body-large-font: Roboto, 'Noto Sans JP';
     --mat-sys-body-large-line-height: 1.5rem;
@@ -346,7 +301,7 @@ html>body.dark-theme {
     --mat-sys-title-small-weight: 500
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-corner-extra-large: 28px;
     --mat-sys-corner-extra-large-top: 28px 28px 0 0;
     --mat-sys-corner-extra-small: 4px;
@@ -361,7 +316,7 @@ html>body.dark-theme {
     --mat-sys-corner-small: 8px
 }
 
-html>body.dark-theme {
+html>body.dark-glass-theme {
     --mat-sys-dragged-state-layer-opacity: 0.16;
     --mat-sys-focus-state-layer-opacity: 0.12;
     --mat-sys-hover-state-layer-opacity: 0.08;

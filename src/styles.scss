@@ -17,6 +17,8 @@
 
 @import url('./theme/light.scss');
 @import url('./theme/dark.scss');
+@import url('./theme/light-glass.scss');
+@import url('./theme/dark-glass.scss');
 
 // Notification Service Styles
 .success-snackbar {
@@ -175,11 +177,13 @@ select {
 
 // styles.scss または component の SCSS に
 
-.dark-theme {
+.dark-theme,
+.dark-glass-theme {
     @import '../node_modules/prismjs/themes/prism-okaidia.css';
 }
 
-.light-theme {
+.light-theme,
+.light-glass-theme {
     @import '../node_modules/prismjs/themes/prism.css';
 }
 
@@ -540,7 +544,7 @@ div {
         th,
         td {
             &:not(:first-child) {
-                border-left-color: #444;
+                border-left-color: var(--plain-border-color);
                 border-left-width: 2px;
                 border-left-style: dotted;
             }

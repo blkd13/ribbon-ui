@@ -190,6 +190,14 @@
           <mat-icon>save</mat-icon>
         </button>
         <!--
+        <button mat-icon-button color="primary" (click)="openModelSetting()" title="設定">
+          <mat-icon>settings</mat-icon>
+        </button>
+        -->
+        <a mat-icon-button color="primary" href="/terminal/{{selectedProject.id}}/" target="_blank" title="コンソール">
+          <mat-icon>terminal</mat-icon>
+        </a>
+        <!--
         <button mat-icon-button color="primary" (click)="openModelSetting()" [title]="'SETTINGS' | translate">
           <mat-icon>settings</mat-icon>
         </button>
@@ -404,7 +412,7 @@
     } @else {
     <!-- リスト表示 -->
 
-    <div class="flex gap-0.5 px-2 w-full hidden-custom-scroll mt-2" style="z-index: 3;">
+    <div class="flex gap-0.5 px-2 pb-2 w-full hidden-custom-scroll mt-2" style="z-index: 3;">
       @for(thread of selectedThreadGroup.threadList;track $index;let tIndex=$index) {
       <div class="w-0 flex-1">
         @if(messageGroupIdListMas[thread.id]; as messageGroupIdList) {
@@ -610,6 +618,7 @@
             <mat-icon>attach_file</mat-icon>
             <span>{{ 'ATTACH_FILE' | translate }}</span>
           </button>
+          <!--           
           <button mat-menu-item (click)="contextCacheControl(selectedThreadGroup)">
             <mat-icon>upload</mat-icon>
             <span>{{ 'CONTEXT_CACHE' | translate }}{{isCacheLive(selectedThreadGroup)?(' ' + ('DELETE' | translate)):('
@@ -619,6 +628,7 @@
             <mat-icon>question_mark</mat-icon>
             <span>{{ 'WHAT_IS_CONTEXT_CACHE' | translate }}</span>
           </a>
+          -->
           <button mat-menu-item (click)="openBulk()">
             <mat-icon>fast_forward</mat-icon>
             <span>{{ 'BATCH_EXECUTION' | translate }}</span>

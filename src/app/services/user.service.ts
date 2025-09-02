@@ -7,8 +7,28 @@ import { LoggerService } from './logger';
 
 declare var _paq: any;
 
-export type UserSettingKey = 'chatLayout' | 'chatTabLayout' | 'enterMode' | 'theme' | 'historyCloseMode' | 'language';
-export type Config = { value: Record<UserSettingKey, any> };
+
+export namespace ConfigKeys {
+  export type ChatLayout = 'flex' | 'grid';
+  export type ChatTabLayout = 'tabs' | 'column';
+  export type EnterMode = 'Ctrl+Enter' | 'Enter';
+  export type Theme = 'system' | 'dark' | 'light' | 'dark-glass' | 'light-glass';
+  export type Language = 'auto' | 'ja' | 'en' | 'zh';
+  // 履歴を閉じる設定：0=閉じない、1=ユーザープロンプトのみ閉じる、2=両方閉じる
+  export type HistoryCloseMode = 0 | 1 | 2;
+}
+export type Config = {
+  // key: 'config',
+  value: {
+    chatLayout: ConfigKeys.ChatLayout,
+    chatTabLayout: ConfigKeys.ChatTabLayout,
+    enterMode: ConfigKeys.EnterMode,
+    theme: ConfigKeys.Theme,
+    historyCloseMode: ConfigKeys.HistoryCloseMode,
+    language: ConfigKeys.Language,
+  }
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -19,13 +39,12 @@ export class UserService {
   readonly auth: AuthService = inject(AuthService);
   readonly logger: LoggerService = inject(LoggerService);
 
-  chatLayout: 'flex' | 'grid' = 'flex'; // チャットエリアのレイアウト
-  chatTabLayout: 'tabs' | 'column' = 'column'; // チャットタブのレイアウト
-  enterMode: 'Ctrl+Enter' | 'Enter' = 'Ctrl+Enter'; // Enterボタンだけで送信できるようにする
-  theme: 'system' | 'light' | 'dark' = 'system'; // テーマ
-  language: 'auto' | 'ja' | 'en' | 'zh' = 'auto'; // 言語設定
-  // 履歴を閉じる設定：0=閉じない、1=ユーザープロンプトのみ閉じる、2=両方閉じる
-  historyCloseMode: 0 | 1 | 2 = 0;
+  chatLayout: ConfigKeys.ChatLayout = 'flex'; // チャットエリアのレイアウト
+  chatTabLayout: ConfigKeys.ChatTabLayout = 'column'; // チャットタブのレイアウト
+  enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter'; // Enterボタンだけで送信できるようにする
+  theme: ConfigKeys.Theme = 'system'; // テーマ
+  language: ConfigKeys.Language = 'auto'; // 言語設定
+  historyCloseMode: ConfigKeys.HistoryCloseMode = 0;
   setting: Config = { value: { chatLayout: this.chatLayout, chatTabLayout: this.chatTabLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } };
 
   constructor() {
@@ -50,40 +69,42 @@ export class UserService {
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
-  setTheme(theme: 'system' | 'dark' | 'light'): Observable<Config> {
+  setTheme(theme: ConfigKeys.Theme): Observable<Config> {
     this.theme = theme;
     _paq.push(['trackEvent', 'ユーザー設定', 'テーマ切替', this.theme]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
-  applyTheme(theme: 'system' | 'dark' | 'light'): void {
+  applyTheme(theme: ConfigKeys.Theme): void {
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-      theme = prefersDark.matches ? 'dark' : 'light';
-    } else { }
-    document.body.classList.remove('dark-theme', 'light-theme');
+      theme = prefersDark.matches ? 'dark-glass' : 'light-glass';
+    } else {
+      theme = `${theme}-glass` as 'dark-glass' | 'light-glass';
+    }
+    document.body.classList.remove('dark-theme', 'light-theme', 'dark-glass-theme', 'light-glass-theme');
     document.body.classList.add(theme + '-theme');
   }
 
-  setEnterMode(enterMode: 'Enter' | 'Ctrl+Enter' = 'Ctrl+Enter'): Observable<Config> {
+  setEnterMode(enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter'): Observable<Config> {
     this.enterMode = enterMode;
     _paq.push(['trackEvent', '設定', 'Enterモード', this.enterMode]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
-  setHistoryCloseMode(historyCloseMode: 0 | 1 | 2): Observable<Config> {
+  setHistoryCloseMode(historyCloseMode: ConfigKeys.HistoryCloseMode): Observable<Config> {
     this.historyCloseMode = historyCloseMode;
     _paq.push(['trackEvent', 'ユーザー設定', '履歴閉じる設定', this.historyCloseMode]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
-  setLanguage(language: 'auto' | 'ja' | 'en' | 'zh'): Observable<Config> {
+  setLanguage(language: ConfigKeys.Language): Observable<Config> {
     this.language = language;
     _paq.push(['trackEvent', 'ユーザー設定', '言語切替', this.language]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
-  saveSetting(theme: 'system' | 'dark' | 'light', enterMode: 'Enter' | 'Ctrl+Enter' = 'Ctrl+Enter', historyCloseMode?: 0 | 1 | 2, language?: 'auto' | 'ja' | 'en' | 'zh'): Observable<Config> {
+  saveSetting(theme: ConfigKeys.Theme, enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter', historyCloseMode?: ConfigKeys.HistoryCloseMode, language?: ConfigKeys.Language): Observable<Config> {
     this.theme = theme;
     this.enterMode = enterMode;
     if (historyCloseMode !== undefined) {

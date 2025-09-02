@@ -767,7 +767,7 @@ export interface PresetDef {
   label: string;
   tooltip?: string;
   badge?: string;
-  modelSelection?: { model: string, provider: AIProviderType }[];
+  modelSelection?: { model: string, provider?: AIProviderType }[];
   tool_choice?: 'auto' | 'none' | 'required';
   tool_names?: string[];
   tool_groups?: string[];

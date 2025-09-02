@@ -905,7 +905,8 @@ export class MemberManagementComponent implements OnInit, OnDestroy {
 
         const updateRequest = {
             role: newRole,
-            isActive: formValue.isActive
+            isActive: formValue.isActive,
+            userId: this.selectedMember.userId,
         };
 
         this.subscriptions.add(

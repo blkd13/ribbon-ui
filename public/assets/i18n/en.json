@@ -592,5 +592,8 @@
     "ERROR_LOADING_LICENSES": "Error loading license information",
     "MERMAID_CODE_FIXED": "Mermaid code has been fixed",
     "MERMAID_SAVE_FAILED": "Failed to save Mermaid code fixes",
-    "MERMAID_FIX_ERROR": "An error occurred during Mermaid fix process"
+    "MERMAID_FIX_ERROR": "An error occurred during Mermaid fix process",
+    "TERMS_OF_SERVICE": "Terms of Service",
+    "PRIVACY_POLICY": "Privacy Policy",
+    "APP_INFO": "App Information"
 }
