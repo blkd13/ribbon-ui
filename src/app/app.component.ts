@@ -63,7 +63,7 @@ export class AppComponent implements OnInit {
         _paq.push(['setCustomUrl', event.urlAfterRedirects]);
         _paq.push(['trackPageView']);
         console.log('Tracking page view:', event.urlAfterRedirects);
-        this.isLoginpage = event.urlAfterRedirects === '/login';
+        this.isLoginpage = event.urlAfterRedirects.endsWith('/login');
       }
     });
   }

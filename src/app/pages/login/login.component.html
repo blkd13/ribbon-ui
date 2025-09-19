@@ -12,6 +12,23 @@
 @if(!(g.info$ | async)?.user){
 <div class="login-container">
 
+    <div class="login-preferences">
+        <div class="lang-select">
+            <label for="language" class="sr-only">Language</label>
+            <select id="language" [ngModel]="selectedLanguage" (ngModelChange)="changeLanguage($event)">
+                <option value="auto">Auto</option>
+                <option value="ja">日本語</option>
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+            </select>
+        </div>
+        <button type="button" class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'テーマ切替'">
+            <mat-icon>
+                {{ selectedTheme === 'system' ? 'settings_brightness' : (selectedTheme.includes('dark') ? 'dark_mode' : 'light_mode') }}
+            </mat-icon>
+        </button>
+    </div>
+
     <div class="flex items-center gap-5 mb-10 pb-7">
         <!-- <img class="block w-[96px] h-[96px]" src="/image/ribbon-full.png"> -->
         <img class="block w-[96px] h-[96px]" src="./image/ribbon-mid.png">
@@ -28,18 +45,20 @@
         @if(apiProviderGroupedList[key].length===1){
         <a class="login-button federation"
             href="{{curEnv.apiUrl}}/public/oauth/{{g.orgKey}}/{{provider.type}}-{{provider.name}}/login">
-            <img src="./image/{{provider.type}}-logo.svg">[{{provider.type}}] {{provider.label}}
+            <img src="./image/{{provider.type}}-logo.svg" alt="{{provider.type}} logo">
+            <!-- [{{provider.type}}] -->
+            {{provider.label}}
         </a>
         } @else {
         <mat-expansion-panel style="border-radius: 32px;margin-top: 20px;">
             <mat-expansion-panel-header class="login-button federation m-0" style="margin: 0;">
-                <img src="./image/{{provider.type}}-logo.svg" class="mr-4">{{provider.type}}
+                <img src="./image/{{provider.type}}-logo.svg" class="mr-4" alt="{{provider.type}} logo">{{provider.type}}
                 <!-- <mat-panel-title>{{group.label}}</mat-panel-title> -->
             </mat-expansion-panel-header>
             @for(provider of apiProviderGroupedList[key];track $index){
             <a class="login-button federation"
                 href="{{curEnv.apiUrl}}/public/oauth/{{g.orgKey}}/{{provider.type}}-{{provider.name}}/login">
-                <img src="./image/{{provider.type}}-logo.svg">{{provider.label}}
+                <img src="./image/{{provider.type}}-logo.svg" alt="{{provider.type}} logo">{{provider.label}}
             </a>
             }
         </mat-expansion-panel>
@@ -50,16 +69,19 @@
         <h3 class="text-left">{{ 'EMAIL_AUTH' | translate }}</h3>
         <div class="form-group">
             <label for="email">{{ 'EMAIL' | translate }}</label>
-            <input formControlName="email" type="text" id="email" name="email"
-                placeholder="{{ 'ENTER_EMAIL' | translate }}">
+            <input formControlName="email" type="email" id="email" name="email"
+                placeholder="{{ 'ENTER_EMAIL' | translate }}" autocomplete="username" inputmode="email">
         </div>
         <div class="form-group">
             <label for="password">{{ 'PASSWORD' | translate }}</label>
             <input formControlName="password" [type]="hidePassword?'password':'text'" id="password" name="password"
-                placeholder="{{ 'ENTER_PASSWORD' | translate }}">
-            <mat-icon class="eye" (click)="hidePassword=!hidePassword">visibility{{hidePassword?'':'_off'}}</mat-icon>
+                placeholder="{{ 'ENTER_PASSWORD' | translate }}" autocomplete="current-password">
+            <mat-icon class="eye" (click)="hidePassword=!hidePassword" [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePassword?'':'_off'}}</mat-icon>
         </div>
-        <button type="submit" class="login-button" [disabled]="loginForm.invalid">{{ 'LOGIN' | translate }}</button>
+        <button type="submit" class="login-button" [disabled]="loginForm.invalid || isSubmitting">{{ 'LOGIN' | translate }}</button>
+        <button type="button" class="login-button guest" (click)="guestLogin()" [disabled]="isSubmitting">
+            {{ 'GUEST_USER' | translate }}
+        </button>
         <a href="javascript:void(0)" (click)="onChangeState('sendmail')" class="forgot-password">
             {{ 'FORGOT_PASSWORD' | translate }}<mat-icon>arrow_forward</mat-icon>
         </a>
@@ -107,15 +129,15 @@
         <div class="form-group">
             <label for="password">{{ 'PASSWORD' | translate }}</label>
             <input formControlName="password" [type]="hidePassword?'password':'text'" id="password" name="password"
-                placeholder="{{ 'ENTER_PASSWORD' | translate }}">
-            <mat-icon class="eye" (click)="hidePassword=!hidePassword">visibility{{hidePassword?'':'_off'}}</mat-icon>
+                placeholder="{{ 'ENTER_PASSWORD' | translate }}" autocomplete="new-password">
+            <mat-icon class="eye" (click)="hidePassword=!hidePassword" [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePassword?'':'_off'}}</mat-icon>
         </div>
         <div class="form-group">
             <label for="passwordConfirm">{{ 'PASSWORD_CONFIRM' | translate }}</label>
             <input formControlName="passwordConfirm" [type]="hidePasswordConfirm?'password':'text'" id="passwordConfirm"
-                name="passwordConfirm" placeholder="{{ 'ENTER_PASSWORD_CONFIRM' | translate }}">
+                name="passwordConfirm" placeholder="{{ 'ENTER_PASSWORD_CONFIRM' | translate }}" autocomplete="new-password">
             <mat-icon class="eye"
-                (click)="hidePasswordConfirm=!hidePasswordConfirm">visibility{{hidePasswordConfirm?'':'_off'}}</mat-icon>
+                (click)="hidePasswordConfirm=!hidePasswordConfirm" [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePasswordConfirm?'':'_off'}}</mat-icon>
         </div>
         <button type="submit" class="login-button" [disabled]="passwordResetForm.invalid">
             {{ 'RESET' | translate}}

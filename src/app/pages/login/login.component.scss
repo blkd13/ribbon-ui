@@ -2,24 +2,46 @@
 
 .login-container {
     position: relative;
-    width: 550px;
+    width: 100%;
+    max-width: 550px;
     margin: 50px auto;
-    padding: 20px;
+    /* 上部に言語/テーマ切替のスペースを確保してロゴと重ならないようにする */
+    padding: 64px 20px 20px;
     border-radius: 8px;
     background: var(--plain-background);
     color: var(--plain-color);
     box-shadow: var(--plain-shadow);
     text-align: center;
+
+    // スマートフォン対応
+    @media (max-width: 768px) {
+        margin: 20px auto;
+        /* モバイルでも重ならない最低限の余白を確保 */
+        padding: 56px 16px 16px;
+        max-width: calc(100vw - 32px);
+        border-radius: 6px;
+    }
+
+    // 小さなスマートフォン対応
+    @media (max-width: 480px) {
+        margin: 10px auto;
+        padding: 52px 12px 12px;
+        max-width: calc(100vw - 24px);
+    }
 }
 
 .login-title {
     text-align: left;
+
+    @media (max-width: 480px) {
+        font-size: 1.4rem;
+    }
 }
 
 // .login-container::before {
 //     content: '';
 //     border-radius: 8px;
-//     background-image: url("/image/ribbon-mid.png") !important;
+//     background-image: url("/image/hapteec-mid.png") !important;
 //     background-repeat: no-repeat;
 //     background-position: center;
 //     background-size: 400px 400px;
@@ -36,6 +58,31 @@
 .login-logo img {
     max-width: 100px;
     margin-bottom: 20px;
+
+    @media (max-width: 480px) {
+        max-width: 80px;
+        margin-bottom: 16px;
+    }
+}
+
+// ヘッダー部分のレスポンシブ対応
+.flex.items-center.gap-5.mb-10.pb-7 {
+    @media (max-width: 480px) {
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+
+        img {
+            width: 64px !important;
+            height: 64px !important;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            text-align: center;
+        }
+    }
 }
 
 .login-form {
@@ -45,6 +92,10 @@
 
 .form-group {
     margin-bottom: 15px;
+
+    @media (max-width: 480px) {
+        margin-bottom: 12px;
+    }
 }
 
 .form-group label {
@@ -52,6 +103,10 @@
     margin-bottom: 5px;
     text-align: left;
     color: var(--plain-color);
+
+    @media (max-width: 480px) {
+        font-size: 0.9rem;
+    }
 }
 
 .form-group input {
@@ -61,6 +116,12 @@
     border-radius: 4px;
     background: var(--plain-background);
     color: var(--plain-color);
+    box-sizing: border-box;
+
+    @media (max-width: 480px) {
+        padding: 12px;
+        font-size: 16px; // iOSでズームを防ぐため
+    }
 }
 
 .login-button {
@@ -72,10 +133,27 @@
     cursor: pointer;
     margin-top: 10px;
     transition: all 0.3s 0s ease;
+    min-height: 44px; // タッチターゲットサイズの確保
+
+    @media (max-width: 480px) {
+        padding: 12px 20px;
+        font-size: 1rem;
+        min-height: 48px;
+    }
 }
 
 .login-button:hover {
     background-color: color.mix(black, rgb(105 184 205), 10%);
+}
+
+.login-button.guest {
+    background: transparent;
+    color: var(--plain-color);
+    border: 1px solid var(--plain-border-color);
+}
+
+.login-button.guest:hover {
+    background: #eee;
 }
 
 .login-button:disabled {
@@ -87,10 +165,22 @@
 .forgot-password {
     display: flex;
     justify-content: end;
+    align-items: center;
     margin-top: 20px;
-    // color: #0099ff;
-    // text-decoration: underline;
     text-align: right;
+    min-height: 44px; // タッチターゲットサイズの確保
+
+    @media (max-width: 768px) {
+        justify-content: center;
+        text-align: center;
+        margin-top: 16px;
+    }
+
+    @media (max-width: 480px) {
+        font-size: 0.9rem;
+        margin-top: 12px;
+        min-height: 48px;
+    }
 }
 
 .forgot-password:hover {
@@ -100,16 +190,21 @@
 .login-container .login-form .federation {
     display: flex;
     justify-content: center;
+    align-items: center;
     color: black;
     background-color: white;
     box-shadow: var(--plain-shadow);
     gap: 10px;
     text-decoration: none;
     margin-top: 20px;
+    min-height: 44px;
+    padding: 10px 20px;
+    border-radius: 4px;
 
     img {
         height: 24px;
         width: auto;
+        flex-shrink: 0;
     }
 
     &:hover {
@@ -121,19 +216,138 @@
             justify-content: center;
         }
     }
+
+    @media (max-width: 480px) {
+        padding: 12px 16px;
+        margin-top: 16px;
+        min-height: 48px;
+        font-size: 0.9rem;
+
+        img {
+            height: 20px;
+        }
+    }
+}
+
+// Angular Materialの拡張パネル対応
+mat-expansion-panel {
+    @media (max-width: 480px) {
+        margin-top: 16px !important;
+
+        .mat-expansion-panel-header {
+            padding: 12px 16px !important;
+            min-height: 48px !important;
+        }
+    }
 }
 
 .terms-and-privacy {
     width: 100%;
-    position: fixed;
-    bottom: 10px;
+    position: static; // デフォルトは重ならないようフロー内に配置
     display: flex;
     justify-content: center;
     gap: 36px;
+    padding: 0 20px;
+    box-sizing: border-box;
+    margin-top: 24px;
 
     .link {
         display: flex;
+        align-items: center;
+        min-height: 44px;
     }
+
+    // 充分に縦幅があるデスクトップのみ固定表示
+    @media (min-width: 1024px) and (min-height: 800px) {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 10px;
+    }
+
+    @media (max-width: 768px) {
+        gap: 24px;
+        padding: 0 16px;
+        font-size: 0.9rem;
+        margin-top: 16px;
+    }
+
+    @media (max-width: 480px) {
+        // flex-direction: column;
+        gap: 8px;
+        font-size: 0.8rem;
+        margin-top: 12px;
+
+        .link {
+            justify-content: center;
+            min-height: 36px;
+        }
+    }
+}
+
+// ログイン画面右上の言語/テーマ切替
+.login-preferences {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1; // 念のため重なり順を明示
+
+    select {
+        padding: 6px 8px;
+        background: var(--plain-background);
+        color: var(--plain-color);
+        border: 1px solid var(--plain-border-color);
+        border-radius: 4px;
+    }
+
+    .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 4px;
+        border: 1px solid var(--plain-border-color);
+        background: var(--plain-background);
+        color: var(--plain-color);
+        cursor: pointer;
+
+        &:hover {
+            background: #eee;
+        }
+    }
+
+    @media (max-width: 480px) {
+        top: 8px;
+        right: 8px;
+        gap: 6px;
+
+        select {
+            padding: 4px 6px;
+            font-size: 0.9rem;
+        }
+
+        .theme-toggle {
+            width: 32px;
+            height: 32px;
+        }
+    }
+}
+
+// 視覚的に不可視なラベル（スクリーンリーダー用）
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 /* 警告スタイル */
@@ -151,10 +365,60 @@
     /* 文字サイズ */
     font-size: 16px;
     margin-bottom: 20px;
+
+    @media (max-width: 480px) {
+        padding: 8px;
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
 }
 
 .eye {
     position: absolute;
     margin-top: 10px;
     right: 36px;
+    cursor: pointer;
+    min-height: 24px;
+    min-width: 24px;
+
+    @media (max-width: 480px) {
+        right: 28px;
+        margin-top: 12px;
+    }
+}
+
+// 区切り線のレスポンシブ対応
+.w-full.my-10 {
+    @media (max-width: 480px) {
+        margin: 16px 0 !important;
+    }
+}
+
+// テキストエリアのレスポンシブ対応
+.text-left {
+    @media (max-width: 480px) {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+}
+
+// セクションタイトルのレスポンシブ対応
+h3.text-left {
+    @media (max-width: 480px) {
+        font-size: 1.1rem;
+    }
+}
+
+// 横スクロールの防止
+* {
+    box-sizing: border-box;
+}
+
+// フォーカス時のアウトライン（アクセシビリティ向上）
+.login-button:focus,
+.form-group input:focus,
+.forgot-password:focus,
+.federation:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
 }

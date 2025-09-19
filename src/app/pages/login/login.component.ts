@@ -3,27 +3,28 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+// import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { finalize } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
-import { DialogComponent } from '../../parts/dialog/dialog.component';
+// import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { AuthService } from '../../services/auth.service';
+import { ConfigKeys, UserService } from '../../services/user.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { GService } from '../../services/g.service';
 import { LoggerService } from '../../services/logger';
-import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-login',
   imports: [
     CommonModule, FormsModule, ReactiveFormsModule,
-    MatSnackBarModule, MatCardModule, MatDialogModule, TranslateModule, MatIconModule,
+    MatSnackBarModule, MatCardModule, /* MatDialogModule, */ TranslateModule, MatIconModule,
     MatExpansionModule, MatButtonModule,
   ],
   templateUrl: './login.component.html',
@@ -37,11 +38,12 @@ export class LoginComponent {
   sendMailForm!: FormGroup;
   passwordResetForm!: FormGroup;
 
-  firstView = '/chat';
-
   errorMessageList: string[] = [];
   hidePassword = true;
   hidePasswordConfirm = true;
+  isSubmitting = false;
+  selectedLanguage: ConfigKeys.Language = 'auto';
+  selectedTheme: ConfigKeys.Theme = 'light';
 
   curEnv = environment;
 
@@ -51,7 +53,7 @@ export class LoginComponent {
   readonly router: Router = inject(Router);
   readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
-  readonly dialog: MatDialog = inject(MatDialog);
+  // readonly dialog: MatDialog = inject(MatDialog);
   readonly g: GService = inject(GService);
   readonly extApiProviderService: ExtApiProviderService = inject(ExtApiProviderService);
   readonly logger: LoggerService = inject(LoggerService);
@@ -59,6 +61,7 @@ export class LoginComponent {
 
   apiProviderKeys: string[] = [];
   apiProviderGroupedList: { [type: string]: ExtApiProviderEntity[] } = {};
+  readonly firstView = `chat`;
 
   ngOnInit(): void {
     document.title = this.translate.instant('APP_TITLE');
@@ -95,7 +98,7 @@ export class LoginComponent {
         },
         error: error => {
           alert(this.translate.instant('INVALID_LINK_ALERT'));
-          this.router.navigate(['/login']);
+          this.router.navigate([`${this.g.isMobilePrefix}login`]);
         }
       });
     } else {
@@ -103,7 +106,7 @@ export class LoginComponent {
       this.authService.getUser().subscribe({
         next: next => {
           this.logger.info('User authenticated, redirecting to main view:', next);
-          this.router.navigate([this.firstView]);
+          this.router.navigate([`${this.g.isMobilePrefix}${this.firstView}`]);
         },
         error: error => {
           // 未ログイン
@@ -125,16 +128,28 @@ export class LoginComponent {
       password: ['', Validators.required],
       passwordConfirm: ['', Validators.required],
     });
+
+    // 未ログインでも選べる表示用の初期値
+    this.selectedLanguage = this.userService.language || 'auto';
+    this.selectedTheme = this.userService.theme || 'light';
   }
 
   onSubmit(): void {
     this.logger.debug('Login form submitted:', { email: this.loginForm.value.email });
 
     if (this.loginForm.valid) {
-      this.authService.login(this.loginForm.value.email || '', this.loginForm.value.password || '').subscribe({
+      this.isSubmitting = true;
+      this.authService.login(this.loginForm.value.email || '', this.loginForm.value.password || '')
+        .pipe(finalize(() => this.isSubmitting = false))
+        .subscribe({
         next: (user) => {
           this.logger.info('Login successful, redirecting:', user);
-          this.router.navigate([this.firstView]);
+          // ログイン前に選択したテーマ/言語を保存（任意・失敗しても遷移継続）
+          this.userService.saveSetting(this.selectedTheme, this.userService.enterMode, this.userService.historyCloseMode, this.selectedLanguage).subscribe({
+            next: () => {},
+            error: () => {}
+          });
+          this.router.navigate([`${this.g.isMobilePrefix}${this.firstView}`]);
         },
         error: (error) => {
           this.errorMessageList = [this.translate.instant('AUTHENTICATION_FAILED')];
@@ -146,30 +161,37 @@ export class LoginComponent {
     }
   }
 
-  guestLogin(): void {
-    this.authService.guestLogin().subscribe({
-      next: user => {
-        this.logger.info('Guest login successful:', user);
-        this.dialog.open(DialogComponent, {
-          data: {
-            title: this.translate.instant('ALERT'),
-            message: this.translate.instant('GUEST_MODE_WARNING'),
-            options: [this.translate.instant('OK'), this.translate.instant('CANCEL')]
-          }
-        }).afterClosed().subscribe({
-          next: next => {
-            if (next === 0) {
-              // OKならログイン
-              this.router.navigate([this.firstView]);
-            } else {
-              // キャンセルならログアウト
-              this.authService.logout();
+  changeLanguage(lang: ConfigKeys.Language): void {
+    this.selectedLanguage = lang;
+    this.userService.language = lang;
+    const useLang = lang === 'auto' ? this.translate.getBrowserLang() || 'en' : lang;
+    this.translate.use(useLang);
             }
-          }
+
+  toggleTheme(): void {
+    const order: ConfigKeys.Theme[] = ['system', 'light', 'dark'];
+    const currentIndex = Math.max(0, order.indexOf(this.selectedTheme));
+    const next = order[(currentIndex + 1) % order.length];
+    this.selectedTheme = next;
+    this.userService.applyTheme(next);
+    this.userService.theme = next;
+  }
+
+  guestLogin(): void {
+    this.isSubmitting = true;
+    this.authService.guestLogin()
+      .pipe(finalize(() => this.isSubmitting = false))
+      .subscribe({
+      next: user => {
+        this.logger.info('Guest login successful, redirecting:', user);
+        this.userService.saveSetting(this.selectedTheme, this.userService.enterMode, this.userService.historyCloseMode, this.selectedLanguage).subscribe({
+          next: () => {},
+          error: () => {}
         });
+        this.router.navigate([`${this.g.isMobilePrefix}${this.firstView}`]);
       },
       error: (error) => {
-        this.errorMessageList = [this.translate.instant('GUEST_MODE_UNAVAILABLE')];
+        this.errorMessageList = [this.translate.instant('AUTHENTICATION_FAILED')];
         this.logger.error('Guest login failed:', error);
       },
     });
@@ -233,7 +255,7 @@ export class LoginComponent {
     this.authService.passwordReset(this.passwordResetForm.value.password, this.passwordResetForm.value.passwordConfirm).subscribe({
       next: (resDto) => {
         this.logger.info('Password reset successful, redirecting:', resDto);
-        this.router.navigate([this.firstView]);
+        this.router.navigate([`${this.g.isMobilePrefix}${this.firstView}`]);
       },
       error: (error) => {
         this.logger.error('Password reset failed:', error);

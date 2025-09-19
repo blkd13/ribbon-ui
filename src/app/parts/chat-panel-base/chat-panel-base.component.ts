@@ -19,6 +19,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { ContentPart, ContentPartType, MessageForView, MessageGroupForView, Thread } from '../../models/project-models';
 import { ChatService } from '../../services/chat.service';
+import { GService } from '../../services/g.service';
 import { LoggerService } from '../../services/logger';
 import { MermaidValidatorService } from '../../services/mermaid-validator.service';
 import { ToolCallPartCommand, ToolCallPartType, ToolCallSet } from '../../services/tool-call.service';
@@ -106,6 +107,7 @@ export class ChatPanelBaseComponent implements OnInit {
   readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   readonly dialog: MatDialog = inject(MatDialog);
   readonly translateService: TranslateService = inject(TranslateService);
+  readonly g: GService = inject(GService);
 
   readonly effectBitCounter = effect(() => {
     this.bitCounter();
@@ -679,6 +681,12 @@ export class ChatPanelBaseComponent implements OnInit {
       });
 
     } else { }
+  }
+
+  toggleExpansion($event: MouseEvent, exp: MatExpansionPanel): void {
+    $event.stopImmediatePropagation();
+    $event.preventDefault();
+    exp.toggle();
   }
 
   /** イベント伝播しないように止める */

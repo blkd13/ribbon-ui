@@ -1,9 +1,14 @@
 :host {
+
     ::ng-deep {
         .mat-expanded {
             .mat-expansion-panel-header-description {
                 visibility: hidden;
             }
+        }
+
+        .mat-expansion-panel-header {
+            padding: 0 8px 0 24px;
         }
 
         .mat-expansion-panel-header-description {
@@ -12,12 +17,14 @@
 
         .mat-expansion-panel-header-title {
             flex-grow: 0;
-            width: 100px;
+            width: 20px;
             flex-basis: auto;
         }
     }
 
     --mat-expansion-header-collapsed-state-height: 38px;
+    --mat-expansion-header-expanded-state-height: 38px;
+    // --mat-expansion-header-expanded-state-height: 64px;
 }
 
 .message-color-assistant-model-name {

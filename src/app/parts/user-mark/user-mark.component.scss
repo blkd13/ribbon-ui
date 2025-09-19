@@ -1,0 +1,54 @@
+.container {
+    bottom: 0;
+    text-align: center;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    background-color: transparent;
+
+    @media (min-width: 768px) {
+        width: 209px;
+    }
+
+    @media (max-width: 767px) {
+        width: auto;
+        height: auto;
+    }
+}
+
+.email {
+
+    @media (min-width: 768px) {
+        display: block;
+    }
+
+    @media (max-width: 767px) {
+        display: none;
+    }
+}
+
+.mobile-user-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--plain-color);
+
+    padding: 6px;
+
+    background: var(--background-gradient);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    z-index: 3;
+
+    svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    @media (min-width: 768px) {
+        margin: 0 10px;
+    }
+
+}

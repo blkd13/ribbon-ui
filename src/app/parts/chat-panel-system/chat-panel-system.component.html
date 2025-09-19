@@ -2,34 +2,16 @@
 
 @if(vm.messageGroup.messages && vm.messageGroup.messages.length>0){
 <mat-expansion-panel class="message" #exPanel [expanded]="vm.messageGroup.isExpanded"
-    (opened)="loadContent().subscribe()" (expandedChange)="expandedChange($event)">
+    (opened)="loadContent().subscribe()" (expandedChange)="expandedChange($event)" hideToggle>
     <mat-expansion-panel-header class="message-header">
-        <mat-panel-title class="message-title" style="font-weight: normal;">
-            <!-- モデル選択 -->
-            <!--
-            <select name="model-select" class="model-select" (click)="stopPropagation($event)"
-                [(ngModel)]="vm.thread.inDto.args.model" (change)="modelChange()">
-                <optgroup label="モデル選択" [ngClass]="[chatService.modelList[0].tag]">
-                    @for(option of chatService.modelList;track $index) {
-                    <option [ngClass]="[option.tag]" [value]="option.id" [disabled]="!option.isEnable">
-                        {{option.tag}}：{{option.id}}</option>
-                    }
-                </optgroup>
-            </select>
-            -->
-            <div class="flex absolute top-0 left-7 gap-3">
-                <!-- 
-                <div class="tip" [ngClass]="[modelIdMas[vm.thread.inDto.args.model].tag]">
-                    {{modelIdMas[vm.thread.inDto.args.model].tag}}
-                </div>
-                -->
+        <mat-panel-title class="message-title flex flex-col" style="font-weight: normal;align-items: start;">
+            <div class="flex gap-3" style="height: 16px;">
                 @if(vm.thread.inDto.args.tool_choice!=='none'){
                 @for(rec of toolGroupCheckMasRecord(toolGroupCheckMas);track $index){
                 @if(rec.checked){
                 <div class="tooltip-small-tag relative">
-                    <img [src]="'./image/'+rec.groupName+'-logo.svg'" alt="icon" class=""
+                    <img appInlineSvg [src]="'./image/'+rec.groupName+'-logo.svg'" alt="icon" class="mat-primary"
                         style="width: 14px;height: 14px;">
-                    <!-- <div>{{rec.label}}</div> -->
                 </div>
                 }
                 }
@@ -37,41 +19,22 @@
             </div>
 
             <app-model-selector name="model-select" [args]="vm.thread.inDto.args" (argsChange)="modelChange($event)"
-                (click)="stopPropagation($event)">
+                (click)="stopPropagation($event)" [opened]="exPanel.expanded">
             </app-model-selector>
-            <!-- <select name="model-select" class="model-select" (click)="stopPropagation($event)"
-                [(ngModel)]="vm.thread.inDto.args.model" (change)="modelChange()">
-                @for(modelGroupId of modelGroupIdList;track $index){
-                <optgroup [ngClass]="[modelGroupId]" [label]="modelGroupId">
-                    @for(option of modelGroupMas[modelGroupId];track $index) {
-                    <option [ngClass]="modelGroupId==='古い'?'古い':'速い'" [value]="option.id" [disabled]="!option.isEnable">
-                        {{option.id}}
-                    </option>
-                    }
-                </optgroup>
-                }
-            </select> -->
-            @if(vm.thread.inDto.args.model; as model){
-            <!--                 
-            @if(chatService.modelMap[model].isGSearch){
-            <div class="flex items-center" style="width: 150px;"
-                [matTooltip]="chatService.modelMap[model].isGSearch?'Google検索の結果をもとに回答します。直近情報（バージョン系の話）やニュースやローカルな話（天気予報）等について会話する際はONにしてください。':'Gemini以外では使用できません。'">
-                <img src="./image/google-logo.svg" alt="Googleアイコン" class="w-8 h-8" style="min-width: 30px;"
-                    [ngStyle]="{opacity: vm.thread.inDto.args.isGoogleSearch ? 1 : 0.3}"
-                    (click)="vm.thread.inDto.args.isGoogleSearch=!vm.thread.inDto.args.isGoogleSearch;stopPropagation($event);">
-            </div>
-            }
-            -->
-            }
+
+            <div style="height: 16px;"></div>
         </mat-panel-title>
-        <mat-panel-description style="width: 0;flex-grow: 1;">
+        <!-- style="width: 0;flex-grow: 1;"  -->
+        <mat-panel-description class="system-prompt-description flex items-center">
             @if(!vm.messageGroup.isExpanded){
             <div class="truncate">{{vm.messageGroup.messages[0].label}}</div>
             }
         </mat-panel-description>
+
+
         @if(tokenObject(); as tokenObject){
         @if(aiModelManagerService.modelMap[vm.thread.inDto.args.model]){
-        <div class="text-xs text-[#999] flex items-center mr-4">
+        <div class="token-obj text-xs text-[#999] flex items-center absolute right-0 mr-8">
             @if(tokenObject.totalTokens>=aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens){
             <div class="text-red-500 flex items-center gap-1 mr-1" matTooltip="Token limit exceeded">
                 <mat-icon class="text-red-500">error</mat-icon>
@@ -83,31 +46,14 @@
             {{aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens|number:'1.0-0'}} |
             ${{tokenObject.cost|number:'1.2-2'}}
         </div>
-        }@else{<div class="text-xs text-[#996] flex items-center mr-4">deprecated</div>}
+        }@else{}
         }
-        <div class="right-0 top-0 flex gap-2">
-            <!-- <div style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"> -->
-            <!--
-            <button mat-icon-button class="invisible">
-                <mat-icon>folder_zip</mat-icon>
-            </button>
-            <button mat-icon-button (click)="copyToClipboard($event)" title="クリップボードにコピー">
-                <mat-icon>content_copy</mat-icon>
-            </button>
-             -->
-            <button mat-icon-button (click)="setEdit($event)"
-                [title]="vm.messageGroup.messages[0].editing?('SAVE' | translate):('EDIT' | translate)">
-                @if(vm.messageGroup.messages[0].editing){
-                <mat-icon>check_circle</mat-icon>
-                }@else{
-                <mat-icon>edit</mat-icon>
-                }
-            </button>
-            <button mat-icon-button (click)="removeThread($event)" style="margin-right: 10px;"
-                [ngClass]="{invisible: !removable()}" [title]="'DELETE_THREAD' | translate">
-                <mat-icon>delete</mat-icon>
-            </button>
+
+        @if (!g.isMobile && exPanel.expanded) {
+        <div style="position: absolute;right: 16px;top: 24px;">
+            <ng-container *ngTemplateOutlet="controller; context: { exPanel: exPanel, position: 'top' }"></ng-container>
         </div>
+        }
     </mat-expansion-panel-header>
     <div class="flex flex-col gap-10">
         <section>
@@ -225,19 +171,19 @@
                     [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
                     <mat-expansion-panel-header>
                         <!-- <mat-panel-title> -->
-                        <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;">
+                        <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;"
+                            class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
                             <mat-icon class="group-check" (click)="toolGroupClick($event, groupDef)"
                                 [ngClass]="{'group-check-checked': toolGroupCheckMas[groupDef.group]===2, 'group-check-bar': toolGroupCheckMas[groupDef.group]===1}">
                                 {{['','remove','check'][toolGroupCheckMas[groupDef.group]]}}
                             </mat-icon>
-                            <img [src]="'./image/'+groupDef.group.split('-')[0]+'-logo.svg'" alt="icon" class="w-8 h-8"
-                                style="min-width: 30px;">
+                            <img appInlineSvg [src]="'./image/'+groupDef.group.split('-')[0]+'-logo.svg'" alt="icon"
+                                class="w-8 h-8 mat-primary" style="min-width: 30px;">
                             {{providerMas[groupDef.group]?providerMas[groupDef.group].label:groupDef.group}}
                         </div>
                         <!-- </mat-panel-title> -->
                     </mat-expansion-panel-header>
 
-                    <div class="grid-container">
                         @for(tool of groupDef.tools;track $index) {
                         <div class="channel cursor-pointer">
                             <!-- [{{tool.info.name}}] {{tool.info.label}} -->
@@ -248,7 +194,6 @@
                             </mat-checkbox>
                         </div>
                         }
-                    </div>
                 </mat-expansion-panel>
 
                 }
@@ -257,9 +202,33 @@
         </fieldset>
     </div>
 </mat-expansion-panel>
+@if (!vm.messageGroup.messages[0].editing) {
+<ng-container *ngTemplateOutlet="controller; context: { exPanel: exPanel, position: 'bottom' }"></ng-container>
+}
 } @else {
 {{vm.messageGroup.messages.length}}
 <!-- {{messageGroup.selectedIndex}} -->
 }
-}
 <!-- <div class="chat-messages"></div> -->
+
+<ng-template #controller let-exPanel="exPanel" let-position="position">
+    <div class="controller-area gap-2"
+        [ngClass]="[vm.messageGroup.role, `controller-${position}`, exPanel.expanded ? `controller-${position}--open` : ``]">
+        <button mat-icon-button (click)="setEdit($event)"
+            [title]="vm.messageGroup.messages[0].editing?('SAVE' | translate):('EDIT' | translate)">
+            @if(vm.messageGroup.messages[0].editing){
+            <mat-icon>check_circle</mat-icon>
+            }@else{
+            <mat-icon>edit</mat-icon>
+            }
+        </button>
+        <button mat-icon-button (click)="removeThread($event)" [ngClass]="{invisible: !removable()}"
+            [title]="'DELETE_THREAD' | translate">
+            <mat-icon>delete</mat-icon>
+        </button>
+    </div>
+    @if (position==='bottom' && exPanel.expanded) {
+    <div class="h-4"></div>
+    }
+</ng-template>
+}

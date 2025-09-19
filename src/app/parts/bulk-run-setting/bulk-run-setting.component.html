@@ -1,32 +1,37 @@
 <div class="container" appFileDrop (filesDropped)="onFilesDropped($event)">
-    <div>
-        <h1>一括実行設定</h1>
+    <div class="dialog-header">
+        <h1 class="title">{{ 'BULK_RUN_SETTINGS' | translate }}</h1>
+        <button mat-icon-button aria-label="close" (click)="dialogRef.close()">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+    <div class="dialog-body">
 
         <mat-radio-group color="primary" class="pb-10" [(ngModel)]="data.mode">
-            <mat-radio-button value="parallel">並列実行（スピード重視）</mat-radio-button>
-            <mat-radio-button value="serial">直列実行（一貫性重視）</mat-radio-button>
+            <mat-radio-button value="parallel">{{ 'PARALLEL_EXECUTION_SPEED' | translate }}</mat-radio-button>
+            <mat-radio-button value="serial">{{ 'SERIAL_EXECUTION_CONSISTENCY' | translate }}</mat-radio-button>
         </mat-radio-group>
 
         <mat-form-field class="textarea-field w-full mt-5">
-            <mat-label>指示ひな形</mat-label>
-            <textarea matInput type="text" name="prompt" placeholder="指示ひな形" #promptTemplateElement="ngModel"
+            <mat-label>{{ 'PROMPT_TEMPLATE' | translate }}</mat-label>
+            <textarea matInput type="text" name="prompt" [placeholder]="'PROMPT_TEMPLATE' | translate" #promptTemplateElement="ngModel"
                 [(ngModel)]="promptTemplate" (change)="validatePromptTemplate(promptTemplateElement)"
                 (focus)="onFocus($event)" required>
             </textarea>
             <!-- エラーメッセージの部分 -->
             @if(promptTemplateElement.errors&&promptTemplateElement.errors['required']){
-            <mat-error>このフィールドは必須です。</mat-error>
+            <mat-error>{{ 'REQUIRED_FIELD' | translate }}</mat-error>
             }
             {{promptTemplateElement.errors&&promptTemplateElement.errors['invalidWord']}}
             @if(promptTemplateElement.errors&&promptTemplateElement.errors['invalidWord']){
-            <mat-error>"{{'${value}'}}"という単語を含めてください。</mat-error>
+            <mat-error>{{ 'INCLUDE_WORD_VALUE' | translate }}</mat-error>
             }
         </mat-form-field>
-        <div class="mb-5">※変数の代入先は "{{'${value}'}}" です。</div>
+        <div class="mb-5">{{ 'VARIABLE_SUBSTITUTION_NOTE' | translate }}</div>
 
 
         <!-- 編集可能なテーブル -->
-        <div class="overflow-y-auto custom-scroll" style="max-height: calc(100vh - 700px);">
+        <div class="overflow-y-auto custom-scroll records">
             <table mat-table [dataSource]="dataSource" class="mat-elevation-z8 mb-10">
                 <colgroup>
                     <col style="width: 50px;">
@@ -40,11 +45,11 @@
                 </ng-container>
 
                 <ng-container matColumnDef="question">
-                    <th mat-header-cell *matHeaderCellDef>値</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'VALUE' | translate }}</th>
                     <td mat-cell *matCellDef="let element; let i = index">
                         <mat-form-field class="w-full">
                             <input matInput (paste)="onPaste($event,i)" [(ngModel)]="dataSource[i].text"
-                                placeholder="複数行の貼付け可能" (focus)="onFocus($event)" (keydown)="onKeyDown($event,i)"
+                                [placeholder]="'MULTILINE_PASTE_POSSIBLE' | translate" (focus)="onFocus($event)" (keydown)="onKeyDown($event,i)"
                                 #valueElement />
                         </mat-form-field>
                     </td>
@@ -52,7 +57,7 @@
 
                 <!-- アクション列（行の削除） -->
                 <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef>削除</th>
+                    <th mat-header-cell *matHeaderCellDef>{{ 'DELETE' | translate }}</th>
                     <td mat-cell *matCellDef="let element; let i = index">
                         <button mat-icon-button color="warn" (click)="removeRow(i)">
                             <mat-icon>delete</mat-icon>
@@ -67,14 +72,18 @@
         </div>
 
         <!-- 行の追加 -->
-        <button mat-button (click)="addRow()" class="add-row-button my-5">
-            <mat-icon>add</mat-icon> 行を追加
+        <button mat-stroked-button (click)="addRow()" class="add-row-button my-5">
+            <mat-icon>add</mat-icon>
+            <span class="ml-1">{{ 'ADD_ROW' | translate }}</span>
         </button>
 
     </div>
 
-    <!-- 一括実行ボタン -->
+    <!-- アクション -->
+    <div class="dialog-actions" mat-dialog-actions>
+        <button mat-button (click)="dialogRef.close()">{{ 'CANCEL' | translate }}</button>
     <button mat-raised-button color="primary" (click)="executeBatch()" [disabled]="isLock || !hasValidInput()">
-        実行
+            {{ 'EXECUTE' | translate }}
     </button>
+    </div>
 </div>

@@ -1,7 +1,8 @@
 @use 'sass:color';
-// :host {
-//     position: relative;
-// }
+
+:host {
+    position: relative;
+}
 
 .message {
     line-height: 1.5;
@@ -10,12 +11,59 @@
 }
 
 .message-header {
+
     select {
-        padding: 2px 5px;
-        border-radius: 4px;
+        padding: 2px 8px;
+        border-radius: 50%;
+        border: 1px solid var(--plain-border-color);
         background: var(--message-background-system);
         cursor: pointer;
-        margin-left: 2px;
+        // margin-left: 2px;
+
+        width: 26px;
+        line-height: 20px;
+        height: 26px;
+
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+
+    /* Role select: show abbreviated label (u/s) when not focused */
+    .role-select {
+
+        position: relative;
+        display: inline-block;
+    }
+
+    .role-select select {
+        color: transparent;
+        /* hide text normally */
+        // text-shadow: 0 0 0 transparent;
+    }
+
+    .role-select::after {
+        content: attr(data-abbr);
+        position: absolute;
+        left: 3px;
+        font-size: 14px;
+        text-align: center;
+        width: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: inherit;
+        pointer-events: none;
+        font-weight: 500;
+    }
+
+    /* On focus, show full labels and hide the abbreviation */
+    .role-select:focus-within select {
+        color: inherit;
+        text-shadow: none;
+    }
+
+    .role-select:focus-within::after {
+        content: '';
     }
 }
 
@@ -33,7 +81,8 @@
     &.closed {
         position: sticky;
         // top: 52px;
-        overflow: hidden;
+        overflow: visible;
+        /* allow bottom controller to protrude */
     }
 
     &.expanded {
@@ -74,9 +123,14 @@
     font-weight: bold;
 }
 
+.message.system,
+.system.controller-bottom {
+    background: var(--message-background-system);
+}
+
 // .user .message-header,
 .message.user,
-.message.user .controller-bottom {
+.user.controller-bottom {
     background: var(--message-background-user);
 
     .message-notediting {
@@ -96,7 +150,7 @@
 
 // .assistant .message-header,
 .message.assistant,
-.message.assistant .controller-bottom {
+.assistant.controller-bottom {
     background: var(--message-background-assistant);
 
     .message-notediting {
@@ -116,7 +170,7 @@
 }
 
 .message.cached,
-.message.cached .controller-bottom {
+.cached.controller-bottom {
     background-color: var(--plain-background);
 }
 
@@ -161,27 +215,54 @@
     }
 }
 
-.controller-bottom {
-    padding-right: 31px;
-    justify-content: end;
+.controller-area {
     position: absolute;
-    bottom: 10px;
+    right: 16px;
     display: flex;
-    top: auto;
-    right: 0;
+    justify-content: end;
+    height: 42px;
     border-radius: 40px;
     border: 1px solid var(--plain-border-color);
+    transform: scale(0.7);
+    transform-origin: top right;
+    padding-right: 0;
+    padding-left: 0;
+    opacity: 0.0;
+}
+
+.controller-top {
+    top: 6px;
 }
 
 .controller-bottom {
-    opacity: 0.1;
+    bottom: -28px;
+    top: auto;
     transition: opacity 0.3s;
+    z-index: 1;
 }
 
-.controller-bottom--hide {
-    bottom: 4px;
-    opacity: 0;
+:host:hover {
+
+    .controller-area,
+    .controller-bottom {
+        opacity: 1;
 }
+}
+
+.controller-bottom--open {
+    bottom: -10px;
+}
+
+@media (max-width: 778px) {
+    .controller-bottom {
+        opacity: 1;
+        transform: scale(0.7);
+        right: -22px;
+        bottom: -8px;
+    }
+}
+
+/* Removed hidden-on-collapse; bottom controller should remain visible */
 
 .controller-bottom:hover {
     opacity: 1;

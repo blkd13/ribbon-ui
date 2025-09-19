@@ -1,0 +1,376 @@
+@if(selectedThreadGroup){
+<div class="mimi" (click)="drawer.toggle()">
+  <mat-icon
+    [ngStyle]="{transform: drawer.opened?'translate(0, 0) rotate(0deg)':'translate(7px, 6px) rotate(-180deg)'}">first_page</mat-icon>
+</div>
+
+@if (!drawer.opened) {
+<a class="add-thread-mobile" matTooltip="Create new thread" (click)="clear();drawer.close()"
+  [routerLink]="['/m/chat', selectedProject.id, 'new-thread']">
+  <mat-icon class="mr-3" color="primary">add_circle</mat-icon>
+</a>
+}
+
+<div class="thread-title">{{selectedThreadGroup.title}}</div>
+
+
+<mat-drawer-container>
+  <mat-drawer mode="over" #drawer class="chat-drawer" [opened]="false">
+    <!-- スレッドリスト -->
+    <div class="mt-12 h-full w-full pt-0 overflow-hidden left-pane relative"
+      [ngClass]="{'drawer-opened':drawer.opened}">
+      <!-- スレッドリストを閉じるときに横幅が狭まるが、中身は狭めないようにするために一層設けておく -->
+      <div class="h-full w-full overflow-hidden relative flex flex-col">
+
+        <mat-menu #projectMenu="matMenu" xPosition="before" [overlapTrigger]="false">
+          @for(team of teamForViewList; track team.id) {
+          <div class="gradient-text pl-3">{{team.label}}</div>
+          @for(project of team.projects; track project.id) {
+          <a mat-menu-item [routerLink]="['/m/chat', project.id, 'new-thread']" (click)="drawer.close()">
+            {{project.label}}
+          </a>
+          }
+          @if(team !== teamForViewList[teamForViewList.length-1]){<mat-divider></mat-divider>}
+          }
+        </mat-menu>
+        @if(selectedTeam.teamType!=='Alone'){
+        <div class="share-tag">Share:{{selectedTeam.label}}</div>
+        }
+        <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Create new thread" (click)="clear();drawer.close()"
+          [routerLink]="['/m/chat', selectedProject.id, 'new-thread']">
+          <mat-icon class="mr-3 mat-primary">add_circle</mat-icon>
+          <div>{{ 'NEW_CHAT' | translate }}</div>
+        </a>
+
+        @if(g.appType==='base'){
+        } @else {
+        <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
+          (change)="rebuildThreadGroupList(threadGroupList)">
+          <mat-radio-button [value]="1">{{ 'SORT_BY_TIME' | translate }}</mat-radio-button>
+          <mat-radio-button [value]="2">{{ 'SORT_BY_NAME' | translate }}</mat-radio-button>
+        </mat-radio-group>
+        }
+
+        <!-- @for (threadGroup of threadGroupList; track threadGroup.id) {
+            <div class="custom-scroll custom-scroll--thin h-full relative">
+                <div class="relative flex items-center justify-between" style="border-bottom: 1px solid;">
+                    実体の場合はこんな囲い方してた。
+                </div>
+            </div>
+            } -->
+        <div class="relative h-0 w-full grow pl-4">
+          <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full"
+            style="height: calc(100vh - 110px);">
+            <div *cdkVirtualFor="let obj of threadGroupListForView;let $index = index;"
+              class="relative flex items-center justify-between group"
+              [ngClass]="{'thread-group':obj.threadGroup, 'selected':obj.threadGroup?.id===selectedThreadGroup.id}">
+              @if(obj.header) {
+              <div class="thread-group-header">{{ obj.header }}</div>
+              }
+
+              @if(obj.threadGroup; as threadGroup) {
+              @if (threadGroup.id === editNameThreadId) {
+              <input [(ngModel)]="threadGroup.title" name="thread-title-{{$index}}" id="thread-title-{{$index}}"
+                class="h-7 m-1 pl-4 text-[#303030]" (change)="renameThreadGroup($event, threadGroup, false, $index)"
+                (blur)="editNameThreadId=''" />
+              } @else {
+              <a class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis grow unstyled-link"
+                style="padding:5px 0 5px 10px;height: 35px;min-width: 0;width: 1px;"
+                [routerLink]="['/m/chat', selectedProject.id, threadGroup.id]" [title]="threadGroup.title"
+                (click)="drawer.close()">
+                {{threadGroup.title}}
+              </a>
+              }
+              @if(isCacheLive(threadGroup)){
+              <mat-icon
+                [matTooltip]="('CONTEXT_CACHE_ACTIVE' | translate) + ' expire:' + (threadGroup.threadList[0].inDto.args.cachedContent?.expireTime|date:'yyyy-MM-dd HH:mm:ss')">cached</mat-icon>
+              }
+
+              <button mat-icon-button [matMenuTriggerFor]="threadMenu" class="mr-4">
+                <mat-icon>more_horiz</mat-icon>
+              </button>
+
+              <mat-menu #threadMenu="matMenu">
+                <button mat-menu-item (click)="renameThreadGroup($event, threadGroup, true, $index)">
+                  <mat-icon>edit</mat-icon>
+                  <span>{{ 'EDIT' | translate }}</span>
+                </button>
+                <button mat-menu-item (click)="cloneThreadGroup($event, threadGroup.id)">
+                  <mat-icon>file_copy</mat-icon>{{ 'COPY' | translate }}
+                </button>
+                <!-- @if(projectList.length>1){
+                <button mat-menu-item [matMenuTriggerFor]="sendToProjesTemplate">
+                  <mat-icon>move_item</mat-icon>{{ 'SEND' | translate }}
+                </button>
+                } -->
+                <!--
+              <button mat-menu-item (click)="duplicate($event, thread)">
+                  <mat-icon>file_copy</mat-icon>
+                  <span>{{ 'DUPLICATE' | translate }}</span>
+              </button>
+              <button mat-menu-item (click)="export($index)">
+                  <mat-icon>download</mat-icon>
+                  <span>{{ 'EXPORT' | translate }}</span>
+              </button>
+              -->
+                <button mat-menu-item (click)="contentsDownload($event,$index, threadGroup)">
+                  <mat-icon>folder_zip</mat-icon>
+                  <span>{{ 'DOWNLOAD_CODE_BLOCKS' | translate }}</span>
+                </button>
+                <mat-divider></mat-divider>
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="removeThreadGroup($event,$index, threadGroup)">
+                  <mat-icon style="color: #FF6666">close</mat-icon>
+                  <span style="color: #FF6666">{{ 'DELETE' | translate }}</span>
+                </button>
+              </mat-menu>
+              <mat-menu #sendToProjesTemplate="matMenu">
+                @for(team of teamForViewList; track team.id) {
+                <div class="gradient-text pl-3">{{team.label}}</div>
+                @for(project of projectList;track project.id){
+                @if(project!==selectedProject && project.teamId===team.id){
+                <button mat-menu-item (click)="sendThreadToProject(project, threadGroup)">{{project.label}}</button>
+                }
+                }
+                @if(team !== teamForViewList[teamForViewList.length-1]){<mat-divider></mat-divider>}
+                }
+              </mat-menu>
+              }
+            </div>
+          </cdk-virtual-scroll-viewport>
+
+          @if (isThreadGroupLoading){
+          <div class="loading-cover loading-cover--sub" style="z-index: 1;">
+            <mat-spinner></mat-spinner>
+          </div>
+          }
+        </div>
+        <!-- <button (click)="export(-1)">export all</button> -->
+      </div>
+    </div>
+  </mat-drawer>
+  <mat-drawer-content>
+    <div class="command-dock">
+      <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse()"
+        [title]="'EXPAND_COLLAPSE_CHAT_PANELS' | translate">
+        <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
+      </button>
+      <button mat-icon-button color="primary" (click)="openSaveAsTemplateDialog()"
+        [title]="'SAVE_AS_TEMPLATE' | translate">
+        <mat-icon>save</mat-icon>
+      </button>
+    </div>
+    <div class="chat-mobile">
+      @let tIndex = tabIndex;
+      @let mainThread = selectedThreadGroup.threadList[tIndex];
+      @let preChat = messageGroupIdListMas[selectedThreadGroup.threadList[0].id] && 1 >= messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length;
+      <!-- System prompt header in pre-chat -->
+      @if(preChat){
+      @if(mainThread && messageGroupIdListMas[mainThread.id]){
+      @if(messageService.messageGroupMas[messageGroupIdListMas[mainThread.id][0]]; as messageGroup){
+      <div class="system-top">
+        <app-chat-panel-system class="top-0" style="z-index:3;" [messageGroup]="messageGroup"
+          [bitCounter]="messageGroupBitCounter[messageGroup.id]" [thread]="mainThread"
+          [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
+          (edit)="editChat($event)" (removeThread)="removeThread($event)" (argsChange)="changeModel(tIndex,$event)"
+          (threadChange)="editSystem($event)" (fileSelectionUpdateEmitter)="onChange()"
+          (expanded)="expanded($event, 0, tIndex, messageGroup)" [tokenObject]="tokenObjList[tIndex]">
+        </app-chat-panel-system>
+      </div>
+      }
+      }
+      }
+
+      <!-- Start screen (pre-chat): centered controls -->
+      @if(preChat){
+      <div class="start-screen">
+        <div class="start-section">
+          <div class="start-title">{{ 'THREAD_COUNT' | translate }}</div>
+          <div class="start-row">
+            @for(index of [1,2,3,4]; track $index){
+            <button class="start-card" [ngClass]="{selected:selectedThreadGroup.threadList.length===index}"
+              (click)="loadPreset(index)">x{{index}}</button>
+            }
+            <button class="start-card" (click)="loadPreset(selectedThreadGroup.threadList.length+1)">+
+            </button>
+          </div>
+        </div>
+
+        <div class="start-section">
+          <div class="start-title">{{ 'TOOLS' | translate }}</div>
+          <div class="start-row wrap">
+            @for(toolGroup of toolCallService.tools; track $index){
+            <button class="start-chip" [ngClass]="{selected: isToolGroupEnabled(toolGroup.group)}"
+              (click)="toggleToolGroup(toolGroup.group)">
+              {{toolGroup.group.replace('-', ' ')}}
+            </button>
+            }
+          </div>
+        </div>
+
+        <div class="start-section">
+          <div class="start-title">{{ 'MODES' | translate }}</div>
+          <div class="start-row wrap">
+            @for(preset of chatService.presetDefs; track $index){
+            <button class="start-chip" [ngClass]="{selected: presetLabel===preset.label}"
+              (click)="selectPreset(preset)" [innerHTML]="preset.label" [matTooltip]="preset.tooltip||''"></button>
+            }
+          </div>
+        </div>
+      </div>
+      }
+
+      <!-- Chat body: hide in pre-chat to keep center clean -->
+      @if(!preChat){
+      <div class="chat-body custom-scroll">
+        @if(mainThread && messageGroupIdListMas[mainThread.id]){
+        @for(messageGroupId of messageGroupIdListMas[mainThread.id]; track $index){
+        @if(messageService.messageGroupMas[messageGroupId]; as messageGroup){
+        @if(messageGroup.role==='system'){
+        <app-chat-panel-system class="top-0" style="z-index:3;" [messageGroup]="messageGroup"
+          [bitCounter]="messageGroupBitCounter[messageGroup.id]" [thread]="mainThread"
+          [removable]="selectedThreadGroup.threadList.length>1" [layout]="userService.chatLayout"
+          (edit)="editChat($event)" (removeThread)="removeThread($event)" (argsChange)="changeModel(tIndex,$event)"
+          (threadChange)="editSystem($event)" (fileSelectionUpdateEmitter)="onChange()"
+          (expanded)="expanded($event, 0, tIndex, messageGroup)" [tokenObject]="tokenObjList[tIndex]">
+        </app-chat-panel-system>
+
+        } @else if(['assistant','user'].includes(messageGroup.role)) {
+        <app-chat-panel-message [layout]="userService.chatLayout" [messageGroup]="messageGroup" [thread]="mainThread"
+          (edit)="editChat($event)" [index]="$index" (removeContent)="removeContent($event)"
+          (removeMessage)="removeMessage($event)" (remove)="removeMessageGroup($event)"
+          (cancel)="cancelGenerating($event)" (toolExec)="toolExec($event)" (fileSelectionUpdateEmitter)="onChange()"
+          (expanded)="expanded($event, $index, 0, messageGroup)">
+        </app-chat-panel-message>
+
+        @if(!messageService.nextMessageGroupId[messageGroupId]){
+        <div class="inline-actions">
+          @if(!['Waiting','Loading'].includes(messageGroup.messages[0].status)){
+          @if(messageGroup.role==='user'){
+          <!-- <button mat-icon-button color="primary" (click)="send('messageGroup',[messageGroupId]).subscribe()">
+            <mat-icon>send</mat-icon>
+          </button> -->
+          } @else if(messageGroup.role==='assistant'){
+          <!-- <button mat-icon-button color="primary" (click)="appendMessageGroup(mainThread.id, messageGroupId)">
+            <mat-icon>add_circle</mat-icon>
+          </button> -->
+          } @else { <div></div> }
+          } @else { <div></div> }
+        </div>
+        }
+
+        @if(messageService.nextMessageGroupId[messageGroupId]){
+        <ng-container
+          *ngTemplateOutlet="messageSelectorTemplate; context: { $implicit: messageService.messageGroupMas[messageGroupId] }"></ng-container>
+        }
+        }
+        }
+        }
+        }
+      </div>
+      }
+
+      <!-- Thread pager just above input -->
+      @if(selectedThreadGroup.threadList.length>1){
+      <div class="thread-pager">
+        <mat-icon class="nav" (click)="restoreScrollPosition(Math.max(0, tabIndex-1))"
+          [ngStyle]="{'visibility': tabIndex>0 ? 'visible' : 'hidden'}">chevron_left</mat-icon>
+        <div class="pager-center">
+          <div class="pager-label">{{tabIndex+1}} / {{selectedThreadGroup.threadList.length}}</div>
+          <div class="pager-dots">
+            @for(i of selectedThreadGroup.threadList; track $index){
+            <span class="dot" [ngClass]="{active: tabIndex===$index}"
+              (click)="restoreScrollPosition($index)"></span>
+            }
+          </div>
+        </div>
+        <mat-icon class="nav" (click)="restoreScrollPosition(Math.min(selectedThreadGroup.threadList.length-1, tabIndex+1))"
+          [ngStyle]="{'visibility': tabIndex < selectedThreadGroup.threadList.length-1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
+      </div>
+      }
+
+      <div class="chat-input">
+        <div class="file-list">
+          @for(content of inputArea.content; track $index){
+          @if(content.type==='file'){
+          <app-doc-tag [content]="content" (updated)="onChange()"
+            (remove)="inputArea.content.splice(inputArea.content.indexOf(content),1)"></app-doc-tag>
+          }
+          }
+        </div>
+        @for(content of inputArea.content; track $index){
+        @if(content.type==='text'){
+        <div class="input-row">
+          <button mat-icon-button color="primary" [matMenuTriggerFor]="menu" [disabled]="isLock"
+            style="width: 48px; height: 48px;">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <textarea (keydown)="onKeyDown($event)" #textAreaElem
+            [placeholder]="'MESSAGE_INPUT_DETAILED_PLACEHOLDER_MOBILE' | translate:{ctrlEnter: userService.enterMode}"
+            [(ngModel)]="content.text" (change)="onChange()"></textarea>
+
+          @if(chatStreamSubscriptionList[selectedThreadGroup.id]){
+          <button mat-fab color="primary" aria-label="Cancel" [matTooltip]="'INTERRUPT_RESPONSE' | translate"
+            (click)="chatCancel()">
+            <mat-icon>cancel</mat-icon>
+          </button>
+          } @else {
+          <button mat-fab color="primary" aria-label="Send" [matTooltip]="userService.enterMode"
+            style="width: 48px; height: 48px;" (click)="send().subscribe()"
+            [disabled]="isLock||(!content.text&&tailRole!=='user')">
+            <mat-icon>send</mat-icon>
+          </button>
+          }
+
+          <mat-menu #menu="matMenu" #name>
+            <input type="file" #fileInput (change)="onFileSelected($event)" style="display: none;" multiple
+              webkitdirectory directory>
+            <button mat-menu-item (click)="openFileDialog(fileInput)"><mat-icon>attach_file</mat-icon><span>{{
+                'ATTACH_FILE'
+                | translate }}</span></button>
+            <button mat-menu-item (click)="openBulk()"><mat-icon>fast_forward</mat-icon><span>{{ 'BATCH_EXECUTION' |
+                translate }}</span></button>
+          </mat-menu>
+        </div>
+        }
+        }
+        <div class="warning">{{ 'AI_WARNING_MESSAGE' | translate }}</div>
+      </div>
+      @if(g.appType!=='base'){
+      <app-user-mark></app-user-mark>
+      }
+    </div>
+  </mat-drawer-content>
+</mat-drawer-container>
+
+
+}
+
+<ng-template #messageSelectorTemplate let-messageGroup>
+  @let nextMessageGroupIdList=messageService.nextMessageGroupId[messageGroup.id];
+  <div class="selector">
+    @if((nextMessageGroupIdList.length>messageGroup.selectedIndex&&nextMessageGroupIdList.length>1)||nextMessageGroupIdList.length===messageGroup.selectedIndex){
+    <div class="select-actions">
+      @if (nextMessageGroupIdList.length === messageGroup.selectedIndex) {
+      @if(messageService.messageGroupMas[messageGroup.id].role==='user'){
+      <button mat-icon-button color="primary"
+        (click)="send('messageGroup', [messageGroup.id]).subscribe()"><mat-icon>send</mat-icon></button>
+      } @else if(messageService.messageGroupMas[messageGroup.id].role==='assistant'){
+      <button mat-icon-button color="primary"
+        (click)="appendMessageGroup(messageGroup.threadId, messageGroup.id)"><mat-icon>add_circle</mat-icon></button>
+      }
+      }
+    </div>
+    <div class="pager">
+      <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, -1)"
+        [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
+      <div class="text-center w-[60px]">
+        @if (nextMessageGroupIdList.length === messageGroup.selectedIndex) { prev } @else { {{messageGroup.selectedIndex
+        + 1}} / {{nextMessageGroupIdList.length}} }
+      </div>
+      <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, 1)"
+        [ngStyle]="{'visibility': nextMessageGroupIdList.length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
+    </div>
+    } @else { <div></div> }
+  </div>
+</ng-template>

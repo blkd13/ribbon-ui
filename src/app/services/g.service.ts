@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { User } from '../models/models';
 
@@ -63,6 +63,14 @@ export class GService {
   info$: Subject<{ user: User }> = new Subject<{ user: User }>();
 
   public queries: { [key: string]: string } = {};
+
+  public isMobile = /iPhone|iPod|Android/i.test(navigator.userAgent);
+  public isMobilePrefix = this.isMobile ? '/m/' : '/';
+
+  // ① 完了キャッシュ：URL -> SVGテキスト
+  public doneCache: { [url: string]: string } = {};
+  // ② 進行中キャッシュ：URL -> 共有Observable（ロック）
+  public inflight: { [url: string]: Observable<string> } = {};
 
   // 画面間遷移で大き目の情報受け渡したいとき用。
   share: any = {};

@@ -1,8 +1,8 @@
-<button #menuTrigger="matMenuTrigger" [matMenuTriggerFor]="rootMenu" class="flex cursor-pointer model-selector">
-    <div>{{args().model}}</div>
+<button #menuTrigger="matMenuTrigger" [matMenuTriggerFor]="rootMenu"
+    class="trigger-button flex cursor-pointer model-selector" [title]="args().model" [class.closed]="!opened()">
+    <div class="selected-model-name">{{args().model}}</div>
     <mat-icon>arrow_drop_down</mat-icon>
 </button>
-
 
 <!-- 1st level: Display categories and tags flat -->
 <mat-menu #rootMenu="matMenu" class="level-1 flat-menu">

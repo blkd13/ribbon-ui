@@ -1,12 +1,12 @@
-import { AuthService, ExtApiProviderType } from './../services/auth.service';
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, ActivatedRoute, ActivatedRouteSnapshot } from '@angular/router';
-import { ProjectService, TeamService, ThreadService } from '../services/project.service';
+import { ActivatedRoute, CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
-import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
 import { UserRoleType } from '../models/models';
+import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
 import { GService } from '../services/g.service';
 import { LoggerService } from '../services/logger';
+import { ProjectService, TeamService, ThreadService } from '../services/project.service';
+import { AuthService, ExtApiProviderType } from './../services/auth.service';
 
 export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanActivateFn => {
   const guardFunc: CanActivateFn = (route, state) => {
@@ -78,6 +78,7 @@ export const teamGuard: CanActivateFn = (route, state) => {
     const teamService: TeamService = inject(TeamService);
     const router = inject(Router);
     const activatedRoute = inject(ActivatedRoute);
+    const g: GService = inject(GService);
     return teamService.getTeam(teamId).pipe(
       map(team => {
         if (team) {
@@ -85,7 +86,7 @@ export const teamGuard: CanActivateFn = (route, state) => {
         } else {
           // ホームに戻す
           alert('権限がありません');
-          router.navigate(['home'], { relativeTo: activatedRoute });
+          router.navigate([`${g.isMobilePrefix}chat`], { relativeTo: activatedRoute });
           return false;
         }
       })
@@ -100,6 +101,7 @@ export const projectGuard: CanActivateFn = (route, state) => {
 
   const router = inject(Router);
   const activatedRoute = inject(ActivatedRoute);
+  const g: GService = inject(GService);
   const { projectId, threadGroupId } = route.params;
 
   let aloneTeam: Team;
@@ -144,7 +146,7 @@ export const projectGuard: CanActivateFn = (route, state) => {
         return true;
       } else {
         // デフォルトプロジェクトに飛ばす。activatedRouteはこの時点では空なのでchatから入れる
-        router.navigate(['chat', defaultProject.id], { relativeTo: activatedRoute });
+        router.navigate([`${g.isMobilePrefix}chat`, defaultProject.id], { relativeTo: activatedRoute });
         return false;
       }
     })

@@ -15,11 +15,29 @@
     }
 }
 
+.closed.model-selector {
+    max-width: 145px;
+
+    >.selected-model-name {
+        width: calc(100% - 120px);
+    }
+}
+
 .model-selector {
-    div {
+    text-align: left;
+
+    .selected-model-name {
+        min-width: 120px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        height: 17px;
+        line-height: 17px;
+    }
+
+    mat-icon {
+        height: 17px;
+        line-height: 17px;
     }
 }
 
@@ -110,6 +128,7 @@
     }
 
     .detail-button {
+        margin: -26px;
         margin: -32px;
         opacity: 0;
         transition: opacity 0.2s ease;
@@ -235,6 +254,12 @@
     .category-header,
     .tag-item {
         padding: 8px 12px !important;
+    }
+
+    .selected-model-name {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }
 

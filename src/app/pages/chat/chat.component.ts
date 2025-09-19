@@ -36,6 +36,7 @@ import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-pan
 import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { FileDropDirective } from '../../parts/file-drop.directive';
+import { InlineSvgDirective } from "../../parts/inline-svg";
 import { ParameterSettingDialogComponent } from '../../parts/parameter-setting-dialog/parameter-setting-dialog.component';
 import { SaveThreadData, SaveThreadDialogComponent } from '../../parts/save-thread-dialog/save-thread-dialog.component';
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
@@ -52,7 +53,10 @@ import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { FileManagerService, FullPathFile } from './../../services/file-manager.service';
 import { genDummyId, genInitialBaseEntity, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
 
+// 例: 送信完了やクリックのタイミングで
 declare var _paq: any;
+declare global { interface Window { dataLayer: any[] } }
+
 
 @Component({
   selector: 'app-chat',
@@ -64,6 +68,7 @@ declare var _paq: any;
     MatBadgeModule, MatTabsModule, ScrollingModule, TranslateModule,
     UserMarkComponent,
     ChatPanelMessageComponent, ChatPanelSystemComponent, AppMenuComponent,
+    InlineSvgDirective
   ],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss'
@@ -111,6 +116,7 @@ export class ChatComponent implements OnInit {
   readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   readonly ngZone: NgZone = inject(NgZone);
   readonly sanitizer: DomSanitizer = inject(DomSanitizer);
+  readonly Math = Math;
 
   // スレッドリスト
   threadGroupList: ThreadGroupForView[] = [];
@@ -143,7 +149,7 @@ export class ChatComponent implements OnInit {
   teamForViewList: TeamForView[] = [];
 
   placeholder = '';
-  defaultPlaceholder = this.translate.instant('DEFAULT_CHAT_PLACEHOLDER');
+  defaultPlaceholder = this.translate.instant('MESSAGE_INPUT_DETAILED_PLACEHOLDER', { ctrlEnter: this.userService.enterMode ? 'Enter' : 'Ctrl+Enter' });
   chatStreamSubscriptionList: { [threadGroupId: string]: { message: MessageForView, subscription: Subscription }[] } = {};
   cacheMap: { [key: string]: CachedContent } = {};
   editNameThreadId: string = '';
@@ -585,7 +591,7 @@ export class ChatComponent implements OnInit {
     // 本来はupdatedAtでソートしたかったが、何故か時刻が更新されていないので。
     if (this.sortType === 1) {
       // 時刻順（新しい方が上に来る）
-      threadGroupList.sort((a, b) => new Date(b.updatedAt) < new Date(a.updatedAt) ? -1 : 1);
+      threadGroupList.sort((a, b) => new Date(b.lastUpdate) < new Date(a.lastUpdate) ? -1 : 1);
     } else {
       // 名前順（Aが上に来る）
       threadGroupList.sort((a, b) => b.title < a.title ? 1 : -1);
@@ -788,7 +794,7 @@ export class ChatComponent implements OnInit {
               // 一番下まで下げる
               // this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
 
-              // this.router.navigate(['chat', this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
+              // this.router.navigate([`${this.g.isMobilePrefix}chat`, this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
               setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
 
               document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
@@ -1441,6 +1447,17 @@ export class ChatComponent implements OnInit {
     } else { }
 
     _paq.push(['trackEvent', 'AIチャット', 'メッセージ送信', threadList.length]);
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'ai_query',
+      conversion_value: threadList.length,
+      // conversion_value: 0,
+      currency: 'JPY',
+      transaction_id: `${this.selectedThreadGroup.id}-${Date.now()}`,
+      // 必要なら他の文脈も
+      // page_location: location.href,
+      // page_title: document.title
+    });
 
     return this.saveAndBuildThreadGroup(threadList.map(thread => thread.id)).pipe(
       tap(_ => {
@@ -1794,7 +1811,7 @@ export class ChatComponent implements OnInit {
       delete this.chatStreamSubscriptionList[threadGroup.id];
       if (this.selectedThreadGroup.id === threadGroup.id) {
         // new-threadだった時はチャットが完了したらURL動かしておく。
-        this.router.navigate(['chat', threadGroup.projectId, threadGroup.id]);
+        this.router.navigate([`${this.g.isMobilePrefix}chat`, threadGroup.projectId, threadGroup.id]);
       } else { }
     } else { }
     this.isLock = false;
@@ -2832,7 +2849,7 @@ export class ChatComponent implements OnInit {
   restoreScrollPosition(tabIndex: number): void {
     // this.tabIndex = tabIndex;
     const threadId = (this.selectedThreadGroup && !this.selectedThreadGroup.id.startsWith('dummy-')) ? this.selectedThreadGroup.id : 'new-thread';
-    this.router.navigate(['/chat', this.selectedProject.id, threadId, { tabIndex }]);
+    this.router.navigate([`${this.g.isMobilePrefix}chat`, this.selectedProject.id, threadId, { tabIndex }]);
     setTimeout(() => {
       const bodyElem = this.textBodyElem().at(tabIndex);
       if (bodyElem) {
@@ -2861,7 +2878,7 @@ export class ChatComponent implements OnInit {
     this.messageService.clear(); // ストック情報を全消ししておく。
     this.threadGroupChangeHandler(this.selectedProject, this.threadGroupList, 'new-thread');
     // this.rebuildThreadGroup();
-    this.router.navigate(['/chat', this.selectedProject.id, 'new-thread']);
+    this.router.navigate([`${this.g.isMobilePrefix}chat`, this.selectedProject.id, 'new-thread']);
   }
 
 
@@ -2873,7 +2890,7 @@ export class ChatComponent implements OnInit {
 
   logout(): void {
     this.authService.logout();
-    // this.router.navigate(['/login']);
+    // this.router.navigate([`${this.g.isMobilePrefix}login`]);
   }
 
   // system-panelコンポーネントの状態を同期する

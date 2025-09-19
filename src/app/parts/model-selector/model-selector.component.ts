@@ -60,6 +60,8 @@ export class ModelSelectorComponent {
   readonly aiModelService: AIModelManagerService = inject(AIModelManagerService);
   readonly tagService: TagService = inject(TagService);
 
+  readonly opened = input<boolean>();
+
   constructor() {
     // Load both AI models and tags, then process them together
     forkJoin({

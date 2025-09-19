@@ -82,11 +82,12 @@ html>body.dark-glass-theme {
     --plain-background-hover: #40404188;
     // --background-gradient: rgba(2, 6, 23, 0.6);
     --message-background-system: rgba(44, 44, 44, 0.6);
+    --message-background-system: rgba(31, 32, 43, 1);
     --message-background-user: rgba(40, 48, 46, 0.6);
     --message-background-assistant: rgba(30, 41, 59, 0.6);
     --message-color-user: rgb(122, 194, 167);
     --message-color-assistant: rgb(139, 190, 253); // --message-color-assistant: rgb(96 165 250 / var(--tw-text-opacity, 1));
-    --message-color-assistant-model-name: rgba(188, 218, 255, 0.3);
+    --message-color-assistant-model-name: rgba(188, 218, 255, 0.8);
 
 
     // backdrop-filter: blur(8px);
@@ -168,7 +169,7 @@ html>body.dark-glass-theme {
     --mat-sys-primary: rgb(105 184 205);
 
     // NEW
-    --mat-sys-primary: rgb(96 165 250);
+    --mat-sys-primary: rgb(96, 165, 250);
     --mat-sys-primary-fixed: rgb(139, 190, 253);
     --mat-sys-primary-fixed-dim: rgb(59, 102, 155);
     --mat-sys-primary-container: rgb(20, 62, 153);

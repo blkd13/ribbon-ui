@@ -146,7 +146,7 @@ select {
 // }
 
 .mdc-icon-button.mat-mdc-icon-button.mat-primary.mat-mdc-button-base,
-.mat-primary mat-icon {
+.mat-primary {
     color: var(--mat-sys-primary);
 }
 
@@ -172,6 +172,10 @@ select {
     // background-color: var(--mdc-dialog-container-color, --mat-sys-on-background);
     // background: linear-gradient(to bottom right, #192020 0%, #111515 50%, #080a0a 100%);
     background: var(--body-modal-background-gradient);
+}
+
+.mat-mdc-checkbox .mdc-label {
+    word-break: break-all;
 }
 
 

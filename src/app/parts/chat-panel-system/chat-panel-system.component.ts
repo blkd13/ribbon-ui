@@ -20,6 +20,7 @@ import { AIModelManagerService } from '../../services/model-manager.service';
 import { MyToolType, ToolCallService } from '../../services/tool-call.service';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { DocTagComponent } from '../doc-tag/doc-tag.component';
+import { InlineSvgDirective } from "../inline-svg";
 import { ModelSelectorComponent } from "../model-selector/model-selector.component";
 
 @Component({
@@ -28,7 +29,8 @@ import { ModelSelectorComponent } from "../model-selector/model-selector.compone
     CommonModule, FormsModule, DocTagComponent,
     MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule,
     MatDialogModule, MatRadioModule, MatCheckboxModule,
-    ModelSelectorComponent, TranslateModule
+    ModelSelectorComponent, TranslateModule,
+    InlineSvgDirective
   ],
   templateUrl: './chat-panel-system.component.html',
   styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-system.component.scss']

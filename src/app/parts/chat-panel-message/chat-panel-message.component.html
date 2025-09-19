@@ -3,7 +3,8 @@
 <mat-expansion-panel class="message"
   [ngClass]="[vm.messageGroup.messages[0].cacheId?'cached':'', vm.messageGroup.role, exPanel.expanded?'expanded':'closed']"
   #exPanel [expanded]="vm.messageGroup.isExpanded" (opened)="loadContent().subscribe()"
-  (expandedChange)="expandedEmitter.emit($event)">
+  (expandedChange)="expandedEmitter.emit($event)" hideToggle>
+  <!-- [hideToggle]="!exPanel.expanded" -->
   <mat-expansion-panel-header class="message-header message-header-message">
     <mat-panel-title class="message-title" style="font-weight: normal;">
       <!-- {{message.role}} -->
@@ -12,10 +13,12 @@
       } @else if(vm.messageGroup.messages[0].cacheId){
       {{ 'CACHE' | translate }}
       } @else {
+      <span class="role-select" [attr.data-abbr]="vm.messageGroup.role==='user' ? 'Me' : 'AI'">
       <select [(ngModel)]="vm.messageGroup.role" (click)="stopPropagation($event)">
-        <option value="user">user</option>
-        <option value="assistant">assistant</option>
+          <option value="user">Me</option>
+          <option value="assistant">AI</option>
       </select>
+      </span>
       }
       <!-- @if(vm.messageGroup.role==='assistant'){
       <span
@@ -27,7 +30,17 @@
     <mat-panel-description>
       <div class="truncate">{{vm.messageGroup.messages[0].label}}</div>
     </mat-panel-description>
+    @if (!g.isMobile && exPanel.expanded) {
+
+    @if(vm.messageGroup.role==='assistant' && vm.messageGroup.source){
+    <div class="align-middle whitespace-nowrap message-color-assistant-model-name relative w-full"
+      style="margin: 10px 0;left: -16px;font-weight: normal;" [title]="vm.messageGroup.source">
+      {{ vm.messageGroup.source }}
+    </div>
+    }
+
     <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'top'}"></ng-container>
+    }
   </mat-expansion-panel-header>
 
   <div class="flex w-full gap-2">
@@ -113,7 +126,8 @@
         @let isRunning = info.isRunning && !info.isInteractive;
         <button class="flex items-center command-tag cursor-pointer relative overflow-hidden"
           (click)="openToolCallDialog($event, toolCallSet)">
-          <img [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 20px;" />
+          <img appInlineSvg [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 20px;"
+            class="mat-primary" />
           <div class="flex flex-col items-start">
             <div>{{info.name}}</div>
             <!--
@@ -215,24 +229,28 @@
   </div>
   }
   -->
-  @if (!vm.messageGroup.messages[mIndex].editing) {
-  <ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'bottom'}"></ng-container>
-  }
-
-  @if(vm.messageGroup.role==='assistant' && vm.messageGroup.source){
-  <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap message-color-assistant-model-name" style="height: 0px;margin: 5px 0;">
     <!-- #BFAE9D -->
+  <!-- 
+  @if(vm.messageGroup.role==='assistant' && vm.messageGroup.source){
+  <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap message-color-assistant-model-name cursor-default"
+    style="height: 0px;margin: 5px 0;" [title]="vm.messageGroup.source">
     by {{ vm.messageGroup.source }}
   </div>
   }
+  -->
 </mat-expansion-panel>
+
+@if (!vm.messageGroup.messages[mIndex].editing) {
+<ng-container *ngTemplateOutlet="controller; context: {exPanel: exPanel, position: 'bottom'}"></ng-container>
+}
+
 } @else {
 {{vm.messageGroup.messages.length}}
 }
 
 <ng-template #controller let-exPanel="exPanel" let-position="position">
-  <div class="right-0 top-0 flex gap-2" style="padding-right: 0;padding-left: 8px;"
-    [ngClass]="{'controller-bottom': position==='bottom', 'controller-bottom--hide': !exPanel.expanded && position==='bottom'}">
+  <div class="controller-area gap-2"
+    [ngClass]="[vm.messageGroup.role, `controller-${position}`, exPanel.expanded ? `controller-${position}--open` : ``]">
     <!-- style="right: 0;top: 0;display: flex;gap: 10px;padding: 10px;"  -->
     @if(vm.messageGroup.type) {
     <!-- Parallel execution (assuming batch) -->
@@ -253,7 +271,7 @@
     </button>
     }
     <button mat-icon-button (click)="downloadContent($event)" [title]="'DOWNLOAD_ZIP_CODE_BLOCKS' | translate"
-      [ngStyle]="{visibility: vm.messageGroup.role==='assistant'?'visible':'hidden'}">
+      [ngStyle]="{display: vm.messageGroup.role==='assistant'?'block':'none'}">
       <mat-icon>folder_zip</mat-icon>
     </button>
     <button mat-icon-button (click)="copyToClipboard($event)" [title]="'COPY_TO_CLIPBOARD' | translate">
@@ -295,12 +313,16 @@
     } @else { }
 
     <!-- 'margin-right': position === 'bottom' ? '-6px' : '10px' -->
-    @if(position==='bottom'){
-    <button mat-icon-button (click)="exPanel.close()" [title]="'CLOSE' | translate" style="margin-left: -17px"
-      [ngStyle]="{visibility: vm.messageGroup.role==='assistant'?'visible':'hidden'}">
-      <mat-icon>{{exPanel.opened ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}}</mat-icon>
+    @if(position==='bottom'||true){
+    <button mat-icon-button (click)="toggleExpansion($event, exPanel)" [title]="'CLOSE' | translate"
+      style="margin-left: -17px">
+      <mat-icon style="transition: transform 0.2s;"
+        [ngStyle]="{'transform': `rotate(${exPanel.expanded?0:180}deg)`}">keyboard_arrow_up</mat-icon>
     </button>
     }
   </div>
+  @if (position==='bottom' && exPanel.expanded) {
+  <div class="h-4"></div>
+  }
 </ng-template>
 }

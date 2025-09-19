@@ -68,11 +68,13 @@ export class AuthService {
    * @returns
    */
   guestLogin(): Observable<User> {
-    const url = `/guest`;
+    const url = `/public/${this.g.orgKey}/guest`;
     return this.http.post<{ user: User, token: string }>(url, {})
       .pipe(map(response => {
         // localStorage.setItem('auth_token', response.token);
         this.user = response.user;
+        this.g.info.user = response.user;
+        this.g.info$.next({ user: response.user });
         return response.user;
       }));
   }

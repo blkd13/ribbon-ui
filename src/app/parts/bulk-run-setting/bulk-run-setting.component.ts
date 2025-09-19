@@ -10,7 +10,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { FileEntity, FileManagerService, FileUploadContent, FullPathFile } from './../../services/file-manager.service';
 import { FileDropDirective } from './../file-drop.directive';
@@ -27,7 +28,7 @@ export interface BulkRunSettingData {
   selector: 'app-bulk-run-setting',
   imports: [FormsModule,
     MatButtonModule, MatTableModule, MatProgressBarModule, MatInputModule, MatIconModule,
-    MatFormFieldModule, MatSnackBarModule, MatRadioModule,
+    MatFormFieldModule, MatSnackBarModule, MatRadioModule, MatDialogModule, TranslateModule,
     FileDropDirective],
   templateUrl: './bulk-run-setting.component.html',
   styleUrl: './bulk-run-setting.component.scss'
@@ -48,6 +49,7 @@ export class BulkRunSettingComponent {
   readonly data: { mode: 'serial' | 'parallel', contents: ({ type: 'text', text: string } | { type: 'file', text: string, fileGroupId: string })[], promptTemplate: string, projectId: string } = inject(MAT_DIALOG_DATA);
   readonly fileManagerService: FileManagerService = inject(FileManagerService);
   readonly snackBar: MatSnackBar = inject(MatSnackBar);
+  readonly translate: TranslateService = inject(TranslateService);
 
   constructor() {
     if (this.data) {
@@ -124,7 +126,11 @@ export class BulkRunSettingComponent {
           this.isLock = false;
         },
         error: error => {
-          this.snackBar.open(`アップロードエラーです\n${JSON.stringify(error)}`, 'close', { duration: 30000 });
+          this.snackBar.open(
+            this.translate.instant('UPLOAD_ERROR_MESSAGE', { error: JSON.stringify(error) }),
+            this.translate.instant('CLOSE'),
+            { duration: 30000 }
+          );
           this.isLock = false;
         },
       });

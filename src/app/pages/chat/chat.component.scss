@@ -216,10 +216,19 @@
     }
 
     &.off {
-        // color: rgba(255, 255, 255, 0.2);
-        opacity: 0.2;
+        opacity: 0;
     }
+
+    &.on {
+        opacity: 1 !important;
 }
+}
+
+.anchor:hover .link-chain {
+    opacity: 0.5;
+}
+
+
 
 .hidden-custom-scroll .link-chain {
     transform: translate(0, 1px);

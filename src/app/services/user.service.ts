@@ -78,11 +78,11 @@ export class UserService {
   applyTheme(theme: ConfigKeys.Theme): void {
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-      theme = prefersDark.matches ? 'dark-glass' : 'light-glass';
+      theme = prefersDark.matches ? 'dark' : 'light';
     } else {
-      theme = `${theme}-glass` as 'dark-glass' | 'light-glass';
+      theme = `${theme}` as 'dark' | 'light';
     }
-    document.body.classList.remove('dark-theme', 'light-theme', 'dark-glass-theme', 'light-glass-theme');
+    document.body.classList.remove('dark-theme', 'light-theme', 'dark-theme', 'light-theme');
     document.body.classList.add(theme + '-theme');
   }
 

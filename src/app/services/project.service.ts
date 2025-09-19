@@ -159,10 +159,12 @@ export class ThreadService {
                 type: ThreadGroupType.Normal,
                 visibility: ThreadGroupVisibility.Team,
                 threadList: [],
+                lastUpdate: new Date().toLocaleDateString(this.g.locale, { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }),
                 updatedDate: new Date().toLocaleDateString(this.g.locale, { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }),
                 ...genInitialBaseEntity('thread-group'),
             } as ThreadGroupForView;
 
+            threadGroup.threadList.push(this.genInitialThreadEntity(threadGroup.id));
             threadGroup.threadList.push(this.genInitialThreadEntity(threadGroup.id));
             return threadGroup;
         }

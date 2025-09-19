@@ -16,6 +16,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { MarkdownComponent } from 'ngx-markdown';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { DocTagComponent } from '../doc-tag/doc-tag.component';
+import { InlineSvgDirective } from "../inline-svg";
 
 @Component({
     selector: 'app-chat-panel-message',
@@ -23,6 +24,7 @@ import { DocTagComponent } from '../doc-tag/doc-tag.component';
         CommonModule, FormsModule, DocTagComponent,
         MatTooltipModule, MarkdownComponent, MatIconModule, MatButtonModule, MatExpansionModule, MatSnackBarModule, MatProgressSpinnerModule, MatMenuModule,
         MatTabsModule, MatButtonToggleModule, TranslateModule,
+    InlineSvgDirective
     ],
     templateUrl: './chat-panel-message.component.html',
     styleUrls: ['../chat-panel-base/chat-panel-base.component.scss', './chat-panel-message.component.scss',],

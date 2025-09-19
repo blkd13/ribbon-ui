@@ -1,12 +1,15 @@
 import { Routes } from '@angular/router';
 import { adminScopeGuard } from './guard/admin.guard';
 import { loginGuardGenerator, oAuthGuardGenerator, projectGuard, teamGuard, threadGroupGuard } from './guard/chat.guard';
+import { genScreenTypeGuard } from './guard/screen-type.guard';
 import { UserRoleType } from './models/models';
 
 // console.dir(gitRoutes, { depth: null });
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
-  { path: 'login', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
+  { path: 'login', canActivate: [genScreenTypeGuard(true)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
+  // Mobile specific routes
+  { path: 'm/login', canActivate: [genScreenTypeGuard(false)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   { path: 'bulk', loadComponent: () => import('./parts/bulk-run-setting/bulk-run-setting.component').then(m => m.BulkRunSettingComponent) },
   { path: 'team/:teamId', canActivate: [teamGuard], loadComponent: () => import('./pages/team/team.component').then(m => m.TeamComponent) },
   { path: 'invite/:onetimeToken', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
@@ -35,9 +38,17 @@ export const routes: Routes = [
     };
   }),
   {
-    path: 'chat', children: [{
+    path: 'chat', canActivate: [genScreenTypeGuard(true)], children: [{
       path: ':projectId', canActivate: [projectGuard], children: [{
         path: ':threadGroupId', canActivate: [threadGroupGuard], loadComponent: () => import('./pages/chat/chat.component').then(m => m.ChatComponent)
+      }, { path: '**', redirectTo: 'new-thread' }]
+    }, { path: '**', redirectTo: 'defaut-project' }]
+  },
+  // Mobile chat routes
+  {
+    path: 'm/chat', canActivate: [genScreenTypeGuard(false)], children: [{
+      path: ':projectId', canActivate: [projectGuard], children: [{
+        path: ':threadGroupId', canActivate: [threadGroupGuard], loadComponent: () => import('./pages/chat/chat.mobile.component').then(m => m.ChatMobileComponent)
       }, { path: '**', redirectTo: 'new-thread' }]
     }, { path: '**', redirectTo: 'defaut-project' }]
   },

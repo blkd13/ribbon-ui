@@ -176,7 +176,7 @@ export class ApiInterceptor implements HttpInterceptor {
       this.logger.info(`redirect to login page: ${location.href}`);
     } else {
       // 未認証の場合、ログインページにリダイレクト
-      this.router.navigate(['/login']);
+      this.router.navigate([`${this.g.isMobilePrefix}login`]);
     }
 
     return throwError(() => error);

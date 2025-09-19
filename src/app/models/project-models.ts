@@ -1,9 +1,8 @@
-import { Observable } from "rxjs";
 import { OpenAI } from "openai";
-import { ChatCompletionStreamInDto, UserStatus } from "./models";
+import { Observable } from "rxjs";
 import { CountTokensResponse } from "../services/chat.service";
-import { ChatCompletionChunk, ChatCompletionToolMessageParam } from "openai/resources/index.mjs";
-import { ToolCallGroup, ToolCallGroupForView, ToolCallGroupStatus } from "../services/tool-call.service";
+import { ToolCallGroupForView } from "../services/tool-call.service";
+import { ChatCompletionStreamInDto, UserStatus } from "./models";
 
 // 共通の型定義
 export type UUID = string;
@@ -283,6 +282,7 @@ export interface ThreadGroup extends BaseEntity {
     title: string;
     description: string;
     visibility: ThreadGroupVisibility;
+    lastUpdate: string; // 最終更新日時（Messageの更新日時の最大値）
     threadList: Thread[];
 }
 export interface ThreadGroupForView extends ThreadGroup {

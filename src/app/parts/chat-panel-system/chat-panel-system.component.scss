@@ -41,6 +41,9 @@
 
 }
 
+.controller-bottom {
+    bottom: -24px;
+}
 
 .accordion {
     mat-expansion-panel {
@@ -176,5 +179,20 @@
         color: var(--link-color);
         cursor: pointer;
         z-index: 10;
+    }
+}
+
+// スマートフォン対応
+@media (max-width: 768px) {
+
+    .token-obj,
+    .system-prompt-description {
+        display: none;
+    }
+
+    :host ::ng-deep {
+        mat-expansion-panel-header .mat-content {
+            justify-content: space-between;
+        }
     }
 }

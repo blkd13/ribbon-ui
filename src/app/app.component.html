@@ -14,19 +14,8 @@
     target="_blank">{{g.version}}</a>
 -->
 @if(!isLoginpage ){
-<div class="fixed cursor-pointer" style="
-    bottom: 0;
-    width: 209px;
-    text-align: center;
-    height: 50px;
-    background: var(--background-gradient);
-    display: flex;
-    align-items: center;
-    justify-content: left;
-    z-index: 1;
-    ">
-    <app-user-settings></app-user-settings>
-    <!-- {{g.info.user.email}} -->
+<div class="user-settings-container">
+    <app-user-settings class="user-settings-component"></app-user-settings>
 </div>
 }
 }
