@@ -860,10 +860,10 @@
                                             @if (tag.label && tag.name !== tag.label) {
                                             <span class="tag-subtitle">({{ tag.name }})</span>
                                             }
+                                        </div>
                                         @if (tag.description) {
                                         <div class="tag-description">{{ tag.description }}</div>
                                         }
-                                        </div>
                                         @if (tag.color) {
                                         <div class="tag-color-preview" [style.background-color]="tag.color"></div>
                                         }

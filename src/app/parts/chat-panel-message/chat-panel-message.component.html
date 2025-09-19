@@ -113,10 +113,13 @@
         @let isRunning = info.isRunning && !info.isInteractive;
         <button class="flex items-center command-tag cursor-pointer relative overflow-hidden"
           (click)="openToolCallDialog($event, toolCallSet)">
-          <img [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 32px;" />
+          <img [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 20px;" />
           <div class="flex flex-col items-start">
+            <div>{{info.name}}</div>
+            <!--
             <div>[{{info.name}}]</div>
             <div>{{info.label}}</div>
+            -->
           </div>
           @if(isRunning){
           <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10 rounded-xl">

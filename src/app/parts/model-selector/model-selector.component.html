@@ -56,7 +56,6 @@
                 <!-- 詳細ボタン -->
                 <button mat-icon-button #detailTrigger="matMenuTrigger" [matMenuTriggerFor]="detail"
                     class="detail-button" (mouseenter)="openDetailMenu(detailTrigger)"
-                    (mouseleave)="closeDetailMenu(detailTrigger)"
                     (click)="openDetailMenu(detailTrigger);$event.stopPropagation()">
                     <mat-icon>description</mat-icon>
                 </button>
@@ -64,7 +63,7 @@
         </div>
 
         <!-- 3rd level: Model detail card -->
-        <mat-menu #detail="matMenu" class="level-3" [hasBackdrop]="false">
+        <mat-menu #detail="matMenu" class="level-3" [hasBackdrop]="false" (mouseleave)="closeDetailMenu(detailTrigger)">
             <ng-container *ngTemplateOutlet="modelCard; context: { model: _model }"></ng-container>
         </mat-menu>
         }

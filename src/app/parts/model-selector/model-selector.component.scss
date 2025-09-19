@@ -31,7 +31,7 @@
 
 /* カテゴリヘッダー - シンプルに */
 .category-header {
-    min-height: 32px;
+    min-height: 31px;
     padding: 8px 16px !important;
     cursor: default !important;
 
@@ -110,7 +110,7 @@
     }
 
     .detail-button {
-        margin: -20px;
+        margin: -32px;
         opacity: 0;
         transition: opacity 0.2s ease;
         flex-shrink: 0;
@@ -241,22 +241,12 @@
 
 // メニューアイテムの基本スタイル
 .mat-mdc-menu-item {
-
-    // 選択されている状態
-    &.selected::after {
-        content: '';
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        height: 100%;
-        width: 36px;
-        background-color: var(--mat-sys-primary-container);
-        filter: opacity(0.5);
+    &.selected {
+        box-shadow: inset -36px 0 0 var(--mat-sys-primary-container);
 
         &:hover {
-            background-color: var(--mat-sys-primary-container);
-            color: var(--mat-sys-primary);
+            // background-color: var(--mat-sys-primary-container);
+            // color: var(--mat-sys-primary);
         }
     }
 }
