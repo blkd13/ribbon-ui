@@ -7,10 +7,12 @@
     justify-content: left;
     background-color: transparent;
 
+    // デスクトップ（タブレット以上）のスタイル
     @media (min-width: 768px) {
         width: 209px;
     }
 
+    // モバイル（タブレット未満）のスタイル
     @media (max-width: 767px) {
         width: auto;
         height: auto;
@@ -19,15 +21,18 @@
 
 .email {
 
+    // デスクトップ（タブレット以上）のスタイル
     @media (min-width: 768px) {
         display: block;
     }
 
+    // モバイル（タブレット未満）のスタイル
     @media (max-width: 767px) {
         display: none;
     }
 }
 
+// モバイルでは丸いアイコンを表示
 .mobile-user-icon {
     display: flex;
     align-items: center;
@@ -37,7 +42,7 @@
     padding: 6px;
 
     background: var(--background-gradient);
-    border-radius: 50%;
+    border-radius: 50%; // 完全な円形
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border: 2px solid rgba(255, 255, 255, 0.2);
     z-index: 3;
@@ -47,6 +52,7 @@
         height: 20px;
     }
 
+    // デスクトップ（タブレット以上）のスタイル
     @media (min-width: 768px) {
         margin: 0 10px;
     }

@@ -46,6 +46,16 @@ export type LlmModel = {
   label?: string;
 }
 
+export type BudgetCheckResponse = {
+  status: 'ok' | 'error',
+  budget: {
+    monthlyLimit: number | null,
+    currentUsage: number | null,
+    remainingCredit: number | null
+  }
+}
+
+
 /**
  * チャットサービス
  * ブラウザの同時コネクション数制限が6とかなので
@@ -545,6 +555,10 @@ export class ChatService {
       })),
       map(messageGroupList => { return { connectionId: this.connectionId, streamId, messageGroupList } })
     );
+  }
+
+  budgetCheck(): Observable<BudgetCheckResponse> {
+    return this.http.get<BudgetCheckResponse>(`/user/budget-check`);
   }
 
   /**

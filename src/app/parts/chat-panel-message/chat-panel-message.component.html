@@ -14,10 +14,10 @@
       {{ 'CACHE' | translate }}
       } @else {
       <span class="role-select" [attr.data-abbr]="vm.messageGroup.role==='user' ? 'Me' : 'AI'">
-      <select [(ngModel)]="vm.messageGroup.role" (click)="stopPropagation($event)">
+        <select [(ngModel)]="vm.messageGroup.role" (click)="stopPropagation($event)">
           <option value="user">Me</option>
           <option value="assistant">AI</option>
-      </select>
+        </select>
       </span>
       }
       <!-- @if(vm.messageGroup.role==='assistant'){
@@ -126,7 +126,7 @@
         @let isRunning = info.isRunning && !info.isInteractive;
         <button class="flex items-center command-tag cursor-pointer relative overflow-hidden"
           (click)="openToolCallDialog($event, toolCallSet)">
-          <img appInlineSvg [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 20px;"
+          <img appInlineSvg [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 20px;height: auto;"
             class="mat-primary" />
           <div class="flex flex-col items-start">
             <div>{{info.name}}</div>
@@ -229,7 +229,7 @@
   </div>
   }
   -->
-    <!-- #BFAE9D -->
+  <!-- #BFAE9D -->
   <!-- 
   @if(vm.messageGroup.role==='assistant' && vm.messageGroup.source){
   <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap message-color-assistant-model-name cursor-default"

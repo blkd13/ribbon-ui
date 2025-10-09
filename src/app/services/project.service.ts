@@ -183,7 +183,7 @@ export class ThreadService {
 
     getInitialArgs(): ChatCompletionCreateParamsWithoutMessages {
         return {
-            model: 'gemini-1.5-pro-002',
+            model: 'gemini-2.5-flash',
             providerName: 'vertexai',
             temperature: 1.0,
             max_tokens: 0,

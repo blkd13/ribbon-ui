@@ -173,19 +173,19 @@
             @if(tokenCounting){ wait.. } @else { $ {{cost|number:'1.2-2'}} }
           </div> |
         </div>
-        <button mat-icon-button color="primary" (click)="userService.toggleChatTabLayout().subscribe()"
+        <button mat-icon-button color="primary" (click)="userService.toggleChatTabLayout().subscribe();focusTextArea()"
           [disabled]="selectedThreadGroup.threadList.length===1" [title]="'TABIFY_CHAT_PANELS' | translate">
           <mat-icon>@if(userService.chatTabLayout==='tabs') { view_column } @else { tab }</mat-icon>
         </button>
-        <button mat-icon-button color="primary" (click)="userService.toggleChatLayout().subscribe()"
+        <button mat-icon-button color="primary" (click)="userService.toggleChatLayout().subscribe();focusTextArea()"
           [title]="'CHAT_PANEL_LAYOUT' | translate">
           <mat-icon>@if(userService.chatLayout==='grid') { dashboard } @else { grid_view }</mat-icon>
         </button>
-        <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse()"
+        <button mat-icon-button color="primary" (click)="toggleAllExpandCollapse();focusTextArea()"
           [title]="'EXPAND_COLLAPSE_CHAT_PANELS' | translate">
           <mat-icon>@if (allExpandCollapseFlag) { unfold_less } @else { unfold_more }</mat-icon>
         </button>
-        <button mat-icon-button color="primary" (click)="openSaveAsTemplateDialog()"
+        <button mat-icon-button color="primary" (click)="openSaveAsTemplateDialog();focusTextArea()"
           [title]="'SAVE_AS_TEMPLATE' | translate">
           <mat-icon>save</mat-icon>
         </button>
@@ -194,9 +194,13 @@
           <mat-icon>settings</mat-icon>
         </button>
         -->
+        <!-- console/terminal -->
+         
+        <!-- 
         <a mat-icon-button color="primary" href="/terminal/{{selectedProject.id}}/" target="_blank" title="コンソール">
           <mat-icon>terminal</mat-icon>
-        </a>
+        </a> -->
+
         <!--
         <button mat-icon-button color="primary" (click)="openModelSetting()" [title]="'SETTINGS' | translate">
           <mat-icon>settings</mat-icon>
@@ -214,6 +218,8 @@
     @if(messageGroupIdListMas[selectedThreadGroup.threadList[0].id]&&1>=messageGroupIdListMas[selectedThreadGroup.threadList[0].id].length){
     <div class="absolute t-0 l-0 w-full flex justify-center items-center flex-col "
       style="z-index: 2;top: calc(50vh);transform: translate(0, -50%);">
+
+      <!-- スレッド数 -->
       <h1 style="font-size: 1.78rem;">{{ 'THREAD_COUNT' | translate }}</h1>
       <div class="w-full flex justify-center items-center gap-5">
         @for(index of [1, 2, 3, 4];track $index){
@@ -224,6 +230,8 @@
           (click)="loadPreset(selectedThreadGroup.threadList.length+1)">+
         </div>
       </div>
+
+      <!-- ツール選択 -->
       <h1 style="font-size: 1.78rem;margin-top: 40px;">{{ 'TOOLS' | translate }}</h1>
       <div class="w-full flex justify-center items-center gap-5 flex-wrap">
         @for(toolGroup of toolCallService.tools; track $index){
@@ -244,6 +252,8 @@
         </div>
         }
       </div>
+
+      <!-- モード選択 -->
       <h1 style="font-size: 1.78rem;margin-top: 40px;">{{ 'MODES' | translate }}</h1>
       <div class="w-full flex justify-center items-center gap-5 flex-wrap">
         @for(preset of chatService.presetDefs;track $index){
@@ -252,6 +262,7 @@
           [ngClass]="{selected:presetLabel===preset.label}" style="line-height: 1.5;"></div>
         }
       </div>
+
       <!-- 個人用モード -->
       <div class="w-full flex justify-center items-center gap-5 flex-wrap mt-5">
         @for (item of templateThreadGroupList.slice().reverse(); track $index) {
@@ -570,6 +581,7 @@
     <!-- 入力エリア -->
     <div class="bottom">
       <!-- ファイル一覧 -->
+      @if(inputArea.content.length>1){
       <div class="flex justify-start gap-3 w-full p-5 overflow-x-auto">
         @for(content of inputArea.content; track $index){
         @if(content.type==='file'){
@@ -578,6 +590,7 @@
         }
         }
       </div>
+      }
       <!-- メッセージ入力 -->
       <div class="chat-input">
         @for(content of inputArea.content; track $index){
@@ -662,7 +675,7 @@
 <!-- 履歴選択 -->
 <ng-template #messageSelectorTemplate let-messageGroup>
   @let nextMessageGroupIdList=messageService.nextMessageGroupId[messageGroup.id];
-  <div class="flex items-center justify-start">
+  <div class="flex items-center justify-between">
     @if(
     (nextMessageGroupIdList.length>messageGroup.selectedIndex&&nextMessageGroupIdList.length>1)||nextMessageGroupIdList.length===messageGroup.selectedIndex
     ){
@@ -684,7 +697,7 @@
       }
     </div>
 
-    <div class="flex items-center mt-2" style="margin-bottom: -5px;">
+    <div class="flex items-center mt-2" style="margin-top: 0px;margin-left: 36px;">
       <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, -1)"
         [ngStyle]="{'visibility': 0 < messageGroup.selectedIndex ? 'visible' : 'hidden'}">chevron_left</mat-icon>
       <div class="text-center w-[60px]">
@@ -697,6 +710,8 @@
       <mat-icon class="cursor-pointer" (click)="setSelect($event, messageGroup, 1)"
         [ngStyle]="{'visibility': nextMessageGroupIdList.length > messageGroup.selectedIndex + 1 ? 'visible' : 'hidden'}">chevron_right</mat-icon>
     </div>
+
+    <div></div>
     }@else{<div></div>}
   </div>
 </ng-template>

@@ -125,8 +125,8 @@
 }
 
 .login-button {
-    background-color: color.mix(black, rgb(105 184 205), 10%);
-    color: white;
+    background-color: var(--mat-sys-primary);
+    color: var(--plain-color);
     padding: 10px 20px;
     border: none;
     border-radius: 4px;
@@ -143,7 +143,7 @@
 }
 
 .login-button:hover {
-    background-color: color.mix(black, rgb(105 184 205), 10%);
+    background-color: var(--mat-sys-primary-fixed);
 }
 
 .login-button.guest {
@@ -259,7 +259,7 @@ mat-expansion-panel {
 
     // 充分に縦幅があるデスクトップのみ固定表示
     @media (min-width: 1024px) and (min-height: 800px) {
-        position: fixed;
+        // position: fixed;
         left: 0;
         right: 0;
         bottom: 10px;

@@ -15,10 +15,10 @@ import { environment } from '../../../environments/environment';
 import { ExtApiProviderAuthType, ExtApiProviderEntity } from '../../models/models';
 // import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { AuthService } from '../../services/auth.service';
-import { ConfigKeys, UserService } from '../../services/user.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { GService } from '../../services/g.service';
 import { LoggerService } from '../../services/logger';
+import { ConfigKeys, UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-login',
@@ -44,6 +44,8 @@ export class LoginComponent {
   isSubmitting = false;
   selectedLanguage: ConfigKeys.Language = 'auto';
   selectedTheme: ConfigKeys.Theme = 'light';
+
+  isInit = false;
 
   curEnv = environment;
 

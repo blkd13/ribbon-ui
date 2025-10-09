@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { Router, RouterModule } from "@angular/router";
 import { TranslateModule } from '@ngx-translate/core';
 import { GService } from '../../services/g.service';
 import { ApiKeyManagerDialogComponent } from '../api-key-manager-dialog/api-key-manager-dialog.component';
@@ -24,6 +25,7 @@ export class UserMarkComponent {
   readonly g: GService = inject(GService);
   readonly authService: AuthService = inject(AuthService);
   readonly dialog: MatDialog = inject(MatDialog);
+  readonly router: Router = inject(Router);
 
   openHistory(): void {
     this.dialog.open(PredictHistoryComponent);
@@ -44,7 +46,7 @@ export class UserMarkComponent {
 
 @Component({
   selector: 'app-user-settings',
-  imports: [CommonModule, MatMenuModule, MatDividerModule, MatIconModule, MatButtonModule, TranslateModule, CdkTableModule],
+  imports: [CommonModule, MatMenuModule, MatDividerModule, MatIconModule, MatButtonModule, TranslateModule, CdkTableModule, RouterModule],
   templateUrl: './user-settings.component.html',
   styleUrl: './user-mark.component.scss'
 })

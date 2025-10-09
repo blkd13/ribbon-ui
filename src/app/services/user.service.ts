@@ -104,7 +104,7 @@ export class UserService {
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
-  saveSetting(theme: ConfigKeys.Theme, enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter', historyCloseMode?: ConfigKeys.HistoryCloseMode, language?: ConfigKeys.Language): Observable<Config> {
+  saveSetting(theme: ConfigKeys.Theme, enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter', historyCloseMode?: ConfigKeys.HistoryCloseMode, language?: ConfigKeys.Language, noTracking?: boolean): Observable<Config> {
     this.theme = theme;
     this.enterMode = enterMode;
     if (historyCloseMode !== undefined) {
@@ -113,11 +113,14 @@ export class UserService {
     if (language !== undefined) {
       this.language = language;
     }
+
+    if (!noTracking) {
     _paq.push(['trackEvent', 'ユーザー設定', 'Enterモード', this.enterMode]);
     _paq.push(['trackEvent', 'ユーザー設定', 'テーマ切替', this.theme]);
     if (language !== undefined) {
       _paq.push(['trackEvent', 'ユーザー設定', '言語切替', this.language]);
     }
+    } else { }
     this.applyTheme(theme);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }

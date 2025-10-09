@@ -378,7 +378,7 @@ export class ChatComponent implements OnInit {
             this.showConnectionPrompt(groupName, requiredProvider);
             return;
           } else { }
-          }
+        }
       } else { }
 
       // 接続確認が完了したらツールグループの状態を更新
@@ -416,10 +416,22 @@ export class ChatComponent implements OnInit {
       this.cdr.detectChanges();
       this.rebuildThreadGroup();
       this.onChange();
+
+      this.focusTextArea();
     } finally {
       // ローディング状態を終了
       this.toolGroupLoadingStates[groupName] = false;
     }
+  }
+
+  focusTextArea(): void {
+    // setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+    setTimeout(() => {
+      const textAreaElem = this.textAreaElem();
+      if (textAreaElem && textAreaElem.nativeElement) {
+        textAreaElem.nativeElement.focus();
+      } else { }
+    }, 100);
   }
 
   // ツールグループの現在状態を取得（全スレッドで一致している場合のみtrue）
@@ -509,7 +521,7 @@ export class ChatComponent implements OnInit {
     this.initializeToolGroupStates();
 
     if (modelCheckOK) {
-      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+      this.focusTextArea();
     } else { /* モデルチェックエラーが出ているのでフォーカスはしない。 */ }
   }
 
@@ -569,7 +581,7 @@ export class ChatComponent implements OnInit {
 
         this.isThreadGroupLoading = false;
 
-        setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+        this.focusTextArea();
 
         document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
 
@@ -645,7 +657,7 @@ export class ChatComponent implements OnInit {
     this.rebuildThreadGroup();
     this.onChange();
     if (modelCheckOK) {
-      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+      this.focusTextArea();
     } else { /* モデルチェックエラーが出ているのでフォーカスはしない。 */ }
   }
 
@@ -683,7 +695,7 @@ export class ChatComponent implements OnInit {
 
       this.inputArea = this.generateInitalInputArea();
       // this.inputArea.previousMessageGroupId = lastMessage.id;
-      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+      this.focusTextArea();
 
       // ホーム画面からの遷移の場合は初期値を入れる
       if (this.g.share['home->chat'] && this.g.share['home->chat'].static) {
@@ -795,7 +807,7 @@ export class ChatComponent implements OnInit {
               // this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
 
               // this.router.navigate([`${this.g.isMobilePrefix}chat`, this.selectedProject.id, thread.id], { relativeTo: this.activatedRoute });
-              setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+              this.focusTextArea();
 
               document.title = `AI : ${this.selectedThreadGroup?.title || '(no title)'}`;
 
@@ -1581,7 +1593,8 @@ export class ChatComponent implements OnInit {
           this.rebuildThreadGroup();
 
           // 入力ボックスのサイズを戻す。
-          setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+          this.focusTextArea();
+
           // setTimeout(() => {
           //   this.textBodyElem().forEach(elem => DomUtils.scrollToBottomIfNeededSmooth(elem.nativeElement));
           // }, 100);
@@ -1819,7 +1832,7 @@ export class ChatComponent implements OnInit {
     message.label = message.contents.filter(content => content.type === 'text').map(content => content.text).join('\n').substring(0, 250);
     this.onChange();
     this.bulkNext();
-    setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+    this.focusTextArea();
   }
 
   // エラーハンドラー
@@ -1880,7 +1893,7 @@ export class ChatComponent implements OnInit {
         messageGroupId ? this.messageService.messageGroupMas[messageGroupId].messages.forEach(message => message.status = MessageStatusType.Canceled) : '';
         // スレッドのロックを解除する
         this.threadLocks[thread.id] = false;
-        setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+        this.focusTextArea();
         this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.subscription.unsubscribe());
       }
     });
@@ -1926,8 +1939,11 @@ export class ChatComponent implements OnInit {
       if ($event.shiftKey) {
         this.onChange();
       } else if ((this.userService.enterMode === 'Ctrl+Enter' && $event.ctrlKey) || this.userService.enterMode === 'Enter') {
-        // TODO: 送信処理 danger
-        this.send().subscribe();
+        if (this.isLock || (!this.inputArea.content.at(-1)?.text && this.tailRole !== 'user')) {
+        } else {
+          // TODO: 送信処理 danger
+          this.send().subscribe();
+        }
       } else {
         this.onChange();
       }
@@ -2309,7 +2325,7 @@ export class ChatComponent implements OnInit {
     messageGroup.messages.forEach(message => message.status = MessageStatusType.Canceled);
     if (this.chatStreamSubscriptionList[this.selectedThreadGroup.id]) {
       this.threadLocks[thread.id] = false;
-      setTimeout(() => { this.textAreaElem().nativeElement.focus(); }, 100);
+      this.focusTextArea();
       this.chatStreamSubscriptionList[this.selectedThreadGroup.id].forEach(s => s.subscription.unsubscribe());
     }
     delete this.chatStreamSubscriptionList[this.selectedThreadGroup.id];

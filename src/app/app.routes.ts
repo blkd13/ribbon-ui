@@ -8,6 +8,7 @@ import { UserRoleType } from './models/models';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', canActivate: [genScreenTypeGuard(true)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
+  { path: 'login/:returnUrl', canActivate: [genScreenTypeGuard(true)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   // Mobile specific routes
   { path: 'm/login', canActivate: [genScreenTypeGuard(false)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   { path: 'bulk', loadComponent: () => import('./parts/bulk-run-setting/bulk-run-setting.component').then(m => m.BulkRunSettingComponent) },

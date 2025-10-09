@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatRadioModule } from '@angular/material/radio';
+import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
+import { MatSelectChange, MatSelectModule } from "@angular/material/select";
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AnimationService } from '../../services/animation.service';
@@ -21,10 +23,9 @@ export interface UserSettingResult {
 
 @Component({
   selector: 'app-user-setting-dialog',
-  imports: [CommonModule,
+  imports: [CommonModule, FormsModule,
     MatDialogModule, MatDividerModule, MatSlideToggleModule, MatButtonModule, MatRadioModule, MatButtonToggleModule,
-    TranslateModule,
-  ],
+    TranslateModule, MatSelectModule],
   templateUrl: './user-setting-dialog.component.html',
   styleUrl: './user-setting-dialog.component.scss'
 })
@@ -70,21 +71,21 @@ export class UserSettingDialogComponent extends BaseDialogComponent<UserSettingD
     this.current = event.checked;
   }
 
-  toggleTheme(event: MatButtonToggleChange) {
+  toggleTheme(event: MatRadioChange | MatButtonToggleChange | MatSelectChange) {
     _paq.push(['trackEvent', this.translate.instant('USER_SETTINGS'), this.translate.instant('THEME_TOGGLE'), event.value]);
     this.theme = event.value;
     this.userService.applyTheme(event.value);
   }
 
-  toggleEnterMode(event: MatButtonToggleChange) {
+  toggleEnterMode(event: MatRadioChange | MatButtonToggleChange | MatSelectChange) {
     this.enterMode = event.value;
   }
 
-  toggleHistoryCloseMode(event: MatButtonToggleChange) {
+  toggleHistoryCloseMode(event: MatRadioChange | MatButtonToggleChange | MatSelectChange) {
     this.historyCloseMode = event.value;
   }
 
-  toggleLanguage(event: MatButtonToggleChange) {
+  toggleLanguage(event: MatRadioChange | MatButtonToggleChange | MatSelectChange) {
     _paq.push(['trackEvent', this.translate.instant('USER_SETTINGS'), this.translate.instant('LANGUAGE_SETTING'), event.value]);
     this.language = event.value;
     // 言語変更は即座に適用して確認できるようにする

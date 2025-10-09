@@ -99,7 +99,7 @@ export class HomeComponent implements OnInit {
   projectList: Project[] = [];
   projectWithoutDefaultList: Project[] = [];
 
-  args = { model: 'gemini-1.5-pro-002', providerName: 'vertexai' };
+  args = { model: 'gemini-2.5-pro', providerName: 'vertexai' };
 
   placeholder: string = '';
   inputText: string = '';

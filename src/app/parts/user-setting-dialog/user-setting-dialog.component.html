@@ -16,11 +16,18 @@
     <div class="settings-section">
         <h3>{{ 'COLOR_THEME' | translate }}</h3>
         <div class="setting-item">
+            <!--
             <mat-button-toggle-group [(value)]="theme" (change)="toggleTheme($event)">
                 <mat-button-toggle value="system">{{ 'SYSTEM' | translate }}</mat-button-toggle>
                 <mat-button-toggle value="light">{{ 'LIGHT' | translate }}</mat-button-toggle>
                 <mat-button-toggle value="dark">{{ 'DARK' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
+            -->
+            <mat-radio-group class="theme-radio-group" [(ngModel)]="theme" (change)="toggleTheme($event)">
+                <mat-radio-button class="theme-radio" value="system">{{ 'SYSTEM' | translate }}</mat-radio-button>
+                <mat-radio-button class="theme-radio" value="light">{{ 'LIGHT' | translate }}</mat-radio-button>
+                <mat-radio-button class="theme-radio" value="dark">{{ 'DARK' | translate }}</mat-radio-button>
+            </mat-radio-group>
             <p class="setting-description">
                 {{ 'THEME_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_SYSTEM_THEME' | translate }}
             </p>
@@ -30,10 +37,18 @@
     <div class="settings-section">
         <h3>{{ 'SEND_MODE_SETTING' | translate }}</h3>
         <div class="setting-item">
+            <!-- 
             <mat-button-toggle-group [(value)]="enterMode" (change)="toggleEnterMode($event)">
                 <mat-button-toggle value="Ctrl+Enter">{{ 'SEND_WITH_CTRL_ENTER' | translate }}</mat-button-toggle>
                 <mat-button-toggle value="Enter">{{ 'SEND_WITH_ENTER' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
+            -->
+            <mat-radio-group class="enter-mode-radio-group" [(ngModel)]="enterMode" (change)="toggleEnterMode($event)">
+                <mat-radio-button class="enter-mode-radio" value="Ctrl+Enter">{{ 'SEND_WITH_CTRL_ENTER' | translate
+                    }}</mat-radio-button>
+                <mat-radio-button class="enter-mode-radio" value="Enter">{{ 'SEND_WITH_ENTER' | translate
+                    }}</mat-radio-button>
+            </mat-radio-group>
             <p class="setting-description">
                 {{ 'SEND_MODE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_CTRL_ENTER' | translate }}
             </p>
@@ -43,11 +58,22 @@
     <div class="settings-section">
         <h3>{{ 'HISTORY_CLOSE_SETTING' | translate }}</h3>
         <div class="setting-item">
+            <!-- 
             <mat-button-toggle-group [(value)]="historyCloseMode" (change)="toggleHistoryCloseMode($event)">
                 <mat-button-toggle [value]="0">{{ 'DONT_CLOSE' | translate }}</mat-button-toggle>
                 <mat-button-toggle [value]="1">{{ 'CLOSE_USER_PROMPT_ONLY' | translate }}</mat-button-toggle>
                 <mat-button-toggle [value]="2">{{ 'CLOSE_BOTH' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
+            -->
+            <mat-radio-group class="history-close-mode-radio-group" [(ngModel)]="historyCloseMode"
+                (change)="toggleHistoryCloseMode($event)">
+                <mat-radio-button class="history-close-mode-radio" [value]="0">{{ 'DONT_CLOSE' | translate
+                    }}</mat-radio-button>
+                <mat-radio-button class="history-close-mode-radio" [value]="1">{{ 'CLOSE_USER_PROMPT_ONLY' | translate
+                    }}</mat-radio-button>
+                <mat-radio-button class="history-close-mode-radio" [value]="2">{{ 'CLOSE_BOTH' | translate
+                    }}</mat-radio-button>
+            </mat-radio-group>
             <p class="setting-description">
                 {{ 'HISTORY_CLOSE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_DONT_CLOSE' | translate }}
             </p>
@@ -57,12 +83,54 @@
     <div class="settings-section">
         <h3>{{ 'LANGUAGE_SETTING' | translate }}</h3>
         <div class="setting-item">
+            <mat-radio-group class="language-radio-group" [(ngModel)]="language" (change)="toggleLanguage($event)"
+                style="display: flex;flex-wrap: wrap;width: 600px;">
+                <mat-radio-button class="language-radio" value="auto">{{ 'SYSTEM' | translate }}</mat-radio-button>
+                <mat-radio-button class="language-radio" value="de">Deutsch</mat-radio-button>
+                <mat-radio-button class="language-radio" value="en">English</mat-radio-button>
+                <mat-radio-button class="language-radio" value="es">Español</mat-radio-button>
+                <mat-radio-button class="language-radio" value="fr">Français</mat-radio-button>
+                <mat-radio-button class="language-radio" value="ja">日本語</mat-radio-button>
+                <mat-radio-button class="language-radio" value="ko">한국어</mat-radio-button>
+                <mat-radio-button class="language-radio" value="pt">Português</mat-radio-button>
+                <mat-radio-button class="language-radio" value="ru">Русский</mat-radio-button>
+                <mat-radio-button class="language-radio" value="tr">Türkçe</mat-radio-button>
+                <mat-radio-button class="language-radio" value="zh">中文</mat-radio-button>
+            </mat-radio-group>
+            <!-- 
             <mat-button-toggle-group [(value)]="language" (change)="toggleLanguage($event)">
                 <mat-button-toggle value="auto">{{ 'SYSTEM' | translate }}</mat-button-toggle>
                 <mat-button-toggle value="ja">{{ 'JAPANESE' | translate }}</mat-button-toggle>
                 <mat-button-toggle value="en">{{ 'ENGLISH' | translate }}</mat-button-toggle>
                 <mat-button-toggle value="zh">{{ 'CHINESE' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="es">{{ 'SPANISH' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="fr">{{ 'FRENCH' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="de">{{ 'GERMAN' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="ko">{{ 'KOREAN' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="pt">{{ 'PORTUGUESE' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="ru">{{ 'RUSSIAN' | translate }}</mat-button-toggle>
+                <mat-button-toggle value="tr">{{ 'TURKISH' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
+            -->
+            <!--             
+            <mat-select [(value)]="language" (selectionChange)="toggleLanguage($event)" class="language-select">
+                @for(lang of [
+                { code: 'auto', name: ('SYSTEM'|translate) },
+                { code: 'ja', name: ('JAPANESE'|translate) },
+                { code: 'en', name: ('ENGLISH'|translate) },
+                { code: 'es', name: ('SPANISH'|translate) },
+                { code: 'zh', name: ('CHINESE'|translate) },
+                { code: 'fr', name: 'Français' },
+                { code: 'de', name: 'Deutsch' },
+                { code: 'ko', name: '한국어' },
+                { code: 'pt', name: 'Português' },
+                { code: 'ru', name: 'Русский' },
+                { code: 'tr', name: 'Türkçe' },
+                ]; track $index) {
+                <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+                }
+            </mat-select>
+            -->
             <p class="setting-description">
                 {{ 'LANGUAGE_DESCRIPTION' | translate }}<br />{{ 'DEFAULT_BROWSER_LANGUAGE' | translate }}
             </p>
