@@ -11,6 +11,14 @@
         <mat-icon>chat</mat-icon>
         <span>{{ 'AI_CHAT' | translate }}</span>
     </a>
+    <a mat-menu-item [routerLink]="['/automation']">
+        <mat-icon>auto_mode</mat-icon>
+        <span>{{ 'AUTOMATION_DASHBOARD' | translate }}</span>
+    </a>
+    <a mat-menu-item [routerLink]="['/context-hub']">
+        <mat-icon>hub</mat-icon>
+        <span>コンテキスト管理</span>
+    </a>
     @for(key of groupKeys; track $index) {
     @if(key === 'git') {
     <button mat-menu-item [matMenuTriggerFor]="gitMenu">

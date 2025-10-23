@@ -124,18 +124,24 @@
 }
 
 .message.system,
+.system.controller-top,
 .system.controller-bottom {
     background: var(--message-background-system);
 }
 
 // .user .message-header,
 .message.user,
+.user.controller-top,
 .user.controller-bottom {
     background: var(--message-background-user);
 
     .message-notediting {
         border: 1px solid var(--message-border-user);
     }
+}
+
+.message.user mat-expansion-panel-header {
+    background: var(--message-background-user);
 }
 
 .user {
@@ -150,13 +156,17 @@
 
 // .assistant .message-header,
 .message.assistant,
+.assistant.controller-top,
 .assistant.controller-bottom {
     background: var(--message-background-assistant);
 
     .message-notediting {
         border: 1px solid var(--message-border-assistant);
-        ;
     }
+}
+
+.message.assistant mat-expansion-panel-header {
+    background: var(--message-background-assistant);
 }
 
 .assistant {
@@ -246,7 +256,7 @@
     .controller-area,
     .controller-bottom {
         opacity: 1;
-}
+    }
 }
 
 .controller-bottom--open {

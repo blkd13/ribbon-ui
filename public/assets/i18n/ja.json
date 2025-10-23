@@ -317,6 +317,7 @@
     "END_DATE": "表示終了日",
     "HOME": "ホーム",
     "AI_CHAT": "AIチャット",
+    "AUTOMATION_DASHBOARD": "AI自動実行ダッシュボード",
     "GIT_REPOSITORY": "Gitリポジトリ",
     "SELECT_MODEL": "モデルを選択",
     "NO_TAGS": "タグなし",

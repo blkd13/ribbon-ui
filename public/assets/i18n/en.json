@@ -316,6 +316,7 @@
     "END_DATE": "End Date",
     "HOME": "Home",
     "AI_CHAT": "AI Chat",
+    "AUTOMATION_DASHBOARD": "Automation Dashboard",
     "GIT_REPOSITORY": "Git Repository",
     "SELECT_MODEL": "Select a model",
     "NO_TAGS": "No Tags",

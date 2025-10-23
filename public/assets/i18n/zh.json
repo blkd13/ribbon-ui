@@ -316,6 +316,7 @@
     "END_DATE": "结束显示日期",
     "HOME": "主页",
     "AI_CHAT": "AI聊天",
+    "AUTOMATION_DASHBOARD": "自动化控制台",
     "GIT_REPOSITORY": "Git存储库",
     "SELECT_MODEL": "选择模型",
     "NO_TAGS": "无标签",

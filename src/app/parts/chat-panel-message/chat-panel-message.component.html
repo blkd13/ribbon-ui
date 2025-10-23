@@ -313,13 +313,11 @@
     } @else { }
 
     <!-- 'margin-right': position === 'bottom' ? '-6px' : '10px' -->
-    @if(position==='bottom'||true){
     <button mat-icon-button (click)="toggleExpansion($event, exPanel)" [title]="'CLOSE' | translate"
-      style="margin-left: -17px">
+      style="margin-left: -10px">
       <mat-icon style="transition: transform 0.2s;"
         [ngStyle]="{'transform': `rotate(${exPanel.expanded?0:180}deg)`}">keyboard_arrow_up</mat-icon>
     </button>
-    }
   </div>
   @if (position==='bottom' && exPanel.expanded) {
   <div class="h-4"></div>

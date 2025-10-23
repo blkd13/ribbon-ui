@@ -1,0 +1,642 @@
+<div class="automation-dashboard">
+  <aside class="automation-dashboard__sidebar">
+    <div class="sidebar-brand">
+      <span class="sidebar-brand__dot"></span>
+      <div>
+        <p class="sidebar-brand__kicker">AI Ops</p>
+        <h1 class="sidebar-brand__title">Automation</h1>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="ダッシュボードビュー">
+      @for (view of views; track view.id) {
+      <button type="button" class="sidebar-nav__item"
+        [ngClass]="{ 'is-active': activeView() === view.id }" (click)="setActiveView(view.id)">
+        <mat-icon>{{ view.icon }}</mat-icon>
+        <div class="sidebar-nav__labels">
+          <span class="label">{{ view.label }}</span>
+          <span class="helper">{{ view.helper }}</span>
+        </div>
+      </button>
+      }
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+
+    <footer class="sidebar-footer">
+      <span>v0.2 beta • last deploy 2h ago</span>
+    </footer>
+  </aside>
+
+  <main class="automation-dashboard__content">
+    <header class="topbar">
+      <div class="topbar-chip">
+        <span class="topbar-chip__dot"></span>
+        <span>ライブ</span>
+      </div>
+
+      <div class="topbar-search">
+        <label class="search-field">
+          <mat-icon>search</mat-icon>
+          <input type="search" placeholder="検索: RunID, Thread名, エラー内容..." [ngModel]="searchTerm()"
+            (ngModelChange)="searchTerm.set($event)">
+        </label>
+        <select [ngModel]="timeRange()" (ngModelChange)="timeRange.set($event)" aria-label="集計期間">
+          <option value="1h">直近1時間</option>
+          <option value="24h">直近24時間</option>
+          <option value="7d">直近7日</option>
+          <option value="all">全期間</option>
+        </select>
+      </div>
+
+      <div class="topbar-actions">
+        <button mat-stroked-button color="primary" type="button" (click)="openModal('run')">
+          <mat-icon>add</mat-icon>
+          手動Run
+        </button>
+        <button mat-button type="button" (click)="openModal('thread')">
+          <mat-icon>add</mat-icon>
+          Thread作成
+        </button>
+        <button mat-button type="button" (click)="openModal('schedule')">
+          <mat-icon>add</mat-icon>
+          Schedule作成
+        </button>
+      </div>
+    </header>
+
+    <section class="dashboard-view">
+      @if (activeView() === 'runs') {
+      <div class="panel">
+        <header class="panel__header">
+          <div class="panel__title">
+            <h2>Runs</h2>
+            <span class="pill">直近24h</span>
+          </div>
+          <div class="panel__actions">
+            <button mat-button type="button">失敗のみ</button>
+            <button mat-button type="button">進行中</button>
+            <button mat-button type="button">エクスポート</button>
+          </div>
+        </header>
+
+        <div class="kpi-grid">
+          @for (metric of runMetrics(); track metric.label) {
+          <article class="kpi-card">
+            <p class="kpi-card__label">{{ metric.label }}</p>
+            <p class="kpi-card__value">{{ metric.value }}</p>
+            <p class="kpi-card__helper">{{ metric.helper }}</p>
+          </article>
+          }
+        </div>
+
+        <div class="panel__filters">
+          <select aria-label="Threadでフィルタ">
+            <option value="">Thread: すべて</option>
+            <option>daily-news-summarizer:v3</option>
+            <option>embedding-indexer:v1</option>
+            <option>image-captioner:v2</option>
+          </select>
+          <select aria-label="Scheduleでフィルタ">
+            <option value="">Schedule: すべて</option>
+            <option>毎時 xx:05 (JST)</option>
+            <option>0 9 * * 1-5 (UTC)</option>
+          </select>
+          <select aria-label="ステータスでフィルタ">
+            <option value="">ステータス: すべて</option>
+            <option>running</option>
+            <option>succeeded</option>
+            <option>failed</option>
+            <option>queued</option>
+          </select>
+          <select aria-label="並び替え">
+            <option>並び替え: 開始時刻 ↓</option>
+            <option>コスト ↓</option>
+            <option>成功率 ↑</option>
+          </select>
+          <span class="panel__filters-spacer"></span>
+          <button mat-button type="button">列カスタム</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>RunID</th>
+                <th>Thread</th>
+                <th>Schedule</th>
+                <th>ステータス</th>
+                <th>Jobs</th>
+                <th>成功率</th>
+                <th>p95</th>
+                <th>コスト</th>
+                <th>開始</th>
+                <th>終了</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (run of filteredRuns(); track run.id) {
+              <tr (click)="openRun(run.id)" class="data-table__row"
+                [ngClass]="{ 'is-selected': selectedRunId() === run.id }">
+                <td class="mono">{{ run.id }}</td>
+                <td>
+                  <div class="table-thread">
+                    <span>{{ run.threadName }}</span>
+                    <span class="muted">{{ run.threadVersion }}</span>
+                  </div>
+                </td>
+                <td>{{ run.schedule }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="statusClass(run.status)">{{ run.status }}</span>
+                </td>
+                <td>{{ run.jobs }}</td>
+                <td>{{ run.successRate | number: '1.0-1' }}%</td>
+                <td>{{ run.p95Seconds | number: '1.0-1' }}s</td>
+                <td>${{ run.cost | number: '1.2-2' }}</td>
+                <td>{{ run.startedAt }}</td>
+                <td>{{ run.finishedAt ?? '—' }}</td>
+                <td>
+                  <div class="table-actions">
+                    <button mat-button type="button" (click)="$event.stopPropagation()">再実行</button>
+                    <button mat-button type="button" class="table-actions__danger"
+                      (click)="$event.stopPropagation()">キャンセル</button>
+                  </div>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      }
+
+      @if (activeView() === 'threads') {
+      <div class="panel">
+        <header class="panel__header">
+          <div class="panel__title">
+            <h2>Threads</h2>
+          </div>
+          <div class="panel__actions">
+            <button mat-stroked-button color="primary" type="button" (click)="openModal('thread')">
+              <mat-icon>add</mat-icon>
+              新規Thread
+            </button>
+          </div>
+        </header>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Thread名</th>
+                <th>最新バージョン</th>
+                <th>モデル</th>
+                <th>タグ</th>
+                <th>最終更新</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (thread of threadRows; track thread.name) {
+              <tr>
+                <td>{{ thread.name }}</td>
+                <td class="mono">{{ thread.version }}</td>
+                <td>{{ thread.model }}</td>
+                <td>
+                  <div class="badge-list">
+                    @for (tag of thread.tags; track tag) {
+                    <span class="pill pill--subtle">{{ tag }}</span>
+                    }
+                  </div>
+                </td>
+                <td>{{ thread.updatedAt }}</td>
+                <td class="table-actions">
+                  <button mat-button type="button">テスト実行</button>
+                  <button mat-button type="button">新バージョン</button>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      }
+
+      @if (activeView() === 'schedules') {
+      <div class="panel">
+        <header class="panel__header">
+          <div class="panel__title">
+            <h2>Schedules</h2>
+          </div>
+          <div class="panel__actions">
+            <button mat-stroked-button color="primary" type="button" (click)="openModal('schedule')">
+              <mat-icon>add</mat-icon>
+              新規Schedule
+            </button>
+          </div>
+        </header>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Schedule名</th>
+                <th>Thread</th>
+                <th>cron</th>
+                <th>TZ</th>
+                <th>並列上限</th>
+                <th>リトライ</th>
+                <th>有効</th>
+                <th>次回実行</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (schedule of scheduleRows; track schedule.name) {
+              <tr>
+                <td>{{ schedule.name }}</td>
+                <td>{{ schedule.thread }}</td>
+                <td class="mono">{{ schedule.cron }}</td>
+                <td>{{ schedule.tz }}</td>
+                <td>{{ schedule.concurrency }}</td>
+                <td>{{ schedule.retry }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="schedule.enabled ? 'status-running' : 'status-queued'">
+                    {{ schedule.enabled ? 'ON' : 'OFF' }}
+                  </span>
+                </td>
+                <td>{{ schedule.nextRun }}</td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      }
+
+      @if (activeView() === 'workers') {
+      <div class="panel">
+        <header class="panel__header">
+          <div class="panel__title">
+            <h2>Workers / Queues</h2>
+          </div>
+          <div class="panel__actions">
+            <button mat-button type="button">スケール +1</button>
+            <button mat-button type="button">スケール -1</button>
+          </div>
+        </header>
+
+        <div class="worker-grid">
+          @for (worker of workerCards; track worker.id) {
+          <article class="worker-card">
+            <header class="worker-card__head">
+              <span class="mono">{{ worker.id }}</span>
+              <span class="status-badge" [ngClass]="statusClass(worker.status)">{{ worker.status }}</span>
+            </header>
+            <p class="worker-card__meta muted">{{ worker.version }} • {{ worker.runtime }} • {{ worker.region }}</p>
+            <div class="worker-card__metrics">
+              <div>
+                <span class="muted">稼働中</span>
+                <p class="worker-card__value">{{ worker.running }}</p>
+              </div>
+              <div>
+                <span class="muted">容量</span>
+                <p class="worker-card__value">{{ worker.capacity }}</p>
+              </div>
+            </div>
+            <p class="worker-card__meta muted">
+              HB: {{ worker.heartbeat }}
+              @if (worker.extra) {
+              • {{ worker.extra }}
+              }
+            </p>
+          </article>
+          }
+        </div>
+
+        <section class="panel panel--sub">
+          <header class="panel__header">
+            <div class="panel__title">
+              <h3>Queues</h3>
+            </div>
+          </header>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Queue</th>
+                  <th>待ち</th>
+                  <th>処理中</th>
+                  <th>失敗/時</th>
+                  <th>TPM(推定)</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (queue of queueRows; track queue.name) {
+                <tr>
+                  <td>{{ queue.name }}</td>
+                  <td>{{ queue.waiting }}</td>
+                  <td>{{ queue.processing }}</td>
+                  <td>{{ queue.failuresPerHour | number: '1.0-1' }}</td>
+                  <td>{{ queue.estimatedTpm }}</td>
+                  <td class="table-actions">
+                    <button mat-button type="button" (click)="toggleQueue('drain', queue)">ドレイン</button>
+                    <button mat-button type="button" (click)="toggleQueue('pause', queue)">一時停止</button>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+      }
+
+      @if (activeView() === 'settings') {
+      <div class="panel">
+        <header class="panel__header">
+          <div class="panel__title">
+            <h2>Settings</h2>
+          </div>
+        </header>
+
+        <div class="kpi-grid kpi-grid--settings">
+          @for (tile of settingTiles; track tile.label) {
+          <article class="kpi-card kpi-card--compact">
+            <header class="kpi-card__icon">
+              <mat-icon>{{ tile.icon }}</mat-icon>
+            </header>
+            <div>
+              <p class="kpi-card__label">{{ tile.label }}</p>
+              <p class="kpi-card__value">{{ tile.value }}</p>
+              <p class="kpi-card__helper">{{ tile.helper }}</p>
+            </div>
+          </article>
+          }
+        </div>
+      </div>
+      }
+    </section>
+  </main>
+</div>
+
+@if (selectedRunDetail(); as detail) {
+<aside class="run-drawer" [ngClass]="{ 'is-open': drawerOpen() }" aria-label="Run詳細">
+  <header class="run-drawer__head">
+    <div>
+      <p class="muted text-xs">Run 詳細</p>
+      <p class="mono">{{ detail.runId }}</p>
+    </div>
+    <div class="run-drawer__actions">
+      <button mat-button type="button">一時停止</button>
+      <button mat-stroked-button color="warn" type="button">キャンセル</button>
+      <button mat-flat-button color="primary" type="button">失敗のみ再実行</button>
+      <button mat-icon-button type="button" (click)="closeDrawer()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </header>
+  <div class="run-drawer__body">
+    <div class="drawer-kpi-grid">
+      <article class="kpi-card kpi-card--compact">
+        <p class="kpi-card__label">ステータス</p>
+        <p class="kpi-card__value">
+          <span class="status-badge" [ngClass]="statusClass(detail.status)">{{ detail.status }}</span>
+        </p>
+      </article>
+      <article class="kpi-card kpi-card--compact">
+        <p class="kpi-card__label">ジョブ数</p>
+        <p class="kpi-card__value">{{ detail.jobCount }}</p>
+      </article>
+      <article class="kpi-card kpi-card--compact">
+        <p class="kpi-card__label">成功率</p>
+        <p class="kpi-card__value">{{ detail.successRate | number: '1.0-1' }}%</p>
+      </article>
+      <article class="kpi-card kpi-card--compact">
+        <p class="kpi-card__label">コスト合計</p>
+        <p class="kpi-card__value">${{ detail.cost | number: '1.2-2' }}</p>
+      </article>
+    </div>
+
+    <section class="snapshot-card">
+      <header class="snapshot-card__head">
+        <h3>Thread スナップショット</h3>
+        <span class="muted">{{ detail.snapshot.threadLabel }}</span>
+      </header>
+      <div class="snapshot-card__grid">
+        <div>
+          <p class="muted text-xs">プロンプト</p>
+          <pre>{{ detail.snapshot.prompt }}</pre>
+        </div>
+        <div>
+          <p class="muted text-xs">パラメータ</p>
+          <pre>{{ detail.snapshot.parameters | json }}</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel panel--sub">
+      <header class="panel__header">
+        <div class="panel__title">
+          <h3>Jobs</h3>
+        </div>
+        <div class="panel__actions">
+          <select aria-label="ジョブステータスでフィルタ">
+            <option>すべて</option>
+            <option>running</option>
+            <option>succeeded</option>
+            <option>failed</option>
+          </select>
+          <input type="search" placeholder="入力キーで検索..." aria-label="ジョブ検索">
+        </div>
+      </header>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>JobID</th>
+              <th>入力キー</th>
+              <th>ステータス</th>
+              <th>試行</th>
+              <th>時間</th>
+              <th>コスト</th>
+              <th>エラー</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (job of detail.jobs; track job.id) {
+            <tr>
+              <td class="mono">{{ job.id }}</td>
+              <td>{{ job.inputKey }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="statusClass(job.status)">{{ job.status }}</span>
+              </td>
+              <td>{{ job.attempts }}</td>
+              <td>{{ formatDuration(job.durationSeconds) }}</td>
+              <td>{{ formatCost(job.cost) }}</td>
+              <td class="muted">{{ job.error ?? '—' }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <section class="output-preview">
+        <p class="muted text-xs">出力プレビュー</p>
+        <pre>{{ detail.outputPreview }}</pre>
+      </section>
+    </section>
+  </div>
+</aside>
+}
+
+<div class="modal-layer" [ngClass]="{ 'is-open': activeModal() !== null }" (click)="closeModal()" aria-hidden="true">
+  @if (activeModal() === 'thread') {
+  <div class="modal" (click)="$event.stopPropagation()">
+    <header class="modal__head">
+      <h2>Thread 作成</h2>
+      <button mat-icon-button type="button" (click)="closeModal()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+    <div class="modal__body">
+      <label>
+        <span>Thread名</span>
+        <input type="text" placeholder="daily-news-summarizer">
+      </label>
+      <label>
+        <span>タグ（カンマ区切り）</span>
+        <input type="text" placeholder="news, summary">
+      </label>
+      <label>
+        <span>モデル</span>
+        <select>
+          <option>gpt-4o-mini</option>
+          <option>gpt-4o</option>
+          <option>claude-3.5-sonnet</option>
+          <option>text-embedding-3-large</option>
+        </select>
+      </label>
+      <label>
+        <span>プロンプトテンプレート</span>
+        <textarea rows="5" placeholder="You are a helpful assistant..."></textarea>
+      </label>
+      <label>
+        <span>パラメータ(JSON)</span>
+        <textarea rows="4" class="mono"
+          placeholder='{ "temperature": 0.3, "max_tokens": 600 }'></textarea>
+      </label>
+    </div>
+    <footer class="modal__actions">
+      <button mat-button type="button" (click)="closeModal()">キャンセル</button>
+      <button mat-flat-button color="primary" type="button">保存</button>
+    </footer>
+  </div>
+  }
+
+  @if (activeModal() === 'schedule') {
+  <div class="modal" (click)="$event.stopPropagation()">
+    <header class="modal__head">
+      <h2>Schedule 作成</h2>
+      <button mat-icon-button type="button" (click)="closeModal()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+    <div class="modal__body modal__body--grid">
+      <label>
+        <span>Thread</span>
+        <select>
+          <option>daily-news-summarizer:v3</option>
+          <option>embedding-indexer:v1</option>
+          <option>image-captioner:v2</option>
+        </select>
+      </label>
+      <label>
+        <span>タイムゾーン</span>
+        <select>
+          <option>Asia/Tokyo</option>
+          <option selected>UTC</option>
+          <option>America/Los_Angeles</option>
+        </select>
+      </label>
+      <label>
+        <span>cron</span>
+        <input type="text" class="mono" value="5 * * * *">
+      </label>
+      <label>
+        <span>並列上限</span>
+        <input type="number" value="4">
+      </label>
+      <label>
+        <span>再試行回数</span>
+        <input type="number" value="3">
+      </label>
+      <label>
+        <span>バックオフ</span>
+        <select>
+          <option>指数 x2</option>
+          <option>固定 15s</option>
+          <option>なし</option>
+        </select>
+      </label>
+      <label>
+        <span>有効</span>
+        <select>
+          <option>ON</option>
+          <option>OFF</option>
+        </select>
+      </label>
+      <label>
+        <span>入力ソース</span>
+        <select>
+          <option>クエリ</option>
+          <option>ファイル</option>
+          <option>キュー</option>
+        </select>
+      </label>
+    </div>
+    <footer class="modal__actions">
+      <button mat-button type="button" (click)="closeModal()">キャンセル</button>
+      <button mat-flat-button color="primary" type="button">保存</button>
+    </footer>
+  </div>
+  }
+
+  @if (activeModal() === 'run') {
+  <div class="modal" (click)="$event.stopPropagation()">
+    <header class="modal__head">
+      <h2>手動 Run</h2>
+      <button mat-icon-button type="button" (click)="closeModal()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+    <div class="modal__body modal__body--grid">
+      <label>
+        <span>Thread</span>
+        <select>
+          <option>daily-news-summarizer:v3</option>
+          <option>embedding-indexer:v1</option>
+          <option>image-captioner:v2</option>
+        </select>
+      </label>
+      <label>
+        <span>優先度</span>
+        <select>
+          <option>通常</option>
+          <option>高</option>
+          <option>低</option>
+        </select>
+      </label>
+      <label class="modal__full">
+        <span>入力（JSONL 可）</span>
+        <textarea rows="6" class="mono"
+          placeholder='{"url":"https://example.com/1"}&#10;{"url":"https://example.com/2"}'></textarea>
+      </label>
+    </div>
+    <footer class="modal__actions">
+      <button mat-button type="button" (click)="closeModal()">キャンセル</button>
+      <button mat-flat-button color="primary" type="button">Run開始</button>
+    </footer>
+  </div>
+  }
+</div>

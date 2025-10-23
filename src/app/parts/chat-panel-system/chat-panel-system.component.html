@@ -184,16 +184,16 @@
                         <!-- </mat-panel-title> -->
                     </mat-expansion-panel-header>
 
-                        @for(tool of groupDef.tools;track $index) {
-                        <div class="channel cursor-pointer">
-                            <!-- [{{tool.info.name}}] {{tool.info.label}} -->
-                            <!-- [(ngModel)]="toolCheckMas[tool.info.group+':'+tool.info.name]" -->
-                            <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
-                                [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
-                                [{{tool.info.name}}] {{tool.info.label}}
-                            </mat-checkbox>
-                        </div>
-                        }
+                    @for(tool of groupDef.tools;track $index) {
+                    <div class="channel cursor-pointer">
+                        <!-- [{{tool.info.name}}] {{tool.info.label}} -->
+                        <!-- [(ngModel)]="toolCheckMas[tool.info.group+':'+tool.info.name]" -->
+                        <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
+                            [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
+                            [{{tool.info.name}}] {{tool.info.label}}
+                        </mat-checkbox>
+                    </div>
+                    }
                 </mat-expansion-panel>
 
                 }
@@ -214,6 +214,7 @@
 <ng-template #controller let-exPanel="exPanel" let-position="position">
     <div class="controller-area gap-2"
         [ngClass]="[vm.messageGroup.role, `controller-${position}`, exPanel.expanded ? `controller-${position}--open` : ``]">
+
         <button mat-icon-button (click)="setEdit($event)"
             [title]="vm.messageGroup.messages[0].editing?('SAVE' | translate):('EDIT' | translate)">
             @if(vm.messageGroup.messages[0].editing){
@@ -222,10 +223,18 @@
             <mat-icon>edit</mat-icon>
             }
         </button>
+
         <button mat-icon-button (click)="removeThread($event)" [ngClass]="{invisible: !removable()}"
             [title]="'DELETE_THREAD' | translate">
             <mat-icon>delete</mat-icon>
         </button>
+
+        <button mat-icon-button (click)="toggleExpansion($event, exPanel)" [title]="'CLOSE' | translate"
+            style="margin-left: 7px">
+            <mat-icon style="transition: transform 0.2s;"
+                [ngStyle]="{'transform': `rotate(${exPanel.expanded?0:180}deg)`}">keyboard_arrow_up</mat-icon>
+        </button>
+
     </div>
     @if (position==='bottom' && exPanel.expanded) {
     <div class="h-4"></div>
