@@ -1,0 +1,190 @@
+<section class="page">
+  <div class="page-header">
+    <h2><i class="fa-solid fa-chart-line"></i> オートメーション サマリー</h2>
+    <div class="page-actions">
+      <label class="select-label">
+        プロジェクト
+        <select [ngModel]="selectedProjectId()" (ngModelChange)="onProjectChange($event)">
+          <option value="">すべて</option>
+          <option *ngFor="let project of projects()" [value]="project.id">
+            {{ project.name }}
+          </option>
+        </select>
+      </label>
+      <label class="input-label">
+        検索
+        <input type="search" [ngModel]="searchTerm()" (ngModelChange)="onSearch($event)" placeholder="ジョブ名 / ID">
+      </label>
+      <label class="select-label">
+        ステータス
+        <select [ngModel]="statusFilter()" (ngModelChange)="onStatusChange($event)">
+          <option value="all">すべて</option>
+          <option value="running">実行中</option>
+          <option value="completed">完了</option>
+          <option value="error">エラー</option>
+          <option value="pending">待機中</option>
+          <option value="stopped">停止</option>
+        </select>
+      </label>
+      <label class="select-label">
+        トリガー
+        <select [ngModel]="triggerFilter()" (ngModelChange)="onTriggerChange($event)">
+          <option value="all">すべて</option>
+          <option value="manual">手動</option>
+          <option value="schedule">スケジュール</option>
+        </select>
+      </label>
+      <button type="button" class="btn-secondary" (click)="refresh()">
+        <i class="fa-solid fa-arrows-rotate"></i> 更新
+      </button>
+    </div>
+  </div>
+
+  <div class="summary-metrics card" *ngIf="!loadingSummary(); else summaryLoading">
+    <div class="metric-card" *ngFor="let metric of summaryMetrics()">
+      <p class="value" [class.running]="metric.tone === 'running'" [class.error]="metric.tone === 'error'">
+        {{ metric.value }}
+      </p>
+      <p class="label">{{ metric.label }}</p>
+    </div>
+  </div>
+
+  <ng-template #summaryLoading>
+    <div class="card loading-state">
+      <p><i class="fa-solid fa-spinner fa-spin"></i> サマリーを読み込み中...</p>
+    </div>
+  </ng-template>
+
+  <div class="card">
+    <div class="card-header">
+      <h2><i class="fa-solid fa-list-check"></i> ジョブ一覧</h2>
+      <span class="muted" *ngIf="pagination() as pager">
+        {{ pager.totalItems | number }} 件 / {{ pager.totalPages }} ページ
+      </span>
+    </div>
+
+    <div class="table-wrapper" *ngIf="!loadingJobs(); else jobsLoading">
+      <table>
+        <thead>
+          <tr>
+            <th>ジョブ名</th>
+            <th>プロジェクト</th>
+            <th>ステータス</th>
+            <th>進捗</th>
+            <th>トリガー</th>
+            <th>開始日時</th>
+            <th>実行時間</th>
+            <th>推定コスト</th>
+            <th>アクション</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let job of jobs(); trackBy: trackByJobId">
+            <td>
+              <button type="button" class="link-button" [routerLink]="['../detail', job.id]">
+                {{ job.name }}
+              </button>
+            </td>
+            <td>{{ formatProject(job.projectId) }}</td>
+            <td>
+              <span [class]="getStatusBadgeClass(job.status)">
+                {{ getStatusLabel(job.status) }}
+              </span>
+            </td>
+            <td>
+              <ng-container *ngIf="job.progress as progress; else noProgress">
+                ({{ progress.current | number }} / {{ progress.total | number }})
+                <div class="progress-bar">
+                  <div [class]="getProgressBarClass(job)" [style.width.%]="progress.percent"></div>
+                </div>
+              </ng-container>
+              <ng-template #noProgress>-</ng-template>
+            </td>
+            <td>{{ job.trigger === 'manual' ? '手動' : 'スケジュール' }}</td>
+            <td>{{ job.startedAt || '-' }}</td>
+            <td>{{ job.durationHuman || '-' }}</td>
+            <td>
+              <ng-container *ngIf="job.estimatedCostUsd !== undefined; else costPlaceholder">
+                {{ job.estimatedCostUsd | number:'1.2-2' }} USD
+              </ng-container>
+              <ng-template #costPlaceholder>-</ng-template>
+            </td>
+            <td class="action-buttons">
+              <button
+                *ngIf="job.status === 'running'"
+                type="button"
+                class="btn-danger"
+                (click)="performAction(job, 'stop')"
+                [disabled]="isActionLoading(job.id, 'stop')"
+              >
+                <i class="fa-solid fa-stop"></i> 停止
+              </button>
+              <button
+                *ngIf="job.status === 'pending'"
+                type="button"
+                class="btn-danger"
+                (click)="performAction(job, 'cancel')"
+                [disabled]="isActionLoading(job.id, 'cancel')"
+              >
+                <i class="fa-solid fa-ban"></i> キャンセル
+              </button>
+              <button
+                *ngIf="job.status === 'stopped'"
+                type="button"
+                (click)="performAction(job, 'resume')"
+                [disabled]="isActionLoading(job.id, 'resume')"
+              >
+                <i class="fa-solid fa-play"></i> 再開
+              </button>
+              <button
+                *ngIf="job.status === 'completed' || job.status === 'error'"
+                type="button"
+                (click)="performAction(job, 'retry')"
+                [disabled]="isActionLoading(job.id, 'retry')"
+              >
+                <i class="fa-solid fa-rotate-right"></i> 再実行
+              </button>
+              <button
+                *ngIf="job.status === 'error'"
+                type="button"
+                (click)="performAction(job, 'retryErrors')"
+                [disabled]="isActionLoading(job.id, 'retryErrors')"
+              >
+                <i class="fa-solid fa-exclamation-triangle"></i> エラーのみ再実行
+              </button>
+              <button type="button" [routerLink]="['../detail', job.id]">
+                <i class="fa-solid fa-magnifying-glass"></i> 詳細
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="jobs().length === 0">
+            <td colspan="9" class="empty-state">
+              <i class="fa-solid fa-inbox"></i> 条件に一致するジョブがありません
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer" *ngIf="pagination() as pager">
+      <button type="button" class="btn-secondary" (click)="goToPage(page() - 1)" [disabled]="page() === 1">
+        <i class="fa-solid fa-angle-left"></i> 前へ
+      </button>
+      <span>ページ {{ page() }} / {{ pager.totalPages }}</span>
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="goToPage(page() + 1)"
+        [disabled]="page() === pager.totalPages"
+      >
+        次へ <i class="fa-solid fa-angle-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <ng-template #jobsLoading>
+    <div class="card loading-state">
+      <p><i class="fa-solid fa-spinner fa-spin"></i> ジョブ一覧を読み込み中...</p>
+    </div>
+  </ng-template>
+</section>

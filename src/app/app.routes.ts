@@ -15,7 +15,11 @@ export const routes: Routes = [
   { path: 'team/:teamId', canActivate: [teamGuard], loadComponent: () => import('./pages/team/team.component').then(m => m.TeamComponent) },
   { path: 'invite/:onetimeToken', loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   { path: 'home', canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent) },
-  { path: 'automation', canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], loadComponent: () => import('./pages/automation-dashboard/automation-dashboard.component').then(m => m.AutomationDashboardComponent) },
+  {
+    path: 'automation',
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
+    loadChildren: () => import('./pages/automation-dashboard/automation-dashboard.routes').then(m => m.AUTOMATION_DASHBOARD_ROUTES),
+  },
   { path: 'context-hub', canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], loadComponent: () => import('./pages/context-hub/context-hub.component').then(m => m.ContextHubComponent) },
   // { path: 'home', canActivate: [loginGuard], loadComponent: () => import('./pages/error/error.component').then(m => m.ErrorComponent) },
   {

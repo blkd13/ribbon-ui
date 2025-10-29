@@ -1,0 +1,207 @@
+<section class="page">
+  <ng-container *ngIf="job() as job; else jobLoading">
+    <div class="card">
+      <div class="job-detail-header">
+        <div>
+          <h2><i class="fa-solid fa-file-invoice"></i> ジョブ詳細: {{ job.name }}</h2>
+          <span [class]="getStatusBadgeClass(job.status)">{{ getStatusLabel(job.status) }}</span>
+        </div>
+        <div class="action-buttons">
+          <button
+            type="button"
+            class="btn-danger"
+            *ngIf="job.status === 'running'"
+            (click)="performAction('stop')"
+            [disabled]="jobAction() === 'stop'"
+          >
+            <i class="fa-solid fa-stop"></i> ジョブを停止
+          </button>
+          <button
+            type="button"
+            class="btn-danger"
+            *ngIf="job.status === 'pending'"
+            (click)="performAction('cancel')"
+            [disabled]="jobAction() === 'cancel'"
+          >
+            <i class="fa-solid fa-ban"></i> ジョブをキャンセル
+          </button>
+          <button
+            type="button"
+            *ngIf="job.status === 'stopped'"
+            (click)="performAction('resume')"
+            [disabled]="jobAction() === 'resume'"
+          >
+            <i class="fa-solid fa-play"></i> 再開
+          </button>
+          <button
+            type="button"
+            *ngIf="job.status === 'completed' || job.status === 'error'"
+            (click)="performAction('retry')"
+            [disabled]="jobAction() === 'retry'"
+          >
+            <i class="fa-solid fa-rotate-right"></i> 再実行
+          </button>
+          <button
+            type="button"
+            *ngIf="job.status === 'error'"
+            (click)="performAction('retryErrors')"
+            [disabled]="jobAction() === 'retryErrors'"
+          >
+            <i class="fa-solid fa-exclamation-triangle"></i> エラーのみ再実行
+          </button>
+          <button type="button" class="btn-secondary" (click)="refresh()">
+            <i class="fa-solid fa-arrows-rotate"></i> 再読み込み
+          </button>
+        </div>
+      </div>
+
+      <div class="job-summary-grid">
+        <div class="summary-item">
+          <span class="label">ジョブID</span>
+          <span class="value">{{ job.jobId }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">プロジェクト</span>
+          <span class="value">{{ job.projectId }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">トリガー</span>
+          <span class="value">{{ job.trigger === 'manual' ? '手動' : 'スケジュール' }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">開始日時</span>
+          <span class="value">{{ job.startedAt || '-' }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">実行時間</span>
+          <span class="value">{{ job.durationHuman || '-' }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">モデル</span>
+          <span class="value">{{ job.model.provider }} / {{ job.model.modelId }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">総タスク数</span>
+          <span class="value">{{ job.totals.tasks | number }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">完了</span>
+          <span class="value success">{{ job.totals.completed | number }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">エラー</span>
+          <span class="value error">{{ job.totals.errors | number }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">累計コスト</span>
+          <span class="value">{{ job.totals.costUsd | number:'1.2-2' }} USD</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">最終実行ID</span>
+          <span class="value">{{ job.lastRunId || '-' }}</span>
+        </div>
+      </div>
+
+      <div class="job-snapshot">
+        <h3><i class="fa-solid fa-scroll"></i> 実行スナップショット</h3>
+        <div class="snapshot-section">
+          <h4>プロンプト</h4>
+          <pre>{{ job.snapshot.prompt }}</pre>
+        </div>
+        <div class="snapshot-section">
+          <h4>パラメーター</h4>
+          <pre>{{ job.snapshot.parameters | json }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><i class="fa-solid fa-tasks"></i> タスク一覧</h3>
+      <div class="task-filters">
+        <label class="input-label">
+          検索
+          <input
+            type="search"
+            [ngModel]="taskSearch()"
+            (ngModelChange)="onTaskSearchChange($event)"
+            placeholder="入力プレビュー / ID"
+          >
+        </label>
+        <label class="select-label">
+          ステータス
+          <select [ngModel]="taskStatusFilter()" (ngModelChange)="onTaskStatusChange($event)">
+            <option *ngFor="let option of taskStatusOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <button type="button" class="btn-secondary" (click)="reloadTasks()">
+          <i class="fa-solid fa-arrows-rotate"></i> 更新
+        </button>
+      </div>
+
+      <div class="table-wrapper" *ngIf="!loadingTasks(); else tasksLoading">
+        <table>
+          <thead>
+            <tr>
+              <th>タスクID</th>
+              <th>ステータス</th>
+              <th>入力プレビュー</th>
+              <th>出力プレビュー</th>
+              <th>トークン</th>
+              <th>実行時間 (秒)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let task of tasks(); trackBy: trackTask">
+              <td>{{ task.taskId }}</td>
+              <td>
+                <span [class]="getStatusBadgeClass(task.status)">
+                  {{ getStatusLabel(task.status) }}
+                </span>
+              </td>
+              <td>{{ task.inputPreview }}</td>
+              <td [class.text-error]="task.status === 'error'">
+                {{ task.outputPreview || task.errorMessage || '-' }}
+              </td>
+              <td>{{ task.tokens | number }}</td>
+              <td>{{ task.durationSeconds | number:'1.1-1' }}</td>
+            </tr>
+            <tr *ngIf="tasks().length === 0">
+              <td colspan="6" class="empty-state">
+                <i class="fa-solid fa-inbox"></i> 条件に一致するタスクがありません
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-footer" *ngIf="pagination() as pager">
+        <button type="button" class="btn-secondary" (click)="goToPage(page() - 1)" [disabled]="page() === 1">
+          <i class="fa-solid fa-angle-left"></i> 前へ
+        </button>
+        <span>ページ {{ page() }} / {{ pager.totalPages }}</span>
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="goToPage(page() + 1)"
+          [disabled]="page() === pager.totalPages"
+        >
+          次へ <i class="fa-solid fa-angle-right"></i>
+        </button>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #jobLoading>
+    <div class="card loading-state">
+      <p><i class="fa-solid fa-spinner fa-spin"></i> ジョブ情報を読み込み中...</p>
+    </div>
+  </ng-template>
+
+  <ng-template #tasksLoading>
+    <div class="loading-state">
+      <p><i class="fa-solid fa-spinner fa-spin"></i> タスク一覧を読み込み中...</p>
+    </div>
+  </ng-template>
+</section>

@@ -24,7 +24,8 @@
         </div>
         <button type="button" class="theme-toggle" (click)="toggleTheme()" [attr.aria-label]="'テーマ切替'">
             <mat-icon>
-                {{ selectedTheme === 'system' ? 'settings_brightness' : (selectedTheme.includes('dark') ? 'dark_mode' : 'light_mode') }}
+                {{ selectedTheme === 'system' ? 'settings_brightness' : (selectedTheme.includes('dark') ? 'dark_mode' :
+                'light_mode') }}
             </mat-icon>
         </button>
     </div>
@@ -52,7 +53,8 @@
         } @else {
         <mat-expansion-panel style="border-radius: 32px;margin-top: 20px;">
             <mat-expansion-panel-header class="login-button federation m-0" style="margin: 0;">
-                <img src="./image/{{provider.type}}-logo.svg" class="mr-4" alt="{{provider.type}} logo">{{provider.type}}
+                <img src="./image/{{provider.type}}-logo.svg" class="mr-4"
+                    alt="{{provider.type}} logo">{{provider.type}}
                 <!-- <mat-panel-title>{{group.label}}</mat-panel-title> -->
             </mat-expansion-panel-header>
             @for(provider of apiProviderGroupedList[key];track $index){
@@ -76,12 +78,16 @@
             <label for="password">{{ 'PASSWORD' | translate }}</label>
             <input formControlName="password" [type]="hidePassword?'password':'text'" id="password" name="password"
                 placeholder="{{ 'ENTER_PASSWORD' | translate }}" autocomplete="current-password">
-            <mat-icon class="eye" (click)="hidePassword=!hidePassword" [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePassword?'':'_off'}}</mat-icon>
+            <mat-icon class="eye" (click)="hidePassword=!hidePassword"
+                [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePassword?'':'_off'}}</mat-icon>
         </div>
-        <button type="submit" class="login-button" [disabled]="loginForm.invalid || isSubmitting">{{ 'LOGIN' | translate }}</button>
+        <button type="submit" class="login-button" [disabled]="loginForm.invalid || isSubmitting">{{ 'LOGIN' | translate
+            }}</button>
+        <!-- 
         <button type="button" class="login-button guest" (click)="guestLogin()" [disabled]="isSubmitting">
             {{ 'GUEST_USER' | translate }}
         </button>
+        -->
         <a href="javascript:void(0)" (click)="onChangeState('sendmail')" class="forgot-password">
             {{ 'FORGOT_PASSWORD' | translate }}<mat-icon>arrow_forward</mat-icon>
         </a>
@@ -130,14 +136,16 @@
             <label for="password">{{ 'PASSWORD' | translate }}</label>
             <input formControlName="password" [type]="hidePassword?'password':'text'" id="password" name="password"
                 placeholder="{{ 'ENTER_PASSWORD' | translate }}" autocomplete="new-password">
-            <mat-icon class="eye" (click)="hidePassword=!hidePassword" [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePassword?'':'_off'}}</mat-icon>
+            <mat-icon class="eye" (click)="hidePassword=!hidePassword"
+                [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePassword?'':'_off'}}</mat-icon>
         </div>
         <div class="form-group">
             <label for="passwordConfirm">{{ 'PASSWORD_CONFIRM' | translate }}</label>
             <input formControlName="passwordConfirm" [type]="hidePasswordConfirm?'password':'text'" id="passwordConfirm"
-                name="passwordConfirm" placeholder="{{ 'ENTER_PASSWORD_CONFIRM' | translate }}" autocomplete="new-password">
-            <mat-icon class="eye"
-                (click)="hidePasswordConfirm=!hidePasswordConfirm" [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePasswordConfirm?'':'_off'}}</mat-icon>
+                name="passwordConfirm" placeholder="{{ 'ENTER_PASSWORD_CONFIRM' | translate }}"
+                autocomplete="new-password">
+            <mat-icon class="eye" (click)="hidePasswordConfirm=!hidePasswordConfirm"
+                [attr.aria-label]="'パスワードの表示切替'">visibility{{hidePasswordConfirm?'':'_off'}}</mat-icon>
         </div>
         <button type="submit" class="login-button" [disabled]="passwordResetForm.invalid">
             {{ 'RESET' | translate}}

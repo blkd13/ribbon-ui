@@ -164,8 +164,18 @@ export class ThreadService {
                 ...genInitialBaseEntity('thread-group'),
             } as ThreadGroupForView;
 
-            threadGroup.threadList.push(this.genInitialThreadEntity(threadGroup.id));
-            threadGroup.threadList.push(this.genInitialThreadEntity(threadGroup.id));
+            const thread0 = this.genInitialThreadEntity(threadGroup.id);
+            thread0.inDto.args.model = 'gpt-5-chat-latest';
+            threadGroup.threadList.push(thread0);
+
+            const thread1 = this.genInitialThreadEntity(threadGroup.id);
+            thread1.inDto.args.model = 'claude-sonnet-4-20250514';
+            threadGroup.threadList.push(thread1);
+
+            const thread2 = this.genInitialThreadEntity(threadGroup.id);
+            thread2.inDto.args.model = 'gemini-2.5-flash';
+            threadGroup.threadList.push(thread2);
+
             return threadGroup;
         }
     }
@@ -183,7 +193,7 @@ export class ThreadService {
 
     getInitialArgs(): ChatCompletionCreateParamsWithoutMessages {
         return {
-            model: 'gemini-2.5-flash',
+            model: 'gpt-5-chat-latest',
             providerName: 'vertexai',
             temperature: 1.0,
             max_tokens: 0,

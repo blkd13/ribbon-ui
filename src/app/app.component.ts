@@ -76,41 +76,46 @@ export class AppComponent implements OnInit {
     this.g.lang = userLang.split('-')[0] as Lang;
     this.g.locale = userLang as Locale;
     this.translateService.setDefaultLang(this.g.lang);
-    this.authService.isAuthorized().subscribe({
-      next: next => {
-        /* matomoにUserIDを送る */
-        _paq.push(['setUserId', next.id]);
+    if (`${location.pathname}${location.search}${location.hash}`.includes('/invite/')) {
+      // 招待リンクの場合はログインチェックをしない
+      this.isChecked = true;
+    } else {
+      this.authService.isAuthorized().subscribe({
+        next: next => {
+          /* matomoにUserIDを送る */
+          _paq.push(['setUserId', next.id]);
 
-        this.g.info.user = next;
-        this.g.info$.next({ user: next });
+          this.g.info.user = next;
+          this.g.info$.next({ user: next });
 
-        this.userService.getUserSetting().subscribe({
-          next: next => {
-            // ユーザーの言語設定を適用
-            const savedLanguage = this.userService.language;
-            if (savedLanguage && savedLanguage !== 'auto') {
-              this.translateService.use(savedLanguage);
-              this.g.lang = savedLanguage.split('-')[0] as Lang;
-              this.g.locale = savedLanguage as Locale;
+          this.userService.getUserSetting().subscribe({
+            next: next => {
+              // ユーザーの言語設定を適用
+              const savedLanguage = this.userService.language;
+              if (savedLanguage && savedLanguage !== 'auto') {
+                this.translateService.use(savedLanguage);
+                this.g.lang = savedLanguage.split('-')[0] as Lang;
+                this.g.locale = savedLanguage as Locale;
+              }
+              this.isChecked = true;
+              this.checkForUnreadAnnouncements();
+            },
+            error: error => {
+              this.isChecked = true;
+            },
+            complete: () => {
+              // this.logger.debug('complete');
             }
-            this.isChecked = true;
-            this.checkForUnreadAnnouncements();
-          },
-          error: error => {
-            this.isChecked = true;
-          },
-          complete: () => {
-            // this.logger.debug('complete');
-          }
-        });
-      },
-      error: error => {
-        this.isChecked = true;
-      },
-      complete: () => {
-        // this.logger.debug('complete');
-      }
-    });
+          });
+        },
+        error: error => {
+          this.isChecked = true;
+        },
+        complete: () => {
+          // this.logger.debug('complete');
+        }
+      });
+    }
   }
 
   private checkForUnreadAnnouncements(): void {
