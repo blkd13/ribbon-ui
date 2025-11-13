@@ -27,7 +27,7 @@ export class ApiInterceptor implements HttpInterceptor {
     // this.logger.debug(`${method} ${url}`);
     // 開発環境の場合はローカルのjsonファイルに向ける
     // !environment.production ||
-    if (request.url.endsWith('.json')) {
+    if (request.url.endsWith('.json') || request.url.endsWith('.jsonl')) {
       // .jsonとかはassets系だと思われるので何もしない。
       return next.handle(request);
     } else if (this.g.queries['isMock']) {

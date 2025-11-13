@@ -104,7 +104,7 @@
         <!-- {{content.id}} -->
         <markdown katex mermaid clipboard [data]="brackets.pre+content.text+brackets.post"></markdown>
       </div>
-      } @else if(content.type==='file') {
+      } @else if(content.type==='file' || content.type==='base64') {
       <!-- Non-text content is file -->
       <!-- File display grouping -->
       @if($index === 0 || message.contents[$index - 1].type !== content.type){

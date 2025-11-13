@@ -7,6 +7,23 @@
     height: 40px !important;
 }
 
+.doc-tag--image {
+    height: unset !important;
+    width: unset !important;
+}
+
+.content {
+    width: unset;
+}
+
+.content--uploaded {
+    height: 200px;
+}
+
+.doc-tag--ai {
+    height: 400px;
+}
+
 .doc-tag {
     min-width: 200px;
     width: 200px;

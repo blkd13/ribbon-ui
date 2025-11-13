@@ -1632,9 +1632,25 @@ export class ChatComponent implements OnInit {
                 this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
                 content = contentPart;
               }
-              const text = choice.delta.content;
-              content.text += text;
-              // this.logger.debug(`content[${content.id}]=${choice.delta.content}`);
+
+              if ((choice.delta as any).mimeType) {
+                // 画像とかファイルとか
+                const mimeType = (choice.delta as any).mimeType as string;
+                // textじゃなかったらブレイクする
+                const contentPart = this.messageService.initContentPart(message.id, '');
+                contentPart.type = ContentPartType.TEXT;
+                message.contents.push(contentPart);
+                this.messageService.addMessageContentPartDry(contentPart.id, contentPart);
+                content = contentPart;
+
+                const dataUrl = choice.delta.content;
+                content.type = ContentPartType.BASE64;
+                content.text += dataUrl;
+              } else {
+                const text = choice.delta.content;
+                content.text += text;
+                // this.logger.debug(`content[${content.id}]=${choice.delta.content}`);
+              }
             } else { }
 
             const toolCallGroupId = message.contents.findLast(content => content.type === ContentPartType.TOOL)?.id || ''; // toolCallGroupIdは発番はされているが取ってくるのが難しいので一旦contentIdで代用。発行単位が同じなのでこれでも大丈夫だと思う。
@@ -1937,7 +1953,7 @@ export class ChatComponent implements OnInit {
   onKeyDown($event: KeyboardEvent): void {
     if ($event.key === 'Enter') {
       if ($event.shiftKey) {
-        this.onChange();
+        // this.onChange();
       } else if ((this.userService.enterMode === 'Ctrl+Enter' && $event.ctrlKey) || this.userService.enterMode === 'Enter') {
         if (this.isLock || (!this.inputArea.content.at(-1)?.text && this.tailRole !== 'user')) {
         } else {
@@ -1945,40 +1961,19 @@ export class ChatComponent implements OnInit {
           this.send().subscribe();
         }
       } else {
-        this.onChange();
+        // this.onChange();
       }
     } else {
-      // 最後のキー入力から1000秒後にonChangeが動くようにする。1000秒経たずにここに来たら前回のタイマーをキャンセルする
-      clearTimeout(this.timeoutId);
-      this.timeoutId = setTimeout(() => this.onChange(), 1000);
+      // // 最後のキー入力から1000秒後にonChangeが動くようにする。1000秒経たずにここに来たら前回のタイマーをキャンセルする
+      // clearTimeout(this.timeoutId);
+      // this.timeoutId = setTimeout(() => this.onChange(), 1000);
     }
   }
 
   onChange(): void {
     this.charCount = 0;
     this.tokenCounting = true;
-
-    // 全スレッド纏めてやろうとしたけどdummyが積み重なってるパターンの考慮が出来てなくて頓死
-    // const ids = this.selectedThreadGroup.threadList.filter(thread => !thread.id.startsWith('dummy-')).map(thread => thread.id);
-    // this.chatService.countTokensByThread(ids).subscribe({
-    //   next: next => {
-    //     this.tokenObjList = next.map(tokenObj => ({
-    //       ...tokenObj,
-    //       cost: this.calcCost(next.findIndex(tokenObj => tokenObj.id === tokenObj.id)),
-    //       model: this.selectedThreadGroup.threadList.find(thread => thread.id === tokenObj.id)!.inDto.args.model,
-    //     }));
-    //     this.tokenObjSummary = { id: 'Summary', totalTokens: 0, totalBillableCharacters: 0, text: 0, image: 0, audio: 0, video: 0, cost: 0, model: 'Summary' };
-    //     this.tokenObjList.forEach(tokenObj => {
-    //       this.tokenObjSummary.totalTokens += tokenObj.totalTokens;
-    //       this.tokenObjSummary.totalBillableCharacters! += tokenObj.totalBillableCharacters || 0;
-    //       this.tokenObjSummary.text += tokenObj.text;
-    //       this.tokenObjSummary.image += tokenObj.image;
-    //       this.tokenObjSummary.audio += tokenObj.audio;
-    //       this.tokenObjSummary.video += tokenObj.video;
-    //       this.tokenObjSummary.cost += tokenObj.cost;
-    //     });
-    //   },
-    // });
+    // console.log('onChange called');
 
     safeForkJoin(this.selectedThreadGroup.threadList.map(thread => {
       // this.logger.debug(this.messageGroupIdListMas[thread.id].at(-1));

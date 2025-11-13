@@ -273,7 +273,18 @@ export class DocViewComponent {
       next: next => {
         this.dataUrl = next;
         if (this.dataUrl.startsWith('data:image/')) {
+          // 画像はObjectURLに変換して表示する
           this.type = 'image';
+          const blob = this.dataURLtoBlob(this.dataUrl);
+          this.dataUrl = URL.createObjectURL(blob);
+        } else if (this.dataUrl.startsWith('data:audio/')) {
+          this.type = 'audio';
+          const blob = this.dataURLtoBlob(this.dataUrl);
+          this.dataUrl = URL.createObjectURL(blob);
+        } else if (this.dataUrl.startsWith('data:video/')) {
+          this.type = 'video';
+          const blob = this.dataURLtoBlob(this.dataUrl);
+          this.dataUrl = URL.createObjectURL(blob);
         } else if (false
           || this.dataUrl.startsWith('data:text/')
           // || this.dataUrl.startsWith('data:application/octet-stream')
@@ -357,10 +368,6 @@ export class DocViewComponent {
             // console.log(e);
             // this.text = this.dataUrl;
           }
-        } else if (this.dataUrl.startsWith('data:audio/')) {
-          this.type = 'audio';
-        } else if (this.dataUrl.startsWith('data:video/')) {
-          this.type = 'video';
         } else if (
           this.dataUrl.startsWith('data:application/pdf')
           || this.dataUrl.startsWith('data:application/msword')

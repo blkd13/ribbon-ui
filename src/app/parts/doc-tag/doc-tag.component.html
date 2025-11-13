@@ -1,3 +1,12 @@
+@if(type==='image'){
+<a target="_blank" [href]="image" class="command-tag doc-tag doc-tag--image relative" [matTooltip]="content().text||''"
+    matTooltipPosition="above">
+    <img [src]="image" [ngClass]="[`doc-tag--${fgType}`]" class="content" />
+</a>
+@if(removable()){
+<mat-icon class="close" (click)="onRemove($event)">close</mat-icon>
+}
+} @else {
 <div class="command-tag doc-tag relative" (click)="open()" [matTooltip]="content().text||''" matTooltipPosition="above">
     <div class="thumbnail">
         <!-- @if (content.image_url.url.startsWith('data:image/')) {
@@ -27,4 +36,4 @@
     @if(removable()){
     <mat-icon class="close" (click)="onRemove($event)">close</mat-icon>
     }
-</div>
+</div> }

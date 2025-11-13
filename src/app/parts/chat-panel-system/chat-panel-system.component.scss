@@ -130,6 +130,7 @@
 
 
 .tooltip-small-tag {
+    top: 16px;
     width: 16px;
     height: 16px;
 
@@ -139,6 +140,11 @@
     padding: 1px;
     margin: 0;
     border-radius: 4px;
+    transition: top 0.2s ease;
+}
+
+::ng-deep .mat-expanded .tooltip-small-tag {
+    top: 10px;
 }
 
 .toggle-button {

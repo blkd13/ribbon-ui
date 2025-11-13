@@ -131,8 +131,8 @@
 
 // .user .message-header,
 .message.user,
-.user.controller-top,
-.user.controller-bottom {
+.message.user.controller-top,
+.message.user.controller-bottom {
     background: var(--message-background-user);
 
     .message-notediting {
@@ -140,11 +140,11 @@
     }
 }
 
-.message.user mat-expansion-panel-header {
+.message.user>mat-expansion-panel-header {
     background: var(--message-background-user);
 }
 
-.user {
+.message.user {
     .message-title {
         color: var(--message-color-user);
     }
@@ -156,8 +156,8 @@
 
 // .assistant .message-header,
 .message.assistant,
-.assistant.controller-top,
-.assistant.controller-bottom {
+.message.assistant.controller-top,
+.message.assistant.controller-bottom {
     background: var(--message-background-assistant);
 
     .message-notediting {
@@ -165,12 +165,12 @@
     }
 }
 
-.message.assistant mat-expansion-panel-header {
+.message.assistant>mat-expansion-panel-header {
     background: var(--message-background-assistant);
 }
 
-.assistant {
-    .message-title {
+.message.assistant {
+    &>.message-title {
         color: var(--message-color-assistant);
     }
 

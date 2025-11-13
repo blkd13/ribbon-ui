@@ -21,6 +21,22 @@ export const routes: Routes = [
     loadChildren: () => import('./pages/automation-dashboard/automation-dashboard.routes').then(m => m.AUTOMATION_DASHBOARD_ROUTES),
   },
   { path: 'context-hub', canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], loadComponent: () => import('./pages/context-hub/context-hub.component').then(m => m.ContextHubComponent) },
+  // Code Sessions
+  { 
+    path: 'code-sessions', 
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], 
+    loadComponent: () => import('./pages/code-sessions/code-sessions-list/code-sessions-list.component').then(m => m.CodeSessionsListComponent) 
+  },
+  { 
+    path: 'code-sessions/:projectName', 
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], 
+    loadComponent: () => import('./pages/code-sessions/project-sessions/project-sessions.component').then(m => m.ProjectSessionsComponent) 
+  },
+  { 
+    path: 'code-sessions/:projectName/:sessionId', 
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], 
+    loadComponent: () => import('./pages/code-sessions/session-detail/session-detail.component').then(m => m.SessionDetailComponent) 
+  },
   // { path: 'home', canActivate: [loginGuard], loadComponent: () => import('./pages/error/error.component').then(m => m.ErrorComponent) },
   {
     path: 'mattermost/:providerName', canActivate: [oAuthGuardGenerator('mattermost')], children: [{

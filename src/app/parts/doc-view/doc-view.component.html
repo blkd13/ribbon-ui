@@ -1,6 +1,6 @@
 <div class="flex justify-center w-full">
     @if(fileGroup){
-    <div class="custom-scroll custom-scroll--thin content" #fileTree style="width: 500px">
+    <div class="custom-scroll custom-scroll--thin" #fileTree style="width: 500px">
         <app-select-tree class="min-w-60" [fileGroup]="fileGroup" (selectFile$)="setFile($event)"></app-select-tree>
     </div>
     <div class="flex items-center cursor-ew-resize" [appDragDelta]="fileTree" position="right">
@@ -9,7 +9,9 @@
     <div class="custom-scroll flex-grow w-0 overflow-hidden">
         <h3 [title]="label">{{label}}</h3>
         @if(type==='image'){
-        <img class="content" [src]="dataUrl" />
+        <a target="_blank" [href]="dataUrl">
+            <img class="content" [src]="dataUrl" />
+        </a>
         }@else if(type==='text'){
         <select [(ngModel)]="encode" (change)="decode()" style="margin:0 20px;">
             <option value="UTF-8">UTF-8</option>
@@ -20,8 +22,10 @@
             <markdown katex mermaid clipboard [data]="brackets.pre+text+brackets.post"></markdown>
         </div>
         }@else if(type==='audio'){
+        <a target="_blank" [href]="dataUrl">音声を別タブで開く</a>
         <audio class="content" [src]="dataUrl" controls></audio>
         }@else if(type==='video'){
+        <a target="_blank" [href]="dataUrl">動画を別タブで開く</a>
         <video class="content" [src]="dataUrl" controls></video>
         }@else if(type==='pdf'){
         <iframe class="content" width="800" style="height:90vh;" [src]="pdfUrl"></iframe>
