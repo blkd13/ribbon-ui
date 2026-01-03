@@ -1,5 +1,5 @@
 @if(type==='image'){
-<a target="_blank" [href]="image" class="command-tag doc-tag doc-tag--image relative" [matTooltip]="content().text||''"
+<a target="_blank" [href]="image" class="command-tag doc-tag doc-tag--image relative" [matTooltip]="image"
     matTooltipPosition="above">
     <img [src]="image" [ngClass]="[`doc-tag--${fgType}`]" class="content" />
 </a>
@@ -36,4 +36,5 @@
     @if(removable()){
     <mat-icon class="close" (click)="onRemove($event)">close</mat-icon>
     }
-</div> }
+</div>
+}

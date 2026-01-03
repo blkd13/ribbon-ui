@@ -12,6 +12,17 @@
                     }
                 </mat-select>
             </mat-form-field>
+
+            <div class="export-buttons">
+                <button mat-stroked-button (click)="exportToCsv()" matTooltip="{{ 'EXPORT_CURRENT_PERIOD' | translate }}">
+                    <mat-icon>file_download</mat-icon>
+                    CSV
+                </button>
+                <button mat-stroked-button (click)="exportTrendToCsv()" matTooltip="{{ 'EXPORT_TREND_DATA' | translate }}">
+                    <mat-icon>trending_up</mat-icon>
+                    {{ 'TREND' | translate }}
+                </button>
+            </div>
         </div>
     </div>
 
@@ -55,6 +66,44 @@
                 </div>
             </div>
         </div>
+
+        <!-- 期間比較 -->
+        @if (selectYyyyMm !== 'ALL') {
+        <div class="comparison-grid">
+            @if (getMonthOverMonthChange(); as mom) {
+            <div class="comparison-card" [class.positive]="mom.percent >= 0" [class.negative]="mom.percent < 0">
+                <div class="comparison-icon">
+                    <mat-icon>{{ mom.percent >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+                </div>
+                <div class="comparison-content">
+                    <div class="comparison-value">
+                        {{ mom.percent >= 0 ? '+' : '' }}{{ mom.percent | number:'1.1-1' }}%
+                    </div>
+                    <div class="comparison-label">{{ 'VS_PREVIOUS_MONTH' | translate }}</div>
+                    <div class="comparison-detail">
+                        {{ mom.value >= 0 ? '+' : '' }}{{ mom.value | number:'1.0-0' }}{{ 'YEN' | translate }}
+                    </div>
+                </div>
+            </div>
+            }
+            @if (getYearOverYearChange(); as yoy) {
+            <div class="comparison-card" [class.positive]="yoy.percent >= 0" [class.negative]="yoy.percent < 0">
+                <div class="comparison-icon">
+                    <mat-icon>{{ yoy.percent >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+                </div>
+                <div class="comparison-content">
+                    <div class="comparison-value">
+                        {{ yoy.percent >= 0 ? '+' : '' }}{{ yoy.percent | number:'1.1-1' }}%
+                    </div>
+                    <div class="comparison-label">{{ 'VS_PREVIOUS_YEAR' | translate }}</div>
+                    <div class="comparison-detail">
+                        {{ yoy.value >= 0 ? '+' : '' }}{{ yoy.value | number:'1.0-0' }}{{ 'YEN' | translate }}
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+        }
     </div>
 
     <!-- チャートセクション -->

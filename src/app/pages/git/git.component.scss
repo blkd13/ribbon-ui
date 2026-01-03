@@ -105,7 +105,7 @@ mat-tab-group {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+    width: 100%;
   padding: 8px 16px;
   gap: 16px;
 }
@@ -185,7 +185,7 @@ mat-tab-group {
 .repository-container {
   flex: 1;
   overflow: auto;
-  padding: 8px;
+    padding: 8px;
 }
 
 .repository-grid {
@@ -395,15 +395,15 @@ mat-tab-group {
 
 // Legacy styles cleanup
 table {
-  width: 100%;
-  border-collapse: collapse;
+    width: 100%;
+    border-collapse: collapse;
 }
 
 th,
 td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
 }
 
 .tree-invisible {

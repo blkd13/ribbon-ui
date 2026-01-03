@@ -12,7 +12,7 @@ export type MultilingualPrompt = Record<Lang, string>;
 })
 export class GService {
 
-  version = 'v20250812';
+  version = 'v20251222';
   appType: string = environment.appType;
 
   // ローディング中のHTTP通信数

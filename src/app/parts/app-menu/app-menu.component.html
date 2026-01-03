@@ -11,14 +11,18 @@
         <mat-icon>chat</mat-icon>
         <span>{{ 'AI_CHAT' | translate }}</span>
     </a>
+
+    <!--
     <a mat-menu-item [routerLink]="['/automation']">
         <mat-icon>auto_mode</mat-icon>
         <span>{{ 'AUTOMATION_DASHBOARD' | translate }}</span>
     </a>
     <a mat-menu-item [routerLink]="['/context-hub']">
         <mat-icon>hub</mat-icon>
-        <span>コンテキスト管理</span>
+        <span>{{ 'CONTEXT_HUB' | translate }}</span>
     </a>
+    -->
+
     @for(key of groupKeys; track $index) {
     @if(key === 'git') {
     <button mat-menu-item [matMenuTriggerFor]="gitMenu">
@@ -30,12 +34,23 @@
     } @else {
 
     @for(apiProvider of apiProviderGroupedList[key]; track $index) {
+    @if(key==='mattermost') {
+    <!-- Mattermost Light固定にしてみる -->
+    <a mat-menu-item href="/mattermost/default/" target="_blank">
+        <mat-icon>
+            <img src="./image/mattermost-light-logo.svg" alt="mattermost-light logo">
+        </mat-icon>
+        <!-- <span>{{ 'MATTERMOST_LIGHT' | translate }}</span> -->
+        <span>Mattermost Light</span>
+    </a>
+    } @else{
     <a mat-menu-item [routerLink]="['/', key, apiProvider.name]">
         <mat-icon>
             <img src="./image/{{key}}-logo.svg">
         </mat-icon>
         <span>{{apiProvider.label}}</span>
     </a>
+    }
     }
     }
 

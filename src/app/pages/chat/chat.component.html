@@ -46,14 +46,16 @@
         <div>{{ 'NEW_CHAT' | translate }}</div>
       </a>
 
-      @if(g.appType==='base'){
-      } @else {
-      <mat-radio-group color="primary" aria-label="sort type" [(ngModel)]="sortType" class="relative bottom-3"
-        (change)="rebuildThreadGroupList(threadGroupList)">
-        <mat-radio-button [value]="1">{{ 'SORT_BY_TIME' | translate }}</mat-radio-button>
-        <mat-radio-button [value]="2">{{ 'SORT_BY_NAME' | translate }}</mat-radio-button>
-      </mat-radio-group>
+      <!-- フィルター入力欄 -->
+      <div class="thread-filter-container">
+        <mat-icon class="filter-icon">search</mat-icon>
+        <input type="text" class="thread-filter-input" [(ngModel)]="threadFilterText"
+          (keyup.enter)="onThreadFilterSearch()" (blur)="onThreadFilterSearch()"
+          [placeholder]="'FILTER_THREADS' | translate" />
+        @if(threadFilterText) {
+        <mat-icon class="filter-clear-icon cursor-pointer" (click)="clearThreadFilter()">close</mat-icon>
       }
+      </div>
 
       <!-- @for (threadGroup of threadGroupList; track threadGroup.id) {
             <div class="custom-scroll custom-scroll--thin h-full relative">
@@ -63,8 +65,8 @@
             </div>
             } -->
       <div class="relative h-0 w-full grow">
-        <cdk-virtual-scroll-viewport itemSize="35" class="custom-scroll custom-scroll--thin h-full"
-          style="height:calc(100% - 70px);">
+        <cdk-virtual-scroll-viewport #threadListViewport [itemSize]="threadListItemSize" class="custom-scroll custom-scroll--thin h-full"
+          style="height:calc(100% - 70px);" (scrolledIndexChange)="onThreadListScroll($event)">
           <div *cdkVirtualFor="let obj of threadGroupListForView;let $index = index;"
             class="relative flex items-center justify-between group"
             [ngClass]="{'thread-group':obj.threadGroup, 'selected':obj.threadGroup?.id===selectedThreadGroup.id}">
@@ -194,13 +196,9 @@
           <mat-icon>settings</mat-icon>
         </button>
         -->
-        <!-- console/terminal -->
-
-        <!-- 
         <a mat-icon-button color="primary" href="/terminal/{{selectedProject.id}}/" target="_blank" title="コンソール">
           <mat-icon>terminal</mat-icon>
-        </a> -->
-
+        </a>
         <!--
         <button mat-icon-button color="primary" (click)="openModelSetting()" [title]="'SETTINGS' | translate">
           <mat-icon>settings</mat-icon>
@@ -638,7 +636,6 @@
             <mat-icon>attach_file</mat-icon>
             <span>{{ 'ATTACH_FILE' | translate }}</span>
           </button>
-          <!--           
           <button mat-menu-item (click)="contextCacheControl(selectedThreadGroup)">
             <mat-icon>upload</mat-icon>
             <span>{{ 'CONTEXT_CACHE' | translate }}{{isCacheLive(selectedThreadGroup)?(' ' + ('DELETE' | translate)):('
@@ -648,7 +645,6 @@
             <mat-icon>question_mark</mat-icon>
             <span>{{ 'WHAT_IS_CONTEXT_CACHE' | translate }}</span>
           </a>
-          -->
           <button mat-menu-item (click)="openBulk()">
             <mat-icon>fast_forward</mat-icon>
             <span>{{ 'BATCH_EXECUTION' | translate }}</span>

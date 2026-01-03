@@ -125,11 +125,13 @@ export class ModelSelectorComponent {
       } else {
         // Add model to each of its active tag categories
         modelActiveTags.forEach(tagName => {
-          const tag = tagMap.get(tagName)!;
+          const tag = tagMap.get(tagName);
+          if (tag) {
           const categoryName = tag.category || 'Uncategorized';
           const categorySortOrder = this.getCategorySortOrder(categoryName, tags);
 
           this.addModelToCategory(categoryMap, categoryName, tag, modelObj, categorySortOrder);
+          }
         });
       }
     });

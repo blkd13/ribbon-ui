@@ -1,922 +1,562 @@
-<!-- Enhanced AI Model Management Template with Scope Management -->
-<div class="container">
-    <h2>{{ 'AI_MODELS' | translate }}</h2>
-    <div class="layout-container">
-        <!-- 左側：モデル一覧 -->
-        <div class="table-container">
-            <div class="table-header">
-                <h3>{{ 'MODELS' | translate }}</h3>
-                @if (selectedScope) {
-                <div class="scope-context">
-                    <small class="text-muted">{{ 'FILTERED_BY_SCOPE' | translate }}: <strong>{{ getScopeDisplayName(selectedScope)
-                            }}</strong></small>
-                </div>
-                }
-                <div class="header-buttons">
-                    <button mat-raised-button type="button" (click)="openTagManagement()" [matTooltip]="'MANAGE_TAGS' | translate">
-                        <mat-icon>local_offer</mat-icon>
-                        {{ 'TAGS' | translate }}
-                    </button>
-                    <button mat-raised-button type="button" color="primary" (click)="createNew()"
-                        [disabled]="!canCreateModel()"
-                        [matTooltip]="!canCreateModel() ? ('NO_PERMISSION_CREATE_MODELS' | translate) : ''">
-                        <mat-icon>add</mat-icon>
-                        {{ 'CREATE_NEW' | translate }}
-                    </button>
-                </div>
-            </div>
-
-            <!-- フィルター・ソート・一括操作バー -->
-            <div class="filter-bar">
-                <div class="filter-controls">
-                    <!-- 検索フィルター -->
-                    <mat-form-field appearance="outline" class="filter-field">
-                        <input matInput [placeholder]="'SEARCH_MODELS' | translate" [(ngModel)]="searchFilter"
-                            (input)="applyFilters()" [value]="searchFilter">
-                        <mat-icon matSuffix>search</mat-icon>
-                    </mat-form-field>
-
-                    <!-- プロバイダーフィルター -->
-                    <mat-form-field appearance="outline" class="filter-field">
-                        <mat-select [placeholder]="'PROVIDER' | translate" [(value)]="providerFilter" (selectionChange)="applyFilters()"
-                            multiple panelWidth="400px">
-                            <mat-option value="">{{ 'ALL_PROVIDERS' | translate }}</mat-option>
-                            @for (provider of availableProviders; track provider) {
-                            <mat-option [value]="provider">{{ provider }}</mat-option>
-                            }
-                        </mat-select>
-                        <mat-icon matSuffix>filter_list</mat-icon>
-                    </mat-form-field>
-
-                    <!-- タグフィルター -->
-                    <mat-form-field appearance="outline" class="filter-field">
-                        <mat-select [placeholder]="'TAGS' | translate" [(value)]="tagFilter" (selectionChange)="applyFilters()" multiple
-                            panelWidth="400px">
-                            <mat-option value="">{{ 'ALL_TAGS' | translate }}</mat-option>
-                            @for (tag of availableTags; track tag) {
-                            <mat-option [value]="tag">{{ getTagDisplayName(tag) }}</mat-option>
-                            }
-                        </mat-select>
-                        <mat-icon matSuffix>local_offer</mat-icon>
-                    </mat-form-field>
-
-                    <!-- アクティブステータスフィルター -->
-                    <mat-form-field appearance="outline" class="filter-field">
-                        <mat-select [placeholder]="'STATUS' | translate" [(value)]="statusFilter" (selectionChange)="applyFilters()">
-                            <mat-option value="">{{ 'ALL_STATUS' | translate }}</mat-option>
-                            <mat-option value="true">{{ 'ACTIVE' | translate }}</mat-option>
-                            <mat-option value="false">{{ 'INACTIVE' | translate }}</mat-option>
-                        </mat-select>
-                        <mat-icon matSuffix>visibility</mat-icon>
-                    </mat-form-field>
-
-                    <!-- フィルターリセット -->
-                    <button mat-icon-button (click)="resetFilters()" [matTooltip]="'RESET_FILTERS' | translate">
-                        <mat-icon>clear</mat-icon>
-                    </button>
-                </div>
-
-                <!-- 一括操作エリア -->
-                @if (selectedModels.length > 0) {
-                <div class="bulk-actions">
-                    <span class="selected-count">{{ selectedModels.length }} {{ 'MODELS_SELECTED' | translate }}</span>
-                    <button mat-raised-button color="primary" (click)="bulkToggleStatus(true)"
-                        [disabled]="!canBulkEdit()">
-                        <mat-icon>visibility</mat-icon>
-                        {{ 'ACTIVATE' | translate }}
-                    </button>
-                    <button mat-raised-button (click)="bulkToggleStatus(false)" [disabled]="!canBulkEdit()">
-                        <mat-icon>visibility_off</mat-icon>
-                        {{ 'DEACTIVATE' | translate }}
-                    </button>
-                    <button mat-raised-button (click)="openBulkTagDialog()" [disabled]="!canBulkEdit()">
-                        <mat-icon>local_offer</mat-icon>
-                        {{ 'ADD_TAGS' | translate }}
-                    </button>
-                    <button mat-raised-button (click)="openBulkProviderDialog()" [disabled]="!canBulkEdit()">
-                        <mat-icon>settings</mat-icon>
-                        {{ 'SET_PROVIDERS' | translate }}
-                    </button>
-                    <button mat-raised-button color="warn" (click)="bulkDelete()" [disabled]="!canBulkEdit()">
-                        <mat-icon>delete</mat-icon>
-                        {{ 'DELETE' | translate }}
-                    </button>
-                </div>
-                }
-            </div>
-
-            <div class="source-links flex gap-2 p-4">
-                <span>{{ 'DATA_SOURCE' | translate }}:</span>
-                <a href="https://platform.openai.com/docs/models" target="_blank"
-                    class="text-blue-500 hover:underline">OpenAI</a>
-                <a href="https://docs.anthropic.com/en/docs/about-claude/models/overview" target="_blank"
-                    class="text-blue-500 hover:underline">Anthropic</a>
-                <a href="https://cloud.google.com/vertex-ai/generative-ai/docs/models" target="_blank"
-                    class="text-blue-500 hover:underline">VertexAI</a>
-                <a href="https://ai.google.dev/gemini-api/docs/models#gemini-2.0-flash" target="_blank"
-                    class="text-blue-500 hover:underline">Gemini</a>
-            </div>
-
-            <div class="table-scroll-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th class="checkbox-column">
-                                <mat-checkbox [checked]="isAllSelected()" [indeterminate]="isSomeSelected()"
-                                    (change)="toggleSelectAll($event)">
-                                </mat-checkbox>
-                            </th>
-                            <th class="sortable-header" (click)="sortByColumn('name')">
-                                <div class="header-content">
-                                    <div class="flex flex-col">{{ 'NAME' | translate }}
-                                        <span class="text-xs text-[#888] align-right">{{ 'PROVIDER' | translate }}</span>
-                                    </div>
-                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'name'">
-                                        @if(sortBy === 'name') {
-                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        } @else {
-                                        unfold_more
-                                        }
-                                    </mat-icon>
-                                </div>
-                            </th>
-                            <th class="sortable-header" (click)="sortByColumn('scope')">
-                                <div class="header-content">
-                                    {{ 'SCOPE' | translate }}
-                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'scope'">
-                                        @if(sortBy === 'scope') {
-                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        } @else {
-                                        unfold_more
-                                        }
-                                    </mat-icon>
-                                </div>
-                            </th>
-                            <th class="sortable-header" (click)="sortByColumn('context')">
-                                <div class="header-content">
-                                    <div class="flex flex-col">{{ 'CONTEXT' | translate }}
-                                        <span class="text-xs text-[#888] align-right">{{ 'OUTPUT' | translate }}</span>
-                                    </div>
-
-                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'context'">
-                                        @if(sortBy === 'context') {
-                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        } @else {
-                                        unfold_more
-                                        }
-                                    </mat-icon>
-                                </div>
-                            </th>
-                            <th class="sortable-header" (click)="sortByColumn('price')">
-                                <div class="header-content">
-                                    {{ 'PRICE' | translate }}<span class="text-xs text-[#888] align-right">({{ 'IN_OUT' | translate }})</span>
-                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'price'">
-                                        @if(sortBy === 'price') {
-                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        } @else {
-                                        unfold_more
-                                        }
-                                    </mat-icon>
-                                </div>
-                            </th>
-                            <th class="sortable-header" (click)="sortByColumn('releaseDate')">
-                                <div class="header-content">
-                                    <div class="flex flex-col">{{ 'RELEASE' | translate }}
-                                        <span class="text-xs text-[#888] align-right">{{ 'KNOWLEDGE' | translate }}</span>
-                                    </div>
-                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'releaseDate'">
-                                        @if(sortBy === 'releaseDate') {
-                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        } @else {
-                                        unfold_more
-                                        }
-                                    </mat-icon>
-                                </div>
-                            </th>
-                            <th>{{ 'MODALITIES' | translate }}</th>
-                            <th>{{ 'TAGS' | translate }}</th>
-                            <th class="sortable-header" (click)="sortByColumn('active')">
-                                <div class="header-content">
-                                    {{ 'STATUS' | translate }}
-                                    <mat-icon class="sort-icon" [class.active]="sortBy === 'active'">
-                                        @if(sortBy === 'active') {
-                                        {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                        } @else {
-                                        unfold_more
-                                        }
-                                    </mat-icon>
-                                </div>
-                            </th>
-                            <th>{{ 'ACTIONS' | translate }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (model of filteredModels; track $index) {
-                        <tr [class.selected]="form.value.id === model.id" [class.own-scope]="isModelsOwnScope(model)"
-                            [class.other-scope]="!isModelsOwnScope(model)"
-                            [class.bulk-selected]="isModelSelected(model.id)">
-                            <td class="checkbox-column" (click)="$event.stopPropagation()">
-                                <mat-checkbox [checked]="isModelSelected(model.id)"
-                                    (change)="toggleModelSelection(model.id, $event)">
-                                </mat-checkbox>
-                            </td>
-                            <td (click)="selectModel(model)">
-                                {{ model.name }}
-                                <div class="text-xs text-[#888] align-right">{{ model.providerNameList.join(', ') }}
-                                </div>
-                            </td>
-                            <td (click)="selectModel(model)">
-                                {{ scopeLabelsMap[`${model.scopeInfo.scopeType}:${model.scopeInfo.scopeId}`] }}
-                                <div class="text-xs text-[#888] align-right">{{ model.scopeInfo.scopeType }}</div>
-                            </td>
-                            <td class="text-right" (click)="selectModel(model)">
-                                {{ model.maxContextTokens | number }}
-                                <div class="text-xs text-[#888] align-right">{{ model.maxOutputTokens | number }}</div>
-                            </td>
-                            <td class="text-right" (click)="selectModel(model)">
-                                @if(model.pricingHistory && model.pricingHistory.length > 0){
-                                <div>
-                                    {{model.pricingHistory[0].inputPricePerUnit|number:'0.2-2'}} /
-                                    {{model.pricingHistory[0].outputPricePerUnit|number:'0.2-2'}}
-                                </div>
-                                <div class="text-xs text-[#888] align-right">{{model.pricingHistory[0].unit}}</div>
-                                } @else {--}
-                            </td>
-                            <td (click)="selectModel(model)">
-                                @if(model.releaseDate){
-                                {{ model.releaseDate | date: 'yyyy/MM/dd' }}
-                                } @else {
-                                <div class="text-xs text-[#888] align-right">N/A</div>
-                                }
-                                <div class="text-xs text-[#888] align-right">
-                                    @if(model.knowledgeCutoff){
-                                    {{ model.knowledgeCutoff | date: 'yyyy/MM/dd' }}
-                                    } @else {
-                                    N/A
-                                    }
-                                </div>
-                            </td>
-                            <td (click)="selectModel(model)" class="wrapping-text">
-                                @if(model.modalities && model.modalities.length > 0){
-                                @for(modality of model.modalities;track $index){
-                                <div class="tag">{{ modality }}</div>
-                                }
-                                } @else {
-                                <div class="text-xs text-[#888] align-right">N/A</div>
-                                }
-                            </td>
-                            <td (click)="selectModel(model)">
-                                @if(model.tags && model.tags.length > 0){
-                                @for(tagName of model.tags;track $index){
-                                <div class="tag" [style.background-color]="getTagColor(tagName)"
-                                    [style.color]="getTagColor(tagName) ? 'white' : 'inherit'"
-                                    [matTooltip]="getTagDisplayName(tagName)">
-                                    {{ getTagDisplayName(tagName) }}
-                                </div>
-                                }
-                                } @else {
-                                <div class="text-xs text-[#888] align-right">N/A</div>
-                                }
-                            </td>
-                            <td (click)="selectModel(model)">
-                                <mat-icon class="status-icon">{{ model.isActive ? 'check_circle' : 'cancel'
-                                    }}</mat-icon>
-                            </td>
-                            <td class="actions-cell">
-                                @if (isModelsOwnScope(model)) {
-                                <!-- 自分のスコープの場合：通常の編集・複製・削除 -->
-                                @if (shouldShowEditButton(model)) {
-                                <button mat-icon-button class="mr-5"
-                                    (click)="editModel(model); $event.stopPropagation();" [matTooltip]="'EDIT_MODEL' | translate">
-                                    <mat-icon>edit</mat-icon>
-                                </button>
-                                }
-
-                                @if (shouldShowDuplicateButton(model)) {
-                                <button mat-icon-button class="mr-5" (click)="duplicateModel(model, $event);"
-                                    [matTooltip]="'DUPLICATE_MODEL' | translate">
-                                    <mat-icon>file_copy</mat-icon>
-                                </button>
-                                }
-
-                                @if (shouldShowDeleteButton(model)) {
-                                <button mat-icon-button class="mr-5"
-                                    (click)="deleteModel(model.id); $event.stopPropagation();"
-                                    [matTooltip]="'DELETE_MODEL' | translate">
-                                    <mat-icon>delete</mat-icon>
-                                </button>
-                                } @else {
-                                <!-- スペース確保 -->
-                                <button mat-icon-button class="mr-5" style="visibility: hidden;">
-                                    <mat-icon>delete</mat-icon>
-                                </button>
-                                }
-                                } @else {
-                                <!-- 他のスコープの場合：閲覧とオーバーライド -->
-                                <button mat-icon-button class="mr-5"
-                                    (click)="viewModel(model); $event.stopPropagation();"
-                                    [matTooltip]="'VIEW_MODEL_DETAILS' | translate">
-                                    <mat-icon>visibility</mat-icon>
-                                </button>
-
-                                @if (shouldShowOverrideButton(model)) {
-                                <button mat-icon-button class="mr-5 override-button"
-                                    (click)="startOverride(model, $event);" [matTooltip]="'CREATE_OVERRIDE' | translate">
-                                    <div class="icon-stack">
-                                        <mat-icon class="base-icon">content_copy</mat-icon>
-                                        <mat-icon class="overlay-icon">add_circle</mat-icon>
-                                    </div>
-                                </button>
-                                } @else {
-                                <button mat-icon-button class="mr-5" disabled
-                                    [matTooltip]="'NO_PERMISSION_CREATE_OVERRIDES' | translate">
-                                    <mat-icon>block</mat-icon>
-                                </button>
-                                }
-
-                                <!-- 削除は表示しない（スペース確保のため透明） -->
-                                <button mat-icon-button class="mr-5" style="visibility: hidden;">
-                                    <mat-icon>delete</mat-icon>
-                                </button>
-                                }
-                            </td>
-                        </tr>
-                        } @empty {
-                        <tr>
-                            <td colspan="10" class="no-data">
-                                <mat-icon>info</mat-icon>
-                                <p>{{ 'NO_MODELS_FOUND' | translate }}</p>
-                            </td>
-                        </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- 右側：編集フォーム -->
-        @if(isFormVisible){
-        <div class="form-container" [class.readonly-mode]="isViewOnlyMode">
-
-            <!-- スコープ情報バナー -->
-            @if (selectedModel && !isModelsOwnScope(selectedModel)) {
-            <div class="scope-info-banner">
-                <mat-card class="info-card" [class.override-mode]="isOverrideMode">
-                    <mat-card-content>
-                        <div class="banner-content">
-                            <div class="banner-icon">
-                                <mat-icon [class.override]="isOverrideMode">
-                                    {{ isOverrideMode ? 'content_copy' : 'info_outline' }}
-                                </mat-icon>
-                            </div>
-                            <div class="banner-text">
-                                @if (isOverrideMode) {
-                                <strong>{{ 'CREATING_OVERRIDE' | translate }}</strong>
-                                <p>You are creating an override of "{{ selectedModel.name }}"
-                                    from {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}:{{
-                                    getScopeLabel(selectedModel.scopeInfo) }}
-                                    in your current scope {{ getScopeTypeLabel(selectedScope!.scopeType) }}:{{
-                                    getScopeLabel(selectedScope!) }}.</p>
-                                } @else {
-                                <strong>{{ 'VIEWING' | translate }} {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}
-                                    {{ 'MODEL' | translate }}</strong>
-                                <p>This model belongs to {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType)
-                                    }}:{{ getScopeLabel(selectedModel.scopeInfo) }}.
-                                    You can view its configuration below.</p>
-                                }
-                            </div>
-                            @if (!isOverrideMode && canCreateModel()) {
-                            <div class="banner-actions">
-                                <button mat-raised-button color="accent" (click)="switchToOverrideMode()">
-                                    <mat-icon>content_copy</mat-icon>
-                                    {{ 'CREATE_OVERRIDE' | translate }}
-                                </button>
-                            </div>
-                            }
-                        </div>
-                    </mat-card-content>
-                </mat-card>
-            </div>
-            }
-
-            <!-- フォームヘッダー -->
-            <div class="form-header">
-                <h3 [class.override-title]="isOverrideMode" [class.view-title]="isViewOnlyMode">
-                    {{ getFormTitle() }}
-                </h3>
-                <button mat-icon-button type="button" (click)="closeForm()">
-                    <mat-icon>close</mat-icon>
-                </button>
-            </div>
-
-            <div class="form-content">
-                <form [formGroup]="form" (ngSubmit)="register()">
-                    <div class="form-tabs">
-                        <div class="tab" [class.active]="activeTab === 'basic'" (click)="setActiveTab('basic')">{{ 'BASIC_INFO' | translate }}
-                        </div>
-                        <div class="tab" [class.active]="activeTab === 'capabilities'"
-                            (click)="setActiveTab('capabilities')">{{ 'CAPABILITIES' | translate }}</div>
-                        <div class="tab" [class.active]="activeTab === 'pricing'" (click)="setActiveTab('pricing')">
-                            {{ 'PRICING' | translate }}
-                        </div>
-                        <div class="tab" [class.active]="activeTab === 'advanced'" (click)="setActiveTab('advanced')">
-                            {{ 'ADVANCED' | translate }}</div>
-                    </div>
-
-                    <!-- Basic Info Tab -->
-                    <div class="tab-content" [class.active]="activeTab === 'basic'">
-                        <!-- Provider (Multiple Selection) -->
-                        <div class="form-group">
-                            <label for="roles">Providers<span class="required">*</span></label>
-                            <mat-form-field appearance="outline" class="w-full">
-                                <mat-label>Select Providers</mat-label>
-                                <mat-select formControlName="providerNameList" multiple
-                                    [ngClass]="{'invalid': hasError('providerNameList')}">
-                                    @for (provider of providerOptions; track provider) {
-                                    <mat-option [value]="provider.name">{{provider.name }}</mat-option>
-                                    }
-                                </mat-select>
-                            </mat-form-field>
-                            @if(hasError('providerNameList')){
-                            <div class="error-message">{{ getErrorMessage('providerNameList') }}</div>
-                            }
-                        </div>
-
-                        <!-- Provider Model ID -->
-                        <div class="form-group">
-                            <label for="providerModelId">Provider Model ID <span class="required">*</span></label>
-                            <input id="providerModelId" type="text" formControlName="providerModelId"
-                                class="form-control" [ngClass]="{'invalid': hasError('providerModelId')}">
-                            @if(hasError('providerModelId')){
-                            <div class="error-message">{{ getErrorMessage('providerModelId') }}</div>
-                            }
-                        </div>
-
-                        <!-- Name -->
-                        <div class="form-group">
-                            <label for="name">Name <span class="required">*</span></label>
-                            <input id="name" type="text" formControlName="name" class="form-control"
-                                [ngClass]="{'invalid': hasError('name')}">
-                            @if(hasError('name')){
-                            <div class="error-message">{{ getErrorMessage('name') }}</div>
-                            }
-                        </div>
-
-                        <!-- Aliases -->
-                        <mat-form-field class="form-group w-full">
-                            <mat-label>Aliases</mat-label>
-                            <mat-chip-grid #aliasChipGrid aria-label="Enter aliases" class="w-full"
-                                formControlName="aliases">
-                                @for (alias of form.get('aliases')?.value; track alias) {
-                                <mat-chip-row (removed)="removeReactiveKeyword('aliases',alias)">
-                                    {{alias}}
-                                    <button matChipRemove [attr.aria-label]="'remove alias' + alias">
-                                        <mat-icon>cancel</mat-icon>
-                                    </button>
-                                </mat-chip-row>
-                                }
-                            </mat-chip-grid>
-                            <input placeholder="New alias..." [matChipInputFor]="aliasChipGrid"
-                                (matChipInputTokenEnd)="addReactiveKeyword('aliases',$event)" class="w-full" />
-                        </mat-form-field>
-
-                        <!-- Short Name -->
-                        <div class="form-group">
-                            <label for="shortName">Short Name <span class="required">*</span></label>
-                            <input id="shortName" type="text" formControlName="shortName" class="form-control"
-                                [ngClass]="{'invalid': hasError('shortName')}" maxlength="8">
-                            @if(hasError('shortName')){
-                            <div class="error-message">{{ getErrorMessage('shortName') }}</div>
-                            }
-                        </div>
-
-                        <!-- Throttle Key -->
-                        <div class="form-group">
-                            <label for="throttleKey">Throttle Key <span class="required">*</span></label>
-                            <input id="throttleKey" type="text" formControlName="throttleKey" class="form-control"
-                                [ngClass]="{'invalid': hasError('throttleKey')}">
-                            @if(hasError('throttleKey')){
-                            <div class="error-message">{{ getErrorMessage('throttleKey') }}</div>
-                            }
-                        </div>
-
-                        <!-- Description (Optional) -->
-                        <div class="form-group">
-                            <label for="description">Description</label>
-                            <textarea id="description" formControlName="description" class="form-control"></textarea>
-                        </div>
-
-                        <!-- Is Active -->
-                        <div class="form-group checkbox-group">
-                            <label>
-                                <input type="checkbox" formControlName="isActive">
-                                Active
-                            </label>
-                        </div>
-
-                        <!-- Scope Information -->
-                        <div class="form-section">
-                            <h4>Scope Information</h4>
-
-                            @if (selectedScope) {
-                            <!-- Read-only scope display when scope is selected from admin -->
-                            <div class="scope-readonly-display">
-                                <div class="form-group">
-                                    <label>Selected Scope</label>
-                                    <div class="readonly-field">
-                                        <span class="scope-type">{{ getScopeTypeLabel(selectedScope.scopeType) }}</span>
-                                        <span class="scope-name">{{ getScopeLabel(selectedScope) }}</span>
-                                    </div>
-                                    <div class="scope-note">
-                                        <small class="text-muted">Scope is set by admin and cannot be changed</small>
-                                    </div>
-                                </div>
-                            </div>
-                            } @else {
-                            <!-- Editable scope selection when no scope is selected from admin -->
-                            <div formGroupName="scopeInfo">
-                                <!-- Scope Type -->
-                                <div class="form-group">
-                                    <label for="scopeType">Scope Type <span class="required">*</span></label>
-                                    <select id="scopeType" formControlName="scopeType" class="form-control"
-                                        [ngClass]="{'invalid': hasError('scopeInfo.scopeType')}">
-                                        <option value="">Select a scope type</option>
-                                        @for (scopeType of scopeTypeOptions; track $index) {
-                                        <option [value]="scopeType.value">{{ scopeType.label }}</option>
-                                        }
-                                    </select>
-                                    @if (hasError('scopeInfo.scopeType')) {
-                                    <div class="error-message">{{ getErrorMessage('scopeInfo.scopeType') }}</div>
-                                    }
-                                </div>
-
-                                <!-- Scope ID -->
-                                <div class="form-group">
-                                    <label for="scopeId">Scope <span class="required">*</span></label>
-                                    <select id="scopeId" formControlName="scopeId" class="form-control"
-                                        [ngClass]="{'invalid': hasError('scopeInfo.scopeId')}">
-                                        <option value="">Select a scope</option>
-                                        @for (scope of scopeLabelsList(form.get('scopeInfo')?.value.scopeType); track
-                                        $index) {
-                                        <option [value]="scope.id">{{ scope.label }}</option>
-                                        }
-                                    </select>
-                                    @if (hasError('scopeInfo.scopeId')) {
-                                    <div class="error-message">{{ getErrorMessage('scopeInfo.scopeId') }}</div>
-                                    }
-                                </div>
-                            </div>
-                            }
-                        </div>
-                    </div>
-
-                    <!-- Capabilities Tab -->
-                    <div class="tab-content" [class.active]="activeTab === 'capabilities'">
-                        <!-- Max Context Tokens -->
-                        <div class="form-group">
-                            <label for="maxContextTokens">Max Context Tokens <span class="required">*</span></label>
-                            <input id="maxContextTokens" type="number" formControlName="maxContextTokens"
-                                class="form-control" [ngClass]="{'invalid': hasError('maxContextTokens')}">
-                            @if(hasError('maxContextTokens')){
-                            <div class="error-message">{{ getErrorMessage('maxContextTokens') }}</div>
-                            }
-                        </div>
-
-                        <!-- Max Output Tokens -->
-                        <div class="form-group">
-                            <label for="maxOutputTokens">Max Output Tokens <span class="required">*</span></label>
-                            <input id="maxOutputTokens" type="number" formControlName="maxOutputTokens"
-                                class="form-control" [ngClass]="{'invalid': hasError('maxOutputTokens')}">
-                            @if(hasError('maxOutputTokens')){
-                            <div class="error-message">{{ getErrorMessage('maxOutputTokens') }}</div>
-                            }
-                        </div>
-
-                        <!-- Modalities -->
-                        <div class="form-group">
-                            <label for="modalities">Modalities <span class="required">*</span></label>
-                            <div class="checkbox-container">
-                                @for (modality of modalityOptions; track $index) {
-                                <div class="checkbox-group">
-                                    <label>
-                                        <input type="checkbox" [value]="modality"
-                                            [checked]="isChecked('modalities', modality)"
-                                            (change)="onCheckboxChange($event, 'modalities')">
-                                        {{ modality }}
-                                    </label>
-                                </div>
-                                }
-                            </div>
-                            @if(hasError('modalities')){
-                            <div class="error-message">{{ getErrorMessage('modalities') }}</div>
-                            }
-                        </div>
-
-                        <!-- Input Formats -->
-                        <div class="form-group">
-                            <label for="inputFormats">Input Formats</label>
-                            <div class="checkbox-container">
-                                @for (format of modalityOptions; track $index) {
-                                <div class="checkbox-group">
-                                    <label>
-                                        <input type="checkbox" [value]="format"
-                                            [checked]="isChecked('inputFormats', format)"
-                                            (change)="onCheckboxChange($event, 'inputFormats')">
-                                        {{ format }}
-                                    </label>
-                                </div>
-                                }
-                            </div>
-                        </div>
-
-                        <!-- Output Formats -->
-                        <div class="form-group">
-                            <label for="outputFormats">Output Formats</label>
-                            <div class="checkbox-container">
-                                @for (format of modalityOptions; track $index) {
-                                <div class="checkbox-group">
-                                    <label>
-                                        <input type="checkbox" [value]="format"
-                                            [checked]="isChecked('outputFormats', format)"
-                                            (change)="onCheckboxChange($event, 'outputFormats')">
-                                        {{ format }}
-                                    </label>
-                                </div>
-                                }
-                            </div>
-                        </div>
-
-                        <!-- Default Parameters -->
-                        <app-json-editor formControlName="defaultParameters"
-                            [suggestions]="['temperature', 'max_tokens', 'top_p']" label="Default Parameters"
-                            placeholder="Parameter name">
-                        </app-json-editor>
-
-                        <!-- Capabilities -->
-                        <app-json-editor formControlName="capabilities" [suggestions]="['streaming', 'tool_call']"
-                            label="Capabilities" placeholder="Capability name">
-                        </app-json-editor>
-                    </div>
-
-                    <!-- Pricing Tab -->
-                    <div class="tab-content" [class.active]="activeTab === 'pricing'">
-                        <div formGroupName="pricing">
-                            <div class="pricing-header">
-                                <h4>Model Pricing Information</h4>
-                            </div>
-
-                            <!-- 価格履歴と選択UI -->
-                            <div class="pricing-selection">
-                                <div class="selection-header">
-                                    <h5>Select Pricing to Edit or Create New</h5>
-                                </div>
-
-                                <!-- 価格履歴の選択用ラジオボタン -->
-                                <div class="radio-group">
-                                    <div class="radio-option">
-                                        <label>
-                                            <input type="radio" name="pricingSelection" [value]="'new'"
-                                                [checked]="pricingSelectionMode === 'new'"
-                                                (change)="setPricingSelectionMode('new')">
-                                            Create New Pricing
-                                        </label>
-                                    </div>
-
-                                    @if(pricingHistory && pricingHistory.length > 0){
-                                    @for(pricing of pricingHistory; track $index) {
-                                    <div class="radio-option">
-                                        <label>
-                                            <input type="radio" name="pricingSelection" [value]="pricing.id"
-                                                [checked]="pricingSelectionMode === 'edit' && selectedPricingId === pricing.id"
-                                                (change)="selectExistingPricing(pricing)">
-                                            Valid from {{ formatDate(pricing.validFrom) }} -
-                                            {{pricing.inputPricePerUnit|trimTrailingZeros}}/
-                                            {{pricing.outputPricePerUnit|trimTrailingZeros}}
-                                            {{pricing.unit}}
-                                        </label>
-                                    </div>
-                                    }
-                                    }
-                                </div>
-                            </div>
-
-                            <!-- 価格情報入力フォーム -->
-                            <div class="pricing-form">
-                                <h5>{{ pricingSelectionMode === 'new' ? 'New Pricing Details' : 'Edit Selected Pricing'
-                                    }}
-                                </h5>
-
-                                <!-- Input Price -->
-                                <div class="form-group">
-                                    <label for="inputPricePerUnit">Input Price per Unit <span
-                                            class="required">*</span></label>
-                                    <input id="inputPricePerUnit" type="number" step="0.00001"
-                                        formControlName="inputPricePerUnit" class="form-control"
-                                        [ngClass]="{'invalid': hasNestedError('pricing.inputPricePerUnit')}">
-                                    @if(hasNestedError('pricing.inputPricePerUnit')){
-                                    <div class="error-message">{{ getNestedErrorMessage('pricing.inputPricePerUnit') }}
-                                    </div>
-                                    }
-                                </div>
-
-                                <!-- Output Price -->
-                                <div class="form-group">
-                                    <label for="outputPricePerUnit">Output Price per Unit <span
-                                            class="required">*</span></label>
-                                    <input id="outputPricePerUnit" type="number" step="0.00001"
-                                        formControlName="outputPricePerUnit" class="form-control"
-                                        [ngClass]="{'invalid': hasNestedError('pricing.outputPricePerUnit')}">
-                                    @if(hasNestedError('pricing.outputPricePerUnit')){
-                                    <div class="error-message">{{ getNestedErrorMessage('pricing.outputPricePerUnit') }}
-                                    </div>
-                                    }
-                                </div>
-
-                                <!-- Unit -->
-                                <div class="form-group">
-                                    <label for="unit">Price Unit <span class="required">*</span></label>
-                                    <input id="unit" type="text" formControlName="unit" class="form-control"
-                                        [ngClass]="{'invalid': hasNestedError('pricing.unit')}">
-                                    @if(hasNestedError('pricing.unit')){
-                                    <div class="error-message">{{ getNestedErrorMessage('pricing.unit') }}</div>
-                                    }
-                                </div>
-
-                                <!-- Valid From -->
-                                <div class="form-group">
-                                    <label for="validFrom">Valid From <span class="required">*</span></label>
-                                    <input id="validFrom" type="date" formControlName="validFrom" class="form-control"
-                                        [ngClass]="{'invalid': hasNestedError('pricing.validFrom')}">
-                                    @if(hasNestedError('pricing.validFrom')){
-                                    <div class="error-message">{{ getNestedErrorMessage('pricing.validFrom') }}</div>
-                                    }
-                                </div>
-                            </div>
-
-                            <!-- 価格履歴テーブル表示 -->
-                            @if(pricingHistory && pricingHistory.length > 0){
-                            <div class="pricing-history">
-                                <h5>All Pricing History</h5>
-                                <table class="history-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Valid From</th>
-                                            <th>Input Price</th>
-                                            <th>Output Price</th>
-                                            <th>Unit</th>
-                                            <th>Current</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @for (pricing of pricingHistory; track $index) {
-                                        <tr [class.highlighted]="selectedPricingId === pricing.id">
-                                            <td>{{ formatDate(pricing.validFrom) }}</td>
-                                            <td>{{ pricing.inputPricePerUnit }}</td>
-                                            <td>{{ pricing.outputPricePerUnit }}</td>
-                                            <td>{{ pricing.unit }}</td>
-                                            <td>
-                                                <mat-icon class="status-icon"
-                                                    [class.current]="isCurrentPricing(pricing)">
-                                                    {{ isCurrentPricing(pricing) ? 'check_circle' : '' }}
-                                                </mat-icon>
-                                            </td>
-                                        </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                            }
-                        </div>
-                    </div>
-
-                    <!-- Advanced Tab -->
-                    <div class="tab-content" [class.active]="activeTab === 'advanced'">
-                        <!-- Endpoint Template -->
-                        <div class="form-group">
-                            <label for="endpointTemplate">Endpoint Template URL</label>
-                            <input id="endpointTemplate" type="text" formControlName="endpointTemplate"
-                                class="form-control">
-                        </div>
-
-                        <!-- Documentation URL -->
-                        <div class="form-group">
-                            <label for="documentationUrl">Documentation URL</label>
-                            <input id="documentationUrl" type="text" formControlName="documentationUrl"
-                                class="form-control">
-                        </div>
-
-                        <!-- License Type -->
-                        <div class="form-group">
-                            <label for="licenseType">License Type</label>
-                            <input id="licenseType" type="text" formControlName="licenseType" class="form-control">
-                        </div>
-
-                        <!-- Knowledge Cutoff -->
-                        <div class="form-group">
-                            <label for="knowledgeCutoff">Knowledge Cutoff</label>
-                            <input id="knowledgeCutoff" type="date" formControlName="knowledgeCutoff"
-                                class="form-control">
-                        </div>
-
-                        <!-- Release Date -->
-                        <div class="form-group">
-                            <label for="releaseDate">Release Date</label>
-                            <input id="releaseDate" type="date" formControlName="releaseDate" class="form-control">
-                        </div>
-
-                        <!-- Deprecation Date -->
-                        <div class="form-group">
-                            <label for="deprecationDate">Deprecation Date</label>
-                            <input id="deprecationDate" type="date" formControlName="deprecationDate"
-                                class="form-control">
-                        </div>
-
-                        <!-- Tags -->
-                        <mat-form-field class="form-group w-full">
-                            <mat-label>Tags</mat-label>
-                            <mat-chip-grid #tagsChipGrid aria-label="Enter tags" formControlName="tags">
-                                @for (tagName of form.get('tags')?.value; track tagName) {
-                                <mat-chip-row (removed)="removeReactiveKeyword('tags', tagName)"
-                                    [style.background-color]="getTagColor(tagName)"
-                                    [style.color]="getTagColor(tagName) ? 'white' : 'inherit'">
-                                    {{ getTagDisplayName(tagName) }}
-                                    <button matChipRemove [attr.aria-label]="'remove tag ' + tagName">
-                                        <mat-icon>cancel</mat-icon>
-                                    </button>
-                                </mat-chip-row>
-                                }
-                            </mat-chip-grid>
-                            <input placeholder="New tag..." [matChipInputFor]="tagsChipGrid"
-                                [matChipInputSeparatorKeyCodes]="separatorKeysCodes" [matAutocomplete]="tagAuto"
-                                (matChipInputTokenEnd)="addReactiveKeyword('tags',$event)"
-                                (input)="filteredTags = filterTags($any($event.target).value)" />
-                            <mat-autocomplete #tagAuto="matAutocomplete"
-                                (optionSelected)="autocompleteSelect('tags', $event)">
-                                @for (tag of filteredTags; track tag.id) {
-                                <mat-option [value]="tag.name">
-                                    <div class="tag-option">
-                                        <div class="tag-main">
-                                            <span class="tag-name">{{ tag.label || tag.name }}</span>
-                                            @if (tag.label && tag.name !== tag.label) {
-                                            <span class="tag-subtitle">({{ tag.name }})</span>
-                                            }
-                                        </div>
-                                        @if (tag.description) {
-                                        <div class="tag-description">{{ tag.description }}</div>
-                                        }
-                                        @if (tag.color) {
-                                        <div class="tag-color-preview" [style.background-color]="tag.color"></div>
-                                        }
-                                    </div>
-                                </mat-option>
-                                }
-                            </mat-autocomplete>
-                        </mat-form-field>
-
-                        <!-- UI Order -->
-                        <div class="form-group">
-                            <label for="uiOrder">UI Order</label>
-                            <input id="uiOrder" type="number" formControlName="uiOrder" class="form-control">
-                        </div>
-
-                        <!-- Metadata -->
-                        <div class="form-group">
-                            <label for="metadata">Metadata (JSON)</label>
-                            <textarea id="metadata" formControlName="metadata"
-                                class="form-control code-editor"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="button-group">
-                        @if (isViewOnlyMode) {
-                        <!-- 閲覧のみモード -->
-                        <button mat-raised-button type="button" (click)="closeForm()">
-                            <mat-icon>close</mat-icon>
-                            Close
-                        </button>
-                        @if (canCreateModel()) {
-                        <button mat-raised-button type="button" color="primary" (click)="switchToOverrideMode()">
-                            <mat-icon>content_copy</mat-icon>
-                            Create Override
-                        </button>
-                        }
-                        } @else {
-                        <!-- 編集・作成モード -->
-                        <button mat-raised-button type="button" (click)="closeForm()">
-                            <mat-icon>cancel</mat-icon>
-                            Cancel
-                        </button>
-                        <button mat-raised-button type="submit" color="primary">
-                            <mat-icon>
-                                {{ isOverrideMode ? 'content_copy' : (isEditMode ? 'save' : 'add') }}
-                            </mat-icon>
-                            {{ isOverrideMode ? 'Create Override' : (isEditMode ? 'Update' : 'Create') }}
-                        </button>
-                        }
-                    </div>
-                </form>
-            </div>
-        </div>
-        }
+<!-- AI Model Management - Refactored with AdminListPageComponent -->
+<app-admin-list-page
+  title="AI Models"
+  subtitle=""
+  [data]="filteredModels"
+  [columns]="columns"
+  [filters]="filters"
+  [filterValues]="filterValues"
+  [sortState]="sortState"
+  [headerActions]="headerActions"
+  [bulkActions]="bulkActions"
+  [rowActions]="rowActions"
+  [selectedIds]="selectedIds"
+  [activeItemId]="form.value.id"
+  [isLoading]="isLoading"
+  [isFormVisible]="isFormVisible"
+  [trackByFn]="trackByModel"
+  [rowClassFn]="getRowClass.bind(this)"
+  emptyMessage="No models found"
+  emptyIcon="info"
+  (filterChange)="onFilterChange($event)"
+  (sortChange)="onSortChange($event)"
+  (itemSelect)="onItemSelect($event)"
+  (selectionChange)="onSelectionChange($event)"
+  (actionClick)="onActionClick($event)"
+>
+  <!-- Header Extra: Data Source Links -->
+  <ng-template #headerExtra>
+    <div class="source-links flex gap-2 items-center">
+      <span>Data Source:</span>
+      <a href="https://platform.openai.com/docs/models" target="_blank" class="text-blue-500 hover:underline">OpenAI</a>
+      <a href="https://docs.anthropic.com/en/docs/about-claude/models/overview" target="_blank" class="text-blue-500 hover:underline">Anthropic</a>
+      <a href="https://cloud.google.com/vertex-ai/generative-ai/docs/models" target="_blank" class="text-blue-500 hover:underline">VertexAI</a>
+      <a href="https://cloud.google.com/vertex-ai/generative-ai/pricing" target="_blank" class="text-blue-500 hover:underline">VertexAI Pricing</a>
+      <a href="https://ai.google.dev/gemini-api/docs/models#gemini-2.0-flash" target="_blank" class="text-blue-500 hover:underline">Gemini</a>
     </div>
-</div>
+  </ng-template>
+
+  <!-- Custom Cell Templates (Optimized: 8 columns → 5 columns) -->
+
+  <!-- Name + Provider -->
+  <ng-template #nameCell let-model>
+    <div class="cell-name">
+      <span class="model-name">{{ model.name }}</span>
+      <div class="text-xs text-[#888]">{{ model.providerNameList.join(', ') }}</div>
+    </div>
+  </ng-template>
+
+  <!-- Specs: Context/Output + Modalities -->
+  <ng-template #specsCell let-model>
+    <div class="cell-specs">
+      <span class="spec-main" [matTooltip]="'Context: ' + formatNumber(model.maxContextTokens) + ' / Output: ' + formatNumber(model.maxOutputTokens)">
+        {{ formatNumber(model.maxContextTokens) }} / {{ formatNumber(model.maxOutputTokens) }}
+      </span>
+      <div class="spec-modalities">
+        @if (model.modalities && model.modalities.length > 0) {
+          @for (modality of model.modalities.slice(0, 3); track $index) {
+            <span class="modality-badge">{{ modality }}</span>
+          }
+          @if (model.modalities.length > 3) {
+            <span class="modality-badge more" [matTooltip]="model.modalities.slice(3).join(', ')">+{{ model.modalities.length - 3 }}</span>
+          }
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Price (Input/Output) -->
+  <ng-template #priceCell let-model>
+    @if (model.pricingHistory && model.pricingHistory.length > 0) {
+      <div class="cell-price">
+        <span class="price-main">
+          {{ formatPrice(model.pricingHistory[0].inputPricePerUnit) }} / {{ formatPrice(model.pricingHistory[0].outputPricePerUnit) }}
+        </span>
+        <div class="text-xs text-[#888]">{{ model.pricingHistory[0].unit }}</div>
+      </div>
+    } @else {
+      <span class="text-[#666]">--</span>
+    }
+  </ng-template>
+
+  <!-- Status: Active + Scope + Tags -->
+  <ng-template #statusCell let-model>
+    <div class="cell-status">
+      <div class="status-row">
+        <mat-icon class="status-icon" [class.active]="model.isActive" [class.inactive]="!model.isActive">
+          {{ model.isActive ? 'check_circle' : 'cancel' }}
+        </mat-icon>
+        <span class="scope-badge" [matTooltip]="model.scopeInfo.scopeType + ': ' + (scopeLabelsMap[model.scopeInfo.scopeType + ':' + model.scopeInfo.scopeId] || model.scopeInfo.scopeId)">
+          {{ getScopeShortLabel(model.scopeInfo) }}
+        </span>
+      </div>
+      @if (model.tags && model.tags.length > 0) {
+        <div class="status-tags">
+          @for (tagName of model.tags.slice(0, 2); track $index) {
+            <span class="tag-mini"
+              [style.background-color]="getTagColor(tagName)"
+              [matTooltip]="getTagDisplayName(tagName)">
+              {{ getTagDisplayName(tagName) | slice:0:8 }}{{ getTagDisplayName(tagName).length > 8 ? '…' : '' }}
+            </span>
+          }
+          @if (model.tags.length > 2) {
+            <span class="tag-mini more" [matTooltip]="getTagDisplayNames(model.tags.slice(2))">+{{ model.tags.length - 2 }}</span>
+          }
+        </div>
+      }
+    </div>
+  </ng-template>
+
+  <!-- Form Panel -->
+  <ng-template #formPanel>
+    <div class="form-panel-content" [class.readonly-mode]="isViewOnlyMode">
+      <!-- スコープ情報バナー -->
+      @if (selectedModel && !isModelsOwnScope(selectedModel)) {
+        <div class="scope-info-banner">
+          <mat-card class="info-card" [class.override-mode]="isOverrideMode">
+            <mat-card-content>
+              <div class="banner-content">
+                <div class="banner-icon">
+                  <mat-icon [class.override]="isOverrideMode">
+                    {{ isOverrideMode ? 'content_copy' : 'info_outline' }}
+                  </mat-icon>
+                </div>
+                <div class="banner-text">
+                  @if (isOverrideMode) {
+                    <strong>Creating Override</strong>
+                    <p>You are creating an override of "{{ selectedModel.name }}"
+                      from {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}:{{ getScopeLabel(selectedModel.scopeInfo) }}
+                      in your current scope {{ getScopeTypeLabel(selectedScope!.scopeType) }}:{{ getScopeLabel(selectedScope!) }}.</p>
+                  } @else {
+                    <strong>Viewing {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }} Model</strong>
+                    <p>This model belongs to {{ getScopeTypeLabel(selectedModel.scopeInfo.scopeType) }}:{{ getScopeLabel(selectedModel.scopeInfo) }}.
+                      You can view its configuration below.</p>
+                  }
+                </div>
+                @if (!isOverrideMode && canCreateModel()) {
+                  <div class="banner-actions">
+                    <button mat-raised-button color="accent" (click)="switchToOverrideMode()">
+                      <mat-icon>content_copy</mat-icon>
+                      Create Override
+                    </button>
+                  </div>
+                }
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
+
+      <!-- フォームヘッダー -->
+      <div class="form-header">
+        <h3 [class.override-title]="isOverrideMode" [class.view-title]="isViewOnlyMode">
+          {{ getFormTitle() }}
+        </h3>
+        <button mat-icon-button type="button" (click)="closeForm()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="form-content">
+        <form [formGroup]="form" (ngSubmit)="register()">
+
+          <!-- ===== BASIC SETTINGS (Always Visible) ===== -->
+          <div class="form-section-basic">
+            <div class="section-header">
+              <h4><mat-icon>settings</mat-icon> Basic Settings</h4>
+            </div>
+
+            <!-- Two-column layout for basic fields -->
+            <div class="form-row">
+              <!-- Provider (Multiple Selection) -->
+              <div class="form-group">
+                <label for="roles">Providers<span class="required">*</span></label>
+                <mat-form-field appearance="outline" class="w-full">
+                  <mat-label>Select Providers</mat-label>
+                  <mat-select formControlName="providerNameList" multiple [ngClass]="{'invalid': hasError('providerNameList')}">
+                    @for (provider of providerOptions; track provider) {
+                      <mat-option [value]="provider.name">{{ provider.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                @if (hasError('providerNameList')) {
+                  <div class="error-message">{{ getErrorMessage('providerNameList') }}</div>
+                }
+              </div>
+
+              <!-- Provider Model ID -->
+              <div class="form-group">
+                <label for="providerModelId">Model ID <span class="required">*</span></label>
+                <input id="providerModelId" type="text" formControlName="providerModelId" class="form-control" [ngClass]="{'invalid': hasError('providerModelId')}" placeholder="e.g. gpt-4o-2024-08-06">
+                @if (hasError('providerModelId')) {
+                  <div class="error-message">{{ getErrorMessage('providerModelId') }}</div>
+                }
+              </div>
+            </div>
+
+            <div class="form-row">
+              <!-- Name -->
+              <div class="form-group">
+                <label for="name">Display Name <span class="required">*</span></label>
+                <input id="name" type="text" formControlName="name" class="form-control" [ngClass]="{'invalid': hasError('name')}" placeholder="e.g. GPT-4o">
+                @if (hasError('name')) {
+                  <div class="error-message">{{ getErrorMessage('name') }}</div>
+                }
+              </div>
+
+              <!-- Short Name -->
+              <div class="form-group">
+                <label for="shortName">Short Name <span class="required">*</span></label>
+                <input id="shortName" type="text" formControlName="shortName" class="form-control" [ngClass]="{'invalid': hasError('shortName')}" maxlength="8" placeholder="e.g. 4o">
+                @if (hasError('shortName')) {
+                  <div class="error-message">{{ getErrorMessage('shortName') }}</div>
+                }
+              </div>
+            </div>
+
+            <!-- Aliases -->
+            <mat-form-field class="form-group w-full">
+              <mat-label>Aliases</mat-label>
+              <mat-chip-grid #aliasChipGrid aria-label="Enter aliases" class="w-full" formControlName="aliases">
+                @for (alias of form.get('aliases')?.value; track alias) {
+                  <mat-chip-row (removed)="removeReactiveKeyword('aliases', alias)">
+                    {{ alias }}
+                    <button matChipRemove [attr.aria-label]="'remove alias ' + alias">
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  </mat-chip-row>
+                }
+              </mat-chip-grid>
+              <input placeholder="New alias..." [matChipInputFor]="aliasChipGrid"
+                [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                (matChipInputTokenEnd)="addReactiveKeyword('aliases', $event)" class="w-full" />
+            </mat-form-field>
+
+            <div class="form-row">
+              <!-- Max Context Tokens -->
+              <div class="form-group">
+                <label for="maxContextTokens">Context Length <span class="required">*</span></label>
+                <input id="maxContextTokens" type="number" formControlName="maxContextTokens" class="form-control" [ngClass]="{'invalid': hasError('maxContextTokens')}" placeholder="e.g. 128000">
+                @if (hasError('maxContextTokens')) {
+                  <div class="error-message">{{ getErrorMessage('maxContextTokens') }}</div>
+                }
+              </div>
+
+              <!-- Max Output Tokens -->
+              <div class="form-group">
+                <label for="maxOutputTokens">Output Length <span class="required">*</span></label>
+                <input id="maxOutputTokens" type="number" formControlName="maxOutputTokens" class="form-control" [ngClass]="{'invalid': hasError('maxOutputTokens')}" placeholder="e.g. 16384">
+                @if (hasError('maxOutputTokens')) {
+                  <div class="error-message">{{ getErrorMessage('maxOutputTokens') }}</div>
+                }
+              </div>
+            </div>
+
+            <!-- Is Active -->
+            <div class="form-group checkbox-inline">
+              <label class="toggle-label">
+                <input type="checkbox" formControlName="isActive">
+                <span class="toggle-text">Active</span>
+              </label>
+              @if (selectedScope) {
+                <span class="scope-info-inline">
+                  <mat-icon>domain</mat-icon>
+                  {{ getScopeTypeLabel(selectedScope.scopeType) }}: {{ getScopeLabel(selectedScope) }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- ===== ADVANCED SETTINGS (Collapsible) ===== -->
+          <mat-accordion class="form-accordion">
+            <!-- Capabilities Section -->
+            <mat-expansion-panel [expanded]="expandedSections.capabilities">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>psychology</mat-icon>
+                  Capabilities
+                </mat-panel-title>
+                <mat-panel-description>
+                  Modalities, formats, parameters
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+
+              <!-- Modalities -->
+              <div class="form-group">
+                <label for="modalities">Modalities <span class="required">*</span></label>
+                <div class="checkbox-container compact">
+                  @for (modality of modalityOptions; track $index) {
+                    <div class="checkbox-group">
+                      <label>
+                        <input type="checkbox" [value]="modality" [checked]="isChecked('modalities', modality)" (change)="onCheckboxChange($event, 'modalities')">
+                        {{ modality }}
+                      </label>
+                    </div>
+                  }
+                </div>
+                @if (hasError('modalities')) {
+                  <div class="error-message">{{ getErrorMessage('modalities') }}</div>
+                }
+              </div>
+
+              <!-- Input/Output Formats -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Input Formats</label>
+                  <div class="checkbox-container compact">
+                    @for (format of modalityOptions; track $index) {
+                      <label class="chip-checkbox">
+                        <input type="checkbox" [value]="format" [checked]="isChecked('inputFormats', format)" (change)="onCheckboxChange($event, 'inputFormats')">
+                        <span>{{ format }}</span>
+                      </label>
+                    }
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Output Formats</label>
+                  <div class="checkbox-container compact">
+                    @for (format of modalityOptions; track $index) {
+                      <label class="chip-checkbox">
+                        <input type="checkbox" [value]="format" [checked]="isChecked('outputFormats', format)" (change)="onCheckboxChange($event, 'outputFormats')">
+                        <span>{{ format }}</span>
+                      </label>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- Default Parameters & Capabilities (2カラム) -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="defaultParameters">Default Parameters</label>
+                  <textarea id="defaultParameters" formControlName="defaultParameters" class="form-control code-editor" rows="3" placeholder='{"temperature": 0.7, "max_tokens": 4096}'></textarea>
+                  <small class="hint">JSON format: temperature, max_tokens, top_p</small>
+                </div>
+                <div class="form-group">
+                  <label for="capabilities">Capabilities</label>
+                  <textarea id="capabilities" formControlName="capabilities" class="form-control code-editor" rows="3" placeholder='{"streaming": true, "tool_call": true}'></textarea>
+                  <small class="hint">JSON format: streaming, tool_call, etc.</small>
+                </div>
+              </div>
+            </mat-expansion-panel>
+
+            <!-- Pricing Section -->
+            <mat-expansion-panel [expanded]="expandedSections.pricing">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>attach_money</mat-icon>
+                  Pricing
+                </mat-panel-title>
+                <mat-panel-description>
+                  Price per token, history
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+
+              <div formGroupName="pricing">
+                <!-- 価格履歴選択 (既存データがある場合) -->
+                @if (pricingHistory && pricingHistory.length > 0) {
+                  <div class="pricing-selection compact">
+                    <div class="radio-group horizontal">
+                      <label class="radio-option">
+                        <input type="radio" name="pricingSelection" [value]="'new'" [checked]="pricingSelectionMode === 'new'" (change)="setPricingSelectionMode('new')">
+                        <span>New</span>
+                      </label>
+                      @for (pricing of pricingHistory.slice(0, 3); track $index) {
+                        <label class="radio-option">
+                          <input type="radio" name="pricingSelection" [value]="pricing.id" [checked]="pricingSelectionMode === 'edit' && selectedPricingId === pricing.id" (change)="selectExistingPricing(pricing)">
+                          <span>{{ formatDate(pricing.validFrom) }}</span>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <!-- 価格入力 (2カラム) -->
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="inputPricePerUnit">Input $/1M <span class="required">*</span></label>
+                    <input id="inputPricePerUnit" type="number" step="0.00001" formControlName="inputPricePerUnit" class="form-control" [ngClass]="{'invalid': hasNestedError('pricing.inputPricePerUnit')}">
+                  </div>
+                  <div class="form-group">
+                    <label for="outputPricePerUnit">Output $/1M <span class="required">*</span></label>
+                    <input id="outputPricePerUnit" type="number" step="0.00001" formControlName="outputPricePerUnit" class="form-control" [ngClass]="{'invalid': hasNestedError('pricing.outputPricePerUnit')}">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="unit">Unit <span class="required">*</span></label>
+                    <input id="unit" type="text" formControlName="unit" class="form-control" [ngClass]="{'invalid': hasNestedError('pricing.unit')}">
+                  </div>
+                  <div class="form-group">
+                    <label for="validFrom">Valid From <span class="required">*</span></label>
+                    <input id="validFrom" type="date" formControlName="validFrom" class="form-control" [ngClass]="{'invalid': hasNestedError('pricing.validFrom')}">
+                  </div>
+                </div>
+
+                <!-- 価格履歴テーブル (コンパクト) -->
+                @if (pricingHistory && pricingHistory.length > 0) {
+                  <details class="pricing-history-details">
+                    <summary>View All History ({{ pricingHistory.length }})</summary>
+                    <table class="history-table compact">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>In</th>
+                          <th>Out</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (pricing of pricingHistory; track $index) {
+                          <tr [class.highlighted]="selectedPricingId === pricing.id">
+                            <td>{{ formatDate(pricing.validFrom) }}</td>
+                            <td>{{ pricing.inputPricePerUnit | trimTrailingZeros }}</td>
+                            <td>{{ pricing.outputPricePerUnit | trimTrailingZeros }}</td>
+                            <td>
+                              @if (isCurrentPricing(pricing)) {
+                                <mat-icon class="status-icon current">check_circle</mat-icon>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </details>
+                }
+              </div>
+            </mat-expansion-panel>
+
+            <!-- Advanced Section -->
+            <mat-expansion-panel [expanded]="expandedSections.advanced">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  <mat-icon>tune</mat-icon>
+                  Advanced
+                </mat-panel-title>
+                <mat-panel-description>
+                  URLs, dates, tags, metadata
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+
+              <!-- URLs (2カラム) -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="endpointTemplate">Endpoint Template</label>
+                  <input id="endpointTemplate" type="text" formControlName="endpointTemplate" class="form-control" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                  <label for="documentationUrl">Documentation URL</label>
+                  <input id="documentationUrl" type="text" formControlName="documentationUrl" class="form-control" placeholder="https://...">
+                </div>
+              </div>
+
+              <!-- Dates (3カラム) -->
+              <div class="form-row three-col">
+                <div class="form-group">
+                  <label for="releaseDate">Release</label>
+                  <input id="releaseDate" type="date" formControlName="releaseDate" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="knowledgeCutoff">Cutoff</label>
+                  <input id="knowledgeCutoff" type="date" formControlName="knowledgeCutoff" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="deprecationDate">Deprecation</label>
+                  <input id="deprecationDate" type="date" formControlName="deprecationDate" class="form-control">
+                </div>
+              </div>
+
+              <!-- License & Order (2カラム) -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="licenseType">License Type</label>
+                  <input id="licenseType" type="text" formControlName="licenseType" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="uiOrder">UI Order</label>
+                  <input id="uiOrder" type="number" formControlName="uiOrder" class="form-control">
+                </div>
+              </div>
+
+              <!-- Tags -->
+              <mat-form-field class="form-group w-full">
+                <mat-label>Tags</mat-label>
+                <mat-chip-grid #tagsChipGrid aria-label="Enter tags" formControlName="tags">
+                  @for (tagName of form.get('tags')?.value; track tagName) {
+                    <mat-chip-row (removed)="removeReactiveKeyword('tags', tagName)"
+                      [style.background-color]="getTagColor(tagName)"
+                      [style.color]="getTagColor(tagName) ? 'white' : 'inherit'">
+                      {{ getTagDisplayName(tagName) }}
+                      <button matChipRemove [attr.aria-label]="'remove tag ' + tagName">
+                        <mat-icon>cancel</mat-icon>
+                      </button>
+                    </mat-chip-row>
+                  }
+                </mat-chip-grid>
+                <input placeholder="New tag..." [matChipInputFor]="tagsChipGrid"
+                  [matChipInputSeparatorKeyCodes]="separatorKeysCodes" [matAutocomplete]="tagAuto"
+                  (matChipInputTokenEnd)="addReactiveKeyword('tags', $event)"
+                  (input)="filteredTags = filterTags($any($event.target).value)" />
+                <mat-autocomplete #tagAuto="matAutocomplete" (optionSelected)="autocompleteSelect('tags', $event)">
+                  @for (tag of filteredTags; track tag.id) {
+                    <mat-option [value]="tag.name">
+                      <div class="tag-option">
+                        <div class="tag-main">
+                          <span class="tag-name">{{ tag.label || tag.name }}</span>
+                          @if (tag.label && tag.name !== tag.label) {
+                            <span class="tag-subtitle">({{ tag.name }})</span>
+                          }
+                        </div>
+                        @if (tag.description) {
+                          <div class="tag-description">{{ tag.description }}</div>
+                        }
+                        @if (tag.color) {
+                          <div class="tag-color-preview" [style.background-color]="tag.color"></div>
+                        }
+                      </div>
+                    </mat-option>
+                  }
+                </mat-autocomplete>
+              </mat-form-field>
+
+              <!-- Metadata -->
+              <div class="form-group">
+                <label for="metadata">Metadata (JSON)</label>
+                <textarea id="metadata" formControlName="metadata" class="form-control code-editor" rows="3"></textarea>
+              </div>
+            </mat-expansion-panel>
+          </mat-accordion>
+
+          <div class="button-group">
+            @if (isViewOnlyMode) {
+              <!-- 閲覧のみモード -->
+              <button mat-raised-button type="button" (click)="closeForm()">
+                <mat-icon>close</mat-icon>
+                Close
+              </button>
+              @if (canCreateModel()) {
+                <button mat-raised-button type="button" color="primary" (click)="switchToOverrideMode()">
+                  <mat-icon>content_copy</mat-icon>
+                  Create Override
+                </button>
+              }
+            } @else {
+              <!-- 編集・作成モード -->
+              <button mat-raised-button type="button" (click)="closeForm()">
+                <mat-icon>cancel</mat-icon>
+                Cancel
+              </button>
+              <button mat-raised-button type="submit" color="primary">
+                <mat-icon>
+                  {{ isOverrideMode ? 'content_copy' : (isEditMode ? 'save' : 'add') }}
+                </mat-icon>
+                {{ isOverrideMode ? 'Create Override' : (isEditMode ? 'Update' : 'Create') }}
+              </button>
+            }
+          </div>
+        </form>
+      </div>
+    </div>
+  </ng-template>
+</app-admin-list-page>

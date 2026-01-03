@@ -96,7 +96,7 @@ export class EditTeamMemberDialogComponent implements OnInit {
 
   registMember(): void {
     if (this.isEdit) {
-      this.teamService.updateTeamMember(this.team.id, this.teamMember.id, this.teamMember).subscribe(this.subscriber('更新'));
+      this.teamService.updateTeamMember(this.team.id, this.teamMember.userId, this.teamMember).subscribe(this.subscriber('更新'));
     } else {
       const user = this.userListAll.find(user => user.name === this.userName);
       if (user) {

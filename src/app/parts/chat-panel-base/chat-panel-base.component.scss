@@ -131,8 +131,8 @@
 
 // .user .message-header,
 .message.user,
-.message.user.controller-top,
-.message.user.controller-bottom {
+.user.controller-top,
+.user.controller-bottom {
     background: var(--message-background-user);
 
     .message-notediting {
@@ -156,8 +156,8 @@
 
 // .assistant .message-header,
 .message.assistant,
-.message.assistant.controller-top,
-.message.assistant.controller-bottom {
+.assistant.controller-top,
+.assistant.controller-bottom {
     background: var(--message-background-assistant);
 
     .message-notediting {
@@ -240,15 +240,23 @@
     opacity: 0.0;
 }
 
+.system .controller-top {
+    top: 20px;
+}
+
 .controller-top {
     top: 6px;
 }
 
 .controller-bottom {
-    bottom: -28px;
+    bottom: -8px;
     top: auto;
     transition: opacity 0.3s;
     z-index: 1;
+}
+
+.controller-bottom--open {
+    bottom: -28px;
 }
 
 :host:hover {

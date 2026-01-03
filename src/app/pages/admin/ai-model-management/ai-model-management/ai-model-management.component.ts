@@ -1,6 +1,6 @@
-// ai-model-management.component.ts - Enhanced version with scope management
-import { CommonModule } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+// ai-model-management.component.ts - Refactored version using AdminListPageComponent
+import { CommonModule, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { LiveAnnouncer } from '@angular/cdk/a11y';
@@ -8,9 +8,10 @@ import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -22,19 +23,50 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
-import { JsonEditorComponent } from "../../../../parts/json-editor/json-editor.component";
+import { AdminListPageComponent } from '../../../../parts/admin-list-page/admin-list-page.component';
+import {
+  AdminActionEvent,
+  AdminBulkAction,
+  AdminColumnDef,
+  AdminFilterDef,
+  AdminFilterValues,
+  AdminHeaderAction,
+  AdminRowAction,
+  AdminSortState,
+} from '../../../../parts/admin-list-page/admin-list-page.types';
 import { TrimTrailingZerosPipe } from '../../../../pipe/trim-trailing-zeros.pipe';
 import { AdminScopeService } from '../../../../services/admin-scope.service';
 import { AuthService, ScopeLabels, ScopeLabelsResponse } from '../../../../services/auth.service';
 import { GService } from '../../../../services/g.service';
-import { AIModelEntity, AIModelEntityForView, AIModelManagerService, AIModelPricingService, AIModelStatus, AIProviderEntity, AIProviderManagerService, Modality, ModelPricing, ScopeInfo, ScopeType, TagEntity, TagService } from '../../../../services/model-manager.service';
+import {
+  AIModelEntity,
+  AIModelEntityForView,
+  AIModelManagerService,
+  AIModelPricingService,
+  AIModelStatus,
+  AIProviderEntity,
+  AIProviderManagerService,
+  Modality,
+  ModelPricing,
+  ScopeInfo,
+  ScopeType,
+  TagEntity,
+  TagService
+} from '../../../../services/model-manager.service';
 import { genInitialBaseEntity } from '../../../../services/project.service';
+import { AdminExportService } from '../../../../services/admin-export.service';
 import { BulkProviderDialogComponent } from '../bulk-provider-dialog/bulk-provider-dialog.component';
 import { BulkTagDialogComponent } from '../bulk-tag-dialog/bulk-tag-dialog.component';
 import { TagManagementDialogComponent } from '../tag-management-dialog/tag-management-dialog.component';
+import {
+  ImportExportDialogComponent,
+  ImportExportDialogData,
+  ImportExportDialogResult
+} from '../../shared/import-export-dialog/import-export-dialog.component';
 
 @Component({
   selector: 'app-ai-model-management',
+  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -52,19 +84,32 @@ import { TagManagementDialogComponent } from '../tag-management-dialog/tag-manag
     MatDialogModule,
     MatCardModule,
     MatCheckboxModule,
-    JsonEditorComponent,
+    MatExpansionModule,
     TrimTrailingZerosPipe,
+    AdminListPageComponent,
   ],
   templateUrl: './ai-model-management.component.html',
-  styleUrl: './ai-model-management.component.scss'
+  styleUrl: './ai-model-management.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [DecimalPipe],
 })
 export class AIModelManagementComponent implements OnInit, OnDestroy {
+  // ========== Template References ==========
+  // Optimized cell templates (8 → 4 columns)
+  @ViewChild('nameCell') nameCellTemplate!: TemplateRef<any>;
+  @ViewChild('specsCell') specsCellTemplate!: TemplateRef<any>;
+  @ViewChild('priceCell') priceCellTemplate!: TemplateRef<any>;
+  @ViewChild('statusCell') statusCellTemplate!: TemplateRef<any>;
+
+  // ========== Services ==========
   form!: FormGroup;
   private fb: FormBuilder = inject(FormBuilder);
   private snackBar: MatSnackBar = inject(MatSnackBar);
+  private cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   private readonly adminScopeService = inject(AdminScopeService);
   readonly announcer = inject(LiveAnnouncer);
   readonly dialog = inject(MatDialog);
+  private decimalPipe = inject(DecimalPipe);
 
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
   readonly aiProviderService: AIProviderManagerService = inject(AIProviderManagerService);
@@ -74,20 +119,14 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   readonly translate: TranslateService = inject(TranslateService);
   readonly tagService = inject(TagService);
   readonly authService = inject(AuthService);
+  readonly exportService = inject(AdminExportService);
 
+  // ========== Data ==========
   models: AIModelEntityForView[] = [];
   filteredModels: AIModelEntityForView[] = [];
   selectedModel: AIModelEntityForView | null = null;
-
-  // フィルター・ソート・一括操作関連
-  searchFilter = '';
-  providerFilter: string[] = [];
-  statusFilter = '';
-  tagFilter: string[] = [];
-  sortBy: string | null = null;
-  sortDirection: 'asc' | 'desc' = 'desc';
-  selectedModels: string[] = [];
-  availableProviders: string[] = [];
+  selectedIds: Set<string> = new Set();
+  isLoading = false;
 
   // Subscriptions
   private subscriptions = new Subscription();
@@ -95,7 +134,49 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   // Selected scope from admin
   selectedScope: ScopeInfo | null = null;
 
-  // 表示状態管理
+  // ========== AdminListPage Configuration ==========
+  columns: AdminColumnDef<AIModelEntityForView>[] = [];
+  filters: AdminFilterDef[] = [];
+  filterValues: AdminFilterValues = {
+    search: '',
+    provider: [],
+    tag: [],
+    status: '',
+  };
+  sortState: AdminSortState = { column: null, direction: 'desc' };
+
+  headerActions: AdminHeaderAction[] = [
+    {
+      id: 'import-export',
+      label: 'Import/Export',
+      icon: 'import_export',
+    },
+    {
+      id: 'manage-tags',
+      label: 'Tags',
+      icon: 'local_offer',
+    },
+    {
+      id: 'create',
+      label: 'New Model',
+      icon: 'add',
+      color: 'primary',
+      disabled: () => !this.canCreateModel(),
+      tooltip: () => !this.canCreateModel() ? 'You do not have permission to create models' : '',
+    },
+  ];
+
+  bulkActions: AdminBulkAction[] = [
+    { id: 'activate', label: 'Activate', icon: 'visibility', color: 'primary', disabled: () => !this.canBulkEdit() },
+    { id: 'deactivate', label: 'Deactivate', icon: 'visibility_off', disabled: () => !this.canBulkEdit() },
+    { id: 'add-tags', label: 'Add Tags', icon: 'local_offer', disabled: () => !this.canBulkEdit() },
+    { id: 'set-providers', label: 'Set Providers', icon: 'settings', disabled: () => !this.canBulkEdit() },
+    { id: 'delete', label: 'Delete', icon: 'delete', color: 'warn', disabled: () => !this.canBulkEdit() },
+  ];
+
+  rowActions: AdminRowAction<AIModelEntityForView>[] = [];
+
+  // ========== 表示状態管理 ==========
   isFormVisible = false;
   isEditMode = false;
   isDuplicateMode = false;
@@ -103,28 +184,32 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   isOverrideMode = false;
   activeTab = 'basic';
 
-  // 価格情報管理
+  // Accordion expanded state
+  expandedSections = {
+    capabilities: false,
+    pricing: false,
+    advanced: false
+  };
+
+  // ========== 価格情報管理 ==========
   currentPricing: ModelPricing | null = null;
   pricingHistory: ModelPricing[] = [];
   hasExistingPricing = false;
+  pricingSelectionMode: 'new' | 'edit' = 'new';
+  selectedPricingId: string | undefined = undefined;
 
-  // ドロップダウンオプション
+  // ========== ドロップダウンオプション ==========
   providerOptions: AIProviderEntity[] = [];
   statusOptions = Object.values(AIModelStatus);
   modalityOptions = Object.values(Modality);
 
-  // 価格情報の選択モード管理
-  pricingSelectionMode: 'new' | 'edit' = 'new';
-  selectedPricingId: string | undefined = undefined;
-
-  // タグ関連（フィルター用）
+  // ========== タグ関連 ==========
   availableTags: string[] = [];
-
-  // タグエンティティ関連（タグ管理用）
   availableTagEntities: TagEntity[] = [];
   filteredTags: TagEntity[] = [];
+  availableProviders: string[] = [];
 
-  // Scope management
+  // ========== Scope management ==========
   readonly scopeTypeOptions = [
     { value: ScopeType.ORGANIZATION, label: 'Organization' },
     { value: ScopeType.DIVISION, label: 'Division' },
@@ -147,6 +232,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.initForm();
     this.loadTags();
+    this.initializeColumns();
+    this.initializeFilters();
+    this.initializeRowActions();
 
     // Subscribe to selected scope changes
     const scopeSubscription = this.adminScopeService.selectedScope$.subscribe(scope => {
@@ -163,7 +251,177 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-  // ===== スコープ関連メソッド =====
+  // ========== Column/Filter/Action Initialization ==========
+
+  private initializeColumns(): void {
+    // Optimized columns: 8 → 4 columns for better readability
+    setTimeout(() => {
+      this.columns = [
+        {
+          key: 'name',
+          label: 'Model',
+          subLabel: 'Provider',
+          sortable: true,
+          template: this.nameCellTemplate,
+        },
+        {
+          key: 'specs',
+          label: 'Specs',
+          subLabel: 'Context / Output',
+          sortable: true,
+          template: this.specsCellTemplate,
+        },
+        {
+          key: 'price',
+          label: 'Price',
+          subLabel: '$/1M tokens',
+          sortable: true,
+          align: 'right',
+          template: this.priceCellTemplate,
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          subLabel: 'Scope / Tags',
+          sortable: true,
+          template: this.statusCellTemplate,
+        },
+      ];
+      this.cdr.markForCheck();
+    });
+  }
+
+  private initializeFilters(): void {
+    this.filters = [
+      { key: 'search', label: 'Search', type: 'text', placeholder: 'Search models...', icon: 'search' },
+      { key: 'provider', label: 'Provider', type: 'multi-select', options: [], icon: 'filter_list' },
+      { key: 'tag', label: 'Tags', type: 'multi-select', options: [], icon: 'local_offer' },
+      { key: 'status', label: 'Status', type: 'boolean', icon: 'visibility' },
+    ];
+  }
+
+  private initializeRowActions(): void {
+    this.rowActions = [
+      {
+        id: 'edit',
+        icon: 'edit',
+        tooltip: 'Edit this model',
+        visible: (item) => this.isModelsOwnScope(item) && this.shouldShowEditButton(item),
+      },
+      {
+        id: 'view',
+        icon: 'visibility',
+        tooltip: 'View model details',
+        visible: (item) => !this.isModelsOwnScope(item),
+      },
+      {
+        id: 'duplicate',
+        icon: 'file_copy',
+        tooltip: 'Duplicate this model',
+        visible: (item) => this.shouldShowDuplicateButton(item),
+      },
+      {
+        id: 'override',
+        icon: 'content_copy',
+        tooltip: 'Create override in your scope',
+        visible: (item) => this.shouldShowOverrideButton(item),
+        class: 'override-button',
+      },
+      {
+        id: 'delete',
+        icon: 'delete',
+        tooltip: 'Delete this model',
+        visible: (item) => this.shouldShowDeleteButton(item),
+        color: 'warn',
+      },
+    ];
+  }
+
+  private updateFilterOptions(): void {
+    // Update provider options
+    const providerFilter = this.filters.find(f => f.key === 'provider');
+    if (providerFilter) {
+      providerFilter.options = this.availableProviders.map(p => ({ value: p, label: p }));
+    }
+
+    // Update tag options
+    const tagFilter = this.filters.find(f => f.key === 'tag');
+    if (tagFilter) {
+      tagFilter.options = this.availableTags.map(t => ({ value: t, label: this.getTagDisplayName(t) }));
+    }
+  }
+
+  // ========== AdminListPage Event Handlers ==========
+
+  onFilterChange(values: AdminFilterValues): void {
+    this.filterValues = values;
+    this.applyFilters();
+  }
+
+  onSortChange(state: AdminSortState): void {
+    this.sortState = state;
+    this.applySorting();
+  }
+
+  onItemSelect(model: AIModelEntityForView): void {
+    this.selectModel(model);
+  }
+
+  onSelectionChange(ids: Set<string>): void {
+    this.selectedIds = ids;
+  }
+
+  onActionClick(event: AdminActionEvent<AIModelEntityForView>): void {
+    switch (event.actionId) {
+      case 'import-export':
+        this.openImportExportDialog();
+        break;
+      case 'manage-tags':
+        this.openTagManagement();
+        break;
+      case 'create':
+        this.createNew();
+        break;
+      case 'edit':
+        if (event.item) this.editModel(event.item);
+        break;
+      case 'view':
+        if (event.item) this.viewModel(event.item);
+        break;
+      case 'duplicate':
+        if (event.item) this.duplicateModel(event.item);
+        break;
+      case 'override':
+        if (event.item) this.startOverride(event.item);
+        break;
+      case 'delete':
+        if (event.item) this.deleteModel(event.item.id);
+        break;
+      case 'activate':
+        this.bulkToggleStatus(true);
+        break;
+      case 'deactivate':
+        this.bulkToggleStatus(false);
+        break;
+      case 'add-tags':
+        this.openBulkTagDialog();
+        break;
+      case 'set-providers':
+        this.openBulkProviderDialog();
+        break;
+    }
+  }
+
+  getScopeLabel(scope: ScopeInfo): string {
+    const key = `${scope.scopeType}:${scope.scopeId}`;
+    return this.scopeLabelsMap[key] || scope.scopeId;
+  }
+
+  getScopeDisplayName(scope: ScopeInfo): string {
+    return `${this.getScopeTypeLabel(scope.scopeType)}: ${this.getScopeLabel(scope)}`;
+  }
+
+  // ========== スコープ関連メソッド ==========
 
   private updateScopeInForm(scope: ScopeInfo | null) {
     if (scope && this.form) {
@@ -171,7 +429,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         scopeType: scope.scopeType,
         scopeId: scope.scopeId
       });
-
       this.form.get('scopeInfo.scopeType')?.disable();
       this.form.get('scopeInfo.scopeId')?.disable();
     } else if (this.form) {
@@ -189,44 +446,26 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return typeOption ? typeOption.label : scopeType;
   }
 
-  getScopeLabel(scope: ScopeInfo): string {
-    const key = `${scope.scopeType}:${scope.scopeId}`;
-    return this.scopeLabelsMap[key] || scope.scopeId;
-  }
-
-  getScopeDisplayName(scope: ScopeInfo): string {
-    return `${this.getScopeTypeLabel(scope.scopeType)}: ${this.getScopeLabel(scope)}`;
-  }
-
-  // ===== 権限チェック =====
+  // ========== 権限チェック ==========
 
   canCreateModel(): boolean {
-    return this.adminScopeService.canCreateAIProvider(); // Same permission as AI Provider
+    return this.adminScopeService.canCreateAIProvider();
   }
 
   canUserEditModel(model: AIModelEntityForView): boolean {
-    return this.adminScopeService.canEditScope(
-      model.scopeInfo.scopeType,
-      model.scopeInfo.scopeId
-    );
+    return this.adminScopeService.canEditScope(model.scopeInfo.scopeType, model.scopeInfo.scopeId);
   }
 
   isModelsOwnScope(model: AIModelEntityForView): boolean {
     const currentScope = this.selectedScope;
     if (!currentScope) return false;
-
-    return model.scopeInfo.scopeType === currentScope.scopeType &&
-      model.scopeInfo.scopeId === currentScope.scopeId;
+    return model.scopeInfo.scopeType === currentScope.scopeType && model.scopeInfo.scopeId === currentScope.scopeId;
   }
 
-  // ===== UIヘルパーメソッド =====
+  // ========== UIヘルパーメソッド ==========
 
   shouldShowEditButton(model: AIModelEntityForView): boolean {
     return this.canUserEditModel(model) && this.isModelsOwnScope(model);
-  }
-
-  shouldShowViewButton(model: AIModelEntityForView): boolean {
-    return !this.isModelsOwnScope(model);
   }
 
   shouldShowOverrideButton(model: AIModelEntityForView): boolean {
@@ -241,9 +480,23 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return this.shouldShowEditButton(model);
   }
 
-  // ===== データ読み込み =====
+  getRowClass(model: AIModelEntityForView): Record<string, boolean> {
+    return {
+      'own-scope': this.isModelsOwnScope(model),
+      'other-scope': !this.isModelsOwnScope(model),
+    };
+  }
+
+  trackByModel(model: AIModelEntityForView): string {
+    return model.id;
+  }
+
+  // ========== データ読み込み ==========
 
   private loadModels() {
+    this.isLoading = true;
+    this.cdr.markForCheck();
+
     this.authService.getScopeLabels().subscribe(scopeLabels => {
       this.scopeLabels = scopeLabels;
       this.buildScopeLabelsMap(scopeLabels);
@@ -254,16 +507,19 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         const visibleModels = this.adminScopeService.getVisibleItems(allModels);
         this.models = this.adminScopeService.getEffectiveItems(visibleModels);
         this.updateFilteredModels();
+        this.isLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error loading models:', err);
         this.showErrorMessage('Error loading models');
+        this.isLoading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
   loadData() {
-    // Load providers for dropdown
     this.aiProviderService.getProviders(false).subscribe({
       next: (providers) => {
         this.providerOptions = this.adminScopeService.getEffectiveItems(providers);
@@ -277,42 +533,35 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   private buildScopeLabelsMap(scopeLabels: ScopeLabelsResponse) {
     this.scopeLabelsMap = {};
-
     Object.entries(scopeLabels.scopeLabels).forEach(([type, labels]) => {
       (labels as any[]).forEach(label => {
         this.scopeLabelsMap[`${type}:${label.id}`] = label.label;
       });
     });
-
     this.models.forEach(model => {
       const key = `${model.scopeInfo.scopeType}:${model.scopeInfo.scopeId}`;
       if (!this.scopeLabelsMap[key]) {
-        this.scopeLabelsMap[key] = this.adminScopeService.getScopeLabel(
-          model.scopeInfo.scopeType,
-          model.scopeInfo.scopeId
-        );
+        this.scopeLabelsMap[key] = this.adminScopeService.getScopeLabel(model.scopeInfo.scopeType, model.scopeInfo.scopeId);
       }
     });
   }
 
-  // ===== モデル操作メソッド =====
+  // ========== モデル操作メソッド ==========
 
   createNew() {
     if (!this.canCreateModel()) {
-      this.showErrorMessage('You do not have permission to create models in the current scope');
+      this.showErrorMessage('You do not have permission to create models');
       return;
     }
-
     this.resetFormState();
     this.isFormVisible = true;
     this.resetForm();
-
     if (this.selectedScope) {
       this.updateScopeInForm(this.selectedScope);
     }
-
     this.setFormReadOnly(false);
     this.setActiveTab('basic');
+    this.cdr.markForCheck();
   }
 
   viewModel(model: AIModelEntityForView) {
@@ -320,9 +569,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.resetFormState();
     this.isViewOnlyMode = true;
     this.isFormVisible = true;
-
     this.loadModelToForm(model);
     this.setFormReadOnly(true);
+    this.cdr.markForCheck();
   }
 
   editModel(model: AIModelEntityForView) {
@@ -330,53 +579,44 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       this.showErrorMessage('You can only edit models in your own scope');
       return;
     }
-
     this.selectedModel = model;
     this.resetFormState();
     this.isEditMode = true;
     this.isFormVisible = true;
-
     this.loadModelToForm(model);
     this.setFormReadOnly(false);
+    this.cdr.markForCheck();
   }
 
   startOverride(model: AIModelEntityForView, event?: Event) {
-    if (event) {
-      event.stopPropagation();
-    }
-
+    if (event) event.stopPropagation();
     if (!this.canCreateModel()) {
-      this.showErrorMessage('You do not have permission to create models in the current scope');
+      this.showErrorMessage('You do not have permission to create models');
       return;
     }
-
     if (this.isModelsOwnScope(model)) {
       this.editModel(model);
       return;
     }
-
     this.selectedModel = model;
     this.resetFormState();
     this.isOverrideMode = true;
     this.isFormVisible = true;
-
     this.prepareOverrideForm(model);
     this.setFormReadOnly(false);
+    this.cdr.markForCheck();
   }
 
   switchToOverrideMode() {
-    if (!this.selectedModel || !this.canCreateModel()) {
-      return;
-    }
-
+    if (!this.selectedModel || !this.canCreateModel()) return;
     this.isViewOnlyMode = false;
     this.isOverrideMode = true;
     this.prepareOverrideForm(this.selectedModel);
     this.setFormReadOnly(false);
+    this.cdr.markForCheck();
   }
 
   selectModel(model: AIModelEntityForView) {
-    // Determine the appropriate action based on permissions
     if (this.isModelsOwnScope(model) && this.canUserEditModel(model)) {
       this.editModel(model);
     } else {
@@ -385,43 +625,34 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   }
 
   duplicateModel(model: AIModelEntityForView, event?: Event) {
-    if (event) {
-      event.stopPropagation();
-    }
-
+    if (event) event.stopPropagation();
     if (!this.canCreateModel()) {
-      this.showErrorMessage('You do not have permission to create models in the current scope');
+      this.showErrorMessage('You do not have permission to create models');
       return;
     }
-
     this.selectedModel = model;
     this.resetFormState();
     this.isDuplicateMode = true;
     this.isFormVisible = true;
-
     this.initForm();
     this.loadModelToForm(model);
-
-    // Clear ID and modify name for duplication
     this.form.patchValue({
       id: '',
       name: model.name + '_copy',
       providerModelId: model.providerModelId + '_copy',
       isActive: true,
     });
-
-    // Clear pricing information for new model
     this.currentPricing = null;
     this.pricingHistory = [];
     this.hasExistingPricing = false;
     this.pricingSelectionMode = 'new';
     this.selectedPricingId = undefined;
-
     this.setFormReadOnly(false);
     this.updateCheckboxes();
+    this.cdr.markForCheck();
   }
 
-  // ===== フォーム関連ヘルパー =====
+  // ========== フォーム関連ヘルパー ==========
 
   private resetFormState() {
     this.isEditMode = false;
@@ -432,8 +663,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   private loadModelToForm(model: AIModelEntityForView) {
     this.initForm();
-
-    // Load pricing information
     this.hasExistingPricing = model.pricingHistory && model.pricingHistory.length > 0;
     if (this.hasExistingPricing) {
       const latestPricing = model.pricingHistory[0];
@@ -449,15 +678,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       this.setPricingSelectionMode('new');
     }
 
-    // Format dates
     const knowledgeCutoff = model.knowledgeCutoff ? this.formatDateForInput(model.knowledgeCutoff) : '';
     const releaseDate = model.releaseDate ? this.formatDateForInput(model.releaseDate) : '';
     const deprecationDate = model.deprecationDate ? this.formatDateForInput(model.deprecationDate) : '';
 
-    // Set form values
     this.form.patchValue({
       id: model.id,
-      providerNameList: model.providerNameList.filter(name => this.providerOptions.find(provider => provider.name === name)),
+      providerNameList: model.providerNameList.filter(name => this.providerOptions.find(p => p.name === name)),
       providerModelId: model.providerModelId,
       name: model.name,
       aliases: model.aliases || [],
@@ -470,9 +697,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       maxOutputTokens: model.maxOutputTokens,
       inputFormats: model.inputFormats || [],
       outputFormats: model.outputFormats || [],
-      defaultParameters: model.defaultParameters || {},
-      capabilities: model.capabilities || {},
-      metadata: model.metadata || {},
+      defaultParameters: model.defaultParameters ? JSON.stringify(model.defaultParameters, null, 2) : '',
+      capabilities: model.capabilities ? JSON.stringify(model.capabilities, null, 2) : '',
+      metadata: model.metadata ? JSON.stringify(model.metadata, null, 2) : '',
       endpointTemplate: model.endpointTemplate || '',
       documentationUrl: model.documentationUrl || '',
       licenseType: model.licenseType || '',
@@ -485,38 +712,24 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       isActive: model.isActive || false,
       scopeInfo: model.scopeInfo
     });
-
     this.updateCheckboxes();
   }
 
   private prepareOverrideForm(model: AIModelEntityForView) {
     this.initForm();
     this.loadModelToForm(model);
-
-    // Clear ID for new model creation
-    this.form.patchValue({
-      id: '',
-      isActive: true,
-    });
-
-    // Use selected scope for override
+    this.form.patchValue({ id: '', isActive: true });
     if (this.selectedScope) {
       this.updateScopeInForm(this.selectedScope);
     }
   }
 
   getFormTitle(): string {
-    if (this.isViewOnlyMode) {
-      return 'View Model';
-    } else if (this.isOverrideMode) {
-      return `Override Model`;
-    } else if (this.isDuplicateMode) {
-      return 'Duplicate Model';
-    } else if (this.isEditMode) {
-      return 'Edit Model';
-    } else {
-      return 'New Model';
-    }
+    if (this.isViewOnlyMode) return 'View Model';
+    if (this.isOverrideMode) return 'Override Model';
+    if (this.isDuplicateMode) return 'Duplicate Model';
+    if (this.isEditMode) return 'Edit Model';
+    return 'New Model';
   }
 
   closeForm(): void {
@@ -524,15 +737,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.resetFormState();
     this.selectedModel = null;
     this.resetForm();
+    this.cdr.markForCheck();
   }
 
-  // ===== 保存・削除処理 =====
+  // ========== 保存・削除処理 ==========
 
   register() {
-    if (this.isViewOnlyMode) {
-      return;
-    }
-
+    if (this.isViewOnlyMode) return;
     if (this.form.invalid) {
       this.activateTabWithErrors();
       this.markFormGroupTouched(this.form);
@@ -541,8 +752,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const formValue = this.form.getRawValue(); // disabled フィールドも含めて取得
-
+      const formValue = this.form.getRawValue();
       const scopeInfo = this.selectedScope;
       if (!scopeInfo) {
         this.showErrorMessage('No scope selected');
@@ -550,7 +760,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       }
 
       const isUpdate = formValue.id && this.isEditMode && !this.isOverrideMode;
-
       if (isUpdate) {
         if (!this.adminScopeService.canEditScope(scopeInfo.scopeType, scopeInfo.scopeId)) {
           this.showErrorMessage('You do not have permission to edit this model');
@@ -558,15 +767,10 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         }
       } else {
         if (!this.canCreateModel()) {
-          this.showErrorMessage('You do not have permission to create models in the current scope');
+          this.showErrorMessage('You do not have permission to create models');
           return;
         }
       }
-
-      // Build model data
-      const knowledgeCutoff = formValue.knowledgeCutoff ? new Date(formValue.knowledgeCutoff) : null;
-      const releaseDate = formValue.releaseDate ? new Date(formValue.releaseDate) : null;
-      const deprecationDate = formValue.deprecationDate ? new Date(formValue.deprecationDate) : null;
 
       const modelData: AIModelEntity & { aliases: string[] } = {
         ...genInitialBaseEntity(),
@@ -584,15 +788,15 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         maxOutputTokens: formValue.maxOutputTokens,
         inputFormats: formValue.inputFormats?.length ? formValue.inputFormats : [],
         outputFormats: formValue.outputFormats?.length ? formValue.outputFormats : [],
-        defaultParameters: formValue.defaultParameters,
-        capabilities: formValue.capabilities,
-        metadata: formValue.metadata,
+        defaultParameters: this.parseJsonField(formValue.defaultParameters),
+        capabilities: this.parseJsonField(formValue.capabilities),
+        metadata: this.parseJsonField(formValue.metadata),
         endpointTemplate: formValue.endpointTemplate || undefined,
         documentationUrl: formValue.documentationUrl || undefined,
         licenseType: formValue.licenseType || undefined,
-        knowledgeCutoff: knowledgeCutoff,
-        releaseDate: releaseDate,
-        deprecationDate: deprecationDate,
+        knowledgeCutoff: formValue.knowledgeCutoff ? new Date(formValue.knowledgeCutoff) : null,
+        releaseDate: formValue.releaseDate ? new Date(formValue.releaseDate) : null,
+        deprecationDate: formValue.deprecationDate ? new Date(formValue.deprecationDate) : null,
         tags: formValue.tags || [],
         uiOrder: formValue.uiOrder || undefined,
         isStream: !!formValue.isStream,
@@ -600,7 +804,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         scopeInfo: scopeInfo,
       };
 
-      // Build pricing data
       const pricingData: Partial<ModelPricing> = {
         id: this.pricingSelectionMode === 'new' ? undefined : formValue.pricing?.id,
         modelId: formValue.id,
@@ -612,13 +815,8 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         validFrom: formValue.pricing?.validFrom ? new Date(formValue.pricing.validFrom) : new Date(),
       };
 
-      const operationType = this.isOverrideMode
-        ? 'override'
-        : isUpdate
-          ? 'update'
-          : 'create';
+      const operationType = this.isOverrideMode ? 'override' : isUpdate ? 'update' : 'create';
 
-      // Save model and pricing
       this.aiModelService.upsertAIModel(modelData).pipe(
         switchMap(savedModel => {
           if (savedModel) {
@@ -627,22 +825,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
               return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
             } else if (this.pricingSelectionMode === 'edit' && this.isPricingChanged(pricingData)) {
               return this.aiModelPricingService.upsertPricing(pricingData as ModelPricing);
-            } else {
-              return of(null);
             }
-            return of(null);
-          } else {
-            return of(null);
           }
+          return of(null);
         })
       ).subscribe({
         next: () => {
-          const message = this.isOverrideMode
-            ? 'Model override created successfully'
-            : operationType === 'create'
-              ? 'Model created successfully'
-              : 'Model updated successfully';
-
+          const message = this.isOverrideMode ? 'Model override created' : operationType === 'create' ? 'Model created' : 'Model updated';
           this.showSuccessMessage(message);
           this.loadModels();
           this.closeForm();
@@ -664,23 +853,19 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       this.showErrorMessage('Model not found');
       return;
     }
-
     if (!this.canUserEditModel(model)) {
       this.showErrorMessage('You do not have permission to delete this model');
       return;
     }
 
-    if (confirm('Are you sure you want to delete this model and its pricing information?')) {
+    if (confirm('Are you sure you want to delete this model?')) {
       this.aiModelPricingService.deletePricingByModelId(id).pipe(
         switchMap(() => this.aiModelService.deleteAIModel(id))
       ).subscribe({
         next: () => {
-          this.showSuccessMessage('Model deleted successfully');
+          this.showSuccessMessage('Model deleted');
           this.loadModels();
-
-          if (this.form.value.id === id) {
-            this.closeForm();
-          }
+          if (this.form.value.id === id) this.closeForm();
         },
         error: (error) => {
           console.error('Error deleting model:', error);
@@ -690,7 +875,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ===== ユーティリティメソッド =====
+  // ========== ユーティリティメソッド ==========
 
   private setFormReadOnly(readOnly: boolean): void {
     if (readOnly) {
@@ -709,17 +894,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   }
 
   private showErrorMessage(message: string) {
-    this.snackBar.open(message, 'Close', {
-      duration: 3000,
-      panelClass: 'error-snackbar'
-    });
+    this.snackBar.open(message, 'Close', { duration: 3000, panelClass: 'error-snackbar' });
   }
 
-  // ===== フォーム初期化と管理 =====
+  // ========== フォーム初期化と管理 ==========
 
   initForm() {
     const today = this.formatDateForInput(new Date());
-
     this.form = this.fb.group({
       id: [''],
       providerNameList: [[], Validators.required],
@@ -735,9 +916,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       maxOutputTokens: [0, [Validators.required, Validators.min(0)]],
       inputFormats: [[Modality.TEXT]],
       outputFormats: [[Modality.TEXT]],
-      defaultParameters: [{}],
-      capabilities: [{}],
-      metadata: [{}],
+      defaultParameters: [''],
+      capabilities: [''],
+      metadata: [''],
       endpointTemplate: [''],
       documentationUrl: [''],
       licenseType: [''],
@@ -779,9 +960,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       maxOutputTokens: 0,
       inputFormats: [Modality.TEXT],
       outputFormats: [Modality.TEXT],
-      defaultParameters: {},
-      capabilities: {},
-      metadata: {},
+      defaultParameters: '',
+      capabilities: '',
+      metadata: '',
       endpointTemplate: '',
       documentationUrl: '',
       licenseType: '',
@@ -792,10 +973,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       uiOrder: 0,
       isStream: true,
       isActive: true,
-      scopeInfo: {
-        scopeType: '',
-        scopeId: ''
-      },
+      scopeInfo: { scopeType: '', scopeId: '' },
       pricing: {
         id: '',
         modelId: '',
@@ -805,7 +983,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
         validFrom: this.formatDateForInput(new Date())
       }
     });
-
     this.currentPricing = null;
     this.pricingHistory = [];
     this.hasExistingPricing = false;
@@ -817,7 +994,18 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.activeTab = tabName;
   }
 
-  // ===== タグ管理 =====
+  // ========== JSON Field Parser ==========
+
+  private parseJsonField(value: string): Record<string, any> {
+    if (!value || value.trim() === '') return {};
+    try {
+      return JSON.parse(value);
+    } catch {
+      return {};
+    }
+  }
+
+  // ========== タグ管理 ==========
 
   private loadTags() {
     const tagSubscription = this.tagService.getTags().subscribe({
@@ -839,18 +1027,41 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       maxHeight: '80vh',
       data: { tags: this.availableTags }
     });
-
     dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadTags();
+      if (result) this.loadTags();
+    });
+  }
+
+  openImportExportDialog() {
+    const dialogData: ImportExportDialogData = {
+      mode: 'both',
+      dataType: 'models',
+      scopeInfo: this.selectedScope,
+      models: this.models,
+      providers: this.providerOptions,
+    };
+
+    const dialogRef = this.dialog.open(ImportExportDialogComponent, {
+      width: '600px',
+      maxHeight: '80vh',
+      data: dialogData
+    });
+
+    dialogRef.afterClosed().subscribe((result: ImportExportDialogResult) => {
+      if (result?.action === 'imported') {
+        // インポート後にデータをリロード
+        this.loadModels();
+        this.snackBar.open(
+          `Imported ${result.importedModels || 0} models`,
+          'Close',
+          { duration: 3000 }
+        );
       }
     });
   }
 
   filterTags(query: string): TagEntity[] {
-    if (!query) {
-      return this.availableTagEntities;
-    }
+    if (!query) return this.availableTagEntities;
     const filterValue = query.toLowerCase();
     return this.availableTagEntities.filter(tag =>
       tag.name.toLowerCase().includes(filterValue) ||
@@ -863,18 +1074,31 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return tag?.label || tagName;
   }
 
+  getTagDisplayNames(tagNames: string[]): string {
+    return tagNames.map(t => this.getTagDisplayName(t)).join(', ');
+  }
+
   getTagColor(tagName: string): string | undefined {
     const tag = this.availableTagEntities.find(t => t.name === tagName);
     return tag?.color;
   }
 
-  // ===== チェックボックス管理 =====
+  getScopeShortLabel(scopeInfo: { scopeType: string; scopeId: string }): string {
+    const label = this.scopeLabelsMap[`${scopeInfo.scopeType}:${scopeInfo.scopeId}`];
+    if (label) {
+      // Return first 6 chars with ellipsis if longer
+      return label.length > 6 ? label.slice(0, 6) + '…' : label;
+    }
+    // Fallback: first letter of scopeType + first 4 chars of scopeId
+    return scopeInfo.scopeType.charAt(0).toUpperCase() + ':' + scopeInfo.scopeId.slice(0, 4);
+  }
+
+  // ========== チェックボックス管理 ==========
 
   onCheckboxChange(event: Event, fieldName: string) {
     const checkbox = event.target as HTMLInputElement;
     const value = checkbox.value;
     const isChecked = checkbox.checked;
-
     const values = this.form.get(fieldName)?.value as string[] || [];
 
     if (isChecked && !values.includes(value)) {
@@ -883,7 +1107,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       const index = values.indexOf(value);
       values.splice(index, 1);
     }
-
     this.form.get(fieldName)?.setValue(values);
   }
 
@@ -902,18 +1125,15 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   updateCheckboxField(fieldName: string) {
     const values = this.form.get(fieldName)?.value as string[] || [];
-
     this.modalityOptions.forEach(option => {
       const selector = `input[type="checkbox"][value="${option}"]`;
       const allCheckboxes = document.querySelectorAll(selector);
-
       allCheckboxes.forEach(cb => {
         const checkbox = cb as HTMLInputElement;
         let parent = checkbox.parentElement;
         while (parent && !parent.textContent?.includes(fieldName) && parent.tagName !== 'FORM') {
           parent = parent.parentElement;
         }
-
         if (parent && parent.textContent?.includes(fieldName)) {
           checkbox.checked = values.includes(option);
         }
@@ -921,12 +1141,12 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ===== バリデーション関連 =====
+  // ========== バリデーション関連 ==========
 
   activateTabWithErrors() {
     const tabFields = {
-      'basic': ['providerNameList', 'providerModelId', 'name', 'aliases', 'shortName', 'throttleKey', 'status', 'description', 'isStream', 'isActive'],
-      'capabilities': ['modalities', 'maxContextTokens', 'maxOutputTokens', 'inputFormats', 'outputFormats', 'defaultParameters', 'capabilities'],
+      'basic': ['providerNameList', 'providerModelId', 'name', 'shortName', 'throttleKey', 'status'],
+      'capabilities': ['modalities', 'maxContextTokens', 'maxOutputTokens'],
       'pricing': ['pricing.inputPricePerUnit', 'pricing.outputPricePerUnit', 'pricing.unit', 'pricing.validFrom'],
       'advanced': ['endpointTemplate', 'documentationUrl', 'licenseType', 'releaseDate', 'knowledgeCutoff', 'deprecationDate', 'tags', 'uiOrder', 'metadata']
     };
@@ -934,15 +1154,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     for (const [tab, fields] of Object.entries(tabFields)) {
       for (const field of fields) {
         if (field.includes('.')) {
-          if (this.hasNestedError(field)) {
-            this.setActiveTab(tab);
-            return;
-          }
+          if (this.hasNestedError(field)) { this.setActiveTab(tab); return; }
         } else {
-          if (this.hasError(field)) {
-            this.setActiveTab(tab);
-            return;
-          }
+          if (this.hasError(field)) { this.setActiveTab(tab); return; }
         }
       }
     }
@@ -951,10 +1165,8 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   hasNestedError(path: string): boolean {
     const parts = path.split('.');
     if (parts.length !== 2) return false;
-
     const group = this.form.get(parts[0]) as FormGroup;
     if (!group) return false;
-
     const control = group.get(parts[1]);
     return !!control?.invalid && !!control?.touched;
   }
@@ -962,26 +1174,15 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   getNestedErrorMessage(path: string): string {
     const parts = path.split('.');
     if (parts.length !== 2) return '';
-
     const group = this.form.get(parts[0]) as FormGroup;
     if (!group) return '';
-
     const control = group.get(parts[1]);
     if (!control) return '';
-
-    if (control.errors?.['required']) {
-      return 'This field is required';
-    }
-    if (control.errors?.['min']) {
-      return 'Value must be greater than or equal to 0';
-    }
-    if (control.errors?.['invalidJson']) {
-      return 'Invalid JSON format';
-    }
+    if (control.errors?.['required']) return 'This field is required';
+    if (control.errors?.['min']) return 'Value must be >= 0';
+    if (control.errors?.['invalidJson']) return 'Invalid JSON format';
     return '';
   }
-
-  // ===== 日付関連ユーティリティ =====
 
   formatDate(date: Date | string): string {
     const d = date instanceof Date ? date : new Date(date);
@@ -1010,16 +1211,9 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   getErrorMessage(controlName: string): string {
     const control = this.form.get(controlName);
     if (!control) return '';
-
-    if (control.errors?.['required']) {
-      return 'This field is required';
-    }
-    if (control.errors?.['min']) {
-      return 'Value must be greater than or equal to 0';
-    }
-    if (control.errors?.['invalidJson']) {
-      return 'Invalid JSON format';
-    }
+    if (control.errors?.['required']) return 'This field is required';
+    if (control.errors?.['min']) return 'Value must be >= 0';
+    if (control.errors?.['invalidJson']) return 'Invalid JSON format';
     return '';
   }
 
@@ -1028,11 +1222,10 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     return !!control?.invalid && !!control?.touched;
   }
 
-  // ===== 価格情報管理 =====
+  // ========== 価格情報管理 ==========
 
   setPricingSelectionMode(mode: 'new' | 'edit') {
     this.pricingSelectionMode = mode;
-
     if (mode === 'new') {
       const today = this.formatDateForInput(new Date());
       const pricingForm = this.form.get('pricing');
@@ -1068,7 +1261,6 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   selectExistingPricing(pricing: ModelPricing) {
     this.pricingSelectionMode = 'edit';
     this.selectedPricingId = pricing.id;
-
     const pricingForm = this.form.get('pricing');
     if (pricingForm) {
       pricingForm.patchValue({
@@ -1090,20 +1282,13 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
   isPricingChanged(newPricing: Partial<ModelPricing>): boolean {
     const selectedPricing = this.pricingHistory.find(p => p.id === this.selectedPricingId);
     if (!selectedPricing) return true;
-
-    const currentInput = selectedPricing.inputPricePerUnit.toString();
-    const newInput = newPricing.inputPricePerUnit?.toString() || '';
-
-    const currentOutput = selectedPricing.outputPricePerUnit.toString();
-    const newOutput = newPricing.outputPricePerUnit?.toString() || '';
-
-    return currentInput !== newInput ||
-      currentOutput !== newOutput ||
+    return selectedPricing.inputPricePerUnit.toString() !== (newPricing.inputPricePerUnit?.toString() || '') ||
+      selectedPricing.outputPricePerUnit.toString() !== (newPricing.outputPricePerUnit?.toString() || '') ||
       selectedPricing.unit !== newPricing.unit ||
       this.formatDateForInput(selectedPricing.validFrom) !== this.formatDateForInput(newPricing.validFrom as Date);
   }
 
-  // ===== チップ入力関連 =====
+  // ========== チップ入力関連 ==========
 
   addReactiveKeyword(fieldName: string, event: MatChipInputEvent): void {
     const value = (event.value || '').trim();
@@ -1142,14 +1327,16 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ===== フィルター・ソート・一括操作関連 =====
+  // ========== フィルター・ソート関連 ==========
 
   applyFilters(): void {
     let filtered = [...this.models];
+    const search = (this.filterValues['search'] || '').toLowerCase().trim();
+    const providerFilter = this.filterValues['provider'] || [];
+    const tagFilter = this.filterValues['tag'] || [];
+    const statusFilter = this.filterValues['status'];
 
-    // 検索フィルター
-    if (this.searchFilter.trim()) {
-      const search = this.searchFilter.toLowerCase();
+    if (search) {
       filtered = filtered.filter(model =>
         model.name.toLowerCase().includes(search) ||
         model.providerModelId.toLowerCase().includes(search) ||
@@ -1158,63 +1345,43 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
       );
     }
 
-    // プロバイダーフィルター
-    if (this.providerFilter.length > 0) {
-      filtered = filtered.filter(model =>
-        model.providerNameList.some(p => this.providerFilter.includes(p))
-      );
+    if (providerFilter.length > 0) {
+      filtered = filtered.filter(model => model.providerNameList.some(p => providerFilter.includes(p)));
     }
 
-    // ステータスフィルター
-    if (this.statusFilter !== '') {
-      const isActive = this.statusFilter === 'true';
+    if (statusFilter !== '' && statusFilter !== undefined) {
+      const isActive = statusFilter === 'true';
       filtered = filtered.filter(model => model.isActive === isActive);
     }
 
-    // タグフィルター
-    if (this.tagFilter.length > 0) {
-      filtered = filtered.filter(model =>
-        model.tags && model.tags.some(tag => this.tagFilter.includes(tag))
-      );
+    if (tagFilter.length > 0) {
+      filtered = filtered.filter(model => model.tags && model.tags.some(tag => tagFilter.includes(tag)));
     }
 
     this.filteredModels = filtered;
     this.applySorting();
+    this.cdr.markForCheck();
   }
 
   applySorting(): void {
-    // 安定ソートのために配列をインデックス付きで処理
     const indexedModels = this.filteredModels.map((model, index) => ({ model, index }));
+    const column = this.sortState.column;
+    const direction = this.sortState.direction;
 
     indexedModels.sort((a, b) => {
       let valueA: any;
       let valueB: any;
 
-      switch (this.sortBy) {
+      switch (column) {
         case null:
         case '':
-          // デフォルト順序：リリース日新しい順 > 名前順
           const releaseDateA = a.model.releaseDate ? new Date(a.model.releaseDate).getTime() : 0;
           const releaseDateB = b.model.releaseDate ? new Date(b.model.releaseDate).getTime() : 0;
-
-          if (releaseDateA !== releaseDateB) {
-            return releaseDateB - releaseDateA; // 新しい順（descending）
-          }
-
-          // リリース日が同じ場合は名前でソート
+          if (releaseDateA !== releaseDateB) return releaseDateB - releaseDateA;
           return a.model.name.localeCompare(b.model.name);
-
-        case 'release':
-          valueA = a.model.releaseDate ? new Date(a.model.releaseDate).getTime() : 0;
-          valueB = b.model.releaseDate ? new Date(b.model.releaseDate).getTime() : 0;
-          break;
         case 'name':
           valueA = a.model.name;
           valueB = b.model.name;
-          break;
-        case 'provider':
-          valueA = a.model.providerNameList.join(',');
-          valueB = b.model.providerNameList.join(',');
           break;
         case 'scope':
           valueA = `${a.model.scopeInfo.scopeType}:${a.model.scopeInfo.scopeId}`;
@@ -1232,102 +1399,31 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
           valueA = a.model.releaseDate ? new Date(a.model.releaseDate).getTime() : 0;
           valueB = b.model.releaseDate ? new Date(b.model.releaseDate).getTime() : 0;
           break;
-        case 'active':
+        case 'status':
           valueA = a.model.isActive ? 1 : 0;
           valueB = b.model.isActive ? 1 : 0;
           break;
-        case 'updated':
-          valueA = a.model.updatedAt;
-          valueB = b.model.updatedAt;
-          break;
         default:
-          // 値が同じ場合は元のインデックス順を保持（安定ソート）
           return a.index - b.index;
       }
 
-      // 値が同じ場合は元のインデックス順を保持（安定ソート）
-      if (valueA === valueB) {
-        return a.index - b.index;
-      }
-
+      if (valueA === valueB) return a.index - b.index;
       if (typeof valueA === 'string' && typeof valueB === 'string') {
         const result = valueA.localeCompare(valueB);
-        return this.sortDirection === 'asc' ? result : -result;
+        return direction === 'asc' ? result : -result;
       } else {
         const result = valueA - valueB;
-        return this.sortDirection === 'asc' ? result : -result;
+        return direction === 'asc' ? result : -result;
       }
     });
 
-    // ソート結果を元の配列に戻す
     this.filteredModels = indexedModels.map(item => item.model);
   }
 
-  sortByColumn(column: string): void {
-    if (this.sortBy === column) {
-      // 同じ列をクリックした場合は方向を反転
-      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-      // 新しい列の場合は昇順から開始
-      this.sortBy = column;
-      this.sortDirection = 'asc';
-    }
-    this.applySorting();
-  }
+  // ========== 一括操作 ==========
 
-  toggleSortDirection(): void {
-    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.applySorting();
-  }
-
-  resetFilters(): void {
-    this.searchFilter = '';
-    this.providerFilter = [];
-    this.statusFilter = '';
-    this.tagFilter = [];
-    this.sortBy = null;
-    this.sortDirection = 'desc';
-    this.selectedModels = [];
-    this.applyFilters();
-  }
-
-  // 一括選択関連
-  isModelSelected(modelId: string): boolean {
-    return this.selectedModels.includes(modelId);
-  }
-
-  toggleModelSelection(modelId: string, event: MatCheckboxChange): void {
-    if (event.checked) {
-      if (!this.selectedModels.includes(modelId)) {
-        this.selectedModels.push(modelId);
-      }
-    } else {
-      const index = this.selectedModels.indexOf(modelId);
-      if (index > -1) {
-        this.selectedModels.splice(index, 1);
-      }
-    }
-  }
-
-  isAllSelected(): boolean {
-    return this.filteredModels.length > 0 && this.selectedModels.length === this.filteredModels.length;
-  }
-
-  isSomeSelected(): boolean {
-    return this.selectedModels.length > 0 && this.selectedModels.length < this.filteredModels.length;
-  }
-
-  toggleSelectAll(event: MatCheckboxChange): void {
-    if (event.checked) {
-      this.selectedModels = this.filteredModels.map(model => model.id);
-    } else {
-      this.selectedModels = [];
-    }
-  }
-
-  // 一括操作
   canBulkEdit(): boolean {
-    return this.selectedModels.length > 0 && this.selectedModels.every(id => {
+    return this.selectedIds.size > 0 && Array.from(this.selectedIds).every(id => {
       const model = this.models.find(m => m.id === id);
       return model && this.isModelsOwnScope(model);
     });
@@ -1335,22 +1431,16 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
 
   bulkToggleStatus(isActive: boolean): void {
     if (!this.canBulkEdit()) return;
-
     const action = isActive ? 'activate' : 'deactivate';
-    const confirmed = confirm(`Are you sure you want to ${action} ${this.selectedModels.length} models?`);
+    if (!confirm(`Are you sure you want to ${action} ${this.selectedIds.size} models?`)) return;
 
-    if (!confirmed) return;
-
-    const updateObservables = this.selectedModels
-      .map(id => {
-        const model = this.models.find(m => m.id === id);
-        if (model && this.isModelsOwnScope(model)) {
-          const updatedModel = { ...model, isActive };
-          return this.aiModelService.upsertAIModel(updatedModel);
-        }
-        return of(null);
-      })
-      .filter(obs => obs !== null);
+    const updateObservables = Array.from(this.selectedIds).map(id => {
+      const model = this.models.find(m => m.id === id);
+      if (model && this.isModelsOwnScope(model)) {
+        return this.aiModelService.upsertAIModel({ ...model, isActive });
+      }
+      return of(null);
+    }).filter(obs => obs !== null);
 
     if (updateObservables.length === 0) {
       this.snackBar.open('No models to update', 'Close', { duration: 3000 });
@@ -1360,7 +1450,7 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     forkJoin(updateObservables).subscribe({
       next: () => {
         this.snackBar.open(`${updateObservables.length} models ${isActive ? 'activated' : 'deactivated'}`, 'Close', { duration: 3000 });
-        this.selectedModels = [];
+        this.selectedIds = new Set();
         this.loadModels();
       },
       error: (error) => {
@@ -1370,151 +1460,81 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  bulkDelete(): void {
-    if (!this.canBulkEdit()) return;
-
-    if (confirm(`Are you sure you want to delete ${this.selectedModels.length} models? This action cannot be undone.`)) {
-      const deletePromises = this.selectedModels.map(id => {
-        const model = this.models.find(m => m.id === id);
-        if (model && this.isModelsOwnScope(model)) {
-          return this.aiModelService.deleteAIModel(id);
-        }
-        return Promise.resolve();
-      });
-
-      Promise.all(deletePromises)
-        .then(() => {
-          this.snackBar.open(`${this.selectedModels.length} models deleted`, 'Close', { duration: 3000 });
-          this.selectedModels = [];
-          this.loadModels();
-        })
-        .catch(error => {
-          console.error('Bulk delete failed:', error);
-          this.snackBar.open('Bulk delete failed', 'Close', { duration: 3000 });
-        });
-    }
-  }
-
-  // 一括タグ追加ダイアログ
   openBulkTagDialog(): void {
     if (!this.canBulkEdit()) return;
-
     const dialogRef = this.dialog.open(BulkTagDialogComponent, {
       width: '600px',
-      data: {
-        selectedModels: this.selectedModels,
-        availableTags: this.availableTagEntities,
-        models: this.models
-      }
+      data: { selectedModels: Array.from(this.selectedIds), availableTags: this.availableTagEntities, models: this.models }
     });
-
     dialogRef.afterClosed().subscribe(result => {
-      if (result && result.tags) {
-        this.bulkAddTags(result.tags);
-      }
+      if (result && result.tags) this.bulkAddTags(result.tags);
     });
   }
 
-  // 一括プロバイダー設定ダイアログ
   openBulkProviderDialog(): void {
     if (!this.canBulkEdit()) return;
-
     const dialogRef = this.dialog.open(BulkProviderDialogComponent, {
       width: '600px',
-      data: {
-        selectedModels: this.selectedModels,
-        availableProviders: this.providerOptions,
-        models: this.models
-      }
+      data: { selectedModels: Array.from(this.selectedIds), availableProviders: this.providerOptions, models: this.models }
     });
-
     dialogRef.afterClosed().subscribe(result => {
-      if (result && result.providers) {
-        this.bulkSetProviders(result.providers);
-      }
+      if (result && result.providers) this.bulkSetProviders(result.providers);
     });
   }
 
   bulkAddTags(tags: string[]): void {
     if (!this.canBulkEdit() || !tags.length) return;
+    const updateObservables = Array.from(this.selectedIds).map(id => {
+      const model = this.models.find(m => m.id === id);
+      if (model && this.isModelsOwnScope(model)) {
+        const newTags = [...new Set([...(model.tags || []), ...tags])];
+        return this.aiModelService.upsertAIModel({ ...model, tags: newTags });
+      }
+      return of(null);
+    }).filter(obs => obs !== null);
 
-    const updateObservables = this.selectedModels
-      .map(id => {
-        const model = this.models.find(m => m.id === id);
-        if (model && this.isModelsOwnScope(model)) {
-          const existingTags = model.tags || [];
-          const newTags = [...new Set([...existingTags, ...tags])]; // 重複除去
-          const updatedModel = { ...model, tags: newTags };
-          return this.aiModelService.upsertAIModel(updatedModel);
-        }
-        return of(null);
-      })
-      .filter(obs => obs !== null);
-
-    if (updateObservables.length === 0) {
-      this.snackBar.open('No models to update', 'Close', { duration: 3000 });
-      return;
-    }
-
+    if (updateObservables.length === 0) return;
     forkJoin(updateObservables).subscribe({
       next: () => {
         this.snackBar.open(`Tags added to ${updateObservables.length} models`, 'Close', { duration: 3000 });
-        this.selectedModels = [];
+        this.selectedIds = new Set();
         this.loadModels();
       },
-      error: (error) => {
-        console.error('Bulk tag update failed:', error);
-        this.snackBar.open('Bulk tag update failed', 'Close', { duration: 3000 });
-      }
+      error: () => this.snackBar.open('Bulk tag update failed', 'Close', { duration: 3000 })
     });
   }
 
   bulkSetProviders(providers: string[]): void {
     if (!this.canBulkEdit() || !providers.length) return;
+    const updateObservables = Array.from(this.selectedIds).map(id => {
+      const model = this.models.find(m => m.id === id);
+      if (model && this.isModelsOwnScope(model)) {
+        return this.aiModelService.upsertAIModel({ ...model, providerNameList: providers });
+      }
+      return of(null);
+    }).filter(obs => obs !== null);
 
-    const updateObservables = this.selectedModels
-      .map(id => {
-        const model = this.models.find(m => m.id === id);
-        if (model && this.isModelsOwnScope(model)) {
-          const updatedModel = { ...model, providerNameList: providers };
-          return this.aiModelService.upsertAIModel(updatedModel);
-        }
-        return of(null);
-      })
-      .filter(obs => obs !== null);
-
-    if (updateObservables.length === 0) {
-      this.snackBar.open('No models to update', 'Close', { duration: 3000 });
-      return;
-    }
-
+    if (updateObservables.length === 0) return;
     forkJoin(updateObservables).subscribe({
       next: () => {
         this.snackBar.open(`Providers updated for ${updateObservables.length} models`, 'Close', { duration: 3000 });
-        this.selectedModels = [];
+        this.selectedIds = new Set();
         this.loadModels();
       },
-      error: (error) => {
-        console.error('Bulk provider update failed:', error);
-        this.snackBar.open('Bulk provider update failed', 'Close', { duration: 3000 });
-      }
+      error: () => this.snackBar.open('Bulk provider update failed', 'Close', { duration: 3000 })
     });
   }
 
   private updateAvailableProviders(): void {
     const providers = new Set<string>();
-    this.models.forEach(model => {
-      model.providerNameList.forEach(provider => providers.add(provider));
-    });
+    this.models.forEach(model => model.providerNameList.forEach(provider => providers.add(provider)));
     this.availableProviders = Array.from(providers).sort();
   }
 
   private updateAvailableTags(): void {
     const tags = new Set<string>();
     this.models.forEach(model => {
-      if (model.tags) {
-        model.tags.forEach(tag => tags.add(tag));
-      }
+      if (model.tags) model.tags.forEach(tag => tags.add(tag));
     });
     this.availableTags = Array.from(tags).sort();
   }
@@ -1523,7 +1543,17 @@ export class AIModelManagementComponent implements OnInit, OnDestroy {
     this.filteredModels = [...this.models];
     this.updateAvailableProviders();
     this.updateAvailableTags();
-    // 初期化時は自動でソートを適用
+    this.updateFilterOptions();
     this.applyFilters();
+  }
+
+  // ========== Cell Value Formatters (for template usage) ==========
+
+  formatNumber(value: number): string {
+    return this.decimalPipe.transform(value) || '';
+  }
+
+  formatPrice(price: number): string {
+    return this.decimalPipe.transform(price, '0.2-2') || '';
   }
 }

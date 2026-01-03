@@ -1,149 +1,182 @@
-@if(viewModel(); as vm){
+@if (viewModel(); as vm) {
 
-@if(vm.messageGroup.messages && vm.messageGroup.messages.length>0){
-<mat-expansion-panel class="message" #exPanel [expanded]="vm.messageGroup.isExpanded"
-    (opened)="loadContent().subscribe()" (expandedChange)="expandedChange($event)" hideToggle>
-    <mat-expansion-panel-header class="message-header">
-        <mat-panel-title class="message-title flex flex-col" style="font-weight: normal;align-items: start;">
-            <div class="flex gap-3" style="height: 16px;">
-                @if(vm.thread.inDto.args.tool_choice!=='none'){
-                @for(rec of toolGroupCheckMasRecord(toolGroupCheckMas);track $index){
-                @if(rec.checked){
-                <div class="tooltip-small-tag relative">
-                    <img appInlineSvg [src]="'./image/'+rec.groupName+'-logo.svg'" alt="icon" class="mat-primary"
-                        style="width: 14px;height: 14px;">
-                </div>
-                }
-                }
-                }
-            </div>
+@if (vm.messageGroup.messages && vm.messageGroup.messages.length > 0) {
+<mat-expansion-panel class="message system" #exPanel [expanded]="vm.messageGroup.isExpanded"
+  (opened)="loadContent().subscribe()" (expandedChange)="expandedChange($event)" hideToggle>
+  <mat-expansion-panel-header class="message-header">
+    <mat-panel-title class="message-title flex flex-col" style="font-weight: normal;align-items: start;">
+      <div class="flex gap-3" style="height: 16px;">
+        @if(vm.thread.inDto.args.tool_choice!=='none'){
+        @for (rec of toolGroupCheckMasRecord(toolGroupCheckMas);track $index) {
+        @if (rec.checked) {
+        <div class="tooltip-small-tag relative">
+          <img appInlineSvg [src]="'./image/' + rec.groupName + '-logo.svg'" alt="icon" class="mat-primary"
+            style="width: 14px;height: 14px;">
+        </div>
+        }
+        }
+        }
+      </div>
 
-            <app-model-selector name="model-select" [args]="vm.thread.inDto.args" (argsChange)="modelChange($event)"
-                (click)="stopPropagation($event)" [opened]="exPanel.expanded">
-            </app-model-selector>
+      <app-model-selector name="model-select" [args]="vm.thread.inDto.args" (argsChange)="modelChange($event)"
+        (click)="stopPropagation($event)" [opened]="exPanel.expanded" style="margin-top: -16px;">
+      </app-model-selector>
 
-            <div style="height: 16px;"></div>
-        </mat-panel-title>
-        <!-- style="width: 0;flex-grow: 1;"  -->
-        <mat-panel-description class="system-prompt-description flex items-center">
-            @if(!vm.messageGroup.isExpanded){
-            <div class="truncate">{{vm.messageGroup.messages[0].label}}</div>
+      @if (
+      aiModelManagerService.modelMap[vm.thread.inDto.args.model] &&
+      aiModelManagerService.modelMap[vm.thread.inDto.args.model].tags?.includes('古い')
+      ) {
+
+      <div style="
+                height: 16px;
+                font-size: 12px;
+                line-height: 12px;
+                background: rgb(248, 248, 169);
+                color: black;
+                padding: 2px 10px;
+                border-radius: 10px;
+                position: absolute;
+                bottom: 0;
+              ">
+        古い
+      </div>
+      } @else if (
+      aiModelManagerService.modelMap[vm.thread.inDto.args.model] &&
+      aiModelManagerService.modelMap[vm.thread.inDto.args.model].isActive
+      ) {
+      <div style="height: 16px;position: absolute;bottom: 0;"></div>
+      } @else {
+      <div style="
+                height: 16px;
+                font-size: 12px;
+                line-height: 12px;
+                background: rgb(248, 248, 169);
+                color: black;
+                padding: 2px 10px;
+                border-radius: 10px;
+                position: absolute;
+                bottom: 0;
+              ">
+        廃止済み
+      </div>
+      }
+    </mat-panel-title>
+    <!-- style="width: 0;flex-grow: 1;"  -->
+    <mat-panel-description class="system-prompt-description flex items-center">
+      @if (!vm.messageGroup.isExpanded) {
+      <div class="truncate">{{ vm.messageGroup.messages[0].label }}</div>
+      }
+    </mat-panel-description>
+
+
+    @if (tokenObject(); as tokenObject) {
+    @if (aiModelManagerService.modelMap[vm.thread.inDto.args.model]) {
+    <div class="token-obj text-xs text-[#999] flex items-center absolute right-0 mr-8">
+      <!-- {{ tokenObject.totalTokens }}>={{aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens}} -->
+      @if (tokenObject.totalTokens >=aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens) {
+      <div class="text-red-500 flex items-center gap-1 mr-1" matTooltip="Token limit exceeded">
+        <mat-icon class="text-red-500">error</mat-icon>
+        {{ tokenObject.totalTokens | number: "1.0-0" }}
+      </div>
+      } @else {
+      {{ tokenObject.totalTokens | number: "1.0-0" }}
+      } / {{
+      aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens | number: "1.0-0"
+      }} | ${{ tokenObject.cost | number: "1.2-2" }}
+    </div>
+    } @else {}
+    }
+
+    @if (!g.isMobile && exPanel.expanded) {
+    <ng-container *ngTemplateOutlet="controller; context: { exPanel: exPanel, position: 'top' }"></ng-container>
+    }
+  </mat-expansion-panel-header>
+  <div class="flex flex-col gap-10">
+    <section>
+      <div class="flex items-center gap-2 justify-between w-full">
+        <h4>{{ "SYSTEM_PROMPT" | translate }}</h4>
+        <!-- Toggle button (top) -->
+        <button class="toggle-button" (click)="showFullPrompt = !showFullPrompt">
+          {{showFullPrompt ? ("COLLAPSE" | translate) : ("SHOW_ALL" | translate)}}
+        </button>
+      </div>
+      <div class="flex flex-col w-full">
+        @for (message of vm.messageGroup.messages;track $index;let mIndex = $index) {
+        <div class="w-full relative overflow-hidden" [ngClass]="{ 'message-notediting': !message.editing }">
+          <!-- ファイル -->
+          @if (message.contents.length > 1) {
+          <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto flex-wrap">
+            @for (content of message.contents; track $index) {
+            @if (content.type === "text") {
+            } @else if (content.type === "error") {
+            } @else {
+            <app-doc-tag [content]="content" (remove)="message.cacheId || removeDoc(content)"></app-doc-tag>
             }
-        </mat-panel-description>
+            }
+          </div>
+          }
 
-
-        @if(tokenObject(); as tokenObject){
-        @if(aiModelManagerService.modelMap[vm.thread.inDto.args.model]){
-        <div class="token-obj text-xs text-[#999] flex items-center absolute right-0 mr-8">
-            @if(tokenObject.totalTokens>=aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens){
-            <div class="text-red-500 flex items-center gap-1 mr-1" matTooltip="Token limit exceeded">
-                <mat-icon class="text-red-500">error</mat-icon>
-                {{tokenObject.totalTokens|number:'1.0-0'}}
-            </div>
-            }@else {
-            {{tokenObject.totalTokens|number:'1.0-0'}}
-            } /
-            {{aiModelManagerService.modelMap[vm.thread.inDto.args.model].maxContextTokens|number:'1.0-0'}} |
-            ${{tokenObject.cost|number:'1.2-2'}}
-        </div>
-        }@else{}
-        }
-
-        @if (!g.isMobile && exPanel.expanded) {
-        <div style="position: absolute;right: 16px;top: 24px;">
-            <ng-container *ngTemplateOutlet="controller; context: { exPanel: exPanel, position: 'top' }"></ng-container>
-        </div>
-        }
-    </mat-expansion-panel-header>
-    <div class="flex flex-col gap-10">
-        <section>
-            <div class="flex items-center gap-2 justify-between w-full">
-                <h4>{{ 'SYSTEM_PROMPT' | translate }}</h4>
-                <!-- Toggle button (top) -->
-                <button class="toggle-button" (click)="showFullPrompt = !showFullPrompt">
-                    {{ showFullPrompt ? ('COLLAPSE' | translate) : ('SHOW_ALL' | translate) }}
-                </button>
-            </div>
-            <div class="flex flex-col w-full">
-                @for (message of vm.messageGroup.messages; track $index;let mIndex=$index) {
-                <div class="w-full relative overflow-hidden" [ngClass]="{'message-notediting': !message.editing}">
-                    <!-- ファイル -->
-                    @if(message.contents.length>1){
-                    <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
-                        @for(content of message.contents; track $index) {
-                        @if(content.type==='text') {
-                        } @else if(content.type==='error') {
-                        } @else {
-                        <app-doc-tag [content]="content" (remove)="message.cacheId||removeDoc(content)"></app-doc-tag>
-                        }
-                        }
-                    </div>
-                    }
-
-                    <!-- メッセージ -->
-                    @for(content of message.contents; track $index;let cIndex=$index){
-                    @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket) :
-                    blankBracket;
-                    @if(content.type==='text'){
-                    <div class="chat-input" [hidden]="!message.editing">
-                        <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)"
-                            (blur)="onBlur($event)" (load)="onLoad()" [ngStyle]="{height:height}"
-                            [placeholder]="'ENTER_MESSAGE' | translate" [(ngModel)]="content.text"
-                            (change)="onSubmit()"></textarea>
-                    </div>
-                    <div class="custom-scroll system-prompt-container" [class.expanded]="showFullPrompt" #textBodyElem>
-                        <markdown [hidden]="message.editing" katex mermaid clipboard
-                            [data]="brackets.pre+content.text+brackets.post">
-                        </markdown>
-                    </div>
-                    <!-- <button class="toggle-button" (click)="showFullPrompt = !showFullPrompt">
+          <!-- メッセージ -->
+          @for (content of message.contents;track $index;let cIndex = $index) {
+          @let brackets = bracketsList[mIndex] ? (bracketsList[mIndex][cIndex] || blankBracket): blankBracket;
+          @if (content.type === "text") {
+          <div class="chat-input" [hidden]="!message.editing">
+            <textarea #textAreaElem [hidden]="!message.editing" (keydown)="onKeyDown($event)" (blur)="onBlur($event)"
+              (load)="onLoad()" [ngStyle]="{ height: height }" [placeholder]="'ENTER_MESSAGE' | translate"
+              [(ngModel)]="content.text" (change)="onSubmit()"></textarea>
+          </div>
+          <div class="custom-scroll system-prompt-container" [class.expanded]="showFullPrompt" #textBodyElem>
+            <markdown [hidden]="message.editing" katex mermaid clipboard
+              [data]="brackets.pre + content.text + brackets.post">
+            </markdown>
+          </div>
+          <!-- <button class="toggle-button" (click)="showFullPrompt = !showFullPrompt">
                         {{ showFullPrompt ? '折りたたむ' : '全て表示' }}
                     </button> -->
 
-                    <!-- <div class="custom-scroll" style="display: block;overflow: auto;"
+          <!-- <div class="custom-scroll" style="display: block;overflow: auto;"
                         [ngClass]="[vm.messageGroup.role==='assistant'&&layout()==='grid'?'grid-panel':'flex-panel']"
                         #textBodyElem>
                         <markdown [hidden]="message.editing" katex mermaid clipboard
                             [data]="brackets.pre+content.text+brackets.post">
                         </markdown>
                     </div> -->
-                    }@else if(content.type==='error'){
-                    <div class="text-red-500 overflow-auto">
-                        <div>ERROR</div>
-                        {{content.text}}
-                    </div>
-                    }@else{
-                    <!-- text 以外はファイル -->
-                    }
-                    }
+          } @else if (content.type === "error") {
+          <div class="text-red-500 overflow-auto">
+            <div>ERROR</div>
+            {{ content.text }}
+          </div>
+          } @else {
+          <!-- text 以外はファイル -->
+          }
+          }
 
-                    <!-- Loading -->
-                    @if (message.status === 'Loading') {
-                    <!-- アニメーションつけるかどうか [@fadeAnimation] -->
-                    <div class="absolute inset-0 flex items-center justify-center bg-black/25">
-                        <mat-spinner style="transform: scale(0.4);"></mat-spinner>
-                    </div>
-                    }
-                </div>
-                }
-            </div>
-        </section>
-        <fieldset>
-            <legend>{{ 'TOOL_USAGE_SETTINGS' | translate }}</legend>
-            <mat-radio-group [(ngModel)]="vm.thread.inDto.args.tool_choice" (change)="threadChange()">
-
-                @for(toolChoiceObj of toolChoiceMapper|keyvalue;track $index) {
-                <mat-radio-button [value]="toolChoiceObj.key" class="" color="primary">
-                    {{toolChoiceObj.key}}
-                    <!-- [{{toolChoiceObj.key}}] {{toolChoiceObj.value.label}} -->
-                </mat-radio-button>
-                }
-            </mat-radio-group>
-        </fieldset>
-        <fieldset>
-            <legend>{{ 'TOOL_LIST' | translate }}</legend>
-            <!-- <mat-checkbox [(ngModel)]="vm.thread.inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
-            <!-- @for(groupDef of this.toolCallService.tools;track $index) {
+          <!-- Loading -->
+          @if (message.status === "Loading") {
+          <!-- アニメーションつけるかどうか [@fadeAnimation] -->
+          <div class="absolute inset-0 flex items-center justify-center bg-black/25">
+            <mat-spinner style="transform: scale(0.4)"></mat-spinner>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </section>
+    <fieldset>
+      <legend>{{ "TOOL_USAGE_SETTINGS" | translate }}</legend>
+      <mat-radio-group [(ngModel)]="vm.thread.inDto.args.tool_choice" (change)="threadChange()">
+        @for (toolChoiceObj of toolChoiceMapper | keyvalue; track $index) {
+        <mat-radio-button [value]="toolChoiceObj.key" class="" color="primary">
+          {{ toolChoiceObj.key }}
+          <!-- [{{toolChoiceObj.key}}] {{toolChoiceObj.value.label}} -->
+        </mat-radio-button>
+        }
+      </mat-radio-group>
+    </fieldset>
+    <fieldset>
+      <legend>{{ "TOOL_LIST" | translate }}</legend>
+      <!-- <mat-checkbox [(ngModel)]="vm.thread.inDto.args.isGoogleSearch">Google検索</mat-checkbox> -->
+      <!-- @for(groupDef of this.toolCallService.tools;track $index) {
             <div>
                 <mat-checkbox [(ngModel)]="toolCheckMas[groupDef.group]"
                     (change)="toolGroupCheck($event, groupDef.tools)"
@@ -163,81 +196,82 @@
             }
             -->
 
-            <mat-accordion class="accordion custom-scroll"
-                style="min-width: 0;width: 330px;height: calc(100vh - 100px);overflow-y: scroll;"
-                [ngClass]="{'disabled': !vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'}">
-                @for(groupDef of this.toolCallService.tools;track $index) {
-                <mat-expansion-panel
-                    [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
-                    <mat-expansion-panel-header>
-                        <!-- <mat-panel-title> -->
-                        <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;"
-                            class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
-                            <mat-icon class="group-check" (click)="toolGroupClick($event, groupDef)"
-                                [ngClass]="{'group-check-checked': toolGroupCheckMas[groupDef.group]===2, 'group-check-bar': toolGroupCheckMas[groupDef.group]===1}">
-                                {{['','remove','check'][toolGroupCheckMas[groupDef.group]]}}
-                            </mat-icon>
-                            <img appInlineSvg [src]="'./image/'+groupDef.group.split('-')[0]+'-logo.svg'" alt="icon"
-                                class="w-8 h-8 mat-primary" style="min-width: 30px;">
-                            {{providerMas[groupDef.group]?providerMas[groupDef.group].label:groupDef.group}}
-                        </div>
-                        <!-- </mat-panel-title> -->
-                    </mat-expansion-panel-header>
+      <mat-accordion class="accordion custom-scroll"
+        style="min-width: 0;width: 330px;height: calc(100vh - 100px);overflow-y: scroll;"
+        [ngClass]="{disabled: !vm.thread.inDto.args.tool_choice || vm.thread.inDto.args.tool_choice === 'none',}">
+        @for (groupDef of this.toolCallService.tools; track $index) {
+        <mat-expansion-panel
+          [disabled]="!vm.thread.inDto.args.tool_choice || vm.thread.inDto.args.tool_choice === 'none'">
+          <mat-expansion-panel-header>
+            <!-- <mat-panel-title> -->
+            <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;"
+              class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+              <mat-icon class="group-check" (click)="toolGroupClick($event, groupDef)"
+                [ngClass]="{'group-check-checked': toolGroupCheckMas[groupDef.group] === 2, 'group-check-bar': toolGroupCheckMas[groupDef.group] === 1,}">
+                {{
+                ["", "remove", "check"][toolGroupCheckMas[groupDef.group]]
+                }}
+              </mat-icon>
+              <img appInlineSvg [src]="'./image/' + groupDef.group.split('-')[0] + '-logo.svg'" alt="icon"
+                class="w-8 h-8 mat-primary" style="min-width: 30px" />
+              {{providerMas[groupDef.group] ? providerMas[groupDef.group].label : groupDef.group}}
+            </div>
+            <!-- </mat-panel-title> -->
+          </mat-expansion-panel-header>
 
-                    @for(tool of groupDef.tools;track $index) {
-                    <div class="channel cursor-pointer">
-                        <!-- [{{tool.info.name}}] {{tool.info.label}} -->
-                        <!-- [(ngModel)]="toolCheckMas[tool.info.group+':'+tool.info.name]" -->
-                        <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
-                            [disabled]="!vm.thread.inDto.args.tool_choice||vm.thread.inDto.args.tool_choice==='none'">
-                            [{{tool.info.name}}] {{tool.info.label}}
-                        </mat-checkbox>
-                    </div>
-                    }
-                </mat-expansion-panel>
+          @for (tool of groupDef.tools; track $index) {
+          <div class="channel cursor-pointer">
+            <!-- [{{tool.info.name}}] {{tool.info.label}} -->
+            <!-- [(ngModel)]="toolCheckMas[tool.info.group+':'+tool.info.name]" -->
+            <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
+              [disabled]="!vm.thread.inDto.args.tool_choice ||vm.thread.inDto.args.tool_choice === 'none'">
+              [{{ tool.info.name }}] {{ tool.info.label }}
+            </mat-checkbox>
+          </div>
+          }
+        </mat-expansion-panel>
 
-                }
-            </mat-accordion>
-            <!-- ※ツール使用には事前にAPI連携の登録が必要です。右上の〇からAPI鍵を登録してください。 -->
-        </fieldset>
-    </div>
+        }
+      </mat-accordion>
+      <!-- ※ツール使用には事前にAPI連携の登録が必要です。右上の〇からAPI鍵を登録してください。 -->
+    </fieldset>
+  </div>
 </mat-expansion-panel>
 @if (!vm.messageGroup.messages[0].editing) {
-<ng-container *ngTemplateOutlet="controller; context: { exPanel: exPanel, position: 'bottom' }"></ng-container>
+<ng-container *ngTemplateOutlet="controller;context: { exPanel: exPanel, position: 'bottom' }"></ng-container>
 }
 } @else {
-{{vm.messageGroup.messages.length}}
+{{ vm.messageGroup.messages.length }}
 <!-- {{messageGroup.selectedIndex}} -->
 }
 <!-- <div class="chat-messages"></div> -->
 
 <ng-template #controller let-exPanel="exPanel" let-position="position">
-    <div class="controller-area gap-2"
-        [ngClass]="[vm.messageGroup.role, `controller-${position}`, exPanel.expanded ? `controller-${position}--open` : ``]">
+  <div class="controller-area gap-2"
+    [ngClass]="[vm.messageGroup.role,`controller-${position}`,exPanel.expanded ? `controller-${position}--open` : ``,]">
+    <button mat-icon-button (click)="setEdit($event)"
+      [title]="vm.messageGroup.messages[0].editing? ('SAVE' | translate): ('EDIT' | translate)">
+      @if (vm.messageGroup.messages[0].editing) {
+      <mat-icon>check_circle</mat-icon>
+      } @else {
+      <mat-icon>edit</mat-icon>
+      }
+    </button>
 
-        <button mat-icon-button (click)="setEdit($event)"
-            [title]="vm.messageGroup.messages[0].editing?('SAVE' | translate):('EDIT' | translate)">
-            @if(vm.messageGroup.messages[0].editing){
-            <mat-icon>check_circle</mat-icon>
-            }@else{
-            <mat-icon>edit</mat-icon>
-            }
-        </button>
+    <button mat-icon-button (click)="removeThread($event)" [ngClass]="{ invisible: !removable() }"
+      [title]="'DELETE_THREAD' | translate">
+      <mat-icon>delete</mat-icon>
+    </button>
 
-        <button mat-icon-button (click)="removeThread($event)" [ngClass]="{invisible: !removable()}"
-            [title]="'DELETE_THREAD' | translate">
-            <mat-icon>delete</mat-icon>
-        </button>
+    <button mat-icon-button (click)="toggleExpansion($event, exPanel)" [title]="'CLOSE' | translate"
+      style="margin-left: 7px">
+      <mat-icon style="transition: transform 0.2s;"
+        [ngStyle]="{'transform': `rotate(${exPanel.expanded?0:180}deg)`}">keyboard_arrow_up</mat-icon>
+    </button>
 
-        <button mat-icon-button (click)="toggleExpansion($event, exPanel)" [title]="'CLOSE' | translate"
-            style="margin-left: 7px">
-            <mat-icon style="transition: transform 0.2s;"
-                [ngStyle]="{'transform': `rotate(${exPanel.expanded?0:180}deg)`}">keyboard_arrow_up</mat-icon>
-        </button>
-
-    </div>
-    @if (position==='bottom' && exPanel.expanded) {
-    <div class="h-4"></div>
-    }
+  </div>
+  @if (position === "bottom" && exPanel.expanded) {
+  <div class="h-4"></div>
+  }
 </ng-template>
 }

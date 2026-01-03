@@ -161,14 +161,23 @@ export const threadGroupGuard: CanActivateFn = (route, state) => {
   if (threadGroupId === 'new-thread') {
     return true;
   } else {
-    return threadService.getThreadGroupList(projectId, true).pipe(map(threadGroupList => {
-      if (threadGroupList.find(threadGroup => threadGroup.id === threadGroupId)) {
-        return true;
-      } else {
-        // デフォルトプロジェクトに飛ばす。
+    // ローカルキャッシュではなくAPIから直接存在確認する
+    // (スレッド一覧が遅延読み込みのため、キャッシュだと50件以降が弾かれる)
+    return threadService.getThreadGroup(projectId, threadGroupId).pipe(
+      map(threadGroup => {
+        if (threadGroup && threadGroup.projectId === projectId) {
+          return true;
+        } else {
+          // プロジェクトIDが不一致の場合は新規スレッドへ
+          router.navigate(['new-thread'], { relativeTo: activatedRoute });
+          return false;
+        }
+      }),
+      catchError(() => {
+        // スレッドグループが存在しない場合は新規スレッドへ
         router.navigate(['new-thread'], { relativeTo: activatedRoute });
-        return false;
-      }
-    }));
+        return of(false);
+      })
+    );
   }
 };

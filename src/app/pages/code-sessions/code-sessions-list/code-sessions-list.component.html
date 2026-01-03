@@ -1,0 +1,77 @@
+<div class="code-sessions-container">
+  <div class="header">
+    <h1>
+      <mat-icon>code</mat-icon>
+      Code Sessions
+    </h1>
+    <p class="subtitle">ClaudeCode / GeminiCli / CodexCli セッション履歴</p>
+  </div>
+
+  <div class="search-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>プロジェクトを検索</mat-label>
+      <input matInput 
+             [(ngModel)]="searchQuery" 
+             (ngModelChange)="onSearch()"
+             placeholder="プロジェクト名、パスで検索...">
+      <mat-icon matPrefix>search</mat-icon>
+    </mat-form-field>
+  </div>
+
+  @if (loading) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>プロジェクトを読み込み中...</p>
+    </div>
+  }
+
+  @if (!loading) {
+    <div class="projects-grid">
+      @for (project of filteredProjects; track project.name) {
+        <mat-card class="project-card"
+                  (click)="navigateToProject(project)">
+          <mat-card-header>
+            <mat-icon mat-card-avatar class="project-icon">{{ getProjectIcon(project.name) }}</mat-icon>
+            <mat-card-title>{{ project.displayName }}</mat-card-title>
+            <mat-card-subtitle>{{ project.path }}</mat-card-subtitle>
+          </mat-card-header>
+
+          <mat-card-content>
+            <div class="stats">
+              <div class="stat-item">
+                <mat-icon>folder_open</mat-icon>
+                <span class="stat-value">{{ project.sessionCount }}</span>
+                <span class="stat-label">セッション</span>
+              </div>
+              <div class="stat-item">
+                <mat-icon>chat</mat-icon>
+                <span class="stat-value">{{ project.totalMessages }}</span>
+                <span class="stat-label">メッセージ</span>
+              </div>
+              <div class="stat-item">
+                <mat-icon>schedule</mat-icon>
+                <span class="stat-value">{{ project.lastActivity | relativeTime }}</span>
+                <span class="stat-label">最終更新</span>
+              </div>
+            </div>
+          </mat-card-content>
+
+          <mat-card-actions>
+            <button mat-button color="primary">
+              <mat-icon>arrow_forward</mat-icon>
+              セッションを表示
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      }
+
+      @if (filteredProjects.length === 0) {
+        <div class="no-results">
+          <mat-icon>search_off</mat-icon>
+          <h3>プロジェクトが見つかりません</h3>
+          <p>検索条件を変更してください</p>
+        </div>
+      }
+    </div>
+  }
+</div>

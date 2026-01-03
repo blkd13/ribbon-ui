@@ -1,0 +1,192 @@
+<h2 mat-dialog-title>
+  <mat-icon>import_export</mat-icon>
+  Import / Export
+</h2>
+
+<mat-dialog-content>
+  <mat-tab-group [(selectedIndex)]="selectedTabIndex">
+    <!-- Export Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">file_download</mat-icon>
+        Export
+      </ng-template>
+
+      <div class="tab-content export-tab">
+        <p class="description">
+          Export your AI configuration as a JSON file. You can import this file later to restore or migrate settings.
+        </p>
+
+        <div class="export-options">
+          <label class="export-option">
+            <mat-checkbox [(ngModel)]="exportModels" [disabled]="modelsCount === 0">
+              <div class="option-content">
+                <span class="option-label">AI Models</span>
+                <span class="option-count">({{ modelsCount }} items)</span>
+              </div>
+            </mat-checkbox>
+          </label>
+
+          <label class="export-option">
+            <mat-checkbox [(ngModel)]="exportProviders" [disabled]="providersCount === 0">
+              <div class="option-content">
+                <span class="option-label">AI Providers</span>
+                <span class="option-count">({{ providersCount }} items)</span>
+              </div>
+            </mat-checkbox>
+          </label>
+        </div>
+
+        @if (data.scopeInfo) {
+          <div class="scope-info">
+            <mat-icon>info</mat-icon>
+            <span>Exporting from scope: <strong>{{ data.scopeInfo.scopeType }}:{{ data.scopeInfo.scopeId }}</strong></span>
+          </div>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- Import Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">file_upload</mat-icon>
+        Import
+      </ng-template>
+
+      <div class="tab-content import-tab">
+        @if (!importFile) {
+          <!-- File Drop Zone -->
+          <div
+            class="drop-zone"
+            [class.drag-over]="isDragOver"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)">
+            <mat-icon class="drop-icon">cloud_upload</mat-icon>
+            <p class="drop-text">Drag and drop a JSON file here</p>
+            <p class="drop-or">or</p>
+            <label class="file-select-btn">
+              <input type="file" accept=".json" (change)="onFileSelected($event)" hidden>
+              <span class="btn-content">
+                <mat-icon>folder_open</mat-icon>
+                Select File
+              </span>
+            </label>
+          </div>
+        } @else {
+          <!-- File Selected -->
+          <div class="file-info">
+            <div class="file-header">
+              <mat-icon class="file-icon">description</mat-icon>
+              <div class="file-details">
+                <span class="file-name">{{ importFile.name }}</span>
+                <span class="file-size">{{ (importFile.size / 1024).toFixed(1) }} KB</span>
+              </div>
+              <button mat-icon-button (click)="clearImport()" matTooltip="Remove file">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            @if (isValidating) {
+              <div class="validating">
+                <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                <span>Validating...</span>
+              </div>
+            }
+
+            @if (validationResult) {
+              <div class="validation-result" [class.valid]="validationResult.isValid" [class.invalid]="!validationResult.isValid">
+                <!-- Summary -->
+                <div class="summary">
+                  <h4>Import Summary</h4>
+                  <div class="summary-grid">
+                    <div class="summary-item">
+                      <span class="label">Models to add:</span>
+                      <span class="value">{{ validationResult.summary.modelsToAdd }}</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="label">Models to update:</span>
+                      <span class="value">{{ validationResult.summary.modelsToUpdate }}</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="label">Providers to add:</span>
+                      <span class="value">{{ validationResult.summary.providersToAdd }}</span>
+                    </div>
+                    <div class="summary-item">
+                      <span class="label">Providers to update:</span>
+                      <span class="value">{{ validationResult.summary.providersToUpdate }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Errors -->
+                @if (validationResult.errors.length > 0) {
+                  <div class="messages errors">
+                    <h5><mat-icon>error</mat-icon> Errors</h5>
+                    <ul>
+                      @for (error of validationResult.errors; track $index) {
+                        <li>{{ error }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+
+                <!-- Warnings -->
+                @if (validationResult.warnings.length > 0) {
+                  <div class="messages warnings">
+                    <h5><mat-icon>warning</mat-icon> Warnings</h5>
+                    <ul>
+                      @for (warning of validationResult.warnings.slice(0, 5); track $index) {
+                        <li>{{ warning }}</li>
+                      }
+                      @if (validationResult.warnings.length > 5) {
+                        <li class="more">... and {{ validationResult.warnings.length - 5 }} more</li>
+                      }
+                    </ul>
+                  </div>
+                }
+
+                @if (validationResult.isValid) {
+                  <div class="valid-message">
+                    <mat-icon>check_circle</mat-icon>
+                    <span>File is valid and ready to import</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @if (isImporting) {
+          <div class="importing">
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            <span>Importing...</span>
+          </div>
+        }
+
+        @if (data.scopeInfo) {
+          <div class="scope-info">
+            <mat-icon>info</mat-icon>
+            <span>Importing to scope: <strong>{{ data.scopeInfo.scopeType }}:{{ data.scopeInfo.scopeId }}</strong></span>
+          </div>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+
+  @if (selectedTabIndex === 0) {
+    <button mat-raised-button color="primary" (click)="onExport()" [disabled]="!canExport">
+      <mat-icon>file_download</mat-icon>
+      Export
+    </button>
+  } @else {
+    <button mat-raised-button color="primary" (click)="onImport()" [disabled]="!canImport">
+      <mat-icon>file_upload</mat-icon>
+      Import
+    </button>
+  }
+</mat-dialog-actions>

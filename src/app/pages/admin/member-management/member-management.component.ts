@@ -1,6 +1,14 @@
+/**
+ * Member Management - Refactored Version
+ *
+ * AdminListPageComponent を使用して共通化
+ */
+import { Component, inject, OnInit, OnDestroy, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Observable, of, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs/operators';
+
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -10,1108 +18,1032 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { Observable, of, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged, map, startWith } from 'rxjs/operators';
+
+import { AdminListPageComponent } from '../../../parts/admin-list-page/admin-list-page.component';
+import {
+  AdminColumnDef,
+  AdminFilterDef,
+  AdminHeaderAction,
+  AdminBulkAction,
+  AdminRowAction,
+  AdminFilterValues,
+  AdminSortState,
+  AdminActionEvent,
+} from '../../../parts/admin-list-page/admin-list-page.types';
 
 import { User, UserRoleType, UserStatus } from '../../../models/models';
 import { AdminScopeService } from '../../../services/admin-scope.service';
 import { GService } from '../../../services/g.service';
 import { LoggerService } from '../../../services/logger';
 import {
-    Division,
-    DivisionMemberForView,
-    MemberAssignmentRequest,
-    MemberManagementService,
-    UserName
+  Division,
+  DivisionMemberForView,
+  MemberAssignmentRequest,
+  MemberManagementService,
+  UserName
 } from '../../../services/member-management.service';
 import { ScopeInfo, ScopeType } from '../../../services/model-manager.service';
 import { UserRolePermissionService } from '../../../services/user-role-permission.service';
 
-// 型定義
+// Type definitions
 interface DivisionFormData {
-    name: string;
-    label: string;
-    description: string;
-    isActive: boolean;
+  name: string;
+  label: string;
+  description: string;
+  isActive: boolean;
 }
 
 interface MemberFormData {
-    roles: UserRoleType[];
-    isActive: boolean;
+  roles: UserRoleType[];
+  isActive: boolean;
 }
 
 interface MemberAddFormData {
-    selectedUser: UserName | null;
-    role: UserRoleType;
+  selectedUser: UserName | null;
+  role: UserRoleType;
 }
 
-// 複数ロール対応のためのインターフェース拡張
 interface ExtendedDivisionMemberForView extends Omit<DivisionMemberForView, 'role'> {
-    roles: UserRoleType[];
-    role?: UserRoleType;
+  roles: UserRoleType[];
+  role?: UserRoleType;
 }
 
 @Component({
-    selector: 'app-member-management',
-    standalone: true,
-    imports: [
-        CommonModule,
-        ReactiveFormsModule,
-        MatIconModule,
-        MatButtonModule,
-        MatSnackBarModule,
-        MatFormFieldModule,
-        MatSelectModule,
-        MatInputModule,
-        MatTableModule,
-        MatCheckboxModule,
-        MatTooltipModule,
-        MatChipsModule,
-        MatAutocompleteModule,
-        TranslateModule,
-    ],
-    templateUrl: './member-management.component.html',
-    styleUrls: ['./member-management.component.scss']
+  selector: 'app-member-management',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatAutocompleteModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatChipsModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatSelectModule,
+    MatSnackBarModule,
+    MatTooltipModule,
+    TranslateModule,
+    AdminListPageComponent,
+  ],
+  templateUrl: './member-management.component.html',
+  styleUrls: ['./member-management.component.scss']
 })
 export class MemberManagementComponent implements OnInit, OnDestroy {
-    readonly memberService = inject(MemberManagementService);
-    readonly adminScopeService = inject(AdminScopeService);
-    readonly userRolePermissionService = inject(UserRolePermissionService);
-    readonly g = inject(GService);
-    readonly snackBar = inject(MatSnackBar);
-    readonly fb = inject(FormBuilder);
-    readonly translate = inject(TranslateService);
-    readonly logger = inject(LoggerService);
+  // ========== Services ==========
+  readonly memberService = inject(MemberManagementService);
+  readonly adminScopeService = inject(AdminScopeService);
+  readonly userRolePermissionService = inject(UserRolePermissionService);
+  readonly g = inject(GService);
+  readonly snackBar = inject(MatSnackBar);
+  readonly fb = inject(FormBuilder);
+  readonly translate = inject(TranslateService);
+  readonly logger = inject(LoggerService);
 
-    // Data
-    members: ExtendedDivisionMemberForView[] = [];
-    filteredMembers: ExtendedDivisionMemberForView[] = [];
-    divisions: Division[] = [];
-    availableUsers: UserName[] = [];
-    filteredUsers: Observable<UserName[]> = of([]);
-    selectedScope: ScopeInfo | null = null;
+  // ========== Template References ==========
+  @ViewChild('headerExtra', { static: true }) headerExtraTemplate!: TemplateRef<any>;
+  @ViewChild('formPanel', { static: true }) formPanelTemplate!: TemplateRef<any>;
 
-    // UI State
-    isLoading = false;
-    isFormVisible = false;
-    selectedMembers = new Set<string>();
-    selectedMember: ExtendedDivisionMemberForView | null = null;
-    selectedDivision: Division | null = null;
+  // ========== Data ==========
+  members: ExtendedDivisionMemberForView[] = [];
+  filteredMembers: ExtendedDivisionMemberForView[] = [];
+  divisions: Division[] = [];
+  availableUsers: UserName[] = [];
+  filteredUsers: Observable<UserName[]> = of([]);
+  selectedScope: ScopeInfo | null = null;
 
-    // Form state - 3種類のフォーム
-    formType: 'member' | 'division' | 'member-add' = 'member';
-    isEditMode = false;
-    divisionStats: any = null;
+  // ========== UI State ==========
+  isLoading = false;
+  isFormVisible = false;
+  selectedIds = new Set<string>();
+  selectedMember: ExtendedDivisionMemberForView | null = null;
+  selectedDivision: Division | null = null;
 
-    // 分離されたフォーム
-    divisionForm: FormGroup<{
-        name: FormControl<string>;
-        label: FormControl<string>;
-        description: FormControl<string>;
-        isActive: FormControl<boolean>;
-    }>;
+  // ========== Form State ==========
+  formType: 'member' | 'division' | 'member-add' = 'member';
+  isEditMode = false;
+  divisionStats: any = null;
 
-    memberForm: FormGroup<{
-        roles: FormControl<UserRoleType[]>;
-        isActive: FormControl<boolean>;
-    }>;
+  // ========== Forms ==========
+  divisionForm: FormGroup<{
+    name: FormControl<string>;
+    label: FormControl<string>;
+    description: FormControl<string>;
+    isActive: FormControl<boolean>;
+  }>;
 
-    memberAddForm: FormGroup<{
-        selectedUser: FormControl<UserName | null>;
-        role: FormControl<UserRoleType>;
-    }>;
+  memberForm: FormGroup<{
+    roles: FormControl<UserRoleType[]>;
+    isActive: FormControl<boolean>;
+  }>;
 
-    // Search and Filter Forms
-    searchControl = new FormControl('');
-    filterForm: FormGroup;
+  memberAddForm: FormGroup<{
+    selectedUser: FormControl<UserName | null>;
+    role: FormControl<UserRoleType>;
+  }>;
 
-    // Subscriptions
-    private subscriptions = new Subscription();
+  // ========== Subscriptions ==========
+  private subscriptions = new Subscription();
 
-    // Enums for template
-    readonly UserRoleType = UserRoleType;
-    // readonly availableRoles = this.memberService.getAvailableRoles();
+  // ========== Enums for Template ==========
+  readonly UserRoleType = UserRoleType;
 
-    constructor() {
-        this.filterForm = this.fb.group({
-            divisionId: [''],
-            role: [''],
-            isActive: [true]
-        });
+  // ========== Admin List Page Config ==========
+  columns: AdminColumnDef<ExtendedDivisionMemberForView>[] = [
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (item) => item.user.name,
+      subLabel: 'User ID',
+      renderSub: (item) => item.user.id,
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      sortable: true,
+      render: (item) => item.user.email,
+    },
+    {
+      key: 'roles',
+      label: 'Roles',
+      sortable: false,
+      render: (item) => item.roles.join(', '),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      render: (item) => item.isActive ? 'Active' : 'Inactive',
+    },
+  ];
 
-        // Division Form - 明確なバリデーション
-        this.divisionForm = this.fb.nonNullable.group({
-            name: ['', [Validators.required, Validators.minLength(2)]],
-            label: ['', [Validators.required, Validators.minLength(2)]],
-            description: [''],
-            isActive: [true]
-        });
+  filters: AdminFilterDef[] = [
+    { key: 'search', label: 'Search', type: 'text', placeholder: 'Search by name or email' },
+    { key: 'role', label: 'Role', type: 'select', options: [] },
+  ];
 
-        // Member Form - ロール管理に特化
-        this.memberForm = this.fb.nonNullable.group({
-            roles: [[] as UserRoleType[], [Validators.required, Validators.minLength(1)]],
-            isActive: [true]
-        });
+  filterValues: AdminFilterValues = { search: '', role: '' };
+  sortState: AdminSortState = { column: null, direction: 'desc' };
 
-        // Member Add Form - 新規メンバー追加用
-        this.memberAddForm = this.fb.nonNullable.group({
-            selectedUser: [null as UserName | null, Validators.required],
-            role: [UserRoleType.User, Validators.required]
-        });
-    }
+  headerActions: AdminHeaderAction[] = [];
+  bulkActions: AdminBulkAction[] = [];
+  rowActions: AdminRowAction<ExtendedDivisionMemberForView>[] = [];
 
-    // Getter for current form based on formType
-    get currentForm(): FormGroup {
-        switch (this.formType) {
-            case 'division': return this.divisionForm;
-            case 'member-add': return this.memberAddForm;
-            default: return this.memberForm;
+  constructor() {
+    // Division Form
+    this.divisionForm = this.fb.nonNullable.group({
+      name: ['', [Validators.required, Validators.minLength(2)]],
+      label: ['', [Validators.required, Validators.minLength(2)]],
+      description: [''],
+      isActive: [true]
+    });
+
+    // Member Form
+    this.memberForm = this.fb.nonNullable.group({
+      roles: [[] as UserRoleType[], [Validators.required, Validators.minLength(1)]],
+      isActive: [true]
+    });
+
+    // Member Add Form
+    this.memberAddForm = this.fb.nonNullable.group({
+      selectedUser: [null as UserName | null, Validators.required],
+      role: [UserRoleType.User, Validators.required]
+    });
+  }
+
+  ngOnInit(): void {
+    this.setupAdminListConfig();
+    this.setupSubscriptions();
+    this.setupUserAutocomplete();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  // ========== Admin List Page Setup ==========
+  private setupAdminListConfig(): void {
+    // Role options for filter
+    this.filters = [
+      { key: 'search', label: 'Search', type: 'text', placeholder: 'Search by name or email' },
+      {
+        key: 'role',
+        label: 'Role',
+        type: 'select',
+        options: [
+          { value: '', label: 'All Roles' },
+          ...this.memberService.getAvailableRoles().map(role => ({ value: role, label: role }))
+        ]
+      },
+    ];
+
+    // Header actions
+    this.headerActions = [
+      {
+        id: 'create-division',
+        label: 'Create Division',
+        icon: 'domain',
+        color: '',
+        disabled: () => !this.canCreateDivision(),
+        tooltip: () => !this.canCreateDivision() ? 'No permission to create division' : '',
+      },
+      {
+        id: 'add-member',
+        label: 'Add Member',
+        icon: 'person_add',
+        color: 'primary',
+        disabled: () => !this.selectedScope || !this.canAssignMembers(),
+        tooltip: () => !this.canAssignMembers() ? 'No permission to add members' : '',
+      },
+    ];
+
+    // Bulk actions
+    this.bulkActions = [
+      {
+        id: 'bulk-delete',
+        label: 'Bulk Remove',
+        icon: 'delete',
+        color: 'warn',
+        disabled: () => !this.canManageUserRoles(),
+      },
+    ];
+
+    // Row actions
+    this.rowActions = [
+      {
+        id: 'edit',
+        icon: 'edit',
+        tooltip: (item) => this.canEditMember(item) ? 'Edit' : (item.userId === this.getCurrentUserId() ? 'Cannot edit own role' : 'No permission'),
+        disabled: (item) => !this.canEditMember(item),
+      },
+      {
+        id: 'delete',
+        icon: 'delete',
+        color: 'warn',
+        tooltip: (item) => this.canRemoveMember(item) ? 'Remove' : (item.userId === this.getCurrentUserId() ? 'Cannot delete self' : 'No permission'),
+        disabled: (item) => !this.canRemoveMember(item),
+      },
+    ];
+  }
+
+  private setupSubscriptions(): void {
+    this.subscriptions.add(
+      this.adminScopeService.selectedScope$.subscribe(scope => {
+        this.selectedScope = scope;
+        if (scope) {
+          this.loadMembers();
+          this.loadDivisions();
+          this.loadAvailableUsers();
         }
+      })
+    );
+  }
+
+  private setupUserAutocomplete(): void {
+    this.filteredUsers = this.memberAddForm.get('selectedUser')!.valueChanges.pipe(
+      startWith(''),
+      map(value => this._filterUsers(value || ''))
+    );
+  }
+
+  private _filterUsers(value: string | UserName): UserName[] {
+    if (typeof value === 'object' && value !== null) {
+      return this.availableUsers;
     }
+    const filterValue = (value as string).toLowerCase();
+    return this.availableUsers.filter(user =>
+      user.email.toLowerCase().includes(filterValue) ||
+      user.name.toLowerCase().includes(filterValue)
+    );
+  }
 
-    ngOnInit(): void {
-        this.setupSubscriptions();
-        this.loadInitialData();
-        this.setupUserAutocomplete();
-    }
+  displayUser(user: UserName): string {
+    return user ? `${user.name} (${user.email})` : '';
+  }
 
-    ngOnDestroy(): void {
-        this.subscriptions.unsubscribe();
-    }
+  onUserSelected(user: UserName): void {
+    this.memberAddForm.patchValue({ selectedUser: user });
+  }
 
-    private setupSubscriptions(): void {
-        // Admin scope selection subscription
-        this.subscriptions.add(
-            this.adminScopeService.selectedScope$.subscribe(scope => {
-                this.selectedScope = scope;
-                if (scope) {
-                    this.loadMembers();
-                    this.loadDivisions();
-                    this.loadAvailableUsers();
-                }
-            })
-        );
+  // ========== Data Loading ==========
+  private loadAvailableUsers(): void {
+    if (!this.selectedScope) return;
 
-        // Search subscription
-        this.subscriptions.add(
-            this.searchControl.valueChanges.pipe(
-                debounceTime(300),
-                distinctUntilChanged()
-            ).subscribe(() => this.filterMembers())
-        );
-
-        // Filter form subscription
-        this.subscriptions.add(
-            this.filterForm.valueChanges.subscribe(() => this.filterMembers())
-        );
-    }
-
-    private setupUserAutocomplete(): void {
-        this.filteredUsers = this.memberAddForm.get('selectedUser')!.valueChanges.pipe(
-            startWith(''),
-            map(value => this._filterUsers(value || ''))
-        );
-    }
-
-    private _filterUsers(value: string | UserName): UserName[] {
-        // value がユーザーオブジェクトの場合は検索文字列として扱わない
-        if (typeof value === 'object' && value !== null) {
-            return this.availableUsers;
+    this.subscriptions.add(
+      this.memberService.getAvailableUsers().subscribe({
+        next: (users) => {
+          this.availableUsers = users;
+        },
+        error: (error) => {
+          this.logger.error('Error loading available users:', error);
         }
+      })
+    );
+  }
 
-        const filterValue = (value as string).toLowerCase();
-        return this.availableUsers.filter(user =>
-            user.email.toLowerCase().includes(filterValue) ||
-            user.name.toLowerCase().includes(filterValue)
-        );
-    }
+  private loadMembers(): void {
+    if (!this.selectedScope) return;
 
-    displayUser(user: UserName): string {
-        return user ? `${user.name} (${user.email})` : '';
-    }
+    this.isLoading = true;
 
-    onUserSelected(user: UserName): void {
-        this.memberAddForm.patchValue({
-            selectedUser: user
-        });
-    }
+    if (this.selectedScope.scopeType === ScopeType.DIVISION) {
+      this.subscriptions.add(
+        this.memberService.getMembers(this.selectedScope.scopeId).subscribe({
+          next: (members) => {
+            const memberMap = new Map<string, ExtendedDivisionMemberForView>();
 
-    private loadInitialData(): void {
-        // Initial scope will be provided via selectedScope$ subscription
-    }
+            members.forEach(member => {
+              const key = member.userId;
 
-    private loadAvailableUsers(): void {
-        if (!this.selectedScope) return;
-
-        this.subscriptions.add(
-            this.memberService.getAvailableUsers().subscribe({
-                next: (users) => {
-                    this.availableUsers = users;
-                },
-                error: (error) => {
-                    this.logger.error('Error loading available users:', error);
+              if (memberMap.has(key)) {
+                const existingMember = memberMap.get(key)!;
+                if (!existingMember.roles.includes(member.role)) {
+                  existingMember.roles.push(member.role);
                 }
-            })
-        );
-    }
+              } else {
+                memberMap.set(key, {
+                  id: `${member.userId}_${this.selectedScope!.scopeId}`,
+                  user: {
+                    id: member.userId,
+                    name: member.userName,
+                    email: member.userEmail
+                  } as User,
+                  divisionId: this.selectedScope!.scopeId,
+                  divisionName: this.selectedScope!.scopeId,
+                  roles: [member.role],
+                  isActive: member.status === UserStatus.Active,
+                  userId: member.userId,
+                  userName: member.userName,
+                  userEmail: member.userEmail,
+                  status: member.status
+                });
+              }
+            });
 
-    private loadMembers(): void {
-        if (!this.selectedScope) return;
-
-        this.isLoading = true;
-
-        if (this.selectedScope.scopeType === ScopeType.DIVISION) {
-            this.subscriptions.add(
-                this.memberService.getMembers(this.selectedScope.scopeId).subscribe({
-                    next: (members) => {
-                        const memberMap = new Map<string, ExtendedDivisionMemberForView>();
-
-                        members.forEach(member => {
-                            const key = member.userId;
-
-                            if (memberMap.has(key)) {
-                                const existingMember = memberMap.get(key)!;
-                                if (!existingMember.roles.includes(member.role)) {
-                                    existingMember.roles.push(member.role);
-                                }
-                            } else {
-                                memberMap.set(key, {
-                                    id: `${member.userId}_${this.selectedScope!.scopeId}`,
-                                    user: {
-                                        id: member.userId,
-                                        name: member.userName,
-                                        email: member.userEmail
-                                    } as User,
-                                    divisionId: this.selectedScope!.scopeId,
-                                    divisionName: this.selectedScope!.scopeId,
-                                    roles: [member.role],
-                                    isActive: member.status === UserStatus.Active,
-                                    userId: member.userId,
-                                    userName: member.userName,
-                                    userEmail: member.userEmail,
-                                    status: member.status
-                                });
-                            }
-                        });
-
-                        this.members = Array.from(memberMap.values());
-                        this.filterMembers();
-                        this.isLoading = false;
-                    },
-                    error: (error) => {
-                        this.logger.error('Error loading members:', error);
-                        this.snackBar.open('メンバーの読み込みに失敗しました', 'Close', { duration: 3000 });
-                        this.isLoading = false;
-                    }
-                })
-            );
-        } else {
-            this.snackBar.open('組織レベルのメンバー管理は現在サポートされていません', 'Close', { duration: 3000 });
+            this.members = Array.from(memberMap.values());
+            this.applyFilters();
             this.isLoading = false;
+          },
+          error: (error) => {
+            this.logger.error('Error loading members:', error);
+            this.snackBar.open('Failed to load members', 'Close', { duration: 3000 });
+            this.isLoading = false;
+          }
+        })
+      );
+    } else {
+      this.snackBar.open('Organization-level member management is not supported', 'Close', { duration: 3000 });
+      this.isLoading = false;
+    }
+  }
+
+  private loadDivisions(): void {
+    if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.ORGANIZATION) return;
+
+    this.subscriptions.add(
+      this.memberService.getDivisions().subscribe({
+        next: (divisions) => {
+          this.divisions = divisions;
+        },
+        error: (error) => {
+          this.logger.error('Error loading divisions:', error);
         }
+      })
+    );
+  }
+
+  private applyFilters(): void {
+    let filtered = [...this.members];
+    const searchTerm = (this.filterValues['search'] || '').toLowerCase();
+    const roleFilter = this.filterValues['role'] || '';
+
+    if (searchTerm) {
+      filtered = filtered.filter(member =>
+        member.user.name.toLowerCase().includes(searchTerm) ||
+        member.user.email.toLowerCase().includes(searchTerm)
+      );
     }
 
-    private loadDivisions(): void {
-        if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.ORGANIZATION) return;
-
-        this.subscriptions.add(
-            this.memberService.getDivisions().subscribe({
-                next: (divisions) => {
-                    this.divisions = divisions;
-                },
-                error: (error) => {
-                    this.logger.error('Error loading divisions:', error);
-                }
-            })
-        );
+    if (roleFilter) {
+      filtered = filtered.filter(member => member.roles.includes(roleFilter as UserRoleType));
     }
 
-    private filterMembers(): void {
-        let filtered = [...this.members];
-        const searchTerm = this.searchControl.value?.toLowerCase() || '';
-        const filters = this.filterForm.value;
+    // Apply sorting
+    if (this.sortState.column && this.sortState.direction) {
+      filtered = this.sortMembers(filtered);
+    }
 
-        // Text search
-        if (searchTerm) {
-            filtered = filtered.filter(member =>
-                member.user.name.toLowerCase().includes(searchTerm) ||
-                member.user.email.toLowerCase().includes(searchTerm)
-            );
+    this.filteredMembers = filtered;
+  }
+
+  private sortMembers(members: ExtendedDivisionMemberForView[]): ExtendedDivisionMemberForView[] {
+    const { column, direction } = this.sortState;
+    if (!column || !direction) return members;
+
+    return [...members].sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (column) {
+        case 'name':
+          aVal = a.user.name.toLowerCase();
+          bVal = b.user.name.toLowerCase();
+          break;
+        case 'email':
+          aVal = a.user.email.toLowerCase();
+          bVal = b.user.email.toLowerCase();
+          break;
+        case 'status':
+          aVal = a.isActive ? 1 : 0;
+          bVal = b.isActive ? 1 : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // ========== Admin List Page Event Handlers ==========
+  onFilterChange(values: AdminFilterValues): void {
+    this.filterValues = values;
+    this.applyFilters();
+  }
+
+  onSortChange(sortState: AdminSortState): void {
+    this.sortState = sortState;
+    this.applyFilters();
+  }
+
+  onItemSelect(item: ExtendedDivisionMemberForView): void {
+    this.selectMember(item);
+  }
+
+  onSelectionChange(ids: Set<string>): void {
+    this.selectedIds = ids;
+  }
+
+  onActionClick(event: AdminActionEvent<ExtendedDivisionMemberForView>): void {
+    switch (event.actionId) {
+      // Header actions
+      case 'create-division':
+        this.createDivision();
+        break;
+      case 'add-member':
+        this.openAddMemberForm();
+        break;
+
+      // Row actions
+      case 'edit':
+        if (event.item) this.selectMember(event.item);
+        break;
+      case 'delete':
+        if (event.item) this.removeMember(event.item);
+        break;
+
+      // Bulk actions
+      case 'bulk-delete':
+        this.bulkRemoveMembers();
+        break;
+    }
+  }
+
+  // ========== Tracking ==========
+  trackByMember(item: ExtendedDivisionMemberForView): string {
+    return item.id;
+  }
+
+  getRowClass(item: ExtendedDivisionMemberForView): string {
+    const classes: string[] = [];
+    if (item.userId === this.getCurrentUserId()) {
+      classes.push('self-member');
+    }
+    return classes.join(' ');
+  }
+
+  // ========== Form Management ==========
+  get currentForm(): FormGroup {
+    switch (this.formType) {
+      case 'division': return this.divisionForm;
+      case 'member-add': return this.memberAddForm;
+      default: return this.memberForm;
+    }
+  }
+
+  selectMember(member: ExtendedDivisionMemberForView): void {
+    this.selectedMember = member;
+    this.selectedDivision = null;
+    this.formType = 'member';
+    this.isEditMode = true;
+    this.isFormVisible = true;
+
+    this.memberForm.patchValue({
+      roles: member.roles,
+      isActive: member.isActive
+    });
+
+    if (!this.canEditMember(member)) {
+      this.memberForm.disable();
+    } else {
+      this.memberForm.enable();
+    }
+  }
+
+  createDivision(): void {
+    if (!this.canCreateDivision()) {
+      this.snackBar.open('No permission to create division', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.selectedMember = null;
+    this.selectedDivision = null;
+    this.formType = 'division';
+    this.isEditMode = false;
+    this.isFormVisible = true;
+
+    this.divisionForm.reset({
+      name: '',
+      label: '',
+      description: '',
+      isActive: true
+    });
+  }
+
+  editDivision(division: Division): void {
+    if (!this.canUpdateDivision()) {
+      this.snackBar.open('No permission to edit division', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.selectedMember = null;
+    this.selectedDivision = division;
+    this.formType = 'division';
+    this.isEditMode = true;
+    this.isFormVisible = true;
+
+    this.divisionForm.patchValue({
+      name: division.name,
+      label: division.label,
+      description: division.description || '',
+      isActive: division.isActive
+    });
+  }
+
+  openAddMemberForm(): void {
+    if (!this.selectedScope) return;
+
+    if (!this.canAssignMembers()) {
+      this.snackBar.open('No permission to add members', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.selectedMember = null;
+    this.selectedDivision = null;
+    this.formType = 'member-add';
+    this.isEditMode = false;
+    this.isFormVisible = true;
+
+    const assignableRoles = this.getAssignableRoles();
+    const defaultRole = assignableRoles.includes(UserRoleType.User)
+      ? UserRoleType.User
+      : assignableRoles[assignableRoles.length - 1] || UserRoleType.User;
+
+    this.memberAddForm.reset({
+      selectedUser: null,
+      role: defaultRole
+    });
+  }
+
+  closeForm(): void {
+    this.isFormVisible = false;
+    this.selectedMember = null;
+    this.selectedDivision = null;
+    this.divisionForm.reset();
+    this.memberForm.reset();
+    this.memberAddForm.reset();
+  }
+
+  getFormTitle(): string {
+    switch (this.formType) {
+      case 'division':
+        return this.isEditMode ? 'Edit Division' : 'Create Division';
+      case 'member-add':
+        return 'Add Member';
+      default:
+        return 'Edit Member';
+    }
+  }
+
+  // ========== Form Submission ==========
+  submitForm(): void {
+    switch (this.formType) {
+      case 'division':
+        this.submitDivisionForm();
+        break;
+      case 'member-add':
+        this.submitMemberAddForm();
+        break;
+      default:
+        this.submitMemberForm();
+        break;
+    }
+  }
+
+  submitDivisionForm(): void {
+    if (this.divisionForm.invalid) {
+      this.markFormGroupTouched(this.divisionForm);
+      return;
+    }
+
+    const formValue = this.divisionForm.value as DivisionFormData;
+
+    if (this.isEditMode && this.selectedDivision) {
+      this.updateDivision(formValue);
+    } else {
+      this.createNewDivision(formValue);
+    }
+  }
+
+  submitMemberForm(): void {
+    if (this.memberForm.invalid) {
+      this.markFormGroupTouched(this.memberForm);
+      return;
+    }
+
+    if (!this.selectedMember) return;
+
+    const formValue = this.memberForm.value as MemberFormData;
+    this.updateMember(formValue);
+  }
+
+  submitMemberAddForm(): void {
+    if (this.memberAddForm.invalid) {
+      this.markFormGroupTouched(this.memberAddForm);
+      return;
+    }
+
+    const formValue = this.memberAddForm.value as MemberAddFormData;
+
+    if (!formValue.selectedUser) {
+      this.snackBar.open('Please select a user', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.addMember(formValue);
+  }
+
+  private createNewDivision(formValue: DivisionFormData): void {
+    if (!this.canCreateDivision()) {
+      this.snackBar.open('No permission to create division', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const createRequest = {
+      name: formValue.name,
+      label: formValue.label,
+      description: formValue.description
+    };
+
+    this.subscriptions.add(
+      this.memberService.createDivision(createRequest).subscribe({
+        next: () => {
+          this.snackBar.open('Division created successfully', 'Close', { duration: 3000 });
+          this.loadDivisions();
+          this.closeForm();
+        },
+        error: (error) => {
+          this.logger.error('Error creating division:', error);
+          this.snackBar.open('Failed to create division', 'Close', { duration: 3000 });
         }
+      })
+    );
+  }
 
-        // Filter by division
-        if (filters.divisionId) {
-            filtered = filtered.filter(member => member.divisionId === filters.divisionId);
+  private updateDivision(formValue: DivisionFormData): void {
+    if (!this.selectedDivision || !this.canUpdateDivision()) {
+      this.snackBar.open('No permission to update division', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const updateRequest = {
+      name: formValue.name,
+      label: formValue.label,
+      description: formValue.description,
+      isActive: formValue.isActive
+    };
+
+    this.subscriptions.add(
+      this.memberService.updateDivision(this.selectedDivision.id, updateRequest).subscribe({
+        next: () => {
+          this.snackBar.open('Division updated successfully', 'Close', { duration: 3000 });
+          this.loadDivisions();
+          this.closeForm();
+        },
+        error: (error) => {
+          this.logger.error('Error updating division:', error);
+          this.snackBar.open('Failed to update division', 'Close', { duration: 3000 });
         }
+      })
+    );
+  }
 
-        // Filter by role
-        if (filters.role) {
-            filtered = filtered.filter(member => member.roles.includes(filters.role));
+  private addMember(formValue: MemberAddFormData): void {
+    if (!this.selectedScope || !formValue.selectedUser) return;
+
+    if (!this.canAssignRole(formValue.selectedUser.id, formValue.role)) {
+      const errorMessage = this.userRolePermissionService.generatePermissionErrorMessage(
+        'Role assignment',
+        'role_not_assignable'
+      );
+      this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.isLoading = true;
+
+    const request: MemberAssignmentRequest = {
+      userId: formValue.selectedUser.id,
+      role: formValue.role
+    };
+
+    this.subscriptions.add(
+      this.memberService.assignMember(this.selectedScope.scopeId, request).subscribe({
+        next: () => {
+          this.snackBar.open('Member added successfully', 'Close', { duration: 3000 });
+          this.loadMembers();
+          this.closeForm();
+          this.isLoading = false;
+        },
+        error: (error) => {
+          this.logger.error('Error adding member:', error);
+          this.snackBar.open('Failed to add member', 'Close', { duration: 3000 });
+          this.isLoading = false;
         }
+      })
+    );
+  }
 
-        this.filteredMembers = filtered;
+  private updateMember(formValue: MemberFormData): void {
+    if (!this.selectedMember) return;
+
+    const userRoleContext = {
+      userId: this.selectedMember.userId,
+      divisionId: this.selectedMember.divisionId,
+      currentRoles: this.selectedMember.roles,
+      isActive: this.selectedMember.isActive
+    };
+
+    if (!this.userRolePermissionService.canEditUserRole(userRoleContext, this.selectedMember.divisionId)) {
+      const errorMessage = this.userRolePermissionService.generatePermissionErrorMessage(
+        'Role editing',
+        this.selectedMember.userId === this.getCurrentUserId() ? 'self_edit' : 'insufficient_authority'
+      );
+      this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
+      return;
     }
 
-    // Form Management Methods
-    // selectMember(member: ExtendedDivisionMemberForView): void {
-    //     this.selectedMember = member;
-    //     this.selectedDivision = null;
-    //     this.formType = 'member';
-    //     this.isEditMode = true;
-    //     this.isFormVisible = true;
+    const newRole = formValue.roles[0] || UserRoleType.User;
+    if (!this.canAssignRole(this.selectedMember.userId, newRole)) {
+      const errorMessage = this.userRolePermissionService.generatePermissionErrorMessage(
+        'Role assignment',
+        'role_not_assignable'
+      );
+      this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
+      return;
+    }
 
-    //     this.memberForm.patchValue({
-    //         roles: member.roles,
-    //         isActive: member.isActive
-    //     });
-    // }
+    const updateRequest = {
+      role: newRole,
+      isActive: formValue.isActive,
+      userId: this.selectedMember.userId,
+    };
 
-    createDivision(): void {
-        if (!this.canCreateDivision()) {
-            this.snackBar.open('ディビジョンを作成する権限がありません', 'Close', { duration: 3000 });
-            return;
+    this.subscriptions.add(
+      this.memberService.updateMember(this.selectedMember.divisionId, this.selectedMember.user.id, updateRequest).subscribe({
+        next: () => {
+          const logMetadata = this.userRolePermissionService.generateRoleChangeMetadata(
+            this.selectedMember!.userId,
+            this.selectedMember!.roles,
+            [newRole],
+            this.selectedMember!.divisionId
+          );
+          this.logger.debug('Role change logged:', logMetadata);
+
+          this.snackBar.open('Member updated successfully', 'Close', { duration: 3000 });
+          this.loadMembers();
+          this.closeForm();
+        },
+        error: (error) => {
+          this.logger.error('Error updating member:', error);
+          this.snackBar.open('Failed to update member', 'Close', { duration: 3000 });
         }
+      })
+    );
+  }
 
-        this.selectedMember = null;
-        this.selectedDivision = null;
-        this.formType = 'division';
-        this.isEditMode = false;
-        this.isFormVisible = true;
-
-        this.divisionForm.reset({
-            name: '',
-            label: '',
-            description: '',
-            isActive: true
-        });
+  removeMember(member: ExtendedDivisionMemberForView): void {
+    if (!this.canRemoveMember(member)) {
+      const errorMessage = this.userRolePermissionService.generatePermissionErrorMessage(
+        'Member removal',
+        member.userId === this.getCurrentUserId() ? 'self_edit' : 'insufficient_authority'
+      );
+      this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
+      return;
     }
 
-    editDivision(division: Division): void {
-        if (!this.canUpdateDivision()) {
-            this.snackBar.open('このディビジョンを編集する権限がありません', 'Close', { duration: 3000 });
-            return;
+    if (!confirm(`Remove ${member.user.name} from division?`)) {
+      return;
+    }
+
+    this.subscriptions.add(
+      this.memberService.removeMember(member.divisionId, member.userId).subscribe({
+        next: () => {
+          this.snackBar.open('Member removed', 'Close', { duration: 3000 });
+          this.loadMembers();
+        },
+        error: (error) => {
+          this.logger.error('Error removing member:', error);
+          this.snackBar.open('Failed to remove member', 'Close', { duration: 3000 });
         }
+      })
+    );
+  }
 
-        this.selectedMember = null;
-        this.selectedDivision = division;
-        this.formType = 'division';
-        this.isEditMode = true;
-        this.isFormVisible = true;
+  bulkRemoveMembers(): void {
+    if (this.selectedIds.size === 0) return;
 
-        this.divisionForm.patchValue({
-            name: division.name,
-            label: division.label,
-            description: division.description || '',
-            isActive: division.isActive
-        });
+    if (!this.canManageUserRoles()) {
+      this.snackBar.open('No permission to manage user roles', 'Close', { duration: 3000 });
+      return;
     }
 
-    // 新しいメンバー追加メソッド - ダイアログの代わり
-    // openAddMemberForm(): void {
-    //     if (!this.selectedScope) return;
+    const membersToRemove = this.filteredMembers.filter(member =>
+      this.selectedIds.has(member.id)
+    );
 
-    //     if (!this.canAssignMembers()) {
-    //         this.snackBar.open('このディビジョンでメンバーを管理する権限がありません', 'Close', { duration: 3000 });
-    //         return;
-    //     }
+    const unremovableMembers = membersToRemove.filter(member => !this.canRemoveMember(member));
 
-    //     this.selectedMember = null;
-    //     this.selectedDivision = null;
-    //     this.formType = 'member-add';
-    //     this.isEditMode = false;
-    //     this.isFormVisible = true;
-
-    //     this.memberAddForm.reset({
-    //         selectedUser: null,
-    //         role: UserRoleType.User
-    //     });
-    // }
-
-    closeForm(): void {
-        this.isFormVisible = false;
-        this.selectedMember = null;
-        this.selectedDivision = null;
-        this.divisionForm.reset();
-        this.memberForm.reset();
-        this.memberAddForm.reset();
+    if (unremovableMembers.length > 0) {
+      const selfInList = unremovableMembers.some(member => member.userId === this.getCurrentUserId());
+      const errorMessage = selfInList
+        ? 'Cannot include yourself in bulk removal'
+        : 'Some members cannot be removed due to insufficient permissions';
+      this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
+      return;
     }
 
-    getFormTitle(): string {
-        switch (this.formType) {
-            case 'division':
-                return this.isEditMode ? 'Edit Division' : 'Create Division';
-            case 'member-add':
-                return 'Add Member';
-            default:
-                return 'Edit Member';
-        }
+    const selectedCount = this.selectedIds.size;
+    if (!confirm(`Remove ${selectedCount} selected members?`)) {
+      return;
     }
 
-    // Submit Methods - フォーム別に分離
-    submitForm(): void {
-        switch (this.formType) {
-            case 'division':
-                this.submitDivisionForm();
-                break;
-            case 'member-add':
-                this.submitMemberAddForm();
-                break;
-            default:
-                this.submitMemberForm();
-                break;
-        }
+    const removePromises = membersToRemove.map(member =>
+      this.memberService.removeMember(member.divisionId, member.userId).toPromise()
+    );
+
+    Promise.all(removePromises).then(() => {
+      this.snackBar.open(`${selectedCount} members removed`, 'Close', { duration: 3000 });
+      this.selectedIds.clear();
+      this.loadMembers();
+    }).catch(error => {
+      this.logger.error('Error in bulk remove:', error);
+      this.snackBar.open('Bulk removal failed', 'Close', { duration: 3000 });
+    });
+  }
+
+  // ========== Validation Helpers ==========
+  hasFormError(field: string): boolean {
+    const control = this.currentForm.get(field);
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  getFormErrorMessage(field: string): string {
+    const control = this.currentForm.get(field);
+    if (control?.errors) {
+      if (control.errors['required']) {
+        return `${field} is required`;
+      }
+      if (control.errors['minlength']) {
+        return `${field} must be at least ${control.errors['minlength'].requiredLength} characters`;
+      }
+    }
+    return '';
+  }
+
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      control?.markAsTouched();
+    });
+  }
+
+  refresh(): void {
+    this.loadMembers();
+    this.loadDivisions();
+    this.loadAvailableUsers();
+  }
+
+  // ========== Permission Methods ==========
+  canEditMember(member: ExtendedDivisionMemberForView): boolean {
+    if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
+      return false;
     }
 
-    submitDivisionForm(): void {
-        if (this.divisionForm.invalid) {
-            this.markFormGroupTouched(this.divisionForm);
-            return;
-        }
+    const userRoleContext = {
+      userId: member.userId,
+      divisionId: member.divisionId,
+      currentRoles: member.roles,
+      isActive: member.isActive
+    };
 
-        const formValue = this.divisionForm.value as DivisionFormData;
+    return this.userRolePermissionService.canEditUserRole(
+      userRoleContext,
+      this.selectedScope.scopeId
+    );
+  }
 
-        if (this.isEditMode && this.selectedDivision) {
-            this.updateDivision(formValue);
-        } else {
-            this.createNewDivision(formValue);
-        }
+  canManageUserRoles(): boolean {
+    if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
+      return false;
+    }
+    return this.userRolePermissionService.canManageUserRoles(this.selectedScope.scopeId);
+  }
+
+  canCreateDivision(): boolean {
+    return this.userRolePermissionService.canCreateDivision();
+  }
+
+  canUpdateDivision(): boolean {
+    if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
+      return false;
+    }
+    return this.userRolePermissionService.canUpdateDivision(this.selectedScope.scopeId);
+  }
+
+  canRemoveMember(member: ExtendedDivisionMemberForView): boolean {
+    if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
+      return false;
     }
 
-    submitMemberForm(): void {
-        if (this.memberForm.invalid) {
-            this.markFormGroupTouched(this.memberForm);
-            return;
-        }
+    const userRoleContext = {
+      userId: member.userId,
+      divisionId: member.divisionId,
+      currentRoles: member.roles,
+      isActive: member.isActive
+    };
 
-        if (!this.selectedMember) return;
+    return this.userRolePermissionService.canRemoveUserFromDivision(
+      userRoleContext,
+      this.selectedScope.scopeId
+    );
+  }
 
-        const formValue = this.memberForm.value as MemberFormData;
-        this.updateMember(formValue);
+  canAssignMembers(): boolean {
+    if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
+      return false;
     }
+    return this.userRolePermissionService.canManageUserRoles(this.selectedScope.scopeId);
+  }
 
-    submitMemberAddForm(): void {
-        if (this.memberAddForm.invalid) {
-            this.markFormGroupTouched(this.memberAddForm);
-            return;
-        }
-
-        const formValue = this.memberAddForm.value as MemberAddFormData;
-
-        if (!formValue.selectedUser) {
-            this.snackBar.open('ユーザーを選択してください', 'Close', { duration: 3000 });
-            return;
-        }
-
-        this.addMember(formValue);
+  canAssignRole(targetUserId: string | undefined, role: UserRoleType): boolean {
+    if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
+      return false;
     }
+    return this.userRolePermissionService.canAssignRole(
+      targetUserId || '',
+      role,
+      this.selectedScope.scopeId
+    );
+  }
 
-    // private addMember(formValue: MemberAddFormData): void {
-    //     if (!this.selectedScope || !formValue.selectedUser) return;
-
-    //     this.isLoading = true;
-
-    //     const request: MemberAssignmentRequest = {
-    //         userId: formValue.selectedUser.id,
-    //         role: formValue.role
-    //     };
-
-    //     this.subscriptions.add(
-    //         this.memberService.assignMember(this.selectedScope.scopeId, request).subscribe({
-    //             next: () => {
-    //                 this.snackBar.open('メンバーを正常に追加しました', 'Close', { duration: 3000 });
-    //                 this.loadMembers();
-    //                 this.closeForm();
-    //                 this.isLoading = false;
-    //             },
-    //             error: (error) => {
-    //                 this.logger.error('Error adding member:', error);
-    //                 this.snackBar.open('メンバーの追加に失敗しました', 'Close', { duration: 3000 });
-    //                 this.isLoading = false;
-    //             }
-    //         })
-    //     );
-    // }
-
-    private createNewDivision(formValue: DivisionFormData): void {
-        if (!this.canCreateDivision()) {
-            this.snackBar.open('ディビジョンを作成する権限がありません', 'Close', { duration: 3000 });
-            return;
-        }
-
-        const createRequest = {
-            name: formValue.name,
-            label: formValue.label,
-            description: formValue.description
-        };
-
-        this.subscriptions.add(
-            this.memberService.createDivision(createRequest).subscribe({
-                next: (division) => {
-                    this.snackBar.open('Division created successfully', 'Close', { duration: 3000 });
-                    this.loadDivisions();
-                    this.closeForm();
-                },
-                error: (error) => {
-                    this.logger.error('Error creating division:', error);
-                    this.snackBar.open('Failed to create division', 'Close', { duration: 3000 });
-                }
-            })
-        );
+  getAssignableRoles(): UserRoleType[] {
+    if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
+      return [];
     }
+    return this.userRolePermissionService.getAssignableRoles(this.selectedScope.scopeId);
+  }
 
-    private updateDivision(formValue: DivisionFormData): void {
-        if (!this.selectedDivision || !this.canUpdateDivision()) {
-            this.snackBar.open('このディビジョンを更新する権限がありません', 'Close', { duration: 3000 });
-            return;
-        }
+  getCurrentUserId(): string {
+    return this.g.info?.user?.id || '';
+  }
 
-        const updateRequest = {
-            name: formValue.name,
-            label: formValue.label,
-            description: formValue.description,
-            isActive: formValue.isActive
-        };
-
-        this.subscriptions.add(
-            this.memberService.updateDivision(this.selectedDivision.id, updateRequest).subscribe({
-                next: (division) => {
-                    this.snackBar.open('Division updated successfully', 'Close', { duration: 3000 });
-                    this.loadDivisions();
-                    this.closeForm();
-                },
-                error: (error) => {
-                    this.logger.error('Error updating division:', error);
-                    this.snackBar.open('Failed to update division', 'Close', { duration: 3000 });
-                }
-            })
-        );
+  get availableRoles(): UserRoleType[] {
+    if (this.formType === 'member-add' || this.formType === 'member') {
+      return this.getAssignableRoles();
     }
-
-    // private updateMember(formValue: MemberFormData): void {
-    //     if (!this.selectedMember || !this.canManageUserRoles()) {
-    //         this.snackBar.open('ユーザーロールを管理する権限がありません', 'Close', { duration: 3000 });
-    //         return;
-    //     }
-
-    //     const updateRequest = {
-    //         role: formValue.roles[0] || UserRoleType.User,
-    //         isActive: formValue.isActive
-    //     };
-
-    //     this.subscriptions.add(
-    //         this.memberService.updateMember(this.selectedMember.divisionId, this.selectedMember.user.id, updateRequest).subscribe({
-    //             next: () => {
-    //                 this.snackBar.open('Member updated successfully', 'Close', { duration: 3000 });
-    //                 this.loadMembers();
-    //                 this.closeForm();
-    //             },
-    //             error: (error) => {
-    //                 this.logger.error('Error updating member:', error);
-    //                 this.snackBar.open('Failed to update member', 'Close', { duration: 3000 });
-    //             }
-    //         })
-    //     );
-    // }
-
-    // Validation Helper Methods
-    hasFormError(field: string): boolean {
-        const control = this.currentForm.get(field);
-        return !!(control && control.invalid && (control.dirty || control.touched));
-    }
-
-    getFormErrorMessage(field: string): string {
-        const control = this.currentForm.get(field);
-        if (control?.errors) {
-            if (control.errors['required']) {
-                return `${field} is required`;
-            }
-            if (control.errors['minlength']) {
-                return `${field} must be at least ${control.errors['minlength'].requiredLength} characters`;
-            }
-        }
-        return '';
-    }
-
-    private markFormGroupTouched(formGroup: FormGroup): void {
-        Object.keys(formGroup.controls).forEach(key => {
-            const control = formGroup.get(key);
-            control?.markAsTouched();
-        });
-    }
-
-    // 既存のメソッドは維持（削除されたダイアログ関連以外）
-    // removeMember(member: ExtendedDivisionMemberForView): void {
-    //     if (!this.canRemoveMember(member)) {
-    //         this.snackBar.open('このメンバーを削除する権限がありません', 'Close', { duration: 3000 });
-    //         return;
-    //     }
-
-    //     if (!confirm(`${member.user.name} をディビジョンから削除しますか？`)) {
-    //         return;
-    //     }
-
-    //     this.subscriptions.add(
-    //         this.memberService.removeMember(member.divisionId, member.userId).subscribe({
-    //             next: () => {
-    //                 this.snackBar.open('メンバーを削除しました', 'Close', { duration: 3000 });
-    //                 this.loadMembers();
-    //             },
-    //             error: (error) => {
-    //                 this.logger.error('Error removing member:', error);
-    //                 this.snackBar.open('メンバーの削除に失敗しました', 'Close', { duration: 3000 });
-    //             }
-    //         })
-    //     );
-    // }
-
-    toggleMemberSelection(memberId: string): void {
-        if (this.selectedMembers.has(memberId)) {
-            this.selectedMembers.delete(memberId);
-        } else {
-            this.selectedMembers.add(memberId);
-        }
-    }
-
-    isAllSelected(): boolean {
-        return this.filteredMembers.length > 0 &&
-            this.filteredMembers.every(member => this.selectedMembers.has(member.id));
-    }
-
-    isSomeSelected(): boolean {
-        return this.selectedMembers.size > 0 && !this.isAllSelected();
-    }
-
-    toggleAllSelection(): void {
-        if (this.isAllSelected()) {
-            this.selectedMembers.clear();
-        } else {
-            this.filteredMembers.forEach(member => this.selectedMembers.add(member.id));
-        }
-    }
-
-    // bulkRemoveMembers(): void {
-    //     if (this.selectedMembers.size === 0) return;
-
-    //     if (!this.canManageUserRoles()) {
-    //         this.snackBar.open('ユーザーロールを管理する権限がありません', 'Close', { duration: 3000 });
-    //         return;
-    //     }
-
-    //     const selectedCount = this.selectedMembers.size;
-    //     if (!confirm(`選択した ${selectedCount} 人のメンバーを削除しますか？`)) {
-    //         return;
-    //     }
-
-    //     const membersToRemove = this.filteredMembers.filter(member =>
-    //         this.selectedMembers.has(member.id)
-    //     );
-
-    //     const removePromises = membersToRemove.map(member =>
-    //         this.memberService.removeMember(member.divisionId, member.userId).toPromise()
-    //     );
-
-    //     Promise.all(removePromises).then(() => {
-    //         this.snackBar.open(`${selectedCount} 人のメンバーを削除しました`, 'Close', { duration: 3000 });
-    //         this.selectedMembers.clear();
-    //         this.loadMembers();
-    //     }).catch(error => {
-    //         this.logger.error('Error in bulk remove:', error);
-    //         this.snackBar.open('一括削除に失敗しました', 'Close', { duration: 3000 });
-    //     });
-    // }
-
-    refresh(): void {
-        this.loadMembers();
-        this.loadDivisions();
-        this.loadAvailableUsers();
-    }
-
-    // Permission methods
-    /**
-     * メンバーを編集できるかチェック（ユーザーロール管理用）
-     */
-    canEditMember(member: ExtendedDivisionMemberForView): boolean {
-        if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-            return false;
-        }
-
-        const userRoleContext = {
-            userId: member.userId,
-            divisionId: member.divisionId,
-            currentRoles: member.roles,
-            isActive: member.isActive
-        };
-
-        return this.userRolePermissionService.canEditUserRole(
-            userRoleContext,
-            this.selectedScope.scopeId
-        );
-    }
-
-    /**
-     * ユーザーロールを管理できるかチェック（ユーザーロール管理用）
-     */
-    canManageUserRoles(): boolean {
-        if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-            return false;
-        }
-        return this.userRolePermissionService.canManageUserRoles(this.selectedScope.scopeId);
-    }
-
-    /**
-     * Divisionを作成できるかチェック（ユーザーロール管理用）
-     */
-    canCreateDivision(): boolean {
-        return this.userRolePermissionService.canCreateDivision();
-    }
-
-    /**
-     * Divisionを更新できるかチェック（ユーザーロール管理用）
-     */
-    canUpdateDivision(): boolean {
-        if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-            return false;
-        }
-        return this.userRolePermissionService.canUpdateDivision(this.selectedScope.scopeId);
-    }
-
-    /**
-     * メンバーを削除できるかチェック（ユーザーロール管理用）
-     */
-    canRemoveMember(member: ExtendedDivisionMemberForView): boolean {
-        if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-            return false;
-        }
-
-        const userRoleContext = {
-            userId: member.userId,
-            divisionId: member.divisionId,
-            currentRoles: member.roles,
-            isActive: member.isActive
-        };
-
-        return this.userRolePermissionService.canRemoveUserFromDivision(
-            userRoleContext,
-            this.selectedScope.scopeId
-        );
-    }
-
-    /**
-     * メンバーを割り当てできるかチェック（ユーザーロール管理用）
-     */
-    canAssignMembers(): boolean {
-        if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-            return false;
-        }
-        return this.userRolePermissionService.canManageUserRoles(this.selectedScope.scopeId);
-    }
-
-    /**
-     * 特定のロールを割り当てできるかチェック
-     */
-    canAssignRole(targetUserId: string | undefined, role: UserRoleType): boolean {
-        if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-            return false;
-        }
-        return this.userRolePermissionService.canAssignRole(
-            targetUserId || '',
-            role,
-            this.selectedScope.scopeId
-        );
-    }
-
-    /**
-     * 現在のスコープで割り当て可能なロール一覧を取得
-     */
-    getAssignableRoles(): UserRoleType[] {
-        if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-            return [];
-        }
-        return this.userRolePermissionService.getAssignableRoles(this.selectedScope.scopeId);
-    }
-
-    // Member form methods の修正
-
-    private addMember(formValue: MemberAddFormData): void {
-        if (!this.selectedScope || !formValue.selectedUser) return;
-
-        // 権限チェック: 選択されたロールを割り当てできるかチェック
-        if (!this.canAssignRole(formValue.selectedUser.id, formValue.role)) {
-            const errorMessage = this.userRolePermissionService.generatePermissionErrorMessage(
-                'ロール割り当て',
-                'role_not_assignable'
-            );
-            this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
-            return;
-        }
-
-        this.isLoading = true;
-
-        const request: MemberAssignmentRequest = {
-            userId: formValue.selectedUser.id,
-            role: formValue.role
-        };
-
-        this.subscriptions.add(
-            this.memberService.assignMember(this.selectedScope.scopeId, request).subscribe({
-                next: () => {
-                    this.snackBar.open('メンバーを正常に追加しました', 'Close', { duration: 3000 });
-                    this.loadMembers();
-                    this.closeForm();
-                    this.isLoading = false;
-                },
-                error: (error) => {
-                    this.logger.error('Error adding member:', error);
-                    this.snackBar.open('メンバーの追加に失敗しました', 'Close', { duration: 3000 });
-                    this.isLoading = false;
-                }
-            })
-        );
-    }
-
-    private updateMember(formValue: MemberFormData): void {
-        if (!this.selectedMember) return;
-
-        // 自分自身のロール変更を防ぐ
-        const userRoleContext = {
-            userId: this.selectedMember.userId,
-            divisionId: this.selectedMember.divisionId,
-            currentRoles: this.selectedMember.roles,
-            isActive: this.selectedMember.isActive
-        };
-
-        if (!this.userRolePermissionService.canEditUserRole(userRoleContext, this.selectedMember.divisionId)) {
-            const errorMessage = this.userRolePermissionService.generatePermissionErrorMessage(
-                'ロール編集',
-                this.selectedMember.userId === this.getCurrentUserId() ? 'self_edit' : 'insufficient_authority'
-            );
-            this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
-            return;
-        }
-
-        // 新しいロールを割り当てできるかチェック
-        const newRole = formValue.roles[0] || UserRoleType.User;
-        if (!this.canAssignRole(this.selectedMember.userId, newRole)) {
-            const errorMessage = this.userRolePermissionService.generatePermissionErrorMessage(
-                'ロール割り当て',
-                'role_not_assignable'
-            );
-            this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
-            return;
-        }
-
-        const updateRequest = {
-            role: newRole,
-            isActive: formValue.isActive,
-            userId: this.selectedMember.userId,
-        };
-
-        this.subscriptions.add(
-            this.memberService.updateMember(this.selectedMember.divisionId, this.selectedMember.user.id, updateRequest).subscribe({
-                next: () => {
-                    // 権限変更ログのメタデータを生成
-                    const logMetadata = this.userRolePermissionService.generateRoleChangeMetadata(
-                        this.selectedMember!.userId,
-                        this.selectedMember!.roles,
-                        [newRole],
-                        this.selectedMember!.divisionId
-                    );
-                    this.logger.debug('Role change logged:', logMetadata);
-
-                    this.snackBar.open('Member updated successfully', 'Close', { duration: 3000 });
-                    this.loadMembers();
-                    this.closeForm();
-                },
-                error: (error) => {
-                    this.logger.error('Error updating member:', error);
-                    this.snackBar.open('Failed to update member', 'Close', { duration: 3000 });
-                }
-            })
-        );
-    }
-
-    removeMember(member: ExtendedDivisionMemberForView): void {
-        if (!this.canRemoveMember(member)) {
-            const errorMessage = this.userRolePermissionService.generatePermissionErrorMessage(
-                'メンバー削除',
-                member.userId === this.getCurrentUserId() ? 'self_edit' : 'insufficient_authority'
-            );
-            this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
-            return;
-        }
-
-        if (!confirm(`${member.user.name} をディビジョンから削除しますか？`)) {
-            return;
-        }
-
-        this.subscriptions.add(
-            this.memberService.removeMember(member.divisionId, member.userId).subscribe({
-                next: () => {
-                    this.snackBar.open('メンバーを削除しました', 'Close', { duration: 3000 });
-                    this.loadMembers();
-                },
-                error: (error) => {
-                    this.logger.error('Error removing member:', error);
-                    this.snackBar.open('メンバーの削除に失敗しました', 'Close', { duration: 3000 });
-                }
-            })
-        );
-    }
-
-    bulkRemoveMembers(): void {
-        if (this.selectedMembers.size === 0) return;
-
-        if (!this.canManageUserRoles()) {
-            this.snackBar.open('ユーザーロールを管理する権限がありません', 'Close', { duration: 3000 });
-            return;
-        }
-
-        // 選択されたメンバーの中に削除できないメンバーがいるかチェック
-        const membersToRemove = this.filteredMembers.filter(member =>
-            this.selectedMembers.has(member.id)
-        );
-
-        const unremovableMembers = membersToRemove.filter(member => !this.canRemoveMember(member));
-
-        if (unremovableMembers.length > 0) {
-            const selfInList = unremovableMembers.some(member => member.userId === this.getCurrentUserId());
-            const errorMessage = selfInList
-                ? '自分自身は削除対象に含めることができません'
-                : '権限不足により削除できないメンバーが含まれています';
-            this.snackBar.open(errorMessage, 'Close', { duration: 3000 });
-            return;
-        }
-
-        const selectedCount = this.selectedMembers.size;
-        if (!confirm(`選択した ${selectedCount} 人のメンバーを削除しますか？`)) {
-            return;
-        }
-
-        const removePromises = membersToRemove.map(member =>
-            this.memberService.removeMember(member.divisionId, member.userId).toPromise()
-        );
-
-        Promise.all(removePromises).then(() => {
-            this.snackBar.open(`${selectedCount} 人のメンバーを削除しました`, 'Close', { duration: 3000 });
-            this.selectedMembers.clear();
-            this.loadMembers();
-        }).catch(error => {
-            this.logger.error('Error in bulk remove:', error);
-            this.snackBar.open('一括削除に失敗しました', 'Close', { duration: 3000 });
-        });
-    }
-
-    // Form setup methods の修正
-
-    selectMember(member: ExtendedDivisionMemberForView): void {
-        this.selectedMember = member;
-        this.selectedDivision = null;
-        this.formType = 'member';
-        this.isEditMode = true;
-        this.isFormVisible = true;
-
-        // 割り当て可能なロールのリストを取得
-        const assignableRoles = this.getAssignableRoles();
-
-        // 現在のロールが割り当て可能ロールに含まれていない場合は、フォームを読み取り専用にする
-        const hasEditableRoles = member.roles.some(role => assignableRoles.includes(role));
-
-        this.memberForm.patchValue({
-            roles: member.roles,
-            isActive: member.isActive
-        });
-
-        // 編集権限がない場合はフォームを無効化
-        if (!this.canEditMember(member)) {
-            this.memberForm.disable();
-        }
-    }
-
-    openAddMemberForm(): void {
-        if (!this.selectedScope) return;
-
-        if (!this.canAssignMembers()) {
-            this.snackBar.open('このディビジョンでメンバーを管理する権限がありません', 'Close', { duration: 3000 });
-            return;
-        }
-
-        this.selectedMember = null;
-        this.selectedDivision = null;
-        this.formType = 'member-add';
-        this.isEditMode = false;
-        this.isFormVisible = true;
-
-        // 割り当て可能なロールのうち、デフォルトで最も権限の低いロールを設定
-        const assignableRoles = this.getAssignableRoles();
-        const defaultRole = assignableRoles.includes(UserRoleType.User)
-            ? UserRoleType.User
-            : assignableRoles[assignableRoles.length - 1] || UserRoleType.User;
-
-        this.memberAddForm.reset({
-            selectedUser: null,
-            role: defaultRole
-        });
-    }
-
-    /**
-     * 現在のユーザーIDを取得するヘルパーメソッド
-     */
-    getCurrentUserId(): string {
-        return this.g.info?.user?.id || '';
-    }
-
-    // 既存のメソッドで、availableRoles を動的に変更
-    get availableRoles(): UserRoleType[] {
-        // フォームタイプに応じて利用可能なロールを返す
-        if (this.formType === 'member-add' || this.formType === 'member') {
-            return this.getAssignableRoles();
-        }
-        // フォールバック
-        return this.memberService.getAvailableRoles();
-    }
-
-
-
-    // canEditMember(member: ExtendedDivisionMemberForView): boolean {
-    //     if (!this.selectedScope) return false;
-    //     return this.adminScopeService.canEditScope(
-    //         this.selectedScope.scopeType,
-    //         this.selectedScope.scopeId
-    //     );
-    // }
-
-    // canManageUserRoles(): boolean {
-    //     if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-    //         return false;
-    //     }
-    //     return this.adminScopeService.canManageUserRoles(this.selectedScope.scopeId);
-    // }
-
-    // canCreateDivision(): boolean {
-    //     return this.adminScopeService.canCreateDivision();
-    // }
-
-    // canUpdateDivision(): boolean {
-    //     if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-    //         return false;
-    //     }
-    //     return this.adminScopeService.canEditScope(ScopeType.DIVISION, this.selectedScope.scopeId);
-    // }
-
-    // canRemoveMember(member: ExtendedDivisionMemberForView): boolean {
-    //     if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-    //         return false;
-    //     }
-    //     return this.adminScopeService.canManageUserRoles(this.selectedScope.scopeId);
-    // }
-
-    // canAssignMembers(): boolean {
-    //     if (!this.selectedScope || this.selectedScope.scopeType !== ScopeType.DIVISION) {
-    //         return false;
-    //     }
-    //     return this.adminScopeService.canManageUserRoles(this.selectedScope.scopeId);
-    // }
+    return this.memberService.getAvailableRoles();
+  }
+
+  // ========== Scope Helpers ==========
+  getScopeLabel(): string {
+    if (!this.selectedScope) return '';
+    return `${this.selectedScope.scopeType}: ${this.selectedScope.scopeId}`;
+  }
 }

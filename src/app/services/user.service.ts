@@ -59,19 +59,19 @@ export class UserService {
 
   toggleChatTabLayout(): Observable<Config> {
     this.chatTabLayout = this.chatTabLayout === 'column' ? 'tabs' : 'column';
-    _paq.push(['trackEvent', 'AIチャット画面操作', 'タブ/列切替', this.chatTabLayout]);
+    _paq.push(['trackEvent', 'AIチャット画面操作:タブ/列切替', this.chatTabLayout]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
   toggleChatLayout(): Observable<Config> {
     this.chatLayout = this.chatLayout === 'flex' ? 'grid' : 'flex';
-    _paq.push(['trackEvent', 'AIチャット画面操作', '高さ揃え切替', this.chatLayout]);
+    _paq.push(['trackEvent', 'AIチャット画面操作:高さ揃え切替', this.chatLayout]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
   setTheme(theme: ConfigKeys.Theme): Observable<Config> {
     this.theme = theme;
-    _paq.push(['trackEvent', 'ユーザー設定', 'テーマ切替', this.theme]);
+    _paq.push(['trackEvent', 'ユーザー設定:テーマ切替', this.theme]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
@@ -88,23 +88,23 @@ export class UserService {
 
   setEnterMode(enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter'): Observable<Config> {
     this.enterMode = enterMode;
-    _paq.push(['trackEvent', '設定', 'Enterモード', this.enterMode]);
+    _paq.push(['trackEvent', '設定:Enterモード', this.enterMode]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
   setHistoryCloseMode(historyCloseMode: ConfigKeys.HistoryCloseMode): Observable<Config> {
     this.historyCloseMode = historyCloseMode;
-    _paq.push(['trackEvent', 'ユーザー設定', '履歴閉じる設定', this.historyCloseMode]);
+    _paq.push(['trackEvent', 'ユーザー設定:履歴閉じる設定', this.historyCloseMode]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
   setLanguage(language: ConfigKeys.Language): Observable<Config> {
     this.language = language;
-    _paq.push(['trackEvent', 'ユーザー設定', '言語切替', this.language]);
+    _paq.push(['trackEvent', 'ユーザー設定:言語切替', this.language]);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }
 
-  saveSetting(theme: ConfigKeys.Theme, enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter', historyCloseMode?: ConfigKeys.HistoryCloseMode, language?: ConfigKeys.Language, noTracking?: boolean): Observable<Config> {
+  saveSetting(theme: ConfigKeys.Theme, enterMode: ConfigKeys.EnterMode = 'Ctrl+Enter', historyCloseMode?: ConfigKeys.HistoryCloseMode, language?: ConfigKeys.Language): Observable<Config> {
     this.theme = theme;
     this.enterMode = enterMode;
     if (historyCloseMode !== undefined) {
@@ -113,14 +113,11 @@ export class UserService {
     if (language !== undefined) {
       this.language = language;
     }
-
-    if (!noTracking) {
-    _paq.push(['trackEvent', 'ユーザー設定', 'Enterモード', this.enterMode]);
-    _paq.push(['trackEvent', 'ユーザー設定', 'テーマ切替', this.theme]);
+    _paq.push(['trackEvent', 'ユーザー設定:Enterモード', this.enterMode]);
+    _paq.push(['trackEvent', 'ユーザー設定:テーマ切替', this.theme]);
     if (language !== undefined) {
-      _paq.push(['trackEvent', 'ユーザー設定', '言語切替', this.language]);
+      _paq.push(['trackEvent', 'ユーザー設定:言語切替', this.language]);
     }
-    } else { }
     this.applyTheme(theme);
     return this.upsertUserSetting({ value: { chatTabLayout: this.chatTabLayout, chatLayout: this.chatLayout, enterMode: this.enterMode, theme: this.theme, language: this.language, historyCloseMode: this.historyCloseMode } });
   }

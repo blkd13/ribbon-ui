@@ -277,7 +277,7 @@ export class ChatPanelBaseComponent implements OnInit {
     this.loadContent().subscribe({
       next: contentsList => {
         contentsList.forEach(contents => {
-          const textList = contents.map((content, index) => {
+          contents.forEach((content, index) => {
             if (content.type === 'text') {
               // 奇数インデックスがコードブロックなので、それだけ抜き出す。
               Utils.splitCodeBlock(content.text || '').filter((b, index) => index % 2 === 1).forEach(codeBlock => {
@@ -292,9 +292,21 @@ export class ChatPanelBaseComponent implements OnInit {
                   // plain block
                 }
                 // ZIPにファイルを追加
-                zip.file(filename, codeLineList.join('\n'));
+                zip.file(filename.replaceAll(/^\/*/g, ''), codeLineList.join('\n'));
                 counter++;
               });
+            } else if (content.type === 'base64' && content.meta && content.meta.filename && content.text) {
+              // base64コンテンツはファイルとして保存
+              const base64Data = content.text.split(',')[1] || content.text; // data:...;base64,の部分を除去
+              const binaryData = atob(base64Data);
+              const byteNumbers = new Array(binaryData.length);
+              for (let i = 0; i < binaryData.length; i++) {
+                byteNumbers[i] = binaryData.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              const blob = new Blob([byteArray as any], { type: content.meta.contentType || 'application/octet-stream' });
+              zip.file(content.meta.filename, blob);
+              counter++;
             } else {
               // text以外のコンテンツは無視
               // TODO 本来はファイルとしてダウンロードさせるべきかも・・？

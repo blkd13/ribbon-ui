@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions.mjs';
-import { Observable, tap } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import { ChatCompletionCreateParamsWithoutMessages } from '../../models/models';
 import {
     Thread,
@@ -9,7 +9,8 @@ import {
     ThreadGroupForView,
     ThreadGroupType,
     ThreadGroupUpsertDto,
-    ThreadGroupVisibility
+    ThreadGroupVisibility,
+    PaginatedResponse
 } from '../../models/project-models';
 import { NotificationService } from '../../shared/services/notification.service';
 import { Utils } from '../../utils';
@@ -26,7 +27,7 @@ export class ThreadService {
     private readonly notificationService = inject(NotificationService);
     private readonly g = inject(GService);
 
-    private threadListMas: { [threadGroupId: string]: ThreadGroupForView[] } = {};
+    private threadListMas: { [projectId: string]: ThreadGroupForView[] } = {};
 
     /**
      * 初期スレッドグループエンティティを生成
@@ -70,6 +71,7 @@ export class ThreadService {
                     this.g.locale,
                     { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }
                 ),
+                lastUpdate: new Date().toISOString(),
                 ...genInitialBaseEntity('thread-group'),
             } as ThreadGroupForView;
 
@@ -128,9 +130,11 @@ export class ThreadService {
      * スレッドグループリストを取得
      * @param projectId プロジェクトID
      * @param force キャッシュを無視して強制取得
+     * @param page ページ番号（デフォルト: 1）
+     * @param limit 1ページあたりの件数（デフォルト: 20）
      * @returns スレッドグループリスト
      */
-    getThreadGroupList(projectId: string, force: boolean = false): Observable<ThreadGroupForView[]> {
+    getThreadGroupList(projectId: string, force: boolean = false, page: number = 1, limit: number = 20): Observable<ThreadGroupForView[]> {
         if (this.threadListMas[projectId] && !force) {
             return new Observable(observer => {
                 observer.next(this.threadListMas[projectId]);
@@ -138,10 +142,14 @@ export class ThreadService {
             });
         }
 
-        return this.http.get<ThreadGroupForView[]>(`/user/project/${projectId}/thread-groups`).pipe(
-            tap(threadGroups => {
+        return this.http.get<PaginatedResponse<ThreadGroupForView> | ThreadGroupForView[]>(`/user/project/${projectId}/thread-groups`, {
+            params: { page: page.toString(), limit: limit.toString() }
+        }).pipe(
+            map(response => {
+                // 新形式（PaginatedResponse）と旧形式（配列）の両方に対応
+                const data = Array.isArray(response) ? response : response.data;
                 // 日付変換とキャッシュ保存
-                threadGroups.forEach(threadGroup => {
+                data.forEach(threadGroup => {
                     threadGroup.createdAt = new Date(threadGroup.createdAt);
                     threadGroup.updatedAt = new Date(threadGroup.updatedAt);
                     threadGroup.updatedDate = threadGroup.updatedAt.toLocaleDateString(
@@ -149,8 +157,50 @@ export class ThreadService {
                         { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }
                     );
                 });
-                this.threadListMas[projectId] = threadGroups;
-            })
+                this.threadListMas[projectId] = data;
+                return data;
+            }),
+        );
+    }
+
+    /**
+     * 無限スクロール用：追加ページを取得して既存リストに追記
+     * @param projectId プロジェクトID
+     * @param page ページ番号
+     * @param limit 1ページあたりの件数
+     * @returns { data: 追加取得したリスト, hasNextPage: 次ページの有無 }
+     */
+    loadMoreThreadGroups(projectId: string, page: number, limit: number = 20): Observable<{ data: ThreadGroupForView[], hasNextPage: boolean }> {
+        return this.http.get<PaginatedResponse<ThreadGroupForView> | ThreadGroupForView[]>(`/user/project/${projectId}/thread-groups`, {
+            params: { page: page.toString(), limit: limit.toString() }
+        }).pipe(
+            map(response => {
+                // 新形式（PaginatedResponse）と旧形式（配列）の両方に対応
+                const isArray = Array.isArray(response);
+                const data = isArray ? response : response.data;
+                const hasNextPage = isArray ? data.length >= limit : response.pagination.hasNextPage;
+
+                // 日付変換
+                data.forEach(threadGroup => {
+                    threadGroup.createdAt = new Date(threadGroup.createdAt);
+                    threadGroup.updatedAt = new Date(threadGroup.updatedAt);
+                    threadGroup.updatedDate = threadGroup.updatedAt.toLocaleDateString(
+                        this.g.locale,
+                        { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }
+                    );
+                });
+
+                // 既存キャッシュに追記（重複除外）
+                if (this.threadListMas[projectId]) {
+                    const existingIds = new Set(this.threadListMas[projectId].map(tg => tg.id));
+                    const newItems = data.filter(tg => !existingIds.has(tg.id));
+                    this.threadListMas[projectId].push(...newItems);
+                } else {
+                    this.threadListMas[projectId] = data;
+                }
+
+                return { data, hasNextPage };
+            }),
         );
     }
 

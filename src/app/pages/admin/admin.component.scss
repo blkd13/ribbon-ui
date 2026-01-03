@@ -13,8 +13,62 @@
     transition: all 0.3s 0s ease;
 }
 
+// メニューナビゲーション
+.menu-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+// メニューグループのスタイル
+.menu-group {
+    &-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px;
+        margin-bottom: 4px;
+        color: var(--plain-color-muted, #9CA3AF);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        .group-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+
+        .group-label {
+            opacity: 0.9;
+        }
+    }
+
+    &-items {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        li {
+            margin: 0;
+        }
+    }
+}
+
 // メニューアイテムのスタイル
 .settings-menu-item {
+    .item-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        opacity: 0.8;
+    }
+
     color: var(--plain-color-area, #d1d5db);
 
     &:hover {
@@ -301,4 +355,18 @@
     overflow-y: auto;
 
     @extend .custom-scroll;
+}
+
+// ブレッドクラムコンテナ
+.breadcrumb-container {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--plain-border-color, #333);
+    background: var(--plain-background-area, rgba(255, 255, 255, 0.02));
+}
+
+// コンテンツスクロールエリア
+.content-scroll-area {
+    flex: 1 1 0;
+    overflow-y: auto;
+    min-height: 0;
 }

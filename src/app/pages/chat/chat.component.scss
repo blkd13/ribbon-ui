@@ -467,6 +467,57 @@
     }
 }
 
+// スレッドフィルター入力欄
+.thread-filter-container {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    margin: 0 8px 8px 8px;
+    background-color: var(--plain-background);
+    border: 1px solid var(--plain-border-color);
+    border-radius: 6px;
+    gap: 4px;
+
+    .filter-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--plain-color-area);
+        flex-shrink: 0;
+    }
+
+    .thread-filter-input {
+        flex-grow: 1;
+        border: none;
+        background: transparent;
+        color: var(--plain-color);
+        font-size: 13px;
+        padding: 4px 0;
+        min-width: 0;
+
+        &::placeholder {
+            color: var(--plain-color-area);
+        }
+
+        &:focus {
+            outline: none;
+        }
+    }
+
+    .filter-clear-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: var(--plain-color-area);
+        flex-shrink: 0;
+        transition: color 0.2s ease;
+
+        &:hover {
+            color: var(--plain-color);
+        }
+    }
+}
+
 .tool-group-panel {
     position: relative;
     display: flex;
@@ -500,5 +551,56 @@
         width: 14px;
         height: 14px;
         color: var(--text-color);
+    }
+}
+
+// スレッドフィルター入力欄
+.thread-filter-container {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    margin: 0 8px 8px 8px;
+    background-color: var(--plain-background);
+    border: 1px solid var(--plain-border-color);
+    border-radius: 6px;
+    gap: 4px;
+
+    .filter-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--plain-color-area);
+        flex-shrink: 0;
+    }
+
+    .thread-filter-input {
+        flex-grow: 1;
+        border: none;
+        background: transparent;
+        color: var(--plain-color);
+        font-size: 13px;
+        padding: 4px 0;
+        min-width: 0;
+
+        &::placeholder {
+            color: var(--plain-color-area);
+        }
+
+        &:focus {
+            outline: none;
+        }
+    }
+
+    .filter-clear-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: var(--plain-color-area);
+        flex-shrink: 0;
+        transition: color 0.2s ease;
+
+        &:hover {
+            color: var(--plain-color);
+        }
     }
 }

@@ -185,13 +185,13 @@ export class DynamicDataSource implements DataSource<DynamicFlatNode> {
 
 
 @Component({
-  selector: 'app-tree-selector',
-  imports: [
-    CommonModule, FormsModule,
-    MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
-  ],
-  templateUrl: './tree-selector.component.html',
-  styleUrl: './tree-selector.component.scss'
+    selector: 'app-tree-selector',
+    imports: [
+        CommonModule, FormsModule,
+        MatTreeModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatProgressSpinnerModule,
+    ],
+    templateUrl: './tree-selector.component.html',
+    styleUrl: './tree-selector.component.scss'
 })
 export class TreeSelectorComponent implements OnInit {
 

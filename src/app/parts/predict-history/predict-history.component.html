@@ -1,92 +1,487 @@
-<div class="flex flex-col h-full relative w-full">
-    <p>{{member?.name}}</p>
-    <div class="monthly-summary mb-5">
-        <h1>{{ 'MONTHLY_SUMMARY' | translate }}</h1>
-        <div class="monthly-scroll-container">
-            <table>
-                <thead class="sticky-header">
-                    <tr>
-                        <th>{{ 'MONTH' | translate }}</th>
-                        <th>{{ 'TOTAL_COST_YEN' | translate }}</th>
-                        <th>{{ 'TOTAL_INPUT_TOKENS' | translate }}</th>
-                        <th>{{ 'TOTAL_OUTPUT_TOKENS' | translate }}</th>
-                        <th>{{ 'USAGE_COUNT' | translate }}</th>
-                    </tr>
+<div class="predict-history-container">
+  <!-- ヘッダー -->
+  @if(member && member.name) {
+  <div class="header-section">
+      <!-- <h1>{{ 'USAGE_STATISTICS' | translate }}</h1> -->
+      <span class="member-name">{{member.name}}</span>
+  </div>
+  }
+  <!-- メインコンテンツ: 2ペインレイアウト -->
+  <div class="main-content">
+    <!-- 左ペイン: 期間選択 -->
+    <div class="left-pane">
+      <!-- 総計サマリーカード (選択された期間の合計) -->
+      <div class="summary-cards">
+        <div class="summary-card primary">
+          <mat-icon>payments</mat-icon>
+          <div class="card-content">
+            <div class="card-value">¥{{getSelectedTotal().totalCost|number:'1.0-0'}}</div>
+            <div class="card-label">{{ 'TOTAL_COST' | translate }}</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <mat-icon>analytics</mat-icon>
+          <div class="card-content">
+            <div class="card-value">{{getSelectedTotal().count|number}}</div>
+            <div class="card-label">{{ 'USAGE_COUNT' | translate }}</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <mat-icon>input</mat-icon>
+          <div class="card-content">
+            <div class="card-value">{{getSelectedTotal().totalReqTokens|number}}</div>
+            <div class="card-label">{{ 'INPUT_TOKENS' | translate }}</div>
+          </div>
+        </div>
+        <div class="summary-card">
+          <mat-icon>output</mat-icon>
+          <div class="card-content">
+            <div class="card-value">{{getSelectedTotal().totalResTokens|number}}</div>
+            <div class="card-label">{{ 'OUTPUT_TOKENS' | translate }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 集計期間切り替え -->
+      <div class="period-type-section">
+        <div class="section-header">
+          <span class="section-title">{{ 'AGGREGATION_PERIOD' | translate }}</span>
+          <mat-button-toggle-group [value]="currentPeriodType" (change)="onPeriodTypeChange($event.value)"
+            class="period-toggle">
+            <mat-button-toggle value="month" [matTooltip]="'MONTHLY' | translate">
+              <mat-icon>calendar_month</mat-icon>
+              <span class="toggle-label">{{ 'MONTH' | translate }}</span>
+            </mat-button-toggle>
+            <mat-button-toggle value="month-trend" [matTooltip]="'MONTHLY_TREND' | translate">
+              <mat-icon>trending_up</mat-icon>
+              <span class="toggle-label">{{ 'MONTH' | translate }}({{ 'TREND' | translate }})</span>
+            </mat-button-toggle>
+            <mat-button-toggle value="year" [matTooltip]="'YEARLY' | translate">
+              <mat-icon>event</mat-icon>
+              <span class="toggle-label">{{ 'YEAR' | translate }}</span>
+            </mat-button-toggle>
+            <mat-button-toggle value="year-trend" [matTooltip]="'YEARLY_TREND' | translate">
+              <mat-icon>show_chart</mat-icon>
+              <span class="toggle-label">{{ 'YEAR' | translate }}({{ 'TREND' | translate }})</span>
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+      </div>
+
+      <!-- 推移グラフ表示（推移モード時のみ） -->
+      @if(isTrendMode()) {
+      <div class="trend-charts-container">
+        <!-- コスト/件数切り替え + 凡例表示切替 -->
+        <div class="trend-controls">
+          <div class="trend-view-toggle">
+            <mat-button-toggle-group [value]="trendViewMode" (change)="onTrendViewModeChange($event.value)"
+              class="view-toggle-small">
+              <mat-button-toggle value="cost">
+                <mat-icon>payments</mat-icon>
+                <span class="toggle-label">{{ 'COST' | translate }}</span>
+              </mat-button-toggle>
+              <mat-button-toggle value="count">
+                <mat-icon>tag</mat-icon>
+                <span class="toggle-label">{{ 'COUNT' | translate }}</span>
+              </mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+          <button mat-stroked-button color="primary" class="trend-legend-toggle" (click)="toggleTrendLegendVisibility()">
+            <mat-icon>{{ trendLegendVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
+            <span>{{ trendLegendVisible ? ('HIDE_LEGEND' | translate) : ('SHOW_LEGEND' | translate) }}</span>
+          </button>
+        </div>
+
+        <!-- 各分析レベルのグラフ -->
+        @for(level of analysisLevels; track level) {
+        <div class="trend-chart-card">
+          <div class="trend-chart-header">
+            @switch(level) {
+            @case('throttleKey') {
+            <mat-icon>category</mat-icon>
+            {{ 'BY_THROTTLE_KEY' | translate }}
+            }
+            @case('aplType') {
+            <mat-icon>apps</mat-icon>
+            {{ 'BY_APP_TYPE' | translate }}
+            }
+            @case('model') {
+            <mat-icon>psychology</mat-icon>
+            {{ 'BY_MODEL' | translate }}
+            }
+            @case('provider') {
+            <mat-icon>cloud</mat-icon>
+            {{ 'BY_PROVIDER' | translate }}
+            }
+            }
+          </div>
+          <div class="trend-chart-body">
+            @if(getTrendChartData(level).datasets.length > 0) {
+            <canvas baseChart [data]="getTrendChartData(level)" [options]="trendChartOptions" type="bar">
+            </canvas>
+            } @else {
+            <div class="no-data-message">
+              <mat-icon>info</mat-icon>
+              <span>{{ 'NO_DATA' | translate }}</span>
+            </div>
+            }
+          </div>
+        </div>
+        }
+      </div>
+      }
+
+      <!-- 期間テーブル（推移モードでないときのみ） -->
+      @if(!isTrendMode()) {
+      <div class="period-table-container">
+        <table class="period-table">
+          <thead>
+            <tr>
+              <th class="key-column">{{ 'PERIOD' | translate }}</th>
+              <th class="number-column">{{ 'COST_YEN' | translate }}</th>
+              <th class="number-column">{{ 'COUNT' | translate }}</th>
+              <th class="number-column hide-sm">{{ 'INPUT' | translate }}</th>
+              <th class="number-column hide-sm">{{ 'OUTPUT' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- ALL（全期間）行 -->
+            <tr class="data-row all-row" [class.selected]="isAllSelected()" (click)="selectAllPeriods()">
+              <td class="key-column">
+                <span class="key-text all-label">
+                  <mat-icon>all_inclusive</mat-icon>
+                  {{ 'ALL_PERIODS' | translate }}
+                </span>
+              </td>
+              <td class="number-column">-</td>
+              <td class="number-column">-</td>
+              <td class="number-column hide-sm">-</td>
+              <td class="number-column hide-sm">-</td>
+            </tr>
+            <!-- 期間行 -->
+            @for(period of periodData; track period.key) {
+            <tr class="data-row" [class.selected]="isPeriodSelected(period)" (click)="selectPeriod(period)">
+              <td class="key-column">
+                <span class="key-text">{{period.label}}</span>
+              </td>
+              <td class="number-column">¥{{period.totalCost|number:'1.0-0'}}</td>
+              <td class="number-column">{{period.count|number}}</td>
+              <td class="number-column hide-sm">{{period.totalReqTokens|number}}</td>
+              <td class="number-column hide-sm">{{period.totalResTokens|number}}</td>
+            </tr>
+            }
+            @if(periodData.length === 0) {
+            <tr>
+              <td colspan="5" class="no-data">{{ 'NO_DATA' | translate }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      }
+    </div>
+
+    <!-- 右ペイン: 詳細（タブ形式） -->
+    <div class="right-pane">
+      <!-- 対象期間（タブの外に表示） -->
+      <div class="right-pane-header">
+        <div class="selected-info">
+          <span class="selected-label">{{ 'TARGET_PERIOD' | translate }}:</span>
+          @if(selectedPeriod) {
+          <span class="selected-value">{{selectedPeriod.label}}</span>
+          } @else {
+          <span class="selected-value">{{ 'ALL_PERIODS' | translate }}</span>
+          }
+        </div>
+      </div>
+
+      <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="detail-tabs">
+        <!-- 詳細分析タブ（メイン） -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon>insights</mat-icon>
+            <span>{{ 'DETAILED_BREAKDOWN' | translate }}</span>
+          </ng-template>
+
+          <div class="tab-content breakdown-content">
+            <!-- 表示モード切り替え（3段階） -->
+            <div class="breakdown-view-toggle">
+              <mat-button-toggle-group [(value)]="breakdownViewMode" class="view-toggle">
+                <mat-button-toggle value="cost-chart" [matTooltip]="'COST_CHART' | translate">
+                  <mat-icon>payments</mat-icon>
+                  <span class="toggle-label">{{ 'COST' | translate }}</span>
+                </mat-button-toggle>
+                <mat-button-toggle value="count-chart" [matTooltip]="'COUNT_CHART' | translate">
+                  <mat-icon>tag</mat-icon>
+                  <span class="toggle-label">{{ 'COUNT' | translate }}</span>
+                </mat-button-toggle>
+                <mat-button-toggle value="list" [matTooltip]="'LIST_VIEW' | translate">
+                  <mat-icon>list</mat-icon>
+                  <span class="toggle-label">{{ 'LIST' | translate }}</span>
+                </mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+
+            <!-- 金額グラフ表示モード（縦1列） -->
+            @if(breakdownViewMode === 'cost-chart') {
+            <div class="breakdown-chart-list">
+              @for(level of analysisLevels; track level) {
+              <div class="breakdown-chart-card-single">
+                <div class="breakdown-header">
+                  @switch(level) {
+                  @case('throttleKey') {
+                  <mat-icon>category</mat-icon>
+                  {{ 'BY_THROTTLE_KEY' | translate }}
+                  }
+                  @case('aplType') {
+                  <mat-icon>apps</mat-icon>
+                  {{ 'BY_APP_TYPE' | translate }}
+                  }
+                  @case('model') {
+                  <mat-icon>psychology</mat-icon>
+                  {{ 'BY_MODEL' | translate }}
+                  }
+                  @case('provider') {
+                  <mat-icon>cloud</mat-icon>
+                  {{ 'BY_PROVIDER' | translate }}
+                  }
+                  }
+                </div>
+                <div class="pie-chart-container">
+                  @if(getAnalysisBreakdown(level).length > 0) {
+                  <canvas baseChart [data]="getBreakdownCostChartData(level)" [options]="pieCostChartOptions"
+                    type="pie">
+                  </canvas>
+                  } @else {
+                  <div class="no-data-message">
+                    <mat-icon>info</mat-icon>
+                    <span>{{ 'NO_DATA' | translate }}</span>
+                  </div>
+                  }
+                </div>
+              </div>
+              }
+            </div>
+            }
+
+            <!-- 件数グラフ表示モード（縦1列） -->
+            @if(breakdownViewMode === 'count-chart') {
+            <div class="breakdown-chart-list">
+              @for(level of analysisLevels; track level) {
+              <div class="breakdown-chart-card-single">
+                <div class="breakdown-header">
+                  @switch(level) {
+                  @case('throttleKey') {
+                  <mat-icon>category</mat-icon>
+                  {{ 'BY_THROTTLE_KEY' | translate }}
+                  }
+                  @case('aplType') {
+                  <mat-icon>apps</mat-icon>
+                  {{ 'BY_APP_TYPE' | translate }}
+                  }
+                  @case('model') {
+                  <mat-icon>psychology</mat-icon>
+                  {{ 'BY_MODEL' | translate }}
+                  }
+                  @case('provider') {
+                  <mat-icon>cloud</mat-icon>
+                  {{ 'BY_PROVIDER' | translate }}
+                  }
+                  }
+                </div>
+                <div class="pie-chart-container">
+                  @if(getAnalysisBreakdown(level).length > 0) {
+                  <canvas baseChart [data]="getBreakdownCountChartData(level)" [options]="pieCountChartOptions"
+                    type="pie">
+                  </canvas>
+                  } @else {
+                  <div class="no-data-message">
+                    <mat-icon>info</mat-icon>
+                    <span>{{ 'NO_DATA' | translate }}</span>
+                  </div>
+                  }
+                </div>
+              </div>
+              }
+            </div>
+            }
+
+            <!-- リスト表示モード -->
+            @if(breakdownViewMode === 'list') {
+            <div class="breakdown-grid">
+              @for(level of analysisLevels; track level) {
+              <div class="breakdown-card">
+                <div class="breakdown-header">
+                  @switch(level) {
+                  @case('aplType') {
+                  <mat-icon>apps</mat-icon>
+                  {{ 'BY_APP_TYPE' | translate }}
+                  }
+                  @case('provider') {
+                  <mat-icon>cloud</mat-icon>
+                  {{ 'BY_PROVIDER' | translate }}
+                  }
+                  @case('throttleKey') {
+                  <mat-icon>key</mat-icon>
+                  {{ 'BY_THROTTLE_KEY' | translate }}
+                  }
+                  @case('model') {
+                  <mat-icon>psychology</mat-icon>
+                  {{ 'BY_MODEL' | translate }}
+                  }
+                  }
+                </div>
+                <div class="breakdown-list">
+                  @for(item of getAnalysisBreakdown(level) | slice:0:8; track item.key) {
+                  <div class="breakdown-item">
+                    <span class="item-key">{{item.key || '(empty)'}}</span>
+                    <div class="item-values">
+                      <span class="item-cost">¥{{item.totalCost|number:'0.0-0'}}</span>
+                      <span class="item-count">{{item.count|number}}{{ 'ITEMS_SHORT' | translate }}</span>
+                      <span
+                        class="item-tokens hide-sm">{{item.totalReqTokens|number}}/{{item.totalResTokens|number}}</span>
+                    </div>
+                  </div>
+                  }
+                  @if(getAnalysisBreakdown(level).length === 0) {
+                  <div class="breakdown-item no-data-item">
+                    <span class="item-key">{{ 'NO_DATA' | translate }}</span>
+                  </div>
+                  }
+                </div>
+              </div>
+              }
+            </div>
+            }
+          </div>
+        </mat-tab>
+
+        <!-- 日別推移タブ -->
+        <mat-tab [disabled]="!isDetailTabsEnabled()">
+          <ng-template mat-tab-label>
+            <mat-icon>bar_chart</mat-icon>
+            <span>{{ 'DAILY_TREND' | translate }}</span>
+          </ng-template>
+
+          <div class="tab-content daily-trend-content">
+            @if(dailySummaryData.length > 0) {
+            <!-- チャートエリア -->
+            <div class="chart-container">
+              <canvas baseChart [data]="chartData" [options]="chartOptions" type="bar">
+              </canvas>
+            </div>
+
+            <!-- 日別サマリーテーブル -->
+            <div class="daily-summary-table-container">
+              <table class="daily-summary-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'DATE' | translate }}</th>
+                    <th class="number-column">{{ 'COST_YEN' | translate }}</th>
+                    <th class="number-column">{{ 'COUNT' | translate }}</th>
+                    <th class="number-column hide-sm">{{ 'INPUT' | translate }}</th>
+                    <th class="number-column hide-sm">{{ 'OUTPUT' | translate }}</th>
+                  </tr>
                 </thead>
                 <tbody>
-                    @for(summary of monthlySummary;track summary.month){
-                    <tr>
-                        <td>{{summary.month}}</td>
-                        <td style="text-align: right;">{{summary.totalCost|number:'0.2-2'}}</td>
-                        <td style="text-align: right;">{{summary.totalReqTokens|number}}</td>
-                        <td style="text-align: right;">{{summary.totalResTokens|number}}</td>
-                        <td style="text-align: right;">{{summary.count}}</td>
-                    </tr>
-                    }
+                  @for(day of dailySummaryData; track day.date) {
+                  <tr>
+                    <td>{{day.date}}</td>
+                    <td class="number-column">¥{{day.totalCost|number:'1.0-0'}}</td>
+                    <td class="number-column">{{day.count|number}}</td>
+                    <td class="number-column hide-sm">{{day.totalReqTokens|number}}</td>
+                    <td class="number-column hide-sm">{{day.totalResTokens|number}}</td>
+                  </tr>
+                  }
                 </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="history-container flex-grow">
-        <div class="history-header">
-            <h1>{{ 'DETAILED_HISTORY' | translate }}</h1>
-            <div class="total-count">
-                {{ 'TOTAL_COUNT' | translate }}: {{totalCount}} {{ 'ITEMS' | translate }}
+              </table>
             </div>
-        </div>
-        <div class="history-note">
-            <small>{{ 'CLICK_ROW_FOR_DETAILS' | translate }}</small>
-        </div>
-        <table class="history-table">
-            <tr>
-                <th>No.</th>
-                <th>{{ 'TIME' | translate }}</th>
-                <th>{{ 'MODEL' | translate }}</th>
-                <th>{{ 'COST_YEN' | translate }}</th>
-                <th>{{ 'INPUT' | translate }}</th>
-                <th>{{ 'OUTPUT' | translate }}</th>
-                <th>{{ 'STATUS' | translate }}</th>
-            </tr>
-            <tbody>
-                @for(predict of predictHistory;track $index){
-                <tr class="clickable-row" (click)="openPredictDetail(predict)"
+            } @else {
+            <div class="no-data-message">
+              <mat-icon>info</mat-icon>
+              <span>{{ 'NO_DATA' | translate }}</span>
+            </div>
+            }
+          </div>
+        </mat-tab>
+
+        <!-- 詳細履歴タブ -->
+        <mat-tab [disabled]="!isDetailTabsEnabled()">
+          <ng-template mat-tab-label>
+            <mat-icon>history</mat-icon>
+            <span>{{ 'DETAILED_HISTORY' | translate }}</span>
+          </ng-template>
+
+          <div class="tab-content">
+            <div class="history-header">
+              <span class="record-count">
+                {{filteredHistoryCount|number}} {{ 'ITEMS' | translate }}
+              </span>
+            </div>
+
+            <div class="history-table-container">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <th>{{ 'TIME' | translate }}</th>
+                    <th>{{ 'MODEL' | translate }}</th>
+                    <th class="number-column">{{ 'COST_YEN' | translate }}</th>
+                    <th class="number-column hide-sm">{{ 'INPUT' | translate }}</th>
+                    <th class="number-column hide-sm">{{ 'OUTPUT' | translate }}</th>
+                    <th>{{ 'STATUS' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for(predict of pagedHistory; track $index) {
+                  <tr class="clickable-row" (click)="openPredictDetail(predict)"
                     [title]="('CLICK_FOR_DETAILS' | translate) + ': ' + predict.idempotency_key">
-                    <td style="text-align: right;">{{currentPage * pageSize + $index + 1}}</td>
-                    <td>{{predict.created_at|date:'yyyy-MM-dd HH:mm:ss'}}</td>
-                    <td>{{predict.model}}</td>
-                    <td style="text-align: right;">{{predict.cost*150|number:'0.2-2'}}</td>
-                    <td style="text-align: right;">{{predict.req_token|number}}</td>
-                    <td style="text-align: right;">{{predict.res_token|number}}</td>
-                    <td>
-                        <span class="status-badge" [class]="predict.status">
-                            {{predict.status}}
-                        </span>
+                    <td class="number-column">{{historyCurrentPage * historyPageSize + $index + 1}}</td>
+                    <td class="time-column">{{predict.created_at|date:'yyyy-MM-dd HH:mm'}}</td>
+                    <td class="model-column">
+                      <span class="model-badge">{{predict.model}}</span>
                     </td>
-                </tr>
-                }
-            </tbody>
-        </table>
-        <div class="paginator-container">
-            <div class="paginator-with-jump">
-                <mat-paginator [length]="totalCount" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
-                    [pageIndex]="currentPage" (page)="onPageChange($event)" showFirstLastButtons>
-                </mat-paginator>
-                <div class="page-jump-controls">
-                    <label for="pageInput">{{ 'PAGE_NAVIGATION' | translate }}:</label>
-                    <input id="pageInput" type="number" [(ngModel)]="targetPage" 
-                           [min]="1" [max]="totalPages" 
-                           (keyup.enter)="goToPage()" 
-                           class="page-input">
-                    <span class="page-total">/ {{totalPages}}</span>
-                    <button mat-button (click)="goToPage()" class="go-button">{{ 'GO' | translate }}</button>
-                </div>
+                    <td class="number-column">¥{{predict.cost*150|number:'0.2-2'}}</td>
+                    <td class="number-column hide-sm">{{predict.req_token|number}}</td>
+                    <td class="number-column hide-sm">{{predict.res_token|number}}</td>
+                    <td>
+                      <span class="status-badge" [class]="predict.status">
+                        {{predict.status}}
+                      </span>
+                    </td>
+                  </tr>
+                  }
+                  @if(pagedHistory.length === 0) {
+                  <tr>
+                    <td colspan="7" class="no-data">{{ 'NO_DATA' | translate }}</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
             </div>
-        </div>
+
+            <div class="paginator-section">
+              <mat-paginator #historyPaginator [length]="filteredHistoryCount" [pageSize]="historyPageSize"
+                [pageSizeOptions]="[10, 20, 50]" [pageIndex]="historyCurrentPage" (page)="onHistoryPageChange($event)"
+                showFirstLastButtons>
+              </mat-paginator>
+              <div class="page-jump">
+                <input type="number" [(ngModel)]="historyTargetPage" [min]="1" [max]="historyTotalPages"
+                  (keyup.enter)="goToHistoryPage()" class="page-input">
+                <span>/ {{historyTotalPages}}</span>
+                <button mat-stroked-button (click)="goToHistoryPage()">{{ 'GO' | translate }}</button>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
     </div>
+  </div>
 </div>
+
 <!-- ローディング -->
-@if(isLoading){
+@if(isLoading) {
 <div class="loading-cover loading-cover--sub">
-    <mat-spinner></mat-spinner>
+  <mat-spinner></mat-spinner>
 </div>
 }

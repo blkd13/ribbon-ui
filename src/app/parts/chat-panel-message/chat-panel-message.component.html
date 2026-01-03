@@ -108,7 +108,7 @@
       <!-- Non-text content is file -->
       <!-- File display grouping -->
       @if($index === 0 || message.contents[$index - 1].type !== content.type){
-      <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto">
+      <div class="flex justify-start gap-2 w-full p-5 mb-5 overflow-x-auto flex-wrap">
         @for(fileContent of getConsecutiveFiles(message.contents, $index); track fileContent.id){
         <app-doc-tag [removable]="false" [content]="fileContent" (updated)="fileSelectionUpdate()"
           (remove)="message.cacheId||removeDoc(fileContent)">
@@ -126,7 +126,7 @@
         @let isRunning = info.isRunning && !info.isInteractive;
         <button class="flex items-center command-tag cursor-pointer relative overflow-hidden"
           (click)="openToolCallDialog($event, toolCallSet)">
-          <img appInlineSvg [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 20px;height: auto;"
+          <img appInlineSvg [src]="'image/'+info.group.split('-')[0]+'-logo.svg'" style="width: 20px;height:auto;"
             class="mat-primary" />
           <div class="flex flex-col items-start">
             <div>{{info.name}}</div>
@@ -222,7 +222,7 @@
 
   <!-- Loading -->
   <!-- Whether to add animation [@fadeAnimation] -->
-  <!-- 
+  <!--
   @if (['Waiting'].includes(message.status)) {
   <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10">
     <mat-spinner style="transform: scale(0.4);"></mat-spinner>
@@ -230,7 +230,7 @@
   }
   -->
   <!-- #BFAE9D -->
-  <!-- 
+  <!--
   @if(vm.messageGroup.role==='assistant' && vm.messageGroup.source){
   <div class="ml-2 mt-2 align-middle text-xs whitespace-nowrap message-color-assistant-model-name cursor-default"
     style="height: 0px;margin: 5px 0;" [title]="vm.messageGroup.source">

@@ -1,453 +1,290 @@
-<!-- Member Management Template の権限チェック修正版 -->
+<!-- Member Management - Refactored Version -->
+<!-- Using AdminListPageComponent for common patterns -->
 
-<div class="container">
-    <h2>Member Management</h2>
-    <div class="layout-container">
-        <!-- 左側：メンバー一覧 -->
-        <div class="table-container">
-            <div class="table-header">
-                <h3>Members & Divisions</h3>
-                @if (selectedScope) {
-                <div class="scope-context">
-                    <small class="text-muted">Filtered by scope: <strong>{{ selectedScope.scopeType }}: {{
-                            selectedScope.scopeId }}</strong></small>
+<app-admin-list-page
+  title="Member Management"
+  subtitle=""
+  [data]="filteredMembers"
+  [columns]="columns"
+  [filters]="filters"
+  [filterValues]="filterValues"
+  [sortState]="sortState"
+  [headerActions]="headerActions"
+  [bulkActions]="bulkActions"
+  [rowActions]="rowActions"
+  [selectedIds]="selectedIds"
+  [activeItemId]="selectedMember?.id || null"
+  [showCheckbox]="true"
+  [isLoading]="isLoading"
+  [isFormVisible]="isFormVisible"
+  emptyMessage="No members found"
+  emptyIcon="people_outline"
+  [trackByFn]="trackByMember"
+  [rowClassFn]="getRowClass.bind(this)"
+  (filterChange)="onFilterChange($event)"
+  (sortChange)="onSortChange($event)"
+  (itemSelect)="onItemSelect($event)"
+  (selectionChange)="onSelectionChange($event)"
+  (actionClick)="onActionClick($event)"
+>
+  <!-- Form Panel -->
+  <ng-template #formPanel>
+    <div class="member-form">
+      <!-- Form Header -->
+      <div class="form-header">
+        <h3>{{ getFormTitle() }}</h3>
+        <button mat-icon-button type="button" (click)="closeForm()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Division Form -->
+      @if (formType === 'division') {
+        <form [formGroup]="divisionForm" (ngSubmit)="submitForm()">
+          <div class="form-section">
+            <h4>Basic Information</h4>
+
+            <div class="form-group">
+              <label for="name">Division Name<span class="required">*</span></label>
+              <input id="name" type="text" formControlName="name" class="form-control"
+                [ngClass]="{'invalid': hasFormError('name')}">
+              @if (hasFormError('name')) {
+                <div class="error-message">{{ getFormErrorMessage('name') }}</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="label">Display Label<span class="required">*</span></label>
+              <input id="label" type="text" formControlName="label" class="form-control"
+                [ngClass]="{'invalid': hasFormError('label')}">
+              @if (hasFormError('label')) {
+                <div class="error-message">{{ getFormErrorMessage('label') }}</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" formControlName="description" class="form-control" rows="3"></textarea>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" formControlName="isActive">
+                Active
+              </label>
+            </div>
+          </div>
+
+          @if (isEditMode && selectedDivision) {
+            <div class="form-section">
+              <h4>Statistics & Settings</h4>
+
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <span class="stat-label">Total Members</span>
+                  <span class="stat-value">{{ divisionStats?.totalMembers || 0 }}</span>
                 </div>
+                <div class="stat-item">
+                  <span class="stat-label">Active Members</span>
+                  <span class="stat-value">{{ divisionStats?.activeMembers || 0 }}</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Created</label>
+                <div class="readonly-field">{{ selectedDivision.createdAt | date:'yyyy/MM/dd HH:mm' }}</div>
+              </div>
+
+              <div class="form-group">
+                <label>Last Updated</label>
+                <div class="readonly-field">{{ selectedDivision.updatedAt | date:'yyyy/MM/dd HH:mm' }}</div>
+              </div>
+
+              <div class="form-group">
+                <label>Division ID</label>
+                <div class="readonly-field">{{ selectedDivision.id }}</div>
+              </div>
+            </div>
+          }
+
+          <div class="button-group">
+            <button mat-raised-button type="button" (click)="closeForm()">
+              <mat-icon>cancel</mat-icon>
+              Cancel
+            </button>
+            <button mat-raised-button color="primary" type="submit"
+              [disabled]="divisionForm.invalid || isLoading ||
+                (isEditMode && !canUpdateDivision()) ||
+                (!isEditMode && !canCreateDivision())">
+              <mat-icon>{{ isEditMode ? 'save' : 'add' }}</mat-icon>
+              {{ isEditMode ? 'Update' : 'Create' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      <!-- Member Add Form -->
+      @else if (formType === 'member-add') {
+        <form [formGroup]="memberAddForm" (ngSubmit)="submitForm()">
+          <div class="form-section">
+            <h4>User Selection</h4>
+
+            <div class="form-group">
+              <label for="selectedUser">User<span class="required">*</span></label>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Search User</mat-label>
+                <input type="text" matInput formControlName="selectedUser"
+                  placeholder="Search by name or email..." [matAutocomplete]="userAuto"
+                  [ngClass]="{'invalid': hasFormError('selectedUser')}">
+                <mat-autocomplete #userAuto="matAutocomplete" [displayWith]="displayUser">
+                  @for (user of filteredUsers | async; track user.id) {
+                    <mat-option [value]="user" (onSelectionChange)="onUserSelected(user)">
+                      <div class="user-option">
+                        <div class="user-name">{{ user.name }}</div>
+                        <div class="user-email">{{ user.email }}</div>
+                      </div>
+                    </mat-option>
+                  }
+                </mat-autocomplete>
+              </mat-form-field>
+              @if (hasFormError('selectedUser')) {
+                <div class="error-message">{{ getFormErrorMessage('selectedUser') }}</div>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="role">Role<span class="required">*</span></label>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Select Role</mat-label>
+                <mat-select formControlName="role" [ngClass]="{'invalid': hasFormError('role')}">
+                  @for (role of availableRoles; track role) {
+                    <mat-option [value]="role"
+                      [disabled]="memberAddForm.get('selectedUser')?.value && !canAssignRole(memberAddForm.get('selectedUser')?.value?.id, role)">
+                      {{ role }}
+                      @if (memberAddForm.get('selectedUser')?.value && !canAssignRole(memberAddForm.get('selectedUser')?.value?.id, role)) {
+                        <span class="role-restriction"> (Insufficient permission)</span>
+                      }
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (hasFormError('role')) {
+                <div class="error-message">{{ getFormErrorMessage('role') }}</div>
+              }
+            </div>
+
+            <div class="info-message">
+              <mat-icon class="info-icon">info</mat-icon>
+              <span>{{ 'ASSIGNABLE_ROLES_ONLY_MESSAGE' | translate }}</span>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button mat-raised-button type="button" (click)="closeForm()">
+              <mat-icon>cancel</mat-icon>
+              Cancel
+            </button>
+            <button mat-raised-button color="primary" type="submit"
+              [disabled]="memberAddForm.invalid || isLoading || !canAssignMembers()">
+              <mat-icon>{{ isLoading ? 'hourglass_empty' : 'person_add' }}</mat-icon>
+              {{ isLoading ? 'Adding...' : 'Add Member' }}
+            </button>
+          </div>
+        </form>
+      }
+
+      <!-- Member Edit Form -->
+      @else {
+        <form [formGroup]="memberForm" (ngSubmit)="submitForm()">
+          <div class="form-section">
+            <h4>Member Information</h4>
+
+            <div class="form-group">
+              <label>Name</label>
+              <div class="readonly-field">
+                {{ selectedMember?.user?.name || '' }}
+                @if (selectedMember?.userId === getCurrentUserId()) {
+                  <span class="self-indicator">(You)</span>
                 }
-                <div class="action-buttons">
-                    <button mat-raised-button type="button" class="btn btn-sm btn-secondary" (click)="createDivision()"
-                        [disabled]="!canCreateDivision()"
-                        [matTooltip]="!canCreateDivision() ? ('NO_DIVISION_CREATE_PERMISSION' | translate) : ''">
-                        <mat-icon>domain</mat-icon>
-                        Create Division
-                    </button>
-                    <button mat-raised-button type="button" class="btn btn-sm btn-primary" (click)="openAddMemberForm()"
-                        [disabled]="!selectedScope || !canAssignMembers()"
-                        [matTooltip]="!canAssignMembers() ? ('NO_MEMBER_ADD_PERMISSION' | translate) : ''">
-                        <mat-icon>person_add</mat-icon>
-                        Add Member
-                    </button>
-                </div>
+              </div>
             </div>
 
-            <!-- フィルターセクション（大した数じゃないので要らない）-->
-            <div class="filters-section">
-                <div class="filters-form" [formGroup]="filterForm">
-                    <!-- Search -->
-                    <mat-form-field appearance="outline" class="search-field">
-                        <mat-label>Search</mat-label>
-                        <input matInput [formControl]="searchControl" placeholder="Search by name or email">
-                        <mat-icon matSuffix>search</mat-icon>
-                    </mat-form-field>
-
-                    <!-- Division Filter -->
-                    <mat-form-field appearance="outline" class="filter-field">
-                        <mat-label>Division</mat-label>
-                        <mat-select formControlName="divisionId">
-                            <mat-option value="">All</mat-option>
-                            @for (division of divisions; track division.id) {
-                            <mat-option [value]="division.id">{{ division.name }}</mat-option>
-                            }
-                        </mat-select>
-                    </mat-form-field>
-
-                    <!-- Role Filter -->
-                    <mat-form-field appearance="outline" class="filter-field">
-                        <mat-label>Role</mat-label>
-                        <mat-select formControlName="role">
-                            <mat-option value="">All</mat-option>
-                            @for (role of availableRoles; track role) {
-                            <mat-option [value]="role">{{ role }}</mat-option>
-                            }
-                        </mat-select>
-                    </mat-form-field>
-
-                    <!-- Active Filter -->
-                    <mat-form-field appearance="outline" class="filter-field">
-                        <mat-label>Status</mat-label>
-                        <mat-select formControlName="isActive">
-                            <mat-option [value]="true">Active</mat-option>
-                            <mat-option [value]="false">Inactive</mat-option>
-                        </mat-select>
-                    </mat-form-field>
-                </div>
+            <div class="form-group">
+              <label>Email</label>
+              <div class="readonly-field">{{ selectedMember?.user?.email || '' }}</div>
             </div>
 
-            <!-- Bulk Actions - 権限チェック追加 -->
-            @if(selectedMembers.size > 0 && canManageUserRoles()) {
-            <div class="bulk-actions">
-                <span class="selection-count">{{ selectedMembers.size }} selected</span>
-                <button mat-button color="warn" (click)="bulkRemoveMembers()" [disabled]="isLoading">
-                    <mat-icon>delete</mat-icon>
-                    Bulk Remove
-                </button>
-            </div>
-            }
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>
-                            <mat-checkbox [checked]="isAllSelected()" [indeterminate]="isSomeSelected()"
-                                (change)="toggleAllSelection()" [disabled]="!canManageUserRoles()">
-                            </mat-checkbox>
-                        </th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Roles</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (member of filteredMembers; track member.id) {
-                    <tr [class.selected]="selectedMember?.id === member.id"
-                        [class.self-member]="member.userId === getCurrentUserId()" (click)="selectMember(member)">
-                        <td>
-                            <mat-checkbox [checked]="selectedMembers.has(member.id)"
-                                (change)="toggleMemberSelection(member.id)" (click)="$event.stopPropagation()"
-                                [disabled]="!canRemoveMember(member)">
-                            </mat-checkbox>
-                        </td>
-                        <td>
-                            {{ member.user.name }}
-                            @if(member.userId === getCurrentUserId()) {
-                            <span class="self-indicator">(You)</span>
-                            }
-                            <div class="text-xs text-[#888]">{{ member.user.id }}</div>
-                        </td>
-                        <td>{{ member.user.email }}</td>
-                        <td>
-                            <div class="roles-container">
-                                @for (role of member.roles; track role) {
-                                <div class="tag role-tag">{{ role }}</div>
-                                }
-                            </div>
-                        </td>
-                        <td>
-                            <mat-icon class="status-icon">{{ member.isActive ? 'check_circle' : 'cancel' }}</mat-icon>
-                        </td>
-                        <td class="actions-cell">
-                            <!-- 編集ボタン - 自分自身は編集不可 -->
-                            @if(canEditMember(member)) {
-                            <button mat-icon-button class="mr-5"
-                                (click)="selectMember(member); $event.stopPropagation();" matTooltip="Edit">
-                                <mat-icon>edit</mat-icon>
-                            </button>
-                            } @else {
-                            <button mat-icon-button class="mr-5" disabled
-                                [matTooltip]="member.userId === getCurrentUserId() ? ('CANNOT_EDIT_OWN_ROLE' | translate) : ('NO_EDIT_MEMBER_PERMISSION' | translate)">
-                                <mat-icon>edit_off</mat-icon>
-                            </button>
-                            }
-
-                            <!-- 削除ボタン - 自分自身は削除不可 -->
-                            <button mat-icon-button color="warn"
-                                [matTooltip]="!canRemoveMember(member) ? 
-                                    (member.userId === getCurrentUserId() ? ('CANNOT_DELETE_SELF' | translate) : ('NO_DELETE_MEMBER_PERMISSION' | translate)) : ('REMOVE' | translate)"
-                                (click)="removeMember(member); $event.stopPropagation()"
-                                [disabled]="!canRemoveMember(member) || isLoading">
-                                <mat-icon>{{ canRemoveMember(member) ? 'delete' : 'block' }}</mat-icon>
-                            </button>
-                        </td>
-                    </tr>
-                    } @empty {
-                    <tr>
-                        <td colspan="7" class="no-data">
-                            @if(isLoading) {
-                            <div class="loading-container">
-                                <mat-icon class="loading-icon">hourglass_empty</mat-icon>
-                                <span>Loading...</span>
-                            </div>
-                            } @else {
-                            <div class="empty-state">
-                                <mat-icon>people_outline</mat-icon>
-                                <p>No members found</p>
-                                @if (!selectedScope) {
-                                <p>Please select a scope</p>
-                                } @else if (searchControl.value) {
-                                <p>Try adjusting your search criteria</p>
-                                } @else {
-                                <p>Add members to get started</p>
-                                }
-                            </div>
-                            }
-                        </td>
-                    </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <!-- 右側：編集フォーム -->
-        @if(isFormVisible){
-        <div class="form-container">
-            <div class="form-header">
-                <h3>{{ getFormTitle() }}</h3>
-                <button mat-icon-button type="button" (click)="closeForm()">
-                    <mat-icon>close</mat-icon>
-                </button>
+            <div class="form-group">
+              <label>User ID</label>
+              <div class="readonly-field">{{ selectedMember?.user?.id || '' }}</div>
             </div>
 
-            <!-- Division Form は既存のまま -->
-            @if(formType === 'division') {
-            <form [formGroup]="divisionForm" (ngSubmit)="submitForm()">
-                <div class="form-section">
-                    <h4>Basic Information</h4>
+            <div class="form-group">
+              <label>Current Division</label>
+              <div class="readonly-field">{{ selectedMember?.divisionName || '' }}</div>
+            </div>
 
-                    <!-- Division Name -->
-                    <div class="form-group">
-                        <label for="name">Division Name<span class="required">*</span></label>
-                        <input id="name" type="text" formControlName="name" class="form-control"
-                            [ngClass]="{'invalid': hasFormError('name')}">
-                        @if(hasFormError('name')){
-                        <div class="error-message">{{ getFormErrorMessage('name') }}</div>
-                        }
-                    </div>
-
-                    <!-- Division Label -->
-                    <div class="form-group">
-                        <label for="label">Display Label<span class="required">*</span></label>
-                        <input id="label" type="text" formControlName="label" class="form-control"
-                            [ngClass]="{'invalid': hasFormError('label')}">
-                        @if(hasFormError('label')){
-                        <div class="error-message">{{ getFormErrorMessage('label') }}</div>
-                        }
-                    </div>
-
-                    <!-- Description -->
-                    <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" formControlName="description" class="form-control"
-                            rows="3"></textarea>
-                    </div>
-
-                    <!-- Is Active -->
-                    <div class="form-group checkbox-group">
-                        <label>
-                            <input type="checkbox" formControlName="isActive">
-                            Active
-                        </label>
-                    </div>
-                </div>
-
-                @if(isEditMode && selectedDivision) {
-                <!-- Division Statistics -->
-                <div class="form-section">
-                    <h4>Statistics & Settings</h4>
-
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <span class="stat-label">Total Members</span>
-                            <span class="stat-value">{{ divisionStats?.totalMembers || 0 }}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Active Members</span>
-                            <span class="stat-value">{{ divisionStats?.activeMembers || 0 }}</span>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Created</label>
-                        <div class="readonly-field">{{ selectedDivision.createdAt | date:'yyyy/MM/dd HH:mm' }}</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Last Updated</label>
-                        <div class="readonly-field">{{ selectedDivision.updatedAt | date:'yyyy/MM/dd HH:mm' }}</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Division ID</label>
-                        <div class="readonly-field">{{ selectedDivision.id }}</div>
-                    </div>
-                </div>
-                }
-
-                <!-- Division Form Actions -->
-                <div class="form-actions">
-                    <button mat-raised-button type="button" color="secondary" (click)="closeForm()">
-                        Cancel
-                    </button>
-                    <button mat-raised-button type="submit" color="primary" [disabled]="divisionForm.invalid || isLoading || 
-                                (isEditMode && !canUpdateDivision()) ||
-                                (!isEditMode && !canCreateDivision())">
-                        {{ isEditMode ? 'Update' : 'Create' }}
-                    </button>
-                </div>
-            </form>
+            @if (selectedMember && !canEditMember(selectedMember)) {
+              <div class="warning-message">
+                <mat-icon class="warning-icon">warning</mat-icon>
+                <span>
+                  @if (selectedMember.userId === getCurrentUserId()) {
+                    {{ 'CANNOT_EDIT_OWN_ROLE' | translate }}
+                  } @else {
+                    {{ 'NO_EDIT_MEMBER_ROLE_PERMISSION' | translate }}
+                  }
+                </span>
+              </div>
             }
+          </div>
 
-            <!-- Member Add Form - ロール選択肢の動的変更 -->
-            @else if(formType === 'member-add') {
-            <form [formGroup]="memberAddForm" (ngSubmit)="submitForm()">
-                <div class="form-section">
-                    <h4>User Selection</h4>
+          <div class="form-section">
+            <h4>Role Assignment</h4>
 
-                    <!-- User Search/Select -->
-                    <div class="form-group">
-                        <label for="selectedUser">User<span class="required">*</span></label>
-                        <mat-form-field appearance="outline" class="full-width">
-                            <mat-label>Search User</mat-label>
-                            <input type="text" matInput formControlName="selectedUser"
-                                placeholder="Search by name or email..." [matAutocomplete]="userAuto"
-                                [ngClass]="{'invalid': hasFormError('selectedUser')}">
-                            <mat-autocomplete #userAuto="matAutocomplete" [displayWith]="displayUser">
-                                @for(user of filteredUsers | async; track user.id) {
-                                <mat-option [value]="user" (onSelectionChange)="onUserSelected(user)">
-                                    <div class="user-option">
-                                        <div class="user-name">{{ user.name }}</div>
-                                        <div class="user-email">{{ user.email }}</div>
-                                    </div>
-                                </mat-option>
-                                }
-                            </mat-autocomplete>
-                        </mat-form-field>
-                        @if(hasFormError('selectedUser')){
-                        <div class="error-message">{{ getFormErrorMessage('selectedUser') }}</div>
-                        }
-                    </div>
+            <div class="form-group">
+              <label for="roles">Roles<span class="required">*</span></label>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Select Roles</mat-label>
+                <mat-select formControlName="roles" multiple [ngClass]="{'invalid': hasFormError('roles')}"
+                  [disabled]="!!selectedMember && !canEditMember(selectedMember)">
+                  @for (role of availableRoles; track role) {
+                    <mat-option [value]="role"
+                      [disabled]="!!selectedMember && !canAssignRole(selectedMember.userId, role)">
+                      {{ role }}
+                      @if (!!selectedMember && !canAssignRole(selectedMember.userId, role)) {
+                        <span class="role-restriction"> (Insufficient permission)</span>
+                      }
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (hasFormError('roles')) {
+                <div class="error-message">{{ getFormErrorMessage('roles') }}</div>
+              }
+            </div>
 
-                    <!-- Role Selection - 動的に制限 -->
-                    <div class="form-group">
-                        <label for="role">Role<span class="required">*</span></label>
-                        <mat-form-field appearance="outline" class="full-width">
-                            <mat-label>Select Role</mat-label>
-                            <mat-select formControlName="role" [ngClass]="{'invalid': hasFormError('role')}">
-                                @for(role of availableRoles; track role) {
-                                <mat-option [value]="role"
-                                    [disabled]="memberAddForm.get('selectedUser')?.value && !canAssignRole(memberAddForm.get('selectedUser')?.value?.id, role)">
-                                    {{ role }}
-                                    @if(memberAddForm.get('selectedUser')?.value &&
-                                    !canAssignRole(memberAddForm.get('selectedUser')?.value?.id, role)) {
-                                    <span class="role-restriction"> (権限不足)</span>
-                                    }
-                                </mat-option>
-                                }
-                            </mat-select>
-                        </mat-form-field>
-                        @if(hasFormError('role')){
-                        <div class="error-message">{{ getFormErrorMessage('role') }}</div>
-                        }
-                    </div>
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" formControlName="isActive"
+                  [disabled]="!!selectedMember && !canEditMember(selectedMember)">
+                Active Member
+              </label>
+            </div>
+          </div>
 
-                    <!-- Info Message - 権限に関する説明 -->
-                    <div class="info-message">
-                        <mat-icon class="info-icon">info</mat-icon>
-                        <span>{{ 'ASSIGNABLE_ROLES_ONLY_MESSAGE' | translate }}</span>
-                    </div>
-                </div>
-
-                <!-- Member Add Form Actions -->
-                <div class="form-actions">
-                    <button mat-raised-button type="button" color="secondary" (click)="closeForm()">
-                        Cancel
-                    </button>
-                    <button mat-raised-button type="submit" color="primary"
-                        [disabled]="memberAddForm.invalid || isLoading || !canAssignMembers()">
-                        <mat-icon>{{ isLoading ? 'hourglass_empty' : 'person_add' }}</mat-icon>
-                        {{ isLoading ? 'Adding...' : 'Add Member' }}
-                    </button>
-                </div>
-            </form>
-            }
-
-            <!-- Member Edit Form - 権限チェック強化 -->
-            @else {
-            <form [formGroup]="memberForm" (ngSubmit)="submitForm()">
-                <div class="form-section">
-                    <h4>Member Information</h4>
-
-                    <!-- Member Basic Info (Read-only) -->
-                    <div class="form-group">
-                        <label>Name</label>
-                        <div class="readonly-field">
-                            {{ selectedMember?.user?.name || '' }}
-                            @if(selectedMember?.userId === getCurrentUserId()) {
-                            <span class="self-indicator">(You)</span>
-                            }
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Email</label>
-                        <div class="readonly-field">{{ selectedMember?.user?.email || '' }}</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>User ID</label>
-                        <div class="readonly-field">{{ selectedMember?.user?.id || '' }}</div>
-                    </div>
-
-                    <!-- Current Division (Read-only) -->
-                    <div class="form-group">
-                        <label>Current Division</label>
-                        <div class="readonly-field">{{ selectedMember?.divisionName || '' }}</div>
-                    </div>
-
-                    <!-- 権限警告メッセージ -->
-                    @if(selectedMember && !canEditMember(selectedMember)) {
-                    <div class="warning-message">
-                        <mat-icon class="warning-icon">warning</mat-icon>
-                        <span>
-                            @if(selectedMember.userId === getCurrentUserId()) {
-                            {{ 'CANNOT_EDIT_OWN_ROLE' | translate }}
-                            } @else {
-                            {{ 'NO_EDIT_MEMBER_ROLE_PERMISSION' | translate }}
-                            }
-                        </span>
-                    </div>
-                    }
-                </div>
-
-                <div class="form-section">
-                    <h4>Role Assignment</h4>
-
-                    <!-- Roles (Multiple Selection) - 動的に制限 -->
-                    <div class="form-group">
-                        <label for="roles">Roles<span class="required">*</span></label>
-                        <mat-form-field appearance="outline" class="full-width">
-                            <mat-label>Select Roles</mat-label>
-                            <mat-select formControlName="roles" multiple [ngClass]="{'invalid': hasFormError('roles')}"
-                                [disabled]="!!selectedMember && !canEditMember(selectedMember)">
-                                @for (role of availableRoles; track role) {
-                                <mat-option [value]="role"
-                                    [disabled]="!!selectedMember && !canAssignRole(selectedMember.userId, role)">
-                                    {{ role }}
-                                    @if(!!selectedMember && !canAssignRole(selectedMember.userId, role)) {
-                                    <span class="role-restriction"> (権限不足)</span>
-                                    }
-                                </mat-option>
-                                }
-                            </mat-select>
-                        </mat-form-field>
-                        @if(hasFormError('roles')){
-                        <div class="error-message">{{ getFormErrorMessage('roles') }}</div>
-                        }
-                    </div>
-
-                    <!-- Is Active -->
-                    <div class="form-group checkbox-group">
-                        <label>
-                            <input type="checkbox" formControlName="isActive"
-                                [disabled]="!!selectedMember && !canEditMember(selectedMember)">
-                            Active Member
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Member Form Actions -->
-                <div class="form-actions">
-                    <button mat-raised-button type="button" color="secondary" (click)="closeForm()">
-                        Cancel
-                    </button>
-                    <button mat-raised-button type="submit" color="primary" [disabled]="memberForm.invalid || isLoading || 
-                                    (selectedMember && !canEditMember(selectedMember))">
-                        Update
-                    </button>
-                </div>
-            </form>
-            }
-        </div>
-        }
+          <div class="button-group">
+            <button mat-raised-button type="button" (click)="closeForm()">
+              <mat-icon>cancel</mat-icon>
+              Cancel
+            </button>
+            <button mat-raised-button color="primary" type="submit"
+              [disabled]="memberForm.invalid || isLoading || (selectedMember && !canEditMember(selectedMember))">
+              <mat-icon>save</mat-icon>
+              Update
+            </button>
+          </div>
+        </form>
+      }
     </div>
-</div>
+  </ng-template>
+</app-admin-list-page>

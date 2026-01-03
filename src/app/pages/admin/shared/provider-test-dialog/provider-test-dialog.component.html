@@ -1,0 +1,70 @@
+<h2 mat-dialog-title>
+  <mat-icon>network_check</mat-icon>
+  Connection Test
+</h2>
+
+<mat-dialog-content>
+  <div class="provider-info">
+    <div class="provider-header">
+      <span class="provider-name">{{ data.provider.name }}</span>
+      <span class="provider-type">{{ data.provider.type }}</span>
+    </div>
+    @if (data.provider.label) {
+      <div class="provider-label">{{ data.provider.label }}</div>
+    }
+  </div>
+
+  <div class="test-steps">
+    @for (step of testSteps; track step.name) {
+      <div class="test-step" [class]="getStatusClass(step.status)">
+        <div class="step-indicator">
+          @if (step.status === 'testing') {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon [class]="getStatusClass(step.status)">{{ getStatusIcon(step.status) }}</mat-icon>
+          }
+        </div>
+        <div class="step-content">
+          <span class="step-name">{{ step.name }}</span>
+          @if (step.message) {
+            <span class="step-message">{{ step.message }}</span>
+          }
+        </div>
+        @if (step.duration !== undefined && step.status !== 'idle') {
+          <span class="step-duration">{{ step.duration }}ms</span>
+        }
+      </div>
+    }
+  </div>
+
+  @if (overallStatus !== 'idle') {
+    <div class="test-summary" [class]="'summary-' + overallStatus">
+      @if (overallStatus === 'testing') {
+        <mat-icon>hourglass_top</mat-icon>
+        <span>Testing in progress...</span>
+      } @else if (overallStatus === 'success') {
+        <mat-icon>check_circle</mat-icon>
+        <span>All tests passed ({{ totalDuration }}ms)</span>
+      } @else if (overallStatus === 'error') {
+        <mat-icon>error</mat-icon>
+        <span>Some tests failed ({{ totalDuration }}ms)</span>
+      }
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onClose()">Close</button>
+
+  @if (overallStatus === 'idle') {
+    <button mat-raised-button color="primary" (click)="runTest()">
+      <mat-icon>play_arrow</mat-icon>
+      Run Test
+    </button>
+  } @else if (overallStatus !== 'testing') {
+    <button mat-raised-button color="primary" (click)="onRetry()">
+      <mat-icon>refresh</mat-icon>
+      Retry
+    </button>
+  }
+</mat-dialog-actions>

@@ -11,9 +11,10 @@ import { TranslateModule } from '@ngx-translate/core';
 import { filter, map, Subject, switchMap, takeUntil, tap } from 'rxjs'; // filter, map, switchMap, takeUntil, Subject を追加
 import { UserRoleType } from '../../models/models';
 import { AppMenuComponent } from "../../parts/app-menu/app-menu.component";
+import { AdminScopeBreadcrumbComponent } from "../../parts/admin-scope-breadcrumb/admin-scope-breadcrumb.component";
 import { GroupByPipe } from '../../pipe/group-by.pipe';
 import { AdminScopeService } from '../../services/admin-scope.service';
-import { AuthService, ScopeLabelsResponseItem } from '../../services/auth.service'; // ScopeLabelsResponse を削除
+import { AuthService, ScopeLabelsResponseItem } from '../../services/auth.service';
 import { GService } from '../../services/g.service';
 import { ScopeInfo, ScopeInfoForView } from '../../services/model-manager.service';
 
@@ -24,6 +25,24 @@ interface MenuItem {
   key: string;
   fullPath: string; // scopeを含めたフルパス
 }
+
+interface MenuGroup {
+  label: string;
+  icon: string;
+  items: MenuItem[];
+}
+
+interface BaseMenuItem {
+  icon: string;
+  label: string;
+  key: string;
+}
+
+interface BaseMenuGroup {
+  label: string;
+  icon: string;
+  items: Omit<BaseMenuItem, never>[];
+}
 @Component({
   selector: 'app-admin',
   imports: [
@@ -31,8 +50,9 @@ interface MenuItem {
     MatIconModule, MatButtonModule, MatFormFieldModule, MatSlideToggleModule, MatSelectModule, FormsModule,
     GroupByPipe,
     AppMenuComponent,
+    AdminScopeBreadcrumbComponent,
     TranslateModule
-  ],
+],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss'
 })
@@ -47,16 +67,41 @@ export class AdminComponent implements OnInit, OnDestroy {
   activeSection = ''; // 初期値を空に
   selectedScope: ScopeInfoForView | null = null;
   availableScopes: ScopeInfoForView[] = [];
-  // scopeLabelMap: { [key: string]: string } = {}; // AdminScopeServiceから取得するため不要に
-  baseMenuItems: Omit<MenuItem, 'fullPath' | 'link'>[] = [
-    { icon: 'extension', label: 'AIプロバイダー', key: 'ai-provider-management' },
-    { icon: 'extension', label: 'AIモデル', key: 'ai-model-management' },
-    { icon: 'extension', label: 'API連携', key: 'ext-api-provider-form' },
-    { icon: 'extension', label: 'API連携雛型', key: 'ext-api-provider-template-form' },
-    { icon: 'people', label: 'メンバー管理', key: 'member-management' },
-    { icon: 'analytics', label: '利用状況', key: 'department' },
+  scopeLabelsMap: Record<string, string> = {}; // ブレッドクラム用
+  // グループ化されたメニュー構造
+  baseMenuGroups: BaseMenuGroup[] = [
+    {
+      label: 'AI設定',
+      icon: 'smart_toy',
+      items: [
+        { icon: 'hub', label: 'プロバイダー', key: 'ai-provider-management' },
+        { icon: 'psychology', label: 'モデル', key: 'ai-model-management' },
+      ]
+    },
+    {
+      label: '外部連携',
+      icon: 'sync_alt',
+      items: [
+        { icon: 'api', label: '連携設定', key: 'ext-api-provider-form' },
+        { icon: 'description', label: 'テンプレート', key: 'ext-api-provider-template-form' },
+      ]
+    },
+    {
+      label: 'メンバー',
+      icon: 'people',
+      items: [
+        { icon: 'manage_accounts', label: 'メンバー管理', key: 'member-management' },
+      ]
+    },
+    {
+      label: 'ダッシュボード',
+      icon: 'dashboard',
+      items: [
+        { icon: 'analytics', label: '利用状況', key: 'department' },
+      ]
+    },
   ];
-  menuItems: MenuItem[] = [];
+  menuGroups: MenuGroup[] = [];
 
   constructor() { // constructor を追加
     this.router.events.pipe(
@@ -85,7 +130,7 @@ export class AdminComponent implements OnInit, OnDestroy {
       // ここではselectedScopeの変更に基づいてUIを更新する
       switchMap(() => this.authService.getScopeLabels()),
       tap(labels => {
-        const scopeLabelMap = Object.fromEntries(
+        this.scopeLabelsMap = Object.fromEntries(
           (Object.entries(labels.scopeLabels) as Array<[keyof typeof labels.scopeLabels, ScopeLabelsResponseItem[]]>)
             .filter(([_, value]) => value && value.length > 0)
             .flatMap(([key, value]) => value.map(item => [`${key}:${item.id}`, item.label]))
@@ -108,7 +153,7 @@ export class AdminComponent implements OnInit, OnDestroy {
           })
           .map(scope => ({
             ...scope,
-            label: scopeLabelMap[`${scope.scopeType}:${scope.scopeId}`] || '(未設定)'
+            label: this.scopeLabelsMap[`${scope.scopeType}:${scope.scopeId}`] || '(未設定)'
           })) || [];
 
         // GuardによってselectedScopeが設定されているはずなので、ここでのデフォルト設定は不要
@@ -130,10 +175,14 @@ export class AdminComponent implements OnInit, OnDestroy {
   private updateMenuItems() {
     if (this.selectedScope) {
       const scopePrefix = this.adminScopeService.scopeToUrlParam(this.selectedScope);
-      this.menuItems = this.baseMenuItems.map(item => ({
-        ...item,
-        link: item.key, // ルーターリンクはセクションキーのみ
-        fullPath: `/admin/${scopePrefix}/${item.key}`
+      this.menuGroups = this.baseMenuGroups.map(group => ({
+        label: group.label,
+        icon: group.icon,
+        items: group.items.map(item => ({
+          ...item,
+          link: item.key,
+          fullPath: `/admin/${scopePrefix}/${item.key}`
+        }))
       }));
     }
   }
@@ -144,9 +193,9 @@ export class AdminComponent implements OnInit, OnDestroy {
     if (adminIndex !== -1 && urlSegments.length > adminIndex + 3) {
       // URLが /admin/:scope/:section の形式であることを期待
       this.activeSection = urlSegments[adminIndex + 3];
-    } else if (this.menuItems.length > 0) {
+    } else if (this.menuGroups.length > 0 && this.menuGroups[0].items.length > 0) {
       // デフォルトのアクティブセクション (例: 最初のメニューアイテム)
-      // this.activeSection = this.menuItems[0].key;
+      // this.activeSection = this.menuGroups[0].items[0].key;
       // setActiveSectionを介してナビゲーションをトリガーしないように注意
     }
   }
@@ -155,7 +204,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     if (this.selectedScope) {
       this.adminScopeService.setSelectedScope(this.selectedScope);
       // スコープ変更時にURLを更新して、選択中のセクションを維持
-      const currentSectionKey = this.activeSection || this.baseMenuItems[0]?.key;
+      const currentSectionKey = this.activeSection || this.baseMenuGroups[0]?.items[0]?.key;
       if (currentSectionKey) {
         const scopeUrlParam = this.adminScopeService.scopeToUrlParam(this.selectedScope);
         const scopePathParts = scopeUrlParam.split('/');

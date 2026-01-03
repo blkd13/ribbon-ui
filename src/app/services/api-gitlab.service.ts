@@ -22,6 +22,28 @@ export class ApiGitlabService {
     return this.http.get<GitLabGroupListResponse>(`${this.proxyBase}/${gitlabProvider}/api/v4/groups${tail}`);
   }
 
+  /**
+   * グループを検索する
+   * @param gitlabProvider プロバイダー名
+   * @param search 検索クエリ
+   */
+  searchGroups(gitlabProvider: string, search: string): Observable<GitLabGroup[]> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
+    const url = `${this.proxyBase}/${gitlabProvider}/api/v4/groups`;
+    return this.http.get<GitLabGroup[]>(url, { params: { search, per_page: 50 } });
+  }
+
+  /**
+   * ユーザーを検索する
+   * @param gitlabProvider プロバイダー名
+   * @param search 検索クエリ
+   */
+  searchUsers(gitlabProvider: string, search: string): Observable<GitLabUser[]> {
+    gitlabProvider = gitlabProvider.replace('-', '/');
+    const url = `${this.proxyBase}/${gitlabProvider}/api/v4/users`;
+    return this.http.get<GitLabUser[]>(url, { params: { search, per_page: 50 } });
+  }
+
   usersChildren(gitlabProvider: string, id?: number, query?: string): Observable<(GitLabUser | GitLabProject)[]> {
     gitlabProvider = gitlabProvider.replace('-', '/');
     // /users/:user_id/projects

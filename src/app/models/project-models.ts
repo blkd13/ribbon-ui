@@ -351,3 +351,18 @@ export interface ContentPart extends BaseEntity {
     linkId?: string;
     tokenCount?: { [modelId: string]: CountTokensResponse }; // JSON型を保存
 }
+
+// ページネーション用の型定義
+export interface Pagination {
+    page: number;         // 現在のページ番号
+    limit: number;        // 1ページあたりの件数
+    totalCount: number;   // 全件数
+    totalPages: number;   // 総ページ数
+    hasNextPage: boolean; // 次ページの有無
+    hasPrevPage: boolean; // 前ページの有無
+}
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    pagination: Pagination;
+}

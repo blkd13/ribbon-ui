@@ -19,14 +19,14 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { MmTeamLogoComponent } from '../mm-team-logo/mm-team-logo.component';
 
 @Component({
-  selector: 'app-mm-create-timeline-dialog',
-  imports: [
-    CommonModule, FormsModule,
+    selector: 'app-mm-create-timeline-dialog',
+    imports: [
+        CommonModule, FormsModule,
     MatFormFieldModule, MatInputModule, MatCheckboxModule, MatSelectModule, MatSnackBarModule, MatAutocompleteModule, MatExpansionModule, MatIconModule, MatButtonModule,
-    MmTeamLogoComponent,
-  ],
-  templateUrl: './mm-create-timeline-dialog.component.html',
-  styleUrl: './mm-create-timeline-dialog.component.scss'
+        MmTeamLogoComponent,
+    ],
+    templateUrl: './mm-create-timeline-dialog.component.html',
+    styleUrl: './mm-create-timeline-dialog.component.scss'
 })
 export class MmCreateTimelineDialogComponent {
 

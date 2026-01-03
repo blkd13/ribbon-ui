@@ -28,7 +28,7 @@ export class MermaidValidatorService {
     private readonly dialog = inject(MatDialog);
     private readonly logger = inject(LoggerService);
 
-    defaultModel = 'claude-sonnet-4-20250514'; // デフォルトのAIモデル
+    defaultModel = 'claude-sonnet-4@20250514'; // デフォルトのAIモデル
     defaultSystemPrompt = Utils.trimLines(`
         You are a Mermaid expert. Please fix the Mermaid code that contains syntax errors.
 

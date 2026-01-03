@@ -1,0 +1,276 @@
+<div class="admin-list-page">
+  <h2 class="page-title">{{ title }}</h2>
+
+  <div class="layout-container">
+    <!-- 左側：テーブル -->
+    <div class="table-container">
+      <!-- テーブルヘッダー -->
+      <div class="table-header">
+        <div class="header-left">
+          <h3>{{ title }}</h3>
+          @if (subtitle) {
+            <div class="scope-context">
+              <small class="text-muted">{{ subtitle }}</small>
+            </div>
+          }
+        </div>
+
+        <div class="header-actions">
+          <!-- 追加コンテンツ -->
+          <ng-container *ngTemplateOutlet="headerExtraTemplate"></ng-container>
+
+          <!-- ヘッダーアクションボタン -->
+          @for (action of headerActions; track action.id) {
+            <button
+              mat-raised-button
+              [color]="action.color || ''"
+              [disabled]="isHeaderActionDisabled(action)"
+              [matTooltip]="getHeaderActionTooltip(action)"
+              (click)="onHeaderActionClick(action)"
+            >
+              @if (action.icon) {
+                <mat-icon>{{ action.icon }}</mat-icon>
+              }
+              {{ action.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- フィルターバー -->
+      @if (filters.length > 0) {
+        <div class="filter-bar">
+          <div class="filter-controls">
+            @for (filter of filters; track filter.key) {
+              @switch (filter.type) {
+                @case ('text') {
+                  <mat-form-field appearance="outline" class="filter-field">
+                    <mat-label>{{ filter.label }}</mat-label>
+                    <input
+                      matInput
+                      [placeholder]="filter.placeholder || ''"
+                      [ngModel]="filterValues[filter.key]"
+                      (ngModelChange)="onFilterChange(filter.key, $event)"
+                    />
+                    @if (filter.icon) {
+                      <mat-icon matSuffix>{{ filter.icon }}</mat-icon>
+                    } @else {
+                      <mat-icon matSuffix>search</mat-icon>
+                    }
+                  </mat-form-field>
+                }
+                @case ('select') {
+                  <mat-form-field appearance="outline" class="filter-field">
+                    <mat-label>{{ filter.label }}</mat-label>
+                    <mat-select
+                      [ngModel]="filterValues[filter.key]"
+                      (ngModelChange)="onFilterChange(filter.key, $event)"
+                    >
+                      <mat-option value="">All</mat-option>
+                      @for (option of filter.options; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                      }
+                    </mat-select>
+                    @if (filter.icon) {
+                      <mat-icon matSuffix>{{ filter.icon }}</mat-icon>
+                    }
+                  </mat-form-field>
+                }
+                @case ('multi-select') {
+                  <mat-form-field appearance="outline" class="filter-field">
+                    <mat-label>{{ filter.label }}</mat-label>
+                    <mat-select
+                      multiple
+                      [ngModel]="filterValues[filter.key]"
+                      (ngModelChange)="onFilterChange(filter.key, $event)"
+                      panelWidth="400px"
+                    >
+                      @for (option of filter.options; track option.value) {
+                        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                      }
+                    </mat-select>
+                    @if (filter.icon) {
+                      <mat-icon matSuffix>{{ filter.icon }}</mat-icon>
+                    }
+                  </mat-form-field>
+                }
+                @case ('boolean') {
+                  <mat-form-field appearance="outline" class="filter-field">
+                    <mat-label>{{ filter.label }}</mat-label>
+                    <mat-select
+                      [ngModel]="filterValues[filter.key]"
+                      (ngModelChange)="onFilterChange(filter.key, $event)"
+                    >
+                      <mat-option value="">All</mat-option>
+                      <mat-option [value]="'true'">Active</mat-option>
+                      <mat-option [value]="'false'">Inactive</mat-option>
+                    </mat-select>
+                    @if (filter.icon) {
+                      <mat-icon matSuffix>{{ filter.icon }}</mat-icon>
+                    }
+                  </mat-form-field>
+                }
+              }
+            }
+
+            <!-- 追加フィルターコンテンツ -->
+            <ng-container *ngTemplateOutlet="filterExtraTemplate"></ng-container>
+
+            <!-- リセットボタン -->
+            <button mat-icon-button (click)="onResetFilters()" matTooltip="Reset Filters">
+              <mat-icon>clear</mat-icon>
+            </button>
+          </div>
+
+          <!-- 一括操作エリア -->
+          @if (selectedIds.size > 0 && bulkActions.length > 0) {
+            <div class="bulk-actions">
+              <span class="selected-count">{{ selectedIds.size }} selected</span>
+              @for (action of bulkActions; track action.id) {
+                <button
+                  mat-raised-button
+                  [color]="action.color || ''"
+                  [disabled]="isBulkActionDisabled(action)"
+                  (click)="onBulkActionClick(action)"
+                >
+                  @if (action.icon) {
+                    <mat-icon>{{ action.icon }}</mat-icon>
+                  }
+                  {{ action.label }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- テーブル -->
+      <div class="table-scroll-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              @if (showCheckbox) {
+                <th class="checkbox-column">
+                  <mat-checkbox
+                    [checked]="isAllSelected()"
+                    [indeterminate]="isSomeSelected()"
+                    (change)="onToggleSelectAll($event)"
+                  ></mat-checkbox>
+                </th>
+              }
+              @for (column of columns; track column.key) {
+                <th
+                  [class.sortable-header]="column.sortable"
+                  [style.width]="column.width"
+                  [style.text-align]="column.align || 'left'"
+                  (click)="column.sortable ? onSortClick(column) : null"
+                >
+                  <div class="header-content">
+                    <div class="header-labels">
+                      <span>{{ column.label }}</span>
+                      @if (column.subLabel) {
+                        <span class="sub-label">{{ column.subLabel }}</span>
+                      }
+                    </div>
+                    @if (column.sortable) {
+                      <mat-icon class="sort-icon" [class.active]="sortState.column === column.key">
+                        @if (sortState.column === column.key) {
+                          {{ sortState.direction === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                        } @else {
+                          unfold_more
+                        }
+                      </mat-icon>
+                    }
+                  </div>
+                </th>
+              }
+              @if (rowActions.length > 0) {
+                <th class="actions-column">Actions</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of data; track trackByItem($index, item)) {
+              <tr [ngClass]="getRowClass(item)" (click)="onRowClick(item)">
+                @if (showCheckbox) {
+                  <td class="checkbox-column" (click)="$event.stopPropagation()">
+                    <mat-checkbox
+                      [checked]="isSelected(item)"
+                      (change)="onToggleSelect(item, $event)"
+                    ></mat-checkbox>
+                  </td>
+                }
+                @for (column of columns; track column.key) {
+                  <td
+                    [style.text-align]="column.align || 'left'"
+                    [ngClass]="getCellClass(item, column)"
+                  >
+                    @if (column.template) {
+                      <ng-container
+                        *ngTemplateOutlet="column.template; context: { $implicit: item, column: column }"
+                      ></ng-container>
+                    } @else {
+                      <span class="cell-value">{{ getCellValue(item, column) }}</span>
+                      @if (getCellSubValue(item, column)) {
+                        <div class="cell-sub-value">{{ getCellSubValue(item, column) }}</div>
+                      }
+                    }
+                  </td>
+                }
+                @if (rowActions.length > 0) {
+                  <td class="actions-cell">
+                    @for (action of rowActions; track action.id) {
+                      @if (isRowActionVisible(action, item)) {
+                        <button
+                          mat-icon-button
+                          [class]="action.class || ''"
+                          [color]="action.color || ''"
+                          [disabled]="isRowActionDisabled(action, item)"
+                          [matTooltip]="getRowActionTooltip(action, item)"
+                          (click)="onRowActionClick(action, item, $event)"
+                        >
+                          <mat-icon>{{ action.icon }}</mat-icon>
+                        </button>
+                      } @else {
+                        <!-- スペース確保 -->
+                        <button mat-icon-button style="visibility: hidden;">
+                          <mat-icon>{{ action.icon }}</mat-icon>
+                        </button>
+                      }
+                    }
+                  </td>
+                }
+              </tr>
+            } @empty {
+              <tr>
+                <td
+                  [attr.colspan]="columns.length + (showCheckbox ? 1 : 0) + (rowActions.length > 0 ? 1 : 0)"
+                  class="no-data"
+                >
+                  @if (isLoading) {
+                    <div class="loading-container">
+                      <mat-icon class="loading-icon">hourglass_empty</mat-icon>
+                      <span>Loading...</span>
+                    </div>
+                  } @else {
+                    <div class="empty-state">
+                      <mat-icon>{{ emptyIcon }}</mat-icon>
+                      <p>{{ emptyMessage }}</p>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 右側：フォームパネル -->
+    @if (isFormVisible && formPanelTemplate) {
+      <div class="form-container">
+        <ng-container *ngTemplateOutlet="formPanelTemplate"></ng-container>
+      </div>
+    }
+  </div>
+</div>

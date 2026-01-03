@@ -28,26 +28,45 @@
             </div>
         </div>
 
-        <!-- メニューリスト -->
-        <nav class="p-4">
-            <ul class="space-y-2">
-                @for(item of menuItems; track item.key) {
-                <li>
-                    <a [routerLink]="item.link" [routerLinkActive]="'settings-menu-selected'"
-                        [routerLinkActiveOptions]="{ exact: true }"
-                        class="settings-menu-item w-full text-left px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-3">
-                        <mat-icon class="text-sm">{{ item.icon }}</mat-icon>
-                        <span>{{ item.label }}</span>
-                    </a>
-                </li>
-                }
-            </ul>
+        <!-- メニューリスト（グループ化） -->
+        <nav class="p-4 menu-nav">
+            @for(group of menuGroups; track group.label) {
+            <div class="menu-group">
+                <div class="menu-group-header">
+                    <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
+                    <span class="group-label">{{ group.label }}</span>
+                </div>
+                <ul class="menu-group-items">
+                    @for(item of group.items; track item.key) {
+                    <li>
+                        <a [routerLink]="item.link" [routerLinkActive]="'settings-menu-selected'"
+                            [routerLinkActiveOptions]="{ exact: true }"
+                            class="settings-menu-item w-full text-left px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-3">
+                            <mat-icon class="text-sm item-icon">{{ item.icon }}</mat-icon>
+                            <span>{{ item.label }}</span>
+                        </a>
+                    </li>
+                    }
+                </ul>
+            </div>
+            }
         </nav>
     </div>
 
     <!-- メインコンテンツ -->
-    <div class="flex-1 overflow-auto" style="background-color: var(--plain-background, #1a1a1a);">
-        <router-outlet></router-outlet>
+    <div class="flex-1 flex flex-col overflow-hidden" style="background-color: var(--plain-background, #1a1a1a);">
+        <!-- スコープブレッドクラム（固定） -->
+        <div class="breadcrumb-container flex-shrink-0">
+            <app-admin-scope-breadcrumb
+                [currentScope]="selectedScope"
+                [scopeLabelsMap]="scopeLabelsMap"
+                [showChangeButton]="availableScopes.length > 1">
+            </app-admin-scope-breadcrumb>
+        </div>
+        <!-- コンテンツ（スクロール可能） -->
+        <div class="content-scroll-area">
+            <router-outlet></router-outlet>
+        </div>
     </div>
 </div>
 }

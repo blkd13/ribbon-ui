@@ -1,11 +1,11 @@
 <div class="git-container">
   <mat-tab-group class="h-full" [selectedIndex]="selectedTabIndex"
-      (selectedIndexChange)="selectedTabIndex = $event">
+    (selectedIndexChange)="selectedTabIndex = $event">
     <mat-tab [label]="'GROUP' | translate">
       <div class="tab-content">
-        @if(treeData.groups && treeData.groups.length > 0) {
+        @if(treeData.groups&&treeData.groups.length > 0){
           <div class="tree-container">
-            <mat-tree #tree [dataSource]="treeData.groups" [childrenAccessor]="childrenAccessor">
+        <mat-tree #tree [dataSource]="treeData.groups" [childrenAccessor]="childrenAccessor">
               <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding class="tree-leaf-node">
                 <button mat-icon-button disabled></button>
                 <div class="node-content">
@@ -18,31 +18,31 @@
                   </div>
                   <div class="node-actions">
                     <span class="updated-date">{{node.updated_at | date:'yyyy-MM-dd HH:mm'}}</span>
-                    <a [href]="node.web_url || node.project_url" target="_blank">
+                        <a [href]="node.web_url || node.project_url" target="_blank">
                       <button mat-icon-button color="primary" class="action-btn">
-                        <mat-icon>open_in_new</mat-icon>
-                      </button>
-                    </a>
+                                <mat-icon>open_in_new</mat-icon>
+                            </button>
+                        </a>
                     <button mat-raised-button color="accent" (click)="onSelectProject(node)" class="summary-btn">
                       {{ 'AI_SUMMARY' | translate }}
                     </button>
-                  </div>
+                    </div>
                 </div>
-              </mat-tree-node>
-              <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding matTreeNodeToggle
-                  [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
+            </mat-tree-node>
+            <mat-tree-node *matTreeNodeDef="let node;when: hasChild" matTreeNodePadding matTreeNodeToggle
+                [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
                   class="tree-parent-node">
                 <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.name">
-                  <mat-icon class="mat-icon-rtl-mirror">
-                    {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-                  </mat-icon>
+                    <mat-icon class="mat-icon-rtl-mirror">
+                        {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                    </mat-icon>
                 </button>
                 <div class="parent-node-content">
                   <span class="node-id">{{node.id}}</span>
                   <span class="node-name">{{node.name}}</span>
                 </div>
-              </mat-tree-node>
-            </mat-tree>
+            </mat-tree-node>
+        </mat-tree>
           </div>
         } @else {
           <div class="empty-state">
@@ -65,11 +65,11 @@
             <button mat-raised-button color="primary" type="submit" class="search-btn">
               {{ 'SEARCH' | translate }}
             </button>
-          </form>
+        </form>
         </div>
-        @if(treeData.users && treeData.users.length > 0) {
+        @if(treeData.users&&treeData.users.length > 0){
           <div class="tree-container">
-            <mat-tree #tree [dataSource]="treeData.users" [childrenAccessor]="childrenAccessor">
+        <mat-tree #tree [dataSource]="treeData.users" [childrenAccessor]="childrenAccessor">
               <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding class="tree-leaf-node">
                 <button mat-icon-button disabled></button>
                 <div class="node-content">
@@ -82,31 +82,31 @@
                   </div>
                   <div class="node-actions">
                     <span class="updated-date">{{node.updated_at | date:'yyyy-MM-dd HH:mm'}}</span>
-                    <a [href]="node.web_url || node.project_url" target="_blank">
+                        <a [href]="node.web_url || node.project_url" target="_blank">
                       <button mat-icon-button color="primary" class="action-btn">
-                        <mat-icon>open_in_new</mat-icon>
-                      </button>
-                    </a>
+                                <mat-icon>open_in_new</mat-icon>
+                            </button>
+                        </a>
                     <button mat-raised-button color="accent" (click)="onSelectProject(node)" class="summary-btn">
                       {{ 'AI_SUMMARY' | translate }}
                     </button>
-                  </div>
+                    </div>
                 </div>
-              </mat-tree-node>
-              <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding matTreeNodeToggle
-                  [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
+            </mat-tree-node>
+            <mat-tree-node *matTreeNodeDef="let node;when: hasChild" matTreeNodePadding matTreeNodeToggle
+                [cdkTreeNodeTypeaheadLabel]="node.name" (expandedChange)="node.isExpanded=$event"
                   class="tree-parent-node">
                 <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.name">
-                  <mat-icon class="mat-icon-rtl-mirror">
-                    {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-                  </mat-icon>
+                    <mat-icon class="mat-icon-rtl-mirror">
+                        {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+                    </mat-icon>
                 </button>
                 <div class="parent-node-content">
                   <span class="node-id">{{node.id}}</span>
                   <span class="node-name">{{node.name}}</span>
                 </div>
-              </mat-tree-node>
-            </mat-tree>
+            </mat-tree-node>
+        </mat-tree>
           </div>
         } @else {
           <div class="empty-state">
@@ -129,9 +129,9 @@
             <button mat-raised-button color="primary" type="submit" class="search-btn">
               {{ 'SEARCH' | translate }}
             </button>
-          </form>
+        </form>
         </div>
-        
+
         <div class="repository-container" (scroll)="onScroll($event)">
           @if(projects && projects.length > 0) {
             <div class="repository-grid">
@@ -158,14 +158,14 @@
                       <div class="project-path">
                         <mat-icon class="path-icon">folder</mat-icon>
                         <a [href]="project.url" target="_blank" class="path-link">
-                          {{project.path_with_namespace}}
-                        </a>
+                                {{project.path_with_namespace}}
+                            </a>
                       </div>
                       @if(project.description) {
                         <div class="project-description">
                           <div [innerHTML]="project.description"></div>
                         </div>
-                      }
+                        }
                       <div class="project-meta">
                         <div class="meta-item">
                           <mat-icon class="meta-icon">schedule</mat-icon>
@@ -175,24 +175,24 @@
                     </div>
                   </mat-card-content>
                 </mat-card>
-              }
+                        }
             </div>
           } @else {
             <div class="empty-state">
               <mat-icon>code</mat-icon>
               <p>{{ 'NO_DETAILS' | translate }}</p>
             </div>
-          }
+                    }
         </div>
-      </div>
+        </div>
     </mat-tab>
-  </mat-tab-group>
+</mat-tab-group>
 </div>
 
 <div class="header-overlay">
   <div class="header-left">
     <app-app-menu></app-app-menu>
-  </div>
+</div>
   <div class="header-right">
     <app-user-mark></app-user-mark>
   </div>

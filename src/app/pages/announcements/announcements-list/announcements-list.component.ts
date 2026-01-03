@@ -35,7 +35,7 @@ export class AnnouncementsListComponent implements OnInit {
     private announcementsService: AnnouncementsService,
     private dialog: MatDialog,
     private translate: TranslateService
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.loadAnnouncements();

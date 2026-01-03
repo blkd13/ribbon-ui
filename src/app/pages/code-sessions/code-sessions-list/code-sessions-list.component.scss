@@ -1,0 +1,235 @@
+:host {
+    ::ng-deep {
+        .mat-mdc-standard-chip:not(.mdc-evolution-chip--disabled) .mdc-evolution-chip__text-label {
+            color: unset;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+    }
+}
+
+.code-sessions-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .header {
+    margin-bottom: 32px;
+    
+    h1 {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 32px;
+      font-weight: 500;
+      margin: 0 0 8px 0;
+      
+      mat-icon {
+        font-size: 36px;
+        width: 36px;
+        height: 36px;
+      }
+    }
+
+    .subtitle {
+      color: rgba(0, 0, 0, 0.6);
+      margin: 0;
+      font-size: 14px;
+    }
+  }
+
+  .search-bar {
+    margin-bottom: 24px;
+    
+    .search-field {
+      width: 100%;
+      max-width: 600px;
+    }
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    
+    p {
+      margin-top: 16px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+  }
+
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+
+    .project-card {
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: visible;
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+      }
+
+      mat-card-header {
+        .project-icon {
+          background-color: #1976d2;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+        }
+
+        mat-card-title {
+          font-size: 18px;
+          font-weight: 500;
+        }
+
+        mat-card-subtitle {
+          font-size: 12px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      mat-card-content {
+        .stats {
+          display: flex;
+          justify-content: space-around;
+          padding: 16px 0;
+
+          .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+
+            mat-icon {
+              color: rgba(0, 0, 0, 0.6);
+              font-size: 20px;
+              width: 20px;
+              height: 20px;
+            }
+
+            .stat-value {
+              font-size: 20px;
+              font-weight: 600;
+              color: #1976d2;
+            }
+
+            .stat-label {
+              font-size: 12px;
+              color: rgba(0, 0, 0, 0.6);
+            }
+          }
+        }
+      }
+
+      mat-card-actions {
+        display: flex;
+        justify-content: flex-end;
+        padding: 8px 16px;
+      }
+    }
+
+    .no-results {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: rgba(0, 0, 0, 0.6);
+
+      mat-icon {
+        font-size: 64px;
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+      }
+
+      h3 {
+        margin: 0 0 8px 0;
+        font-weight: 500;
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .code-sessions-container {
+    .header {
+      .subtitle {
+        color: rgba(255, 255, 255, 0.7);
+      }
+    }
+
+    .loading-container {
+      p {
+        color: rgba(255, 255, 255, 0.7);
+      }
+    }
+
+    .projects-grid {
+      .project-card {
+        mat-card-content {
+          .stats {
+            .stat-item {
+              mat-icon {
+                color: rgba(255, 255, 255, 0.7);
+              }
+
+              .stat-label {
+                color: rgba(255, 255, 255, 0.7);
+              }
+            }
+          }
+        }
+      }
+
+      .no-results {
+        color: rgba(255, 255, 255, 0.7);
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .code-sessions-container {
+    padding: 16px;
+
+    .header {
+      h1 {
+        font-size: 24px;
+
+        mat-icon {
+          font-size: 28px;
+          width: 28px;
+          height: 28px;
+        }
+      }
+    }
+
+    .projects-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+}

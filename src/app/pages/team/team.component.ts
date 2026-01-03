@@ -18,10 +18,10 @@ import { ProjectService, TeamService } from '../../services/project.service';
 import { Utils } from '../../utils';
 
 @Component({
-  selector: 'app-team',
+    selector: 'app-team',
   imports: [CommonModule, FormsModule, RouterModule, RelativeTimePipe, MatIconModule, MatButtonModule, TranslateModule],
-  templateUrl: './team.component.html',
-  styleUrl: './team.component.scss'
+    templateUrl: './team.component.html',
+    styleUrl: './team.component.scss'
 })
 export class TeamComponent implements OnInit {
   readonly authService: AuthService = inject(AuthService);

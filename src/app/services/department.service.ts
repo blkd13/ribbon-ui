@@ -34,8 +34,11 @@ export class DepartmentService {
   }
 
   // 月次集計用の全データ取得メソッド（または別途集計API）
-  getPredictHistorySummary(): Observable<any> {
-    return this.http.get<any>('/user/predict-history/summary');
+  getPredictHistorySummaryForAdmin(userId: string): Observable<any> {
+    return this.http.get<any>(`/admin/predict-history/summary/${userId}`);
+  }
+  getPredictHistorySummaryForUser(): Observable<any> {
+    return this.http.get<any>(`/user/predict-history/summary`);
   }
 
   // 月次集計用の全データ取得メソッド（または別途集計API）

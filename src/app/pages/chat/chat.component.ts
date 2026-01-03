@@ -1,4 +1,4 @@
-import { ScrollingModule } from '@angular/cdk/scrolling';
+import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, ElementRef, inject, NgZone, OnInit, viewChild, viewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -25,7 +25,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { saveAs } from 'file-saver';
 import OpenAI from 'openai';
 import { ChatCompletionTool } from 'openai/resources/index.mjs';
-import { BehaviorSubject, catchError, concatMap, EMPTY, filter, forkJoin, from, map, Observable, Observer, of, Subscription, switchMap, tap, throwError, toArray } from 'rxjs';
+import { BehaviorSubject, catchError, concatMap, debounceTime, distinctUntilChanged, EMPTY, filter, forkJoin, from, map, Observable, Observer, of, Subject, Subscription, switchMap, tap, throwError, toArray } from 'rxjs';
 
 import { CachedContent, ChatCompletionCreateParamsWithoutMessages, GPTModels, SafetyRating } from '../../models/models';
 import { ContentPart, ContentPartType, MessageForView, MessageGroup, MessageGroupForView, MessageStatusType, Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupVisibility } from '../../models/project-models';
@@ -92,6 +92,9 @@ export class ChatComponent implements OnInit {
 
   readonly appFileDrop = viewChild(FileDropDirective);
 
+  // スレッドリスト用の仮想スクロールビューポート
+  readonly threadListViewport = viewChild<CdkVirtualScrollViewport>('threadListViewport');
+
   readonly authService: AuthService = inject(AuthService);
   readonly chatService: ChatService = inject(ChatService);
 
@@ -129,6 +132,12 @@ export class ChatComponent implements OnInit {
 
   templateThreadGroupList: ThreadGroupForView[] = [];
   threadGroupListAll: ThreadGroupForView[] = [];
+
+  // 無限スクロール用
+  threadGroupCurrentPage = 1;
+  threadGroupHasNextPage = true;
+  threadGroupLoadingMore = false;
+  threadListItemSize = 35; // cdk-virtual-scroll-viewportのitemSize
 
   // メッセージ一覧のインデックス。メッセージグループの数が最大のスレッドのメッセージグループ数を取得して、その数だけインデックスを作る。
   indexList = Array.from({ length: 0 }, (_, i) => i);
@@ -168,6 +177,8 @@ export class ChatComponent implements OnInit {
   showThreadList = true; // スレッドリスト表示フラグ
   showInfo = true;
   sortType: number = 1;
+  threadFilterText: string = ''; // スレッド検索用フィルター
+  isSearchMode = false; // 検索モード中かどうか
   isLock = false;
   // スレッドごとのロック状態を管理するオブジェクトを追加
   threadLocks: { [threadId: string]: boolean } = {};
@@ -363,7 +374,7 @@ export class ChatComponent implements OnInit {
 
     try {
       // ONにする場合は接続性チェックを実行
-      _paq.push(['trackEvent', 'AIチャット', `ツール選択:${!!newState}`, groupName]);
+      _paq.push(['trackEvent', 'AIチャット:ツール選択', `${groupName}:${!!newState}`]);
       if (newState) {
         const providerType = groupName.split('-')[0]; // グループ名からプロバイダーを取得
         const providerName = groupName.substring(groupName.indexOf('-') + 1); // グループ名からプロバイダー名を取得
@@ -465,7 +476,11 @@ export class ChatComponent implements OnInit {
   }
 
   selectPreset(preset: PresetDef): void {
-    _paq.push(['trackEvent', 'AIチャット', 'モード選択', this.selectedThreadGroup.threadList.length]);
+    if (this.presetLabel === preset.label) {
+      //
+    } else {
+      _paq.push(['trackEvent', 'AIチャット:モード選択', `${preset.label}`]);
+    }
     this.presetLabel = preset.label;
     let isModelChange = false;
     this.selectedThreadGroup.threadList.forEach((thread, tIndex) => {
@@ -538,7 +553,7 @@ export class ChatComponent implements OnInit {
 
     this.isThreadGroupLoading = true;
 
-    _paq.push(['trackEvent', 'AIチャット', 'テンプレート選択', templateThreadGroup.id]);
+    _paq.push(['trackEvent', 'AIチャット:テンプレート選択', templateThreadGroup.id]);
     of(0).pipe(
       // templateThreadGroupのメッセージリストをロードする
       switchMap(() => this.messageService.getMessageGroupList(templateThreadGroup.id)),
@@ -627,6 +642,147 @@ export class ChatComponent implements OnInit {
     return this.threadGroupListForView;
   }
 
+  /**
+   * 検索結果からスレッドリストを再構築
+   */
+  rebuildThreadGroupListFromSearch(searchResults: ThreadGroupForView[]): void {
+    this.threadGroupListForView = [];
+
+    // 時刻順でソート
+    searchResults.sort((a, b) => new Date(b.lastUpdate) < new Date(a.lastUpdate) ? -1 : 1);
+
+    searchResults.forEach((threadGroup, index) => {
+      if (index === 0 || threadGroup.updatedDate !== searchResults[index - 1].updatedDate) {
+        this.threadGroupListForView.push({ header: threadGroup.updatedDate });
+      }
+      this.threadGroupListForView.push({ threadGroup });
+    });
+
+    this.cdr.detectChanges();
+  }
+
+  private lastSearchQuery = '';
+
+  /**
+   * フィルター検索実行（Enter/blur時）
+   */
+  onThreadFilterSearch(): void {
+    const query = this.threadFilterText.trim();
+    // 同じクエリで連続検索を防ぐ
+    if (query === this.lastSearchQuery) return;
+    this.lastSearchQuery = query;
+
+    if (!query) {
+      // 検索文字列が空の場合は通常のリストを表示
+      this.isSearchMode = false;
+      this.rebuildThreadGroupList(this.threadGroupList);
+      return;
+    }
+
+    if (!this.selectedProject) return;
+
+    // 検索モードに入る
+    this.isSearchMode = true;
+    this.isThreadGroupLoading = true;
+    this.threadService.searchThreadGroups(this.selectedProject.id, query).subscribe({
+      next: (results) => {
+        this.isThreadGroupLoading = false;
+        this.rebuildThreadGroupListFromSearch(results);
+      },
+      error: (err) => {
+        this.logger.error('Thread search failed:', err);
+        this.isThreadGroupLoading = false;
+      }
+    });
+  }
+
+  /**
+   * フィルターをクリア
+   */
+  clearThreadFilter(): void {
+    this.threadFilterText = '';
+    this.lastSearchQuery = '';
+    this.isSearchMode = false;
+    this.rebuildThreadGroupList(this.threadGroupList);
+  }
+
+  /**
+   * スレッドリストのスクロールイベントハンドラ（無限スクロール用）
+   */
+  onThreadListScroll(scrolledIndex: number): void {
+    // 検索モード中は無限スクロール無効
+    if (this.isSearchMode) return;
+
+    const viewport = this.threadListViewport();
+    if (!viewport) return;
+
+    // ビューポートに表示可能な件数を計算（ビューポート高さ / アイテム高さ）
+    const viewportSize = viewport.getViewportSize();
+    const visibleCount = Math.ceil(viewportSize / this.threadListItemSize);
+
+    // 下端のインデックス = 先頭インデックス + 表示件数
+    const bottomIndex = scrolledIndex + visibleCount;
+    const totalItems = this.threadGroupListForView.length;
+    const threshold = 5; // 残り5件で追加取得開始
+
+    if (
+      this.threadGroupHasNextPage &&
+      !this.threadGroupLoadingMore &&
+      bottomIndex >= totalItems - threshold
+    ) {
+      this.loadMoreThreadGroups();
+    }
+  }
+
+  /**
+   * スレッドグループの追加取得
+   */
+  loadMoreThreadGroups(): void {
+    if (!this.selectedProject || this.threadGroupLoadingMore || !this.threadGroupHasNextPage) {
+      return;
+    }
+
+    this.threadGroupLoadingMore = true;
+    this.threadGroupCurrentPage++;
+
+    this.threadService.loadMoreThreadGroups(this.selectedProject.id, this.threadGroupCurrentPage).subscribe({
+      next: (result) => {
+        // 追加取得したデータをマージ
+        result.data.forEach(threadGroup => {
+          if (threadGroup.type === ThreadGroupType.Normal) {
+            // 重複チェック
+            if (!this.threadGroupList.find(tg => tg.id === threadGroup.id)) {
+              this.threadGroupList.push(threadGroup);
+            }
+          } else if (threadGroup.type === ThreadGroupType.Template) {
+            if (!this.templateThreadGroupList.find(tg => tg.id === threadGroup.id)) {
+              this.templateThreadGroupList.push(threadGroup);
+            }
+          }
+          // threadGroupListAllにも追加
+          if (!this.threadGroupListAll.find(tg => tg.id === threadGroup.id)) {
+            this.threadGroupListAll.push(threadGroup);
+          }
+          // キャッシュマップ更新
+          threadGroup.threadList.forEach(thread => {
+            if (thread.inDto.args.cachedContent) {
+              this.cacheMap[threadGroup.id] = thread.inDto.args.cachedContent;
+            }
+          });
+        });
+
+        this.threadGroupHasNextPage = result.hasNextPage;
+        this.rebuildThreadGroupList(this.threadGroupList);
+        this.threadGroupLoadingMore = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.logger.error('Failed to load more thread groups', err);
+        this.threadGroupLoadingMore = false;
+      }
+    });
+  }
+
   modelCheck(argList: ChatCompletionCreateParamsWithoutMessages[] = []): boolean {
     this.logger.debug(argList.map(arg => arg.model));
     // 空配列だったらスレッドグループ全体をチェック
@@ -682,7 +838,7 @@ export class ChatComponent implements OnInit {
       const baseThread = this.selectedThreadGroup.threadList[0];
       safeForkJoin(Array.from({ length: 20 }, () => this.messageService.cloneThreadDry(baseThread))).subscribe({
         next: next => {
-          (['gpt-5', 'gemini-2.5-flash', 'claude-sonnet-4-20250514', 'gemini-2.5-flash-thinking', ...Array(16).fill('gemini-2.5-flash')] as GPTModels[]).forEach((model, index) => {
+          (['gpt-5', 'claude-sonnet-4@20250514', 'gemini-2.5-flash-thinking', 'gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash'] as GPTModels[]).forEach((model, index) => {
             next[index].inDto.args.model = model;
           });
           this.presetThreadList = next;
@@ -842,6 +998,11 @@ export class ChatComponent implements OnInit {
   // }
 
   loadThreadGroups(project: Project): Observable<ThreadGroupForView[]> {
+    // ページネーション状態をリセット
+    this.threadGroupCurrentPage = 1;
+    this.threadGroupHasNextPage = true;
+    this.threadGroupLoadingMore = false;
+
     return this.threadService.getThreadGroupList(project.id).pipe(tap(threadGroupList => {
       threadGroupList.forEach(threadGroup => {
         threadGroup.threadList.forEach(thread => {
@@ -1458,18 +1619,7 @@ export class ChatComponent implements OnInit {
       }
     } else { }
 
-    _paq.push(['trackEvent', 'AIチャット', 'メッセージ送信', threadList.length]);
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-      event: 'ai_query',
-      conversion_value: threadList.length,
-      // conversion_value: 0,
-      currency: 'JPY',
-      transaction_id: `${this.selectedThreadGroup.id}-${Date.now()}`,
-      // 必要なら他の文脈も
-      // page_location: location.href,
-      // page_title: document.title
-    });
+    _paq.push(['trackEvent', 'AIチャット:メッセージ送信', threadList.length]);
 
     return this.saveAndBuildThreadGroup(threadList.map(thread => thread.id)).pipe(
       tap(_ => {
@@ -1901,7 +2051,7 @@ export class ChatComponent implements OnInit {
   /** チャット中断 */
   chatCancel(): void {
     // messageGroup.messages.forEach(message => message.status = MessageStatusType.Canceled);
-    _paq.push(['trackEvent', 'AIチャット', 'メッセージキャンセル', this.selectedThreadGroup.threadList.length]);
+    _paq.push(['trackEvent', 'AIチャット:メッセージキャンセル', this.selectedThreadGroup.threadList.length]);
     this.selectedThreadGroup.threadList.forEach(thread => {
       if (this.chatStreamSubscriptionList[this.selectedThreadGroup.id]) {
         // メッセージステータスをキャンセルにする
@@ -2169,7 +2319,7 @@ export class ChatComponent implements OnInit {
 
   toggleAllExpandCollapse(): void {
     this.allExpandCollapseFlag = !this.allExpandCollapseFlag;
-    _paq.push(['trackEvent', 'AIチャット画面操作', 'パネルの一括開閉', this.allExpandCollapseFlag]);
+    _paq.push(['trackEvent', 'AIチャット画面操作:パネルの一括開閉', this.allExpandCollapseFlag]);
     // this.chatSystemPanelList
     this.chatPanelList().forEach(chat => {
       if (this.allExpandCollapseFlag) {
@@ -2316,7 +2466,7 @@ export class ChatComponent implements OnInit {
       this.snackBar.open(this.translate.instant('CANCEL_ERROR'), 'close', { duration: 3000 });
       return;
     } else { }
-    _paq.push(['trackEvent', 'AIチャット', 'メッセージキャンセル-シングル', 1]);
+    _paq.push(['trackEvent', 'AIチャット:メッセージキャンセル-シングル', 1]);
     messageGroup.messages.forEach(message => message.status = MessageStatusType.Canceled);
     if (this.chatStreamSubscriptionList[this.selectedThreadGroup.id]) {
       this.threadLocks[thread.id] = false;

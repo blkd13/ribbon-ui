@@ -7,6 +7,7 @@ import { UserRoleType } from './models/models';
 // console.dir(gitRoutes, { depth: null });
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: 'sandbox', loadComponent: () => import('./sandbox/chat-signal-sample/chat-sandbox.component').then(m => m.ChatSandboxComponent) },
   { path: 'login', canActivate: [genScreenTypeGuard(true)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   { path: 'login/:returnUrl', canActivate: [genScreenTypeGuard(true)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   // Mobile specific routes
@@ -22,20 +23,20 @@ export const routes: Routes = [
   },
   { path: 'context-hub', canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], loadComponent: () => import('./pages/context-hub/context-hub.component').then(m => m.ContextHubComponent) },
   // Code Sessions
-  { 
-    path: 'code-sessions', 
-    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], 
-    loadComponent: () => import('./pages/code-sessions/code-sessions-list/code-sessions-list.component').then(m => m.CodeSessionsListComponent) 
+  {
+    path: 'code-sessions',
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
+    loadComponent: () => import('./pages/code-sessions/code-sessions-list/code-sessions-list.component').then(m => m.CodeSessionsListComponent)
   },
-  { 
-    path: 'code-sessions/:projectName', 
-    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], 
-    loadComponent: () => import('./pages/code-sessions/project-sessions/project-sessions.component').then(m => m.ProjectSessionsComponent) 
+  {
+    path: 'code-sessions/:projectName',
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
+    loadComponent: () => import('./pages/code-sessions/project-sessions/project-sessions.component').then(m => m.ProjectSessionsComponent)
   },
-  { 
-    path: 'code-sessions/:projectName/:sessionId', 
-    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], 
-    loadComponent: () => import('./pages/code-sessions/session-detail/session-detail.component').then(m => m.SessionDetailComponent) 
+  {
+    path: 'code-sessions/:projectName/:sessionId',
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
+    loadComponent: () => import('./pages/code-sessions/session-detail/session-detail.component').then(m => m.SessionDetailComponent)
   },
   // { path: 'home', canActivate: [loginGuard], loadComponent: () => import('./pages/error/error.component').then(m => m.ErrorComponent) },
   {

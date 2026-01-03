@@ -3,6 +3,7 @@
         .mat-expansion-panel.message .mat-expansion-panel-header-title {
             width: 346px;
             width: auto;
+            max-width: calc(100% - 150px);
             flex-grow: 0;
         }
     }
@@ -124,27 +125,25 @@
     // }
 }
 
-.mat-accordion.accordion.disabled {
-    opacity: 0.5;
+.mat-accordion.accordion.disabled{
+  opacity: 0.5;
 }
 
 
 .tooltip-small-tag {
-    top: 16px;
-    width: 16px;
-    height: 16px;
+  width: 16px;
+  height: 16px;
 
     background: linear-gradient(135deg,
-            #e5e5e5 0%,
-            #d5d5d5 100%);
-    padding: 1px;
-    margin: 0;
-    border-radius: 4px;
+    #e5e5e5 0%,
+    #d5d5d5 100%);
+  padding: 1px;
+  margin: 0;
+  border-radius: 4px;
     transition: top 0.2s ease;
 }
 
 ::ng-deep .mat-expanded .tooltip-small-tag {
-    top: 10px;
 }
 
 .toggle-button {
@@ -189,7 +188,7 @@
 }
 
 .token-obj {
-    margin-top: 16px;
+    // margin-top: 16px;
 }
 
 // スマートフォン対応

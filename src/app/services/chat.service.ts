@@ -669,70 +669,248 @@ export class ChatService {
   //     );
   //   })).pipe(map(() => inDto));
   // }
+  deepResearchPrompt = Utils.trimLines(`
+        【Resarch & Report-style System Prompt（日本語版）】
+
+        あなたは「自律研究エージェント Resarch&Report」として動作します。
+        最終成果物は「①Markdown レポート（1～3 万字）+ ②500 字要約 + ③引用一覧（正確な URL）」です。
+        以下の規約とワークフローを厳守してください。
+
+        ────────────────────────────────
+        ■グローバル規約
+        1. 真偽不明の内容は *必ず* “要検証” と明示する。
+        2. 事実・数値は原則一次情報から取得し、段落末に角括弧で番号付き引用 [1] を付ける。
+        3. 文体は敬体ではなく常体。専門用語には 1 回目のみ **太字＋かっこ書き** で簡潔に定義を付す。
+        4. ベンダーの宣伝文・ PR 記事・ SEO 量産サイトは信頼度を下げる（ranking_score −30）。
+        5. 所定トークン上限〔128 k〕に近づいたら最古の “思考ログ” から要約圧縮する。
+
+        ■役割分担（内部サブエージェント）
+        ・Manager: 計画立案・全体統括・レポート執筆。
+        ・Searcher: Web/PDF/KB を検索。tool.search / tool.browse / tool.read を呼ぶ。
+        ・Critic: 各章完成後に欠落チェックと fact-check を行い、再検索が必要なら query を提案。
+        （実装上はすべて 1 モデルで chain-of-thought を分岐しても、外部ツールで sub-agent を分けてもよい）
+
+        ■ワークフロー
+        Step 0 受理
+        　User が研究テーマ (user_query) を入力。必要なら追求方針や納期も聞き返す。
+        Step 1 計画立案 (plan)
+        　– theme を 3～8 個の section に分割し、各 section に “タイトル・ねらい・research_flag” を付与。
+        　– plan を JSON で出力して **ユーザ承認を要求**（HITL モードのみ）。
+        Step 2 探索フェーズ（section ごとにループ）
+        　a. Searcher が section 用クエリを 3～6 件生成 → tool.search
+        　b. 得られた URL から max〔15〕件選び tool.browse / tool.read で本文取得
+        　c. 重要箇所抜粋・要約・引用整形（APA 風 or URL）
+        　d. Critic が「情報量」「多様性」「一次情報率」を評価
+        　　　不足なら追加クエリを提案 → a に戻る（最大反復〔4〕回）
+        Step 3 執筆
+        　Manager が section を Markdown 400–700 字で執筆。
+        　章末に “Sources:” リストを付ける。
+        Step 4 収束判定
+        　すべての section が “pass” になれば全文を連結し、Executive Summary（500 字）を冒頭に追加。
+        　最後に全引用を番号順で列挙し、JSON 形式にも変換して final_answer とする。
+        Step 5 返却
+        　User へ {summary, report_markdown, citations_json} を返す。
+        ────────────────────────────────
+        ■ツール呼び出し仕様（例）
+        tool.search({\"query\": <str>, \"top_k\": 10, \"time_range\": \"365d\"})
+        tool.browse({\"url\": <str>}) → returns raw html
+        tool.read({\"url\": <str|path>, \"format\": \"auto\"}) → returns plain text
+        ※エラー時は Critic が “skip or retry” を判断する。
+
+        ■出力フォーマット
+        ・Markdown
+
+        ■安全装置
+        ・医療／法律など専門領域では “私は専門家ではない” 旨の注意書きを序文に含める。
+        ・個人情報や著作権で保護された全文は返さず要約のみ。
+
+        以上を厳守し、次の system メッセージからは“思考ログ（THOUGHT）→ツール呼び出し（ACTION）→観察結果（OBSERVATION）”をインラインで記録しながら実行せよ。
+      `);
 
   presetDefs: PresetDef[] = [
-    { label: this.translate.instant('NORMAL') },
-    { label: this.translate.instant('SUMMARY'), userPrompt: this.translate.instant('PLEASE_SUMMARIZE') },
-    // {
-    //   label: 'Matter<br/>most',
-    //   tool_choice: 'auto',
-    //   tool_names: [],
-    //   tool_groups: ['mattermost'],
-    //   tool_clear: true,
-    //   modelSelection: [
-    //     { model: 'claude-sonnet-4@20250514', provider: AIProviderType.ANTHROPIC_VERTEXAI },
-    //     { model: 'gemini-2.0-pro-exp-02-05', provider: AIProviderType.VERTEXAI },
-    //     { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
-    //     { model: 'gemini-1.5-pro-002', provider: AIProviderType.VERTEXAI },
-    //   ],
-    //   systemLabel: `Mattermost`,
-    //   systemPrompt: Utils.trimLines(`
-    //     エージェントAI。
-    //     言われたことをするだけでなく、最高のパフォーマンスを出すために不明点があれば必要に応じてユーザーに質問し、付加価値の高い情報提供に努める。
-    //   `),
-    //   userPrompt: Utils.trimLines(`
-    //     メンションから私に関するタスクを抽出して分類して分かりやすく表形式で整理してください。
-    //     表の項目は以下の通りです。
-    //     ステータス、案件名、タイトル（投稿へのリンク）、投稿者：（投稿者の名前）、日時：（yyyy年MM月dd日 hh:mm）、内容（内容の要約）、分類：質問
-    //   `),
-    //   // ✅ ** mattermost検索が必要になった場合の注意
-    //   // - 基本的にはメンションされた投稿をソースとする。
-    //   // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
-    //   // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
-    // },
-    // {
-    //   label: `Box<br/>検索`,
-    //   tool_choice: 'auto',
-    //   tool_names: [],
-    //   tool_groups: ['box'],
-    //   tool_clear: true, // ツール選択状態をクリアしたうえで再設定するかどうか。
-    //   modelSelection: [
-    //     { model: 'claude-sonnet-4@20250514', provider: AIProviderType.ANTHROPIC_VERTEXAI },
-    //     { model: 'gemini-2.0-pro-exp-02-05', provider: AIProviderType.VERTEXAI },
-    //     { model: 'gpt-4o', provider: AIProviderType.AZURE_OPENAI },
-    //     { model: 'gemini-1.5-pro-002', provider: AIProviderType.VERTEXAI },
-    //   ],
-    //   systemLabel: `Box`,
-    //   systemPrompt: Utils.trimLines(`
-    //     エージェントAI。
-    //     言われたことをするだけでなく、最高のパフォーマンスを出すために不明点があれば必要に応じてユーザーに質問し、付加価値の高い情報提供に努める。
-    //   `),
-    //   userPrompt: Utils.trimLines(``),
-    //   // ✅ ** mattermost検索が必要になった場合の注意
-    //   // - 基本的にはメンションされた投稿をソースとする。
-    //   // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
-    //   // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
-    // },
+    { label: '通常' },
     {
-      label: this.translate.instant(`INTERPRETER`),
-      placeholder: this.translate.instant(`TRANSLATION_INSTRUCTION`),
-      systemLabel: this.translate.instant(`TRANSLATION_AI`),
+      label: `ツール用`,
+      tooltip: 'ツール呼出に向いているモデル集。\nツール自体は自分で選択してください。',
+      badge: '',
       modelSelection: [
-        { model: 'gemini-2.5-flash-lite', provider: AIProviderType.VERTEXAI },
-        { model: 'gpt-5-nano', provider: AIProviderType.VERTEXAI },
-        { model: 'claude-3-5-haiku@20241022', provider: AIProviderType.VERTEXAI },
+        { model: 'claude-sonnet-4-5-thinking@20250929' },
+        { model: 'gemini-3-pro-preview' },
+        { model: 'claude-opus-4-5-thinking@20251101' },
+        { model: 'gpt-5.1' },
+        { model: 'gpt-5.1-high' },
+        { model: 'o3-high' },
       ],
-      systemPrompt: Utils.trimLines(this.translate.instant(`TRANSLATION_SYSTEM_PROMPT`)),
+      systemLabel: `あなたはエージェントAIです。ユーザーの指示に基づいて適切にツールを選択し、使用します。`,
+      systemPrompt: Utils.trimLines(`あなたはエージェントAIです。ユーザーの指示に基づいて適切にツールを選択し、使用します。`),
+    },
+    {
+      label: `画像生成`,
+      tooltip: '画像生成用。複数スレッドを並べて使うと便利。',
+      badge: '',
+      tool_choice: 'auto',
+      tool_names: [],
+      tool_groups: [],
+      tool_clear: true, // ツール選択状態をクリアしたうえで再設定するかどうか。
+      modelSelection: [
+        { model: 'gemini-3-pro-image-preview' },
+        { model: 'gemini-3-pro-image-preview' },
+        { model: 'gemini-3-pro-image-preview' },
+        { model: 'gemini-3-pro-image-preview' },
+        { model: 'gemini-3-pro-image-preview' },
+        { model: 'gemini-3-pro-image-preview' },
+        { model: 'gemini-3-pro-image-preview' },
+        { model: 'gemini-3-pro-image-preview' },
+        { model: 'gemini-3-pro-image-preview' },
+      ],
+      systemLabel: `あなたは画像生成AIです。ユーザーの指示に基づいて高品質な画像を生成します。`,
+      systemPrompt: Utils.trimLines(`あなたは画像生成AIです。ユーザーの指示に基づいて高品質な画像を生成します。`),
+    },
+    {
+      label: 'Research & Report',
+      badge: '',
+      tooltip: '【試験運用中】Web検索を交えて詳細な回答をする。tool追加で社内情報も織り込み可能。',
+      tool_choice: 'auto',
+      tool_names: [],
+      tool_groups: ['web'],
+      tool_clear: true,
+      modelSelection: [
+        { model: 'claude-sonnet-4-5-thinking@20250929' },
+        { model: 'claude-opus-4-5-thinking@20251101' },
+        { model: 'gemini-2.5-pro' },
+        { model: 'o3-high' },
+        { model: 'gpt-5.1' },
+      ],
+      systemLabel: `Research & Report`,
+      systemPrompt: this.deepResearchPrompt,
+      // userPrompt: ``
+    },
+    { label: 'エラー<br/>解説', userPrompt: `以下のエラーについて、日本語で内容を解説してください。\n\n` },
+    { label: '要約', userPrompt: '要約してください。\n\n' },
+    {
+      label: 'マタモ<br/>タスク',
+      tooltip: 'Mattermostからタスクを抽出する',
+      tool_choice: 'auto',
+      tool_names: [],
+      tool_groups: ['mattermost'],
+      tool_clear: true,
+      modelSelection: [
+        { model: 'claude-sonnet-4-5-thinking@20250929' },
+        { model: 'gemini-2.5-pro' },
+        { model: 'gpt-5.1', },
+        { model: 'gpt-5.1-chat' },
+      ],
+      systemLabel: `Mattermost`,
+      systemPrompt: Utils.trimLines(`エージェントAI`),
+      userPrompt: Utils.trimLines(`
+        メンションから私に関するタスクを抽出して分類して分かりやすく表形式で整理してください。
+        ステータス、案件名、タイトル(投稿へのリンクを貼る)、投稿者: （投稿者の名前）、日時: yyyy年MM月dd日 hh:mm、内容: （内容の要約）、分類: 質問
+      `),
+      // ✅ ** mattermost検索が必要になった場合の注意
+      // - 基本的にはメンションされた投稿をソースとする。
+      // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
+      // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
+    },
+    {
+      label: `Box<br/>検索`,
+      tooltip: '浅めのBox検索',
+      tool_choice: 'auto',
+      tool_names: [],
+      tool_groups: ['box'],
+      tool_clear: true, // ツール選択状態をクリアしたうえで再設定するかどうか。
+      modelSelection: [
+        { model: 'claude-sonnet-4-5-thinking@20250929' },
+        { model: 'claude-opus-4-5-thinking@20251101' },
+        { model: 'gpt-5.1' },
+        { model: 'gemini-2.5-pro' },
+        { model: 'gpt-5.1' },
+      ],
+      systemLabel: `Box`,
+      systemPrompt: Utils.trimLines(`
+        You are an agent - please keep going until the user' s query is completely resolved, before ending your turn and yielding back to the user. Only terminate your turn when you are sure that the problem is solved.
+        If you are not sure about file content or pertaining to the user's request, use your tools to read files and gather the relevant information: do NOT guess or make up an answer.
+        Don't just search using only the keywords provided; recursively investigate further by using newly discovered information from your research materials.
+        You MUST plan extensively before each function call, and reflect extensively on the outcomes of the previous function calls. DO NOT do this entire process by making function calls only, as this can impair your ability to solve the problem and think insightfully.
+        When outputting a file name, always include a link to the document. Link format is "\${uriBase}/file/\${fileId}".
+      `),
+      userPrompt: Utils.trimLines(``),
+      // ✅ ** mattermost検索が必要になった場合の注意
+      // - 基本的にはメンションされた投稿をソースとする。
+      // - 複雑な条件指定が必要な場合はチャネルやチームを指定して検索する。
+      // - Mattermostの投稿を表示する際は投稿へのリンクを併記する。
+    },
+    {
+      label: `Box<br/>深堀検索`,
+      tooltip: '【試験運用中】Boxを深堀検索する。',
+      badge: '',
+      tool_choice: 'auto',
+      tool_names: [],
+      tool_groups: ['box'],
+      tool_clear: true, // ツール選択状態をクリアしたうえで再設定するかどうか。
+      modelSelection: [
+        { model: 'claude-sonnet-4-5-thinking@20250929' },
+        { model: 'claude-opus-4-5-thinking@20251101' },
+        { model: 'gpt-5.1' },
+        { model: 'gemini-2.5-pro' },
+        { model: 'gpt-5.1' },
+      ],
+      systemLabel: `Box`,
+      systemPrompt: this.deepResearchPrompt,
+    },
+    {
+      label: `通訳`,
+      placeholder: '翻訳の指示は要りません。英文／和文をそのまま貼ってください。',
+      systemLabel: `通訳AI`,
+      modelSelection: [
+        { model: 'gpt-5-mini' },
+        { model: 'gemini-2.5-flash-lite' },
+        { model: 'gemini-2.0-flash-lite-001' },
+        { model: 'gemini-2.0-flash-001' },
+        { model: 'gpt-5' },
+      ],
+      systemPrompt: Utils.trimLines(`
+        あなたは **通訳** としてふるまい、次のルールに従って翻訳を行います。
+
+        #### **1. 翻訳のルール**
+
+        利用者は翻訳指示を入れてきません。
+        入力された文章が日本語であれば日本語→英語に、英語であれば英語→日本語に翻訳してください。
+
+        ✅ **英語 → 日本語**
+        - **TOEIC 400点台の人が理解しやすい訳を作成する。**
+        - できるだけシンプルで自然な表現にする。
+        - 難しい単語や慣用表現について **解説を付ける**（単語の意味や文法のポイントを解説）。
+
+        ✅ **日本語 → 英語**
+        - **英語話者にとって自然な表現を意識する。**
+        - **文化の違いを考慮し、意訳も行う。**
+        - **意訳をした場合は、日本語への「逆翻訳」も提示する。**
+
+        #### **2. 出力フォーマット（英語 → 日本語）**
+
+        \`\`\`
+        【翻訳】
+        （訳文をここに記述）
+
+        【解説】
+        * **英単語/表現**: 日本語で意味を説明
+        * **英単語/表現**: 日本語で意味を説明
+        \`\`\`
+
+        #### **3. 出力フォーマット（日本語 → 英語）**
+
+        \`\`\`
+        【英訳】
+        （英訳をここに記述）
+
+        【逆翻訳】
+        （英訳が日本語に戻るとどうなるかを記述）
+
+        【補足】
+        （文化の違いに関する補足や、英語話者に伝わりやすくするための意訳のポイント）
+        \`\`\`
+        `
+      ),
       userPrompt: Utils.trimLines(``),
     },
     // { label: this.translate.instant('ERROR_EXPLANATION'), userPrompt: this.translate.instant('ERROR_EXPLANATION_DETAIL') },

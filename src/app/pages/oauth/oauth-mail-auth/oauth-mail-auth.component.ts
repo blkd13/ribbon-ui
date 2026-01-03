@@ -8,10 +8,10 @@ import { GService } from '../../../services/g.service';
 import { LoggerService } from '../../../services/logger';
 
 @Component({
-  selector: 'app-oauth-mail-auth',
-  imports: [FormsModule],
-  templateUrl: './oauth-mail-auth.component.html',
-  styleUrl: './oauth-mail-auth.component.scss'
+    selector: 'app-oauth-mail-auth',
+    imports: [FormsModule],
+    templateUrl: './oauth-mail-auth.component.html',
+    styleUrl: './oauth-mail-auth.component.scss'
 })
 export class OAuthMailAuthComponent {
   readonly authService: AuthService = inject(AuthService);

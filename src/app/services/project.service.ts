@@ -7,7 +7,7 @@ import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completion
 import { map, Observable, of, switchMap, tap } from 'rxjs';
 
 import { ChatCompletionCreateParamsWithoutMessages } from '../models/models';
-import { BaseEntity, ContentPart, ContentPartType, Message, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, Project, ProjectCreateDto, ProjectUpdateDto, Team, TeamCreateDto, TeamMember, TeamMemberAddDto, TeamMemberUpdateDto, TeamUpdateDto, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupUpsertDto, ThreadGroupVisibility } from '../models/project-models';
+import { BaseEntity, ContentPart, ContentPartType, Message, MessageForView, MessageGroup, MessageGroupForView, MessageGroupType, MessageStatusType, PaginatedResponse, Project, ProjectCreateDto, ProjectUpdateDto, Team, TeamCreateDto, TeamMember, TeamMemberAddDto, TeamMemberUpdateDto, TeamUpdateDto, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupUpsertDto, ThreadGroupVisibility } from '../models/project-models';
 import { Utils } from '../utils';
 import { safeForkJoin } from '../utils/dom-utils';
 import { AuthService } from './auth.service';
@@ -34,7 +34,7 @@ export class TeamService {
     }
 
     updateTeam(teamId: string, team: TeamUpdateDto): Observable<Team> {
-        return this.http.patch<Team>(`/user/team/${teamId}`, team);
+        return this.http.put<Team>(`/user/team/${teamId}`, team);
     }
 
     deleteTeam(teamId: string): Observable<void> {
@@ -133,7 +133,7 @@ export class ThreadService {
 
     private readonly http: HttpClient = inject(HttpClient);
     private readonly g: GService = inject(GService);
-    private threadListMas: { [threadGroupId: string]: ThreadGroupForView[] } = {};
+    private threadListMas: { [projectId: string]: ThreadGroupForView[] } = {};
 
     genInitialThreadGroupEntity(projectId: string, template?: ThreadGroupForView): ThreadGroupForView {
         const deafultThreadGroup = template || Object.keys(this.threadListMas).map(key => this.threadListMas[key].find(threadGroup => threadGroup.type === ThreadGroupType.Default)).filter(threadGroup => threadGroup)[0];
@@ -164,18 +164,8 @@ export class ThreadService {
                 ...genInitialBaseEntity('thread-group'),
             } as ThreadGroupForView;
 
-            const thread0 = this.genInitialThreadEntity(threadGroup.id);
-            thread0.inDto.args.model = 'gpt-5-chat-latest';
-            threadGroup.threadList.push(thread0);
-
-            const thread1 = this.genInitialThreadEntity(threadGroup.id);
-            thread1.inDto.args.model = 'claude-sonnet-4-20250514';
-            threadGroup.threadList.push(thread1);
-
-            const thread2 = this.genInitialThreadEntity(threadGroup.id);
-            thread2.inDto.args.model = 'gemini-2.5-flash';
-            threadGroup.threadList.push(thread2);
-
+            threadGroup.threadList.push(this.genInitialThreadEntity(threadGroup.id));
+            threadGroup.threadList.push(this.genInitialThreadEntity(threadGroup.id));
             return threadGroup;
         }
     }
@@ -193,7 +183,7 @@ export class ThreadService {
 
     getInitialArgs(): ChatCompletionCreateParamsWithoutMessages {
         return {
-            model: 'gpt-5-chat-latest',
+            model: 'gemini-2.5-flash',
             providerName: 'vertexai',
             temperature: 1.0,
             max_tokens: 0,
@@ -233,11 +223,15 @@ export class ThreadService {
     }
 
 
-    getThreadGroupList(projectId: string, force: boolean = false): Observable<ThreadGroupForView[]> {
+    getThreadGroupList(projectId: string, force: boolean = false, page: number = 1, limit: number = 50): Observable<ThreadGroupForView[]> {
         if (force || !this.threadListMas[projectId]) {
-            return this.http.get<ThreadGroup[]>(`/user/project/${projectId}/thread-group`).pipe(map(objList => {
+            return this.http.get<PaginatedResponse<ThreadGroup> | ThreadGroup[]>(`/user/project/${projectId}/thread-group`, {
+                params: { page: page.toString(), limit: limit.toString() }
+            }).pipe(map(response => {
+                // 新形式（PaginatedResponse）と旧形式（配列）の両方に対応
+                const data = Array.isArray(response) ? response : response.data;
                 // キャッシュ（threadListMas）に格納
-                this.threadListMas[projectId] = objList.map(threadGroupResponseHandlerGenerator(this.g.locale));
+                this.threadListMas[projectId] = data.map(threadGroupResponseHandlerGenerator(this.g.locale));
                 // threadListを整形
                 return this.threadListMas[projectId];
             }));
@@ -247,8 +241,39 @@ export class ThreadService {
         }
     }
 
-    getThreadGroup(threadGroupId: string): Observable<ThreadGroupForView> {
-        return this.http.get<ThreadGroup>(`/user/thread-group/${threadGroupId}`).pipe(map(threadGroupResponseHandlerGenerator(this.g.locale)));
+    /**
+     * 無限スクロール用：追加ページを取得して既存リストに追記
+     * @param projectId プロジェクトID
+     * @param page ページ番号
+     * @param limit 1ページあたりの件数
+     * @returns { data: 追加取得したリスト, hasNextPage: 次ページの有無 }
+     */
+    loadMoreThreadGroups(projectId: string, page: number, limit: number = 50): Observable<{ data: ThreadGroupForView[], hasNextPage: boolean }> {
+        return this.http.get<PaginatedResponse<ThreadGroup> | ThreadGroup[]>(`/user/project/${projectId}/thread-group`, {
+            params: { page: page.toString(), limit: limit.toString() }
+        }).pipe(map(response => {
+            // 新形式（PaginatedResponse）と旧形式（配列）の両方に対応
+            const isArray = Array.isArray(response);
+            const data = isArray ? response : response.data;
+            const hasNextPage = isArray ? data.length >= limit : response.pagination.hasNextPage;
+
+            const formatted = data.map(threadGroupResponseHandlerGenerator(this.g.locale));
+
+            // 既存キャッシュに追記（重複除外）
+            if (this.threadListMas[projectId]) {
+                const existingIds = new Set(this.threadListMas[projectId].map(tg => tg.id));
+                const newItems = formatted.filter(tg => !existingIds.has(tg.id));
+                this.threadListMas[projectId].push(...newItems);
+            } else {
+                this.threadListMas[projectId] = formatted;
+            }
+
+            return { data: formatted, hasNextPage };
+        }));
+    }
+
+    getThreadGroup(projectId: string, threadGroupId: string): Observable<ThreadGroupForView> {
+        return this.http.get<ThreadGroup>(`/user/project/${projectId}/thread-group/${threadGroupId}`).pipe(map(threadGroupResponseHandlerGenerator(this.g.locale)));
     }
 
     moveThreadGroup(threadGroupId: string, projectId: string): Observable<ThreadGroupForView> {
@@ -265,6 +290,22 @@ export class ThreadService {
 
     deleteThreadGroup(threadGroupId: string): Observable<void> {
         return this.http.delete<void>(`/user/thread-group/${threadGroupId}`);
+    }
+
+    /**
+     * スレッドグループをタイトルで検索
+     * @param projectId プロジェクトID
+     * @param title 検索クエリ（タイトル）
+     * @param page ページ番号
+     * @param limit 取得件数上限
+     * @returns 検索結果のスレッドグループリスト
+     */
+    searchThreadGroups(projectId: string, title: string, page: number = 1, limit: number = 50): Observable<ThreadGroupForView[]> {
+        return this.http.get<{ data: ThreadGroup[], pagination: any }>(`/user/project/${projectId}/thread-group-search`, {
+            params: { title, page: page.toString(), limit: limit.toString() }
+        }).pipe(map(response => {
+            return response.data.map(threadGroupResponseHandlerGenerator(this.g.locale));
+        }));
     }
 }
 
@@ -902,6 +943,8 @@ export class MessageService {
                                 } else {
                                     // plain block
                                 }
+                                console.log(`Adding file: ${directory}${filename}`);
+                                console.dir(codeLineList);
                                 // ZIPにファイルを追加
                                 zip.file(`${directory}${filename}`.replaceAll(/^\/*/g, ''), codeLineList.join('\n'));
                                 counter++;

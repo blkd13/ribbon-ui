@@ -16,6 +16,8 @@ import { UserStatus } from '../../../models/models';
 import { DialogComponent, DialogData } from '../../../parts/dialog/dialog.component';
 import { PredictHistoryComponent } from '../../../parts/predict-history/predict-history.component';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
+import { saveAs } from 'file-saver';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 Chart.register(...registerables);
 
@@ -31,6 +33,7 @@ Chart.register(...registerables);
     MatIconModule,
     MatExpansionModule,
     MatButtonModule,
+    MatTooltipModule,
     TranslateModule
   ],
   templateUrl: './usage-stats-dashboard.component.html',
@@ -332,5 +335,184 @@ export class UsageStatsDashboardComponent implements OnInit, AfterViewInit, OnDe
         member.status = member.status === UserStatus.Active ? UserStatus.Suspended : UserStatus.Active;
       }
     });
+  }
+
+  // ========== 期間比較機能 ==========
+
+  /**
+   * 前月の期間キーを取得
+   */
+  getPreviousMonth(): string | null {
+    if (this.selectYyyyMm === 'ALL' || !this.selectYyyyMm) return null;
+    const [year, month] = this.selectYyyyMm.split('-').map(Number);
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const prevKey = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+    return this.yyyyMmList.includes(prevKey) ? prevKey : null;
+  }
+
+  /**
+   * 前年同月の期間キーを取得
+   */
+  getPreviousYear(): string | null {
+    if (this.selectYyyyMm === 'ALL' || !this.selectYyyyMm) return null;
+    const [year, month] = this.selectYyyyMm.split('-');
+    const prevKey = `${Number(year) - 1}-${month}`;
+    return this.yyyyMmList.includes(prevKey) ? prevKey : null;
+  }
+
+  /**
+   * 指定期間のコストを取得
+   */
+  getCostForPeriod(period: string): number {
+    return this.divisionMemberList.reduce((total, division) => {
+      const c = division.cost[period];
+      return total + (c ? c.totalCost * 150 : 0);
+    }, 0);
+  }
+
+  /**
+   * 前月比を計算（パーセンテージ）
+   */
+  getMonthOverMonthChange(): { value: number; percent: number } | null {
+    const prevMonth = this.getPreviousMonth();
+    if (!prevMonth) return null;
+
+    const currentCost = this.getTotalCost();
+    const prevCost = this.getCostForPeriod(prevMonth);
+
+    if (prevCost === 0) return { value: currentCost, percent: 100 };
+
+    const change = currentCost - prevCost;
+    const percent = (change / prevCost) * 100;
+
+    return { value: change, percent };
+  }
+
+  /**
+   * 前年比を計算（パーセンテージ）
+   */
+  getYearOverYearChange(): { value: number; percent: number } | null {
+    const prevYear = this.getPreviousYear();
+    if (!prevYear) return null;
+
+    const currentCost = this.getTotalCost();
+    const prevCost = this.getCostForPeriod(prevYear);
+
+    if (prevCost === 0) return { value: currentCost, percent: 100 };
+
+    const change = currentCost - prevCost;
+    const percent = (change / prevCost) * 100;
+
+    return { value: change, percent };
+  }
+
+  // ========== CSVエクスポート機能 ==========
+
+  /**
+   * 利用統計をCSV形式でエクスポート
+   */
+  exportToCsv(): void {
+    const rows: string[][] = [];
+
+    // ヘッダー
+    rows.push([
+      this.translate.instant('DEPARTMENT'),
+      this.translate.instant('MEMBER_NAME'),
+      'ID',
+      this.translate.instant('ROLE'),
+      this.translate.instant('STATUS'),
+      this.translate.instant('COST') + ' (JPY)',
+      this.translate.instant('TOTAL_USAGE'),
+      'Request Tokens',
+      'Response Tokens',
+      this.translate.instant('FOREIGN_PORTION'),
+      'Foreign Request Tokens',
+      'Foreign Response Tokens'
+    ]);
+
+    // データ行
+    this.divisionMemberList.forEach(division => {
+      const divisionName = division.division.label || division.division.name;
+
+      division.members.forEach(member => {
+        const cost = member.cost?.[this.selectYyyyMm];
+        rows.push([
+          divisionName,
+          member.name || '',
+          member.id || '',
+          member.role || '',
+          member.status || '',
+          cost ? String(Math.round(cost.totalCost * 150)) : '0',
+          cost ? String(cost.totalReqToken + cost.totalResToken) : '0',
+          cost ? String(cost.totalReqToken) : '0',
+          cost ? String(cost.totalResToken) : '0',
+          cost ? String(cost.foreignModelReqToken + cost.foreignModelResToken) : '0',
+          cost ? String(cost.foreignModelReqToken) : '0',
+          cost ? String(cost.foreignModelResToken) : '0'
+        ]);
+      });
+    });
+
+    // CSVに変換（BOM付きUTF-8）
+    const csvContent = rows.map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8' });
+
+    const filename = `usage-stats-${this.selectYyyyMm || 'all'}-${new Date().toISOString().slice(0, 10)}.csv`;
+    saveAs(blob, filename);
+
+    this.snackBar.open(this.translate.instant('EXPORT_COMPLETE') || 'Export complete', this.translate.instant('OK'), { duration: 3000 });
+  }
+
+  /**
+   * 月別推移データをCSVでエクスポート
+   */
+  exportTrendToCsv(): void {
+    const rows: string[][] = [];
+
+    // ヘッダー
+    rows.push([
+      this.translate.instant('PERIOD') || 'Period',
+      this.translate.instant('COST') + ' (JPY)',
+      this.translate.instant('TOTAL_USAGE'),
+      this.translate.instant('FOREIGN_PORTION')
+    ]);
+
+    // データ行（古い順）
+    [...this.yyyyMmList].reverse().forEach(period => {
+      let totalCost = 0;
+      let totalTokens = 0;
+      let foreignTokens = 0;
+
+      this.divisionMemberList.forEach(division => {
+        const c = division.cost[period];
+        if (c) {
+          totalCost += c.totalCost * 150;
+          totalTokens += c.totalReqToken + c.totalResToken;
+          foreignTokens += c.foreignModelReqToken + c.foreignModelResToken;
+        }
+      });
+
+      rows.push([
+        period,
+        String(Math.round(totalCost)),
+        String(totalTokens),
+        String(foreignTokens)
+      ]);
+    });
+
+    const csvContent = rows.map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8' });
+
+    const filename = `usage-trend-${new Date().toISOString().slice(0, 10)}.csv`;
+    saveAs(blob, filename);
+
+    this.snackBar.open(this.translate.instant('EXPORT_COMPLETE') || 'Export complete', this.translate.instant('OK'), { duration: 3000 });
   }
 }
