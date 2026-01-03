@@ -18,8 +18,6 @@ export interface ExtApiProviderStatusItem {
   authType: string;
   /** OAuth認証済みかどうか */
   connected: boolean;
-  /** OAuthアカウントのステータス（ACTIVE, EXPIRED, REVOKED等） */
-  status: string | null;
   /** プロバイダー側のメールアドレス */
   providerEmail: string | null;
 }

@@ -48,7 +48,7 @@ export class ExtApiStatusService {
     return this.getStatuses().pipe(
       map(statuses => {
         const status = statuses.find(s => s.provider === provider);
-        return status?.connected === true && status?.status === 'ACTIVE';
+        return status?.connected === true;
       }),
     );
   }

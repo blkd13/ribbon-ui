@@ -143,7 +143,7 @@ export class ContextHubService {
           name: status.provider.split('-').slice(1).join('-'), // "box-default" -> "default"
           label: status.label,
           icon: this.getProviderIcon(status.type),
-          isConnected: status.connected && status.status === 'ACTIVE',
+          isConnected: status.connected,
           authType: status.authType === 'OAuth2' ? 'oauth2' : 'apikey',
         }));
         return [...staticProviders, ...dynamicProviders];
