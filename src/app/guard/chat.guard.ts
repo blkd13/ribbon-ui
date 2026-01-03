@@ -3,51 +3,45 @@ import { ActivatedRoute, CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { UserRoleType } from '../models/models';
 import { Project, ProjectVisibility, Team, TeamType } from '../models/project-models';
+import { ExtApiStatusService } from '../services/ext-api-status.service';
 import { GService } from '../services/g.service';
 import { LoggerService } from '../services/logger';
 import { ProjectService, TeamService, ThreadService } from '../services/project.service';
 import { AuthService, ExtApiProviderType } from './../services/auth.service';
 
 export const oAuthGuardGenerator = (oAuthProviderType: ExtApiProviderType): CanActivateFn => {
-  const guardFunc: CanActivateFn = (route, state) => {
-    const authService: AuthService = inject(AuthService);
+  return (route, state) => {
+    const extApiStatusService: ExtApiStatusService = inject(ExtApiStatusService);
     const g: GService = inject(GService);
     const logger: LoggerService = inject(LoggerService);
-    logger.debug(route);
+
     const providerName = route.paramMap.get('providerName') as string;
     const provider = `${oAuthProviderType}-${providerName}`;
-    return authService.getOAuthAccount(oAuthProviderType, providerName).pipe(
-      // getOAuthAccount の結果が返ってきたら
-      // isOAuth2Connected を呼び出して結果を返すまで待つ
-      switchMap(oAuthAccount => {
-        logger.debug(route);
-        return authService.isOAuth2Connected(oAuthProviderType, providerName, 'user-info', route.url.toString()).pipe(
-          map(res => {
-            logger.debug(res);
-            // 成功時にはtrueを返す
-            return true;
-          }),
-          catchError(err => {
-            logger.info(location.href);
-            logger.error(err);
-            // 飛ばす機能をinterceptorに実装したので飛ばさない。本当にこれでいいかは再考。
-            // // ログインされていなかったらOAuth2のログイン画面に飛ばす
-            // location.href = `/api/public/oauth/${g.info.user.orgKey}/${oAuthProvider}/login?fromUrl=${encodeURIComponent(location.href)}`;
-            return of(false);
-          }),
-        );
+
+    // state.url は遷移先のURL（例: /box/default）
+    // Guard は route 遷移前に実行されるため、location.href ではなく state.url を使用
+    const fromUrl = location.origin + state.url;
+
+    return extApiStatusService.checkConnection(provider).pipe(
+      map(result => {
+        logger.debug('OAuth Guard: checkConnection result', result);
+        if (result.connected && result.verified) {
+          // 接続済み・検証成功 → 遷移を許可
+          return true;
+        }
+        // 未接続または検証失敗 → OAuth ログインへリダイレクト
+        logger.info(`OAuth2ログインが必要です: ${result.message}`);
+        extApiStatusService.redirectToOAuthLogin(provider, fromUrl);
+        return false;
       }),
       catchError(err => {
-        logger.info('OAuth2ログインが必要です');
-        // getOAuthAccount 自体が失敗した場合もログイン画面へ飛ばす
-        location.href = `/api/public/oauth/${g.info.user.orgKey}/${provider}/login?fromUrl=${encodeURIComponent(location.href)}`;
-        logger.error(err);
+        logger.error('OAuth Guard: checkConnection error', err);
+        // エラー時も OAuth ログインへリダイレクト
+        extApiStatusService.redirectToOAuthLogin(provider, fromUrl);
         return of(false);
       }),
     );
   };
-
-  return guardFunc;
 }
 
 export const loginGuardGenerator = (role: UserRoleType, navigate: string): CanActivateFn => {

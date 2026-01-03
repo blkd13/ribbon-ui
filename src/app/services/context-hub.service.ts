@@ -15,14 +15,14 @@ import {
   ProviderOption,
 } from '../models/context-hub.models';
 import { ExtApiProviderService } from './ext-api-provider.service';
-import { AuthService } from './auth.service';
+import { ExtApiStatusService } from './ext-api-status.service';
 import { UUID } from '../models/project-models';
 
 @Injectable({ providedIn: 'root' })
 export class ContextHubService {
   private readonly http = inject(HttpClient);
   private readonly extApiProviderService = inject(ExtApiProviderService);
-  private readonly authService = inject(AuthService);
+  private readonly extApiStatusService = inject(ExtApiStatusService);
 
   private readonly baseUrl = '/user/context-hub';
 
@@ -115,58 +115,40 @@ export class ContextHubService {
 
   /** 利用可能なプロバイダー一覧を取得 */
   getAvailableProviders(): Observable<ProviderOption[]> {
-    return this.extApiProviderService.getApiProviders().pipe(
-      switchMap(providers => {
-        // 各プロバイダーの接続状態を確認
-        const connectionChecks = providers.map(provider =>
-          this.authService.isOAuth2Connected(provider.type, provider.name, 'user-info').pipe(
-            map(connected => ({
-              type: this.mapProviderType(provider.type),
-              name: provider.name,
-              label: provider.label,
-              icon: this.getProviderIcon(provider.type),
-              isConnected: !!connected,
-              authType: this.getAuthType(provider.type),
-            } as ProviderOption)),
-            catchError(() => of({
-              type: this.mapProviderType(provider.type),
-              name: provider.name,
-              label: provider.label,
-              icon: this.getProviderIcon(provider.type),
-              isConnected: false,
-              authType: this.getAuthType(provider.type),
-            } as ProviderOption)),
-          )
-        );
+    // 静的プロバイダー（認証不要）
+    const staticProviders: ProviderOption[] = [
+      {
+        type: 'local',
+        name: 'local',
+        label: 'ローカルファイル',
+        icon: 'folder',
+        isConnected: true,
+        authType: 'none',
+      },
+      {
+        type: 'web',
+        name: 'web',
+        label: 'Webサイト',
+        icon: 'language',
+        isConnected: true,
+        authType: 'none',
+      },
+    ];
 
-        // 静的プロバイダー（認証不要）を追加
-        const staticProviders: ProviderOption[] = [
-          {
-            type: 'local',
-            name: 'local',
-            label: 'ローカルファイル',
-            icon: 'folder',
-            isConnected: true,
-            authType: 'none',
-          },
-          {
-            type: 'web',
-            name: 'web',
-            label: 'Webサイト',
-            icon: 'language',
-            isConnected: true,
-            authType: 'none',
-          },
-        ];
-
-        if (connectionChecks.length === 0) {
-          return of(staticProviders);
-        }
-
-        return forkJoin(connectionChecks).pipe(
-          map(dynamicProviders => [...staticProviders, ...dynamicProviders]),
-        );
+    // 新しい一括取得APIで全プロバイダーの接続状態を取得
+    return this.extApiStatusService.getStatuses().pipe(
+      map(statuses => {
+        const dynamicProviders: ProviderOption[] = statuses.map(status => ({
+          type: this.mapProviderType(status.type),
+          name: status.provider.split('-').slice(1).join('-'), // "box-default" -> "default"
+          label: status.label,
+          icon: this.getProviderIcon(status.type),
+          isConnected: status.connected && status.status === 'ACTIVE',
+          authType: status.authType === 'OAuth2' ? 'oauth2' : 'apikey',
+        }));
+        return [...staticProviders, ...dynamicProviders];
       }),
+      catchError(() => of(staticProviders)),
     );
   }
 

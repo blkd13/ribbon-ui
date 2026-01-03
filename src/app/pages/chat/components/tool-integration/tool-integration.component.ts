@@ -1,9 +1,9 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { firstValueFrom } from 'rxjs';
 
 import { ToolCallService } from '../../../../services/tool-call.service';
-import { AuthService } from '../../../../services/auth.service';
-import { ExtApiProviderService } from '../../../../services/ext-api-provider.service';
+import { ExtApiStatusService } from '../../../../services/ext-api-status.service';
 import { Thread, ThreadGroupForView } from '../../../../models/project-models';
 
 @Component({
@@ -21,8 +21,7 @@ export class ToolIntegrationComponent {
   @Output() systemPanelSyncRequested = new EventEmitter<void>();
 
   readonly toolCallService = inject(ToolCallService);
-  readonly authService = inject(AuthService);
-  readonly extApiProviderService = inject(ExtApiProviderService);
+  readonly extApiStatusService = inject(ExtApiStatusService);
   readonly snackBar = inject(MatSnackBar);
 
   // ツールグループと外部プロバイダーのマッピング
@@ -151,32 +150,14 @@ export class ToolIntegrationComponent {
         return true;
       }
 
-      // 利用可能なプロバイダーを取得
-      const availableProviders = await this.extApiProviderService.getApiProviders().toPromise();
-      if (!availableProviders) {
-        return false;
-      }
+      // プロバイダー識別子を構築（例: box-default, gitlab-local）
+      const provider = `${providerType}-${providerName}`;
 
-      // 該当するプロバイダータイプのプロバイダーを検索
-      const matchingProviders = availableProviders.filter(provider =>
-        provider.type === providerType && provider.name === providerName
-      );
+      // 新しいAPIで接続テストを実行
+      const result = await firstValueFrom(this.extApiStatusService.checkConnection(provider));
 
-      if (matchingProviders.length === 0) {
-        return false;
-      }
-
-      // 最初に見つかったプロバイダーで接続性をチェック
-      const firstProvider = matchingProviders[0];
-
-      // OAuth2接続確認API呼び出し
-      const result = await this.authService.isOAuth2Connected(
-        firstProvider.type,
-        firstProvider.name,
-        'user-info'
-      ).toPromise();
-
-      return result !== null && result !== undefined;
+      // connected かつ verified が true の場合のみ接続成功
+      return result.connected && result.verified;
     } catch (error) {
       console.error('Provider connectivity check failed:', error);
       return false;
