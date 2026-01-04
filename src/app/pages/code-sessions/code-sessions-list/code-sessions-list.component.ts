@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
-import { CodeProject } from '../../../models/code-session-models';
+import { CodeProjectResponse } from '../../../models/code-session-models';
 import { RelativeTimePipe } from '../../../pipe/relative-time.pipe';
 import { CodeSessionService } from '../../../services/code-session.service';
 
@@ -32,8 +32,8 @@ import { CodeSessionService } from '../../../services/code-session.service';
   styleUrls: ['./code-sessions-list.component.scss']
 })
 export class CodeSessionsListComponent implements OnInit {
-  projects: CodeProject[] = [];
-  filteredProjects: CodeProject[] = [];
+  projects: CodeProjectResponse[] = [];
+  filteredProjects: CodeProjectResponse[] = [];
   loading = true;
   searchQuery = '';
 
@@ -51,7 +51,7 @@ export class CodeSessionsListComponent implements OnInit {
     this.codeSessionService.getProjects().subscribe({
       next: (projects) => {
         this.projects = projects.sort((a, b) =>
-          new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
+          new Date(b.lastActivity || 0).getTime() - new Date(a.lastActivity || 0).getTime()
         );
         this.filteredProjects = this.projects;
         this.loading = false;
@@ -77,8 +77,12 @@ export class CodeSessionsListComponent implements OnInit {
     );
   }
 
-  navigateToProject(project: CodeProject): void {
+  navigateToProject(project: CodeProjectResponse): void {
     this.router.navigate(['/', 'code-sessions', project.name]);
+  }
+
+  navigateToSettings(): void {
+    this.router.navigate(['/code-sessions/settings']);
   }
 
   getProjectIcon(projectName: string): string {

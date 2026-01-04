@@ -8,7 +8,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CodeSession } from '../../../models/code-session-models';
+import { CodeSessionListItem } from '../../../models/code-session-models';
 import { RelativeTimePipe } from '../../../pipe/relative-time.pipe';
 import { CodeSessionService } from '../../../services/code-session.service';
 
@@ -31,9 +31,9 @@ import { CodeSessionService } from '../../../services/code-session.service';
 })
 export class ProjectSessionsComponent implements OnInit {
     projectName = '';
-    sessions: (CodeSession | null)[] = [];
+    sessions: CodeSessionListItem[] = [];
     loading = true;
-    displayedColumns: string[] = ['sessionId', 'startTime', 'messageCount', 'duration', 'gitBranch', 'actions'];
+    displayedColumns: string[] = ['sessionId', 'startTime', 'messageCount', 'duration', 'actions'];
 
     constructor(
         private route: ActivatedRoute,
@@ -53,7 +53,7 @@ export class ProjectSessionsComponent implements OnInit {
         this.codeSessionService.getSessions(this.projectName).subscribe({
             next: (sessions) => {
                 this.sessions = sessions.sort((a, b) =>
-                    (a ? new Date(a.startTime).getTime() : 0) - (b ? new Date(b.startTime).getTime() : 0)
+                    new Date(b.startTime || 0).getTime() - new Date(a.startTime || 0).getTime()
                 );
                 this.loading = false;
             },
@@ -64,7 +64,7 @@ export class ProjectSessionsComponent implements OnInit {
         });
     }
 
-    navigateToSession(session: CodeSession): void {
+    navigateToSession(session: CodeSessionListItem): void {
         this.router.navigate(['/', 'code-sessions', this.projectName, session.sessionId]);
     }
 
@@ -81,8 +81,8 @@ export class ProjectSessionsComponent implements OnInit {
             .replace('Music/', '🎵 ');
     }
 
-    getDuration(session: CodeSession): string {
-        if (!session.endTime) return '進行中';
+    getDuration(session: CodeSessionListItem): string {
+        if (!session.endTime || !session.startTime) return '進行中';
 
         const start = new Date(session.startTime).getTime();
         const end = new Date(session.endTime).getTime();
@@ -96,15 +96,10 @@ export class ProjectSessionsComponent implements OnInit {
         return `${hours}時間${remainingMinutes}分`;
     }
 
-    getFirstUserMessage(session: CodeSession): string {
-        const userMessage = session.messages.find(m => m.type === 'user');
-        if (!userMessage || !('message' in userMessage)) return '';
-
-        const content = userMessage.message.content;
-        if (typeof content === 'string') {
-            return content.substring(0, 100);
-        }
-        return '';
+    formatFileSize(bytes: number): string {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
 
     getTotalMessageCount(): number {

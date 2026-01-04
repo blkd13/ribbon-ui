@@ -35,6 +35,13 @@ interface ColumnData {
   items: BoxItem[];
   isLoading: boolean;
   expandedId?: string;
+  // ページネーション情報
+  totalCount?: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  initialFillChecked?: boolean;  // 初回ビューポート埋めチェック済みフラグ
 }
 
 /** 選択されたアイテム（除外リスト付き） */
@@ -143,9 +150,11 @@ export interface BoxPathChange {
                 <div class="column" [class.active]="colIdx === columns.length - 1">
                   <div class="column-header">
                     <span class="col-title">{{ column.parentName }}</span>
-                    <span class="col-badge">{{ getFilteredItems(column).length }}</span>
+                    <span class="col-badge" [class.has-more]="column.hasMore">
+                      {{ getFilteredItems(column).length }}@if (column.totalCount && column.totalCount > column.items.length) {<span class="total-count">/{{ column.totalCount }}</span>}
+                    </span>
                   </div>
-                  <div class="column-body">
+                  <div class="column-body" (scroll)="onColumnScroll($event, colIdx)">
                     @if (column.isLoading) {
                       <div class="col-loading">
                         <mat-spinner diameter="24"></mat-spinner>
@@ -217,6 +226,18 @@ export interface BoxPathChange {
                           @if (item.type === 'folder') {
                             <mat-icon class="item-arrow">chevron_right</mat-icon>
                           }
+                        </div>
+                      }
+                      <!-- 追加読み込みインジケーター -->
+                      @if (column.isLoadingMore) {
+                        <div class="load-more-indicator">
+                          <mat-spinner diameter="18"></mat-spinner>
+                          <span>読み込み中...</span>
+                        </div>
+                      } @else if (column.hasMore) {
+                        <div class="load-more-hint">
+                          <mat-icon>expand_more</mat-icon>
+                          <span>スクロールで続きを読み込み</span>
                         </div>
                       }
                     }
@@ -337,6 +358,14 @@ export interface BoxPathChange {
     </div>
   `,
   styles: [`
+    :host {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
     .box-selector-container {
       display: flex;
       flex-direction: column;
@@ -564,6 +593,7 @@ export interface BoxPathChange {
       gap: 12px;
       flex: 1;
       min-height: 0;
+      overflow: hidden; /* 子要素のオーバーフローを防ぐ */
     }
 
     /* 左: カラムエリア (Finder風) */
@@ -572,6 +602,8 @@ export interface BoxPathChange {
       display: flex;
       flex-direction: column;
       min-width: 0;
+      min-height: 0; /* flexbox overflow fix */
+      overflow: hidden;
     }
 
     .columns-viewport {
@@ -594,17 +626,19 @@ export interface BoxPathChange {
 
     .columns-track {
       display: flex;
+      min-height: 100%;
       height: 100%;
-      /* transform による横スクロールを廃止し、ネイティブスクロールを使用 */
     }
 
     .column {
       width: var(--col-width);
       min-width: var(--col-width);
+      height: 100%; /* 親の高さを継承 */
       border-right: 1px solid var(--border-color, #3a3f4a);
       display: flex;
       flex-direction: column;
       background: var(--bg-card, #22262e);
+      overflow: hidden; /* 子要素のオーバーフローを防ぐ */
 
       &:last-child { border-right: none; }
       &.active { background: var(--bg-dark, #1a1d24); }
@@ -635,12 +669,53 @@ export interface BoxPathChange {
         background: rgba(255,255,255,0.08);
         border-radius: 10px;
         color: var(--text-muted, #666);
+
+        &.has-more {
+          background: rgba(33, 150, 243, 0.2);
+          color: var(--primary);
+        }
+
+        .total-count {
+          opacity: 0.6;
+        }
       }
 
       .selected-count {
         background: var(--success);
         color: white;
       }
+    }
+
+    /* 追加読み込みインジケーター */
+    .load-more-indicator, .load-more-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 8px;
+      font-size: 11px;
+      color: var(--text-muted, #666);
+    }
+
+    .load-more-indicator {
+      mat-spinner {
+        ::ng-deep svg { width: 18px !important; height: 18px !important; }
+      }
+    }
+
+    .load-more-hint {
+      opacity: 0.6;
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        animation: bounce 1.5s ease-in-out infinite;
+      }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(3px); }
     }
 
     .column-body {
@@ -888,6 +963,7 @@ export interface BoxPathChange {
     .selected-column {
       width: var(--selected-width);
       min-width: var(--selected-width);
+      min-height: 0; /* flexbox overflow fix */
       display: flex;
       flex-direction: column;
       background: var(--bg-card, #22262e);
@@ -1191,6 +1267,11 @@ export interface BoxPathChange {
 export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewInit {
   @Input() providerName = '';
   @Input() selectedFolderId = '';
+  /** 編集モード用: 初期選択状態 */
+  @Input() initialSelection?: {
+    selectedItems: { id: string; name: string; type: 'folder' | 'file'; path?: string }[];
+    excludedItems?: { id: string; name: string; type: 'folder' | 'file'; path?: string; parentId: string }[];
+  };
   @Output() folderSelected = new EventEmitter<BoxSelection>();
   @Output() pathChanged = new EventEmitter<BoxPathChange>();
 
@@ -1252,6 +1333,11 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
       this.loadRoot();
     }
 
+    // 初期選択状態を復元
+    if (this.initialSelection?.selectedItems?.length) {
+      this.restoreInitialSelection();
+    }
+
     // 検索のデバウンス処理をセットアップ
     this.searchSubject.pipe(
       debounceTime(300),
@@ -1304,7 +1390,7 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
       this.isSearching = false;
       if (items.length > 0 || this.searchInputValue.trim()) {
         this.sourceType = 'search';
-        this.columns = [{ parentId: 'search', parentName: '検索結果', parentPath: '', items, isLoading: false }];
+        this.columns = [{ parentId: 'search', parentName: '検索結果', parentPath: '', items, isLoading: false, offset: 0, limit: 100, hasMore: false, isLoadingMore: false }];
         this.breadcrumbs = [];
         this.scrollOffset = 0;
       }
@@ -1337,7 +1423,7 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
   // コレクション読み込み - コレクション一覧を最初のカラムに表示
   private loadCollections(): void {
     this.collectionsLoading = true;
-    this.columns = [{ parentId: 'collections', parentName: 'コレクション', parentPath: '', items: [], isLoading: true }];
+    this.columns = [{ parentId: 'collections', parentName: 'コレクション', parentPath: '', items: [], isLoading: true, offset: 0, limit: 100, hasMore: false, isLoadingMore: false }];
     this.breadcrumbs = [];
 
     this.apiBoxService.getCollection().pipe(
@@ -1374,7 +1460,11 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
 
   // コレクション内のアイテムを読み込み（2カラム目以降）
   private loadCollectionItems(collectionId: string, colIndex: number, parentPath: string): void {
-    this.apiBoxService.collectionItem(collectionId).subscribe({
+    const col = this.columns[colIndex];
+    const limit = col?.limit || 20;
+    const offset = 0;
+
+    this.apiBoxService.collectionItem(collectionId, offset, limit).subscribe({
       next: (response) => {
         const items: BoxItem[] = response.entries?.map(item => ({
           id: item.id,
@@ -1392,6 +1482,13 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
         if (this.columns[colIndex]) {
           this.columns[colIndex].items = items;
           this.columns[colIndex].isLoading = false;
+          this.columns[colIndex].totalCount = response.total_count;
+          this.columns[colIndex].offset = response.offset || 0;
+          this.columns[colIndex].limit = response.limit || limit;
+          this.columns[colIndex].hasMore = (response.offset || 0) + items.length < (response.total_count || 0);
+
+          // ビューポートを埋めきれていない場合は追加ロード
+          setTimeout(() => this.checkAndLoadMoreIfNeeded(colIndex), 100);
         }
       },
       error: (error) => {
@@ -1399,6 +1496,7 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
         if (this.columns[colIndex]) {
           this.columns[colIndex].items = [];
           this.columns[colIndex].isLoading = false;
+          this.columns[colIndex].hasMore = false;
         }
       },
     });
@@ -1433,7 +1531,7 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
   }
 
   private loadRoot(): void {
-    this.columns = [{ parentId: '0', parentName: 'Root', parentPath: '', items: [], isLoading: true }];
+    this.columns = [{ parentId: '0', parentName: 'Root', parentPath: '', items: [], isLoading: true, offset: 0, limit: 20, hasMore: false, isLoadingMore: false }];
     this.breadcrumbs = [];
     this.loadFolder('0', 0, '');
     this.emitPathChange();
@@ -1443,32 +1541,192 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
     const col = this.columns[colIndex];
     if (col) col.isLoading = true;
 
-    this.apiBoxService.folder(folderId).pipe(
-      map(res => res.item_collection.entries.map(item => {
-        const ext = item.type === 'file' ? this.getExtension(item.name) : undefined;
-        const itemPath = parentPath ? `${parentPath}/${item.name}` : `/${item.name}`;
+    const limit = col?.limit || 20;
+    const offset = 0;
+
+    this.apiBoxService.folder(folderId, offset, limit).pipe(
+      map(res => {
+        const items = res.item_collection.entries.map(item => {
+          const ext = item.type === 'file' ? this.getExtension(item.name) : undefined;
+          const itemPath = parentPath ? `${parentPath}/${item.name}` : `/${item.name}`;
+          return {
+            id: item.id,
+            name: item.name,
+            type: item.type as 'folder' | 'file',
+            extension: ext,
+            parentId: folderId,
+            path: itemPath
+          };
+        });
         return {
-          id: item.id,
-          name: item.name,
-          type: item.type as 'folder' | 'file',
-          extension: ext,
-          parentId: folderId,
-          path: itemPath
+          items,
+          totalCount: res.item_collection.total_count,
+          offset: res.item_collection.offset,
+          limit: res.item_collection.limit,
         };
-      })),
-      catchError(err => { console.error('Box load error:', err); return of([]); })
-    ).subscribe(items => {
+      }),
+      catchError(err => { console.error('Box load error:', err); return of({ items: [], totalCount: 0, offset: 0, limit }); })
+    ).subscribe(result => {
       // フォルダを先に、ファイルを後に
-      items.sort((a, b) => {
+      result.items.sort((a, b) => {
         if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
         return a.name.localeCompare(b.name);
       });
 
       if (this.columns[colIndex]) {
-        this.columns[colIndex].items = items;
+        this.columns[colIndex].items = result.items;
         this.columns[colIndex].isLoading = false;
+        this.columns[colIndex].totalCount = result.totalCount;
+        this.columns[colIndex].offset = result.offset;
+        this.columns[colIndex].limit = result.limit;
+        this.columns[colIndex].hasMore = (result.offset + result.items.length) < result.totalCount;
+
+        // ビューポートを埋めきれていない場合は追加ロード
+        setTimeout(() => this.checkAndLoadMoreIfNeeded(colIndex), 100);
       }
     });
+  }
+
+  /** ビューポートを埋めきれていない場合に追加ロードする */
+  private checkAndLoadMoreIfNeeded(colIndex: number, retryCount = 0): void {
+    const MAX_RETRIES = 5; // 最大5回まで（100件分）
+    const col = this.columns[colIndex];
+
+    if (!col || !col.hasMore || col.isLoadingMore || col.isLoading) return;
+    if (retryCount >= MAX_RETRIES) return;
+
+    // 初回チェック済みフラグで重複実行を防止
+    if (retryCount === 0 && col.initialFillChecked) return;
+    if (retryCount === 0) col.initialFillChecked = true;
+
+    // カラムのDOM要素を取得
+    const columnElements = document.querySelectorAll('.box-selector-container .column');
+    const columnElement = columnElements[colIndex];
+    if (!columnElement) return;
+
+    const columnBody = columnElement.querySelector('.column-body') as HTMLElement;
+    if (!columnBody) return;
+
+    // コンテンツがビューポートより小さい場合は追加ロード
+    // clientHeight が 0 の場合はまだレンダリングされていないのでスキップ
+    if (columnBody.clientHeight > 0 && columnBody.scrollHeight <= columnBody.clientHeight + 10) {
+      this.loadMoreItemsWithCallback(colIndex, () => {
+        // ロード完了後、まだ埋まっていなければ再チェック
+        setTimeout(() => this.checkAndLoadMoreIfNeeded(colIndex, retryCount + 1), 100);
+      });
+    }
+  }
+
+  /** 追加ロード（コールバック付き） */
+  private loadMoreItemsWithCallback(colIndex: number, callback: () => void): void {
+    const col = this.columns[colIndex];
+    if (!col || col.isLoadingMore || !col.hasMore) {
+      callback();
+      return;
+    }
+
+    col.isLoadingMore = true;
+    const newOffset = col.offset + col.limit;
+    const parentPath = col.parentPath;
+    const folderId = col.parentId;
+    let callbackCalled = false;
+
+    const callOnce = () => {
+      if (!callbackCalled) {
+        callbackCalled = true;
+        callback();
+      }
+    };
+
+    // コレクションの場合
+    if (folderId.startsWith('collection:')) {
+      const collectionId = folderId.replace('collection:', '');
+      let processed = false;
+      this.apiBoxService.collectionItem(collectionId, newOffset, col.limit).subscribe({
+        next: (response) => {
+          // 有効なデータがある場合のみ処理（APIは複数回emitするため）
+          if (!response.entries?.length && processed) return;
+          processed = true;
+
+          const newItems: BoxItem[] = response.entries?.map(item => ({
+            id: item.id,
+            name: item.name,
+            type: item.type as 'folder' | 'file',
+            extension: item.type === 'file' ? this.getExtension(item.name) : undefined,
+            path: `${parentPath}/${item.name}`
+          })) || [];
+
+          newItems.sort((a, b) => {
+            if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+            return a.name.localeCompare(b.name);
+          });
+
+          // 既存アイテムのIDセットを作成
+          const existingIds = new Set(col.items.map(i => i.id));
+          const uniqueNewItems = newItems.filter(i => !existingIds.has(i.id));
+
+          if (uniqueNewItems.length > 0) {
+            col.items = [...col.items, ...uniqueNewItems];
+            col.offset = newOffset;
+          }
+          col.hasMore = (newOffset + newItems.length) < (response.total_count || 0);
+          col.isLoadingMore = false;
+          callOnce();
+        },
+        error: () => {
+          col.isLoadingMore = false;
+          callOnce();
+        }
+      });
+      return;
+    }
+
+    // 通常のフォルダの場合
+    let processed = false;
+    this.apiBoxService.folder(folderId, newOffset, col.limit).pipe(
+      map(res => ({
+        items: res.item_collection.entries.map(item => {
+          const ext = item.type === 'file' ? this.getExtension(item.name) : undefined;
+          const itemPath = parentPath ? `${parentPath}/${item.name}` : `/${item.name}`;
+          return {
+            id: item.id,
+            name: item.name,
+            type: item.type as 'folder' | 'file',
+            extension: ext,
+            parentId: folderId,
+            path: itemPath
+          };
+        }),
+        totalCount: res.item_collection.total_count,
+      })),
+      catchError(() => of({ items: [] as BoxItem[], totalCount: col.totalCount || 0 }))
+    ).subscribe(result => {
+      // 空の結果で既に処理済みならスキップ
+      if (!result.items.length && processed) return;
+      processed = true;
+
+      result.items.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      // 既存アイテムのIDセットを作成
+      const existingIds = new Set(col.items.map(i => i.id));
+      const uniqueNewItems = result.items.filter(i => !existingIds.has(i.id));
+
+      if (uniqueNewItems.length > 0) {
+        col.items = [...col.items, ...uniqueNewItems];
+        col.offset = newOffset;
+      }
+      col.hasMore = (newOffset + result.items.length) < result.totalCount;
+      col.isLoadingMore = false;
+      callOnce();
+    });
+  }
+
+  /** 追加データを読み込む（無限スクロール用） */
+  loadMoreItems(colIndex: number): void {
+    this.loadMoreItemsWithCallback(colIndex, () => {});
   }
 
   private getExtension(filename: string): string {
@@ -1583,7 +1841,7 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
     this.breadcrumbs.push({ id: item.id, name: item.name, path: itemPath });
 
     // 新しいカラムを追加
-    this.columns.push({ parentId: item.id, parentName: item.name, parentPath: itemPath, items: [], isLoading: true });
+    this.columns.push({ parentId: item.id, parentName: item.name, parentPath: itemPath, items: [], isLoading: true, offset: 0, limit: 20, hasMore: false, isLoadingMore: false });
 
     // コレクションアイテムの場合はコレクション内容を読み込む
     if (item.id.startsWith('collection:')) {
@@ -1725,6 +1983,23 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
     // スクロール位置を更新（インジケータ用）
     if (this.columnsViewport?.nativeElement) {
       this.scrollOffset = -this.columnsViewport.nativeElement.scrollLeft;
+    }
+  }
+
+  /** カラム内スクロールイベントハンドラー（無限スクロール用） */
+  onColumnScroll(event: Event, colIndex: number): void {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+
+    const col = this.columns[colIndex];
+    if (!col || !col.hasMore || col.isLoadingMore) return;
+
+    // 下端に近づいたら追加読み込み（残り100px以下で発火）
+    const threshold = 100;
+    const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < threshold;
+
+    if (isNearBottom) {
+      this.loadMoreItems(colIndex);
     }
   }
 
@@ -1985,6 +2260,43 @@ ${JSON.stringify(itemListForAi, null, 2)}
     } finally {
       this.isAiProcessing = false;
     }
+  }
+
+  /** 初期選択状態を復元 */
+  private restoreInitialSelection(): void {
+    if (!this.initialSelection) return;
+
+    // 選択アイテムを復元
+    for (const item of this.initialSelection.selectedItems) {
+      const boxItem: BoxItem = {
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        path: item.path,
+        extension: item.type === 'file' ? this.getExtension(item.name) : undefined,
+      };
+
+      // 対応する除外アイテムを取得
+      const excludedForThis = this.initialSelection.excludedItems?.filter(
+        e => e.parentId === item.id
+      ) || [];
+
+      const excludes: BoxItem[] = excludedForThis.map(e => ({
+        id: e.id,
+        name: e.name,
+        type: e.type,
+        path: e.path,
+        extension: e.type === 'file' ? this.getExtension(e.name) : undefined,
+      }));
+
+      this.selections.push({
+        item: boxItem,
+        excludes,
+      });
+    }
+
+    // 選択状態を通知
+    this.emitSelection();
   }
 
   /** 選択状態に追加（既存メソッドを利用） */

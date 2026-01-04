@@ -134,7 +134,7 @@ export class PredictHistoryComponent implements OnInit {
       },
       tooltip: {
         callbacks: {
-          label: (context) => `${context.dataset.label}: ¥${context.parsed.y.toLocaleString()}`
+          label: (context) => `${context.dataset.label}: ¥${(context.parsed.y ?? 0).toLocaleString()}`
         }
       }
     },
@@ -193,10 +193,11 @@ export class PredictHistoryComponent implements OnInit {
         callbacks: {
           label: (context) => {
             const isCost = this.currentPeriodType === 'month-trend' || this.currentPeriodType === 'year-trend';
+            const value = context.parsed.y ?? 0;
             if (isCost) {
-              return `${context.dataset.label}: ¥${context.parsed.y.toLocaleString()}`;
+              return `${context.dataset.label}: ¥${value.toLocaleString()}`;
             }
-            return `${context.dataset.label}: ${context.parsed.y.toLocaleString()}件`;
+            return `${context.dataset.label}: ${value.toLocaleString()}件`;
           }
         }
       }

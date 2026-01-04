@@ -1,24 +1,22 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { MatTreeModule } from '@angular/material/tree';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatTabsModule } from '@angular/material/tabs';
 import { FlatTreeControl } from '@angular/cdk/tree';
-import { MatTreeFlatDataSource, MatTreeFlattener } from '@angular/material/tree';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTreeFlatDataSource, MatTreeFlattener, MatTreeModule } from '@angular/material/tree';
 
-import { ApiGitlabService, GitLabGroup, GitLabProject, GitLabUser } from '../../../services/api-gitlab.service';
-import { ApiGiteaService, GiteaRepository } from '../../../services/api-gitea.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { safeForkJoin } from '../../../utils/dom-utils';
+import { ApiGiteaService, GiteaRepository } from '../../../services/api-gitea.service';
+import { ApiGitlabService, GitLabGroup, GitLabProject, GitLabUser } from '../../../services/api-gitlab.service';
 
 export type GitProviderType = 'gitlab' | 'gitea';
 export type SearchScope = 'project' | 'group' | 'user';
@@ -1062,13 +1060,13 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
   private loadGitLabGroups(): void {
     // グループとユーザーの両方を取得
     forkJoin([
-      this.gitlabService.groupChildren(this.providerName).pipe(
+      this.gitlabService.groupChildren(`${this.providerType}-${this.providerName}`).pipe(
         catchError(err => {
           console.error('Failed to load GitLab groups:', err);
           return of([] as (GitLabGroup | GitLabProject)[]);
         })
       ),
-      this.gitlabService.usersChildren(this.providerName).pipe(
+      this.gitlabService.usersChildren(`${this.providerType}-${this.providerName}`).pipe(
         catchError(err => {
           console.error('Failed to load GitLab users:', err);
           return of([] as (GitLabUser | GitLabProject)[]);
@@ -1110,7 +1108,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
   }
 
   private loadGiteaOrgs(): void {
-    this.giteaService.groupChildren(this.providerName).pipe(
+    this.giteaService.groupChildren(`${this.providerType}-${this.providerName}`).pipe(
       map(items => {
         const nodes: GitNode[] = items.map(item => ({
           id: (item as any).id,
@@ -1160,7 +1158,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
     // ユーザーノードの場合はユーザーのプロジェクトを取得
     if (node.type === 'user') {
       const userId = node._userId || parentNode._userId;
-      this.gitlabService.usersChildren(this.providerName, userId).pipe(
+      this.gitlabService.usersChildren(`${this.providerType}-${this.providerName}`, userId).pipe(
         map(items => {
           const children: GitNode[] = (items as GitLabProject[]).map(project => ({
             id: project.id,
@@ -1186,7 +1184,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
     }
 
     // グループノードの場合はサブグループとプロジェクトを取得
-    this.gitlabService.groupChildren(this.providerName, node.id as number).pipe(
+    this.gitlabService.groupChildren(`${this.providerType}-${this.providerName}`, node.id as number).pipe(
       map(items => {
         const children: GitNode[] = items.map(item => {
           const isGroup = !('default_branch' in item);
@@ -1214,7 +1212,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
   }
 
   private loadGiteaChildren(node: FlatGitNode, parentNode: GitNode): void {
-    this.giteaService.groupChildren(this.providerName, parentNode.fullPath).pipe(
+    this.giteaService.groupChildren(`${this.providerType}-${this.providerName}`, parentNode.fullPath).pipe(
       map(items => {
         const children: GitNode[] = (items as GiteaRepository[]).map(repo => ({
           id: repo.id,
@@ -1289,7 +1287,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
 
       if (scopes.includes('project')) {
         observables.push(
-          this.gitlabService.projects(this.providerName, undefined, { search: query }).pipe(
+          this.gitlabService.projects(`${this.providerType}-${this.providerName}`, undefined, { search: query }).pipe(
             catchError(() => of([]))
           )
         );
@@ -1297,7 +1295,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
       }
       if (scopes.includes('group')) {
         observables.push(
-          this.gitlabService.searchGroups(this.providerName, query).pipe(
+          this.gitlabService.searchGroups(`${this.providerType}-${this.providerName}`, query).pipe(
             catchError(() => of([]))
           )
         );
@@ -1305,7 +1303,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
       }
       if (scopes.includes('user')) {
         observables.push(
-          this.gitlabService.searchUsers(this.providerName, query).pipe(
+          this.gitlabService.searchUsers(`${this.providerType}-${this.providerName}`, query).pipe(
             catchError(() => of([]))
           )
         );
@@ -1335,7 +1333,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
     } else {
       // Giteaの場合はプロジェクト検索のみ
       if (scopes.includes('project')) {
-        this.giteaService.projects(this.providerName, undefined, { q: query }).pipe(
+        this.giteaService.projects(`${this.providerType}-${this.providerName}`, undefined, { q: query }).pipe(
           catchError(() => of([]))
         ).subscribe(results => {
           this.searchResultCache.project = results;
@@ -1356,8 +1354,8 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
 
     // すべて空なら検索結果なし
     this.noSearchResults = this.searchResults.length === 0 &&
-                           this.groupSearchResults.length === 0 &&
-                           this.userSearchResults.length === 0;
+      this.groupSearchResults.length === 0 &&
+      this.userSearchResults.length === 0;
   }
 
   toggleScope(scope: SearchScope): void {
@@ -1375,8 +1373,8 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
     // OFF→ONになった場合、検索クエリがあってキャッシュがなければ検索実行
     if (!wasEnabled && this.lastSearchQuery) {
       const needsFetch = (scope === 'project' && this.searchResultCache.project.length === 0) ||
-                         (scope === 'group' && this.searchResultCache.group.length === 0) ||
-                         (scope === 'user' && this.searchResultCache.user.length === 0);
+        (scope === 'group' && this.searchResultCache.group.length === 0) ||
+        (scope === 'user' && this.searchResultCache.user.length === 0);
 
       if (needsFetch && this.cachedQuery === this.lastSearchQuery) {
         this.isSearching = true;
@@ -1408,8 +1406,8 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
 
   hasAnySearchResults(): boolean {
     return this.searchResults.length > 0 ||
-           this.groupSearchResults.length > 0 ||
-           this.userSearchResults.length > 0;
+      this.groupSearchResults.length > 0 ||
+      this.userSearchResults.length > 0;
   }
 
   getSearchResultName(result: GitLabProject | GiteaRepository): string {
@@ -1431,7 +1429,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
     this.currentBrowsePath = groupPath;
     this.browseHistory.push({ path: this.currentBrowsePath, nodes: [...this.dataNodes] });
 
-    this.gitlabService.groupChildren(this.providerName, groupId).pipe(
+    this.gitlabService.groupChildren(`${this.providerType}-${this.providerName}`, groupId).pipe(
       catchError(err => {
         console.error('Failed to load group contents:', err);
         this.errorMessage = 'グループの内容を読み込めませんでした';
@@ -1461,7 +1459,7 @@ export class GitProjectSelectorComponent implements OnInit, OnChanges {
     this.currentBrowsePath = `@${userName}`;
     this.browseHistory.push({ path: this.currentBrowsePath, nodes: [...this.dataNodes] });
 
-    this.gitlabService.usersChildren(this.providerName, userId).pipe(
+    this.gitlabService.usersChildren(`${this.providerType}-${this.providerName}`, userId).pipe(
       catchError(err => {
         console.error('Failed to load user projects:', err);
         this.errorMessage = 'ユーザーのプロジェクトを読み込めませんでした';

@@ -26,6 +26,11 @@ export type ContextResourceSyncStatus =
   | 'error'        // エラー
   | 'disabled';    // 無効
 
+/** 検索モード */
+export type ContextSearchMode =
+  | 'realtime'     // リアルタイムAPI検索
+  | 'vector';      // ベクトルDB検索
+
 /** 階層深度の設定 */
 export interface DepthConfig {
   type: 'none' | 'limited' | 'unlimited';
@@ -55,6 +60,7 @@ export interface ContextResourceProvider extends BaseEntity {
   syncStatus: ContextResourceSyncStatus;
   lastSyncAt?: Date;
   sortOrder: number;
+  searchMode: ContextSearchMode;  // 検索モード（realtime / vector）
 }
 
 // ============================================
@@ -327,6 +333,7 @@ export interface ContextResourceCreateDto {
   label: string;
   description?: string;
   config: ContextResourceConfig;
+  searchMode?: ContextSearchMode;  // デフォルト: 'realtime'
 }
 
 export interface ContextResourceUpdateDto {
@@ -334,6 +341,7 @@ export interface ContextResourceUpdateDto {
   description?: string;
   isActive?: boolean;
   config?: Partial<ContextResourceConfig>;
+  searchMode?: ContextSearchMode;
 }
 
 // ============================================
@@ -366,3 +374,127 @@ export const JIRA_FIELD_OPTIONS: { value: JiraIncludeField; label: string }[] = 
   { value: 'subtasks', label: 'サブタスク' },
   { value: 'links', label: 'リンク' },
 ];
+
+// ============================================
+// コンテンツキャッシュ
+// ============================================
+
+/** コンテンツメタデータ */
+export interface ContextContentMetadata {
+  title?: string;
+  path?: string;
+  url?: string;
+  lastModified?: Date;
+  sourceId?: string;
+  sourceType?: string;
+  mimeType?: string;
+}
+
+/** キャッシュされたコンテンツ */
+export interface ContextContent extends BaseEntity {
+  contextResourceId: UUID;
+  contentHash: string;
+  content: string;
+  metadata?: ContextContentMetadata;
+  chunkIndex?: number;
+  totalChunks?: number;
+  tokenCount?: number;
+}
+
+/** コンテンツ取得結果 */
+export interface FetchContentResult {
+  resourceId: string;
+  contentCount: number;
+  error?: string;
+}
+
+/** コンテンツ取得レスポンス */
+export interface FetchContentResponse {
+  results: FetchContentResult[];
+}
+
+/** コンテンツ一覧レスポンス */
+export interface GetContentResponse {
+  contents: ContextContent[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// ============================================
+// RAG検索
+// ============================================
+
+/** RAG検索リクエスト */
+export interface RAGSearchRequest {
+  query: string;
+  resourceIds?: string[];
+  topK?: number;
+  minScore?: number;
+  model?: string;
+}
+
+/** RAG検索結果アイテム */
+export interface RAGSearchResultItem {
+  resourceId: string;
+  resourceLabel: string;
+  contentId: string;
+  content: string;
+  score: number;
+  metadata?: ContextContentMetadata;
+  chunkIndex?: number;
+  totalChunks?: number;
+}
+
+/** RAG検索レスポンス */
+export interface RAGSearchResponse {
+  results: RAGSearchResultItem[];
+  query: string;
+}
+
+/** Embedding生成結果 */
+export interface GenerateEmbeddingsResult {
+  resourceId: string;
+  embeddingCount: number;
+  error?: string;
+}
+
+/** Embedding生成レスポンス */
+export interface GenerateEmbeddingsResponse {
+  results: GenerateEmbeddingsResult[];
+  model: string;
+}
+
+// ============================================
+// リアルタイム検索
+// ============================================
+
+/** リアルタイム検索リクエスト */
+export interface RealtimeSearchRequest {
+  query: string;
+  resourceIds?: string[];
+  limit?: number;
+}
+
+/** リアルタイム検索結果アイテム */
+export interface RealtimeSearchResult {
+  resourceId: string;
+  resourceLabel: string;
+  title: string;
+  content: string;
+  url?: string;
+  score?: number;
+  metadata?: {
+    path?: string;
+    author?: string;
+    lastModified?: Date;
+    sourceType?: string;
+  };
+}
+
+/** リアルタイム検索レスポンス */
+export interface RealtimeSearchResponse {
+  results: RealtimeSearchResult[];
+  query: string;
+  searchMode: 'realtime';
+}

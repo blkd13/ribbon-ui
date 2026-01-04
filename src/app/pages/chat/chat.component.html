@@ -46,6 +46,22 @@
         <div>{{ 'NEW_CHAT' | translate }}</div>
       </a>
 
+      <!-- サイドバータブ切り替え -->
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab" [class.active]="sidebarTab === 'threads'" (click)="sidebarTab = 'threads'">
+          <mat-icon>forum</mat-icon>
+          <span>スレッド</span>
+        </button>
+        <button class="sidebar-tab" [class.active]="sidebarTab === 'context'" (click)="sidebarTab = 'context'">
+          <mat-icon>hub</mat-icon>
+          <span>コンテキスト</span>
+          @if (selectedContextResourceIds.length > 0) {
+            <span class="badge">{{ selectedContextResourceIds.length }}</span>
+          }
+        </button>
+      </div>
+
+      @if (sidebarTab === 'threads') {
       <!-- フィルター入力欄 -->
       <div class="thread-filter-container">
         <mat-icon class="filter-icon">search</mat-icon>
@@ -150,6 +166,14 @@
         </div>
         }
       </div>
+      } @else {
+      <!-- Context Hub サイドバー -->
+      <app-context-hub-sidebar
+        [projectId]="selectedProject.id"
+        [selectedResourceIds]="selectedContextResourceIds"
+        (selectionChange)="onContextResourceSelectionChange($event)">
+      </app-context-hub-sidebar>
+      }
       <!-- <button (click)="export(-1)">export all</button> -->
     </div>
   </div>
@@ -587,6 +611,32 @@
           (remove)="inputArea.content.splice(inputArea.content.indexOf(content), 1)"></app-doc-tag>
         }
         }
+      </div>
+      }
+      <!-- 選択されたコンテキストリソース -->
+      @if(selectedContextResources.length > 0){
+      <div class="context-resources-indicator">
+        <div class="context-label">
+          <mat-icon>hub</mat-icon>
+          <span>コンテキスト</span>
+          @if(isSearchingContext){
+            <mat-spinner diameter="14"></mat-spinner>
+          }
+        </div>
+        <div class="context-chips">
+          @for(resource of selectedContextResources; track resource.id){
+            <div class="context-chip">
+              <mat-icon class="chip-icon">{{ getProviderIcon(resource.providerType) }}</mat-icon>
+              <span class="chip-label">{{ resource.label }}</span>
+              <button mat-icon-button class="chip-remove" (click)="removeContextResource(resource.id)">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          }
+        </div>
+        <button mat-icon-button class="clear-all" matTooltip="すべてクリア" (click)="clearContextSelection()">
+          <mat-icon>clear_all</mat-icon>
+        </button>
       </div>
       }
       <!-- メッセージ入力 -->

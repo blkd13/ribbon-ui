@@ -5,7 +5,6 @@ import { catchError, map, tap, switchMap } from 'rxjs/operators';
 import {
   ContextHub,
   ContextHubForView,
-  ContextHubCreateDto,
   ContextHubUpdateDto,
   ContextResource,
   ContextResourceForView,
@@ -13,6 +12,13 @@ import {
   ContextResourceUpdateDto,
   ContextResourceProviderType,
   ProviderOption,
+  FetchContentResponse,
+  GetContentResponse,
+  RAGSearchRequest,
+  RAGSearchResponse,
+  GenerateEmbeddingsResponse,
+  RealtimeSearchRequest,
+  RealtimeSearchResponse,
 } from '../models/context-hub.models';
 import { ExtApiProviderService } from './ext-api-provider.service';
 import { ExtApiStatusService } from './ext-api-status.service';
@@ -24,49 +30,39 @@ export class ContextHubService {
   private readonly extApiProviderService = inject(ExtApiProviderService);
   private readonly extApiStatusService = inject(ExtApiStatusService);
 
-  private readonly baseUrl = '/user/context-hub';
-
   // 現在選択中のContext Hub
   private currentHubSubject = new BehaviorSubject<ContextHubForView | null>(null);
   currentHub$ = this.currentHubSubject.asObservable();
 
   // ============================================
-  // Context Hub CRUD
+  // Context Hub CRUD (Project-centric URLs)
   // ============================================
 
   /** プロジェクトのContext Hubを取得（なければ作成） */
   getOrCreateHub(projectId: UUID): Observable<ContextHubForView> {
-    return this.http.get<ContextHubForView>(`${this.baseUrl}/project/${projectId}`).pipe(
-      catchError(() => {
-        // 存在しない場合は新規作成
-        return this.createHub({
-          projectId,
-          name: 'Default Context Hub',
-          description: 'プロジェクトのデフォルトContext Hub',
-        });
-      }),
-      tap(hub => this.currentHubSubject.next(hub)),
-    );
-  }
-
-  /** Context Hubを作成 */
-  createHub(dto: ContextHubCreateDto): Observable<ContextHubForView> {
-    return this.http.post<ContextHubForView>(this.baseUrl, dto).pipe(
+    return this.http.get<ContextHubForView>(`/user/project/${projectId}/context-hub`).pipe(
       tap(hub => this.currentHubSubject.next(hub)),
     );
   }
 
   /** Context Hubを更新 */
-  updateHub(hubId: UUID, dto: ContextHubUpdateDto): Observable<ContextHubForView> {
-    return this.http.patch<ContextHubForView>(`${this.baseUrl}/${hubId}`, dto).pipe(
+  updateHub(projectId: UUID, dto: ContextHubUpdateDto): Observable<ContextHubForView> {
+    return this.http.patch<ContextHubForView>(`/user/project/${projectId}/context-hub`, dto).pipe(
       tap(hub => this.currentHubSubject.next(hub)),
     );
   }
 
   /** Context Hubを削除 */
-  deleteHub(hubId: UUID): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${hubId}`).pipe(
+  deleteHub(projectId: UUID): Observable<void> {
+    return this.http.delete<void>(`/user/project/${projectId}/context-hub`).pipe(
       tap(() => this.currentHubSubject.next(null)),
+    );
+  }
+
+  /** 全リソースの同期を実行 */
+  syncAllResources(projectId: UUID): Observable<ContextHubForView> {
+    return this.http.post<ContextHubForView>(`/user/project/${projectId}/context-hub/sync-all`, {}).pipe(
+      tap(hub => this.currentHubSubject.next(hub)),
     );
   }
 
@@ -76,36 +72,85 @@ export class ContextHubService {
 
   /** リソースを追加 */
   addResource(dto: ContextResourceCreateDto): Observable<ContextResourceForView> {
-    return this.http.post<ContextResourceForView>(`${this.baseUrl}/resource`, dto).pipe(
+    return this.http.post<ContextResourceForView>(`/user/context-hub/resource`, dto).pipe(
       tap(() => this.refreshCurrentHub()),
     );
   }
 
   /** リソースを更新 */
   updateResource(resourceId: UUID, dto: ContextResourceUpdateDto): Observable<ContextResourceForView> {
-    return this.http.patch<ContextResourceForView>(`${this.baseUrl}/resource/${resourceId}`, dto).pipe(
+    return this.http.patch<ContextResourceForView>(`/user/context-hub/resource/${resourceId}`, dto).pipe(
       tap(() => this.refreshCurrentHub()),
     );
   }
 
   /** リソースを削除 */
   deleteResource(resourceId: UUID): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/resource/${resourceId}`).pipe(
+    return this.http.delete<void>(`/user/context-hub/resource/${resourceId}`).pipe(
       tap(() => this.refreshCurrentHub()),
     );
   }
 
   /** リソースの同期を実行 */
   syncResource(resourceId: UUID): Observable<ContextResourceForView> {
-    return this.http.post<ContextResourceForView>(`${this.baseUrl}/resource/${resourceId}/sync`, {}).pipe(
+    return this.http.post<ContextResourceForView>(`/user/context-hub/resource/${resourceId}/sync`, {}).pipe(
       tap(() => this.refreshCurrentHub()),
     );
   }
 
-  /** 全リソースの同期を実行 */
-  syncAllResources(hubId: UUID): Observable<ContextHubForView> {
-    return this.http.post<ContextHubForView>(`${this.baseUrl}/${hubId}/sync-all`, {}).pipe(
-      tap(hub => this.currentHubSubject.next(hub)),
+  // ============================================
+  // コンテンツ取得・管理
+  // ============================================
+
+  /** プロジェクトのコンテンツを取得・キャッシュ */
+  fetchContent(projectId: UUID, resourceIds?: string[], force?: boolean): Observable<FetchContentResponse> {
+    return this.http.post<FetchContentResponse>(`/user/project/${projectId}/context-hub/fetch-content`, {
+      resourceIds,
+      force,
+    });
+  }
+
+  /** リソースのキャッシュ済みコンテンツを取得 */
+  getResourceContent(resourceId: UUID, limit?: number, offset?: number): Observable<GetContentResponse> {
+    const params: Record<string, string> = {};
+    if (limit) params['limit'] = limit.toString();
+    if (offset) params['offset'] = offset.toString();
+
+    return this.http.get<GetContentResponse>(`/user/context-hub/resource/${resourceId}/content`, { params });
+  }
+
+  /** リソースのキャッシュ済みコンテンツを削除 */
+  deleteResourceContent(resourceId: UUID): Observable<{ message: string; deletedCount: number }> {
+    return this.http.delete<{ message: string; deletedCount: number }>(`/user/context-hub/resource/${resourceId}/content`);
+  }
+
+  // ============================================
+  // RAG検索
+  // ============================================
+
+  /** RAG検索を実行（ベクトル検索） */
+  searchContent(projectId: UUID, request: RAGSearchRequest): Observable<RAGSearchResponse> {
+    return this.http.post<RAGSearchResponse>(`/user/project/${projectId}/context-hub/search`, request);
+  }
+
+  /** リアルタイム検索を実行 */
+  searchRealtime(projectId: UUID, request: RealtimeSearchRequest): Observable<RealtimeSearchResponse> {
+    return this.http.post<RealtimeSearchResponse>(`/user/project/${projectId}/context-hub/search-realtime`, request);
+  }
+
+  /** プロジェクトのHub内全リソースのEmbeddingを生成 */
+  generateHubEmbeddings(projectId: UUID, resourceIds?: string[], model?: string): Observable<GenerateEmbeddingsResponse> {
+    return this.http.post<GenerateEmbeddingsResponse>(`/user/project/${projectId}/context-hub/generate-embeddings`, {
+      resourceIds,
+      model,
+    });
+  }
+
+  /** リソースのEmbeddingを生成 */
+  generateResourceEmbeddings(resourceId: UUID, model?: string): Observable<{ message: string; resourceId: string; embeddingCount: number; model: string }> {
+    return this.http.post<{ message: string; resourceId: string; embeddingCount: number; model: string }>(
+      `/user/context-hub/resource/${resourceId}/generate-embeddings`,
+      { model }
     );
   }
 
@@ -197,11 +242,11 @@ export class ContextHubService {
   // ヘルパー
   // ============================================
 
-  /** 現在のHubを再読み込み */
+  /** 現在のHubを再読み込み（projectIdを使用） */
   private refreshCurrentHub(): void {
     const currentHub = this.currentHubSubject.getValue();
     if (currentHub) {
-      this.http.get<ContextHubForView>(`${this.baseUrl}/${currentHub.id}`).pipe(
+      this.http.get<ContextHubForView>(`/user/project/${currentHub.projectId}/context-hub`).pipe(
         tap(hub => this.currentHubSubject.next(hub)),
       ).subscribe();
     }

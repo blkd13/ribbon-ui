@@ -13,12 +13,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatRadioModule } from '@angular/material/radio';
 
 import { ContextHubService } from '../../../services/context-hub.service';
 import {
   ContextResourceForView,
   ContextResourceCreateDto,
   ContextResourceUpdateDto,
+  ContextSearchMode,
   ConfluenceResourceConfig,
 } from '../../../models/context-hub.models';
 import { UUID } from '../../../models/project-models';
@@ -48,6 +50,7 @@ export interface ConfluenceWizardData {
     MatTooltipModule,
     MatSnackBarModule,
     MatCheckboxModule,
+    MatRadioModule,
     ConfluenceSpaceSelectorComponent,
   ],
   template: `
@@ -126,6 +129,21 @@ export interface ConfluenceWizardData {
                   <label class="form-label">説明</label>
                   <input type="text" class="form-input" formControlName="description"
                          placeholder="このリソースの説明を入力...">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">検索モード</label>
+                <mat-radio-group formControlName="searchMode" class="horizontal-radio-group">
+                  <mat-radio-button value="realtime">リアルタイム検索</mat-radio-button>
+                  <mat-radio-button value="vector">ベクトル検索</mat-radio-button>
+                </mat-radio-group>
+                <div class="form-hint">
+                  @if (form.get('searchMode')?.value === 'realtime') {
+                    Confluence CQLを使用して最新データを検索（推奨）
+                  } @else {
+                    事前同期したデータでセマンティック検索
+                  }
                 </div>
               </div>
 
@@ -673,6 +691,14 @@ export interface ConfluenceWizardData {
       }
     }
 
+    /* 横並びラジオグループ */
+    .horizontal-radio-group {
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      align-items: center;
+    }
+
     /* Footer */
     .wizard-footer {
       display: flex;
@@ -782,6 +808,7 @@ export class ConfluenceResourceWizardComponent implements OnInit, OnDestroy {
     this.form = this.fb.group({
       label: ['', Validators.required],
       description: [''],
+      searchMode: ['realtime'],
       depth: [1],
       updatedWithin: [0],
       includeAttachments: [false],
@@ -795,6 +822,7 @@ export class ConfluenceResourceWizardComponent implements OnInit, OnDestroy {
     this.form.patchValue({
       label: resource.label,
       description: resource.description || '',
+      searchMode: resource.searchMode || 'realtime',
       depth: config.depth?.depth ?? 1,
       includeAttachments: config.includeAttachments || false,
     });
@@ -900,6 +928,7 @@ export class ConfluenceResourceWizardComponent implements OnInit, OnDestroy {
         label: formValue.label,
         description: formValue.description || undefined,
         config,
+        searchMode: formValue.searchMode as ContextSearchMode,
       };
 
       this.contextHubService.addResource(dto)
@@ -920,6 +949,7 @@ export class ConfluenceResourceWizardComponent implements OnInit, OnDestroy {
         label: formValue.label,
         description: formValue.description || undefined,
         config,
+        searchMode: formValue.searchMode as ContextSearchMode,
       };
 
       this.contextHubService.updateResource(this.data.resource!.id, dto)

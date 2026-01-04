@@ -11,6 +11,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatRadioModule } from '@angular/material/radio';
 
 import { BoxFolderSelectorComponent, BoxSelection } from './box-folder-selector.component';
 import {
@@ -19,6 +20,7 @@ import {
   BoxResourceConfig,
   DepthConfig,
   DEPTH_OPTIONS,
+  ContextSearchMode,
 } from '../../../models/context-hub.models';
 
 export interface BoxResourceWizardData {
@@ -50,6 +52,7 @@ export interface BoxResourceWizardResult {
     MatChipsModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatRadioModule,
     BoxFolderSelectorComponent,
   ],
   template: `
@@ -84,6 +87,7 @@ export interface BoxResourceWizardResult {
           <div class="step-content step1">
             <app-box-folder-selector
               [providerName]="data.providerName"
+              [initialSelection]="initialSelection"
               (folderSelected)="onFolderSelected($event)">
             </app-box-folder-selector>
           </div>
@@ -173,6 +177,27 @@ export interface BoxResourceWizardResult {
                     </div>
                   </div>
 
+                  <!-- 検索モード -->
+                  <div class="form-card">
+                    <div class="card-header">
+                      <mat-icon>search</mat-icon>
+                      <h3>検索モード</h3>
+                    </div>
+                    <div class="card-body">
+                      <mat-radio-group formControlName="searchMode" class="horizontal-radio-group">
+                        <mat-radio-button value="realtime">リアルタイム検索</mat-radio-button>
+                        <mat-radio-button value="vector">ベクトル検索</mat-radio-button>
+                      </mat-radio-group>
+                      <div class="radio-hint">
+                        @if (settingsForm.get('searchMode')?.value === 'realtime') {
+                          Box Search APIを使用して最新データを検索（推奨）
+                        } @else {
+                          事前同期したデータでセマンティック検索
+                        }
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- 取得設定カード -->
                   <div class="form-card">
                     <div class="card-header">
@@ -183,13 +208,11 @@ export interface BoxResourceWizardResult {
                       <div class="inline-field-group">
                         <div class="field-with-label">
                           <span class="field-label">階層深度</span>
-                          <mat-form-field appearance="outline" class="compact-field">
-                            <mat-select formControlName="depthType">
-                              @for (opt of depthOptions; track opt.value) {
-                                <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-                              }
-                            </mat-select>
-                          </mat-form-field>
+                          <mat-radio-group formControlName="depthType" class="horizontal-radio-group compact">
+                            @for (opt of depthOptions; track opt.value) {
+                              <mat-radio-button [value]="opt.value">{{ opt.label }}</mat-radio-button>
+                            }
+                          </mat-radio-group>
                         </div>
                         @if (settingsForm.get('depthType')?.value === 'limited') {
                           <div class="field-with-label">
@@ -282,15 +305,22 @@ export interface BoxResourceWizardResult {
     </div>
   `,
   styles: [`
+    /* ホストスタイル */
+    :host {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
     .wizard-container {
       display: flex;
       flex-direction: column;
-      width: 90vw;
-      max-width: 1600px;
-      height: 90vh;
-      max-height: 950px;
+      width: 100%;
+      height: 100%;
       background: var(--bg-dialog, #1e2128);
       color: var(--text-primary, #e0e0e0);
+      overflow: hidden;
     }
 
     /* ヘッダー（プログレスインジケーター統合） */
@@ -300,6 +330,7 @@ export interface BoxResourceWizardResult {
       gap: 16px;
       padding: 10px 16px;
       border-bottom: 1px solid var(--border-color, #3a3f4a);
+      flex-shrink: 0;
     }
 
     .header-title {
@@ -388,6 +419,7 @@ export interface BoxResourceWizardResult {
     /* コンテンツエリア */
     .wizard-content {
       flex: 1;
+      min-height: 0; /* flexbox overflow fix */
       overflow: hidden;
       padding: 0 20px 8px;
       display: flex;
@@ -403,6 +435,10 @@ export interface BoxResourceWizardResult {
 
     .step1 {
       padding: 0;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     .step2 {
@@ -769,6 +805,29 @@ export interface BoxResourceWizardResult {
       }
     }
 
+    /* 横並びラジオグループ */
+    .horizontal-radio-group {
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      align-items: center;
+
+      &.compact {
+        gap: 12px;
+
+        ::ng-deep .mdc-label {
+          font-size: 12px;
+        }
+      }
+    }
+
+    .radio-hint {
+      font-size: 11px;
+      color: var(--text-secondary, #8b929a);
+      margin-top: 4px;
+      padding-left: 2px;
+    }
+
     mat-form-field {
       width: 100%;
 
@@ -813,6 +872,8 @@ export interface BoxResourceWizardResult {
       justify-content: space-between;
       padding: 16px 20px;
       border-top: 1px solid var(--border-color, #3a3f4a);
+      flex-shrink: 0;
+      background: var(--bg-dialog, #1e2128);
     }
 
     .footer-left {
@@ -858,6 +919,12 @@ export class BoxResourceWizardComponent implements OnInit {
   currentPath = '';
   currentFolderId = '0';
 
+  /** 編集モード用の初期選択 */
+  initialSelection?: {
+    selectedItems: { id: string; name: string; type: 'folder' | 'file'; path?: string }[];
+    excludedItems?: { id: string; name: string; type: 'folder' | 'file'; path?: string; parentId: string }[];
+  };
+
   depthOptions = DEPTH_OPTIONS;
 
   get excludedItemsCount(): number {
@@ -883,6 +950,7 @@ export class BoxResourceWizardComponent implements OnInit {
     this.settingsForm = this.fb.group({
       label: ['', [Validators.required, Validators.minLength(2)]],
       description: [''],
+      searchMode: ['realtime'],
       depthType: ['none'],
       depthValue: [1],
       filePatterns: [''],
@@ -900,6 +968,7 @@ export class BoxResourceWizardComponent implements OnInit {
     this.settingsForm.patchValue({
       label: resource.label,
       description: resource.description || '',
+      searchMode: resource.searchMode || 'realtime',
       depthType: config.depth?.type || 'none',
       depthValue: config.depth?.depth || 1,
       filePatterns: config.filePatterns?.join(', ') || '',
@@ -907,12 +976,21 @@ export class BoxResourceWizardComponent implements OnInit {
       maxFileSizeMB: config.maxFileSizeMB || null,
     });
 
-    // 選択済みとして扱う（編集モードでは詳細は表示用のみ）
-    this.selectedItems = [{
+    // 選択済みアイテムを設定
+    const selectedItem = {
       id: config.folderId,
       name: config.folderPath?.split('/').pop() || 'Root',
-      type: 'folder'
-    }];
+      type: 'folder' as const,
+      path: config.folderPath || '/',
+    };
+
+    this.selectedItems = [selectedItem];
+
+    // フォルダセレクターに渡す初期選択を設定
+    this.initialSelection = {
+      selectedItems: [selectedItem],
+      excludedItems: [],
+    };
   }
 
   onFolderSelected(selection: BoxSelection): void {
@@ -983,6 +1061,7 @@ export class BoxResourceWizardComponent implements OnInit {
       isActive: true,
       syncStatus: 'pending',
       sortOrder: 0,
+      searchMode: formValue.searchMode as ContextSearchMode,
     };
 
     // 編集モードの場合はIDを保持

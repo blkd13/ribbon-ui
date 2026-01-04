@@ -7,7 +7,6 @@ import { UserRoleType } from './models/models';
 // console.dir(gitRoutes, { depth: null });
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
-  { path: 'sandbox', loadComponent: () => import('./sandbox/chat-signal-sample/chat-sandbox.component').then(m => m.ChatSandboxComponent) },
   { path: 'login', canActivate: [genScreenTypeGuard(true)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   { path: 'login/:returnUrl', canActivate: [genScreenTypeGuard(true)], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   // Mobile specific routes
@@ -21,12 +20,17 @@ export const routes: Routes = [
     canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
     loadChildren: () => import('./pages/automation-dashboard/automation-dashboard.routes').then(m => m.AUTOMATION_DASHBOARD_ROUTES),
   },
-  { path: 'context-hub', canActivate: [loginGuardGenerator(UserRoleType.User, 'login')], loadComponent: () => import('./pages/context-hub/context-hub.component').then(m => m.ContextHubComponent) },
+  { path: 'context-hub/:projectId', canActivate: [loginGuardGenerator(UserRoleType.User, 'login'), projectGuard], loadComponent: () => import('./pages/context-hub/context-hub.component').then(m => m.ContextHubComponent) },
   // Code Sessions
   {
     path: 'code-sessions',
     canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
     loadComponent: () => import('./pages/code-sessions/code-sessions-list/code-sessions-list.component').then(m => m.CodeSessionsListComponent)
+  },
+  {
+    path: 'code-sessions/settings',
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
+    loadComponent: () => import('./pages/code-sessions/data-source-settings/data-source-settings.component').then(m => m.DataSourceSettingsComponent)
   },
   {
     path: 'code-sessions/:projectName',

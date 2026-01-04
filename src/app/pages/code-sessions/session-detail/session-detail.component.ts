@@ -78,9 +78,9 @@ export class SessionDetailComponent implements OnInit {
 
     loadSessionDetail(): void {
         this.loading = true;
-        this.codeSessionService.getSessions(this.projectName).subscribe({
-            next: (sessions) => {
-                this.session = sessions.find(s => s && s.sessionId === this.sessionId) || null;
+        this.codeSessionService.getSession(this.projectName, this.sessionId).subscribe({
+            next: (session) => {
+                this.session = session;
                 if (this.session) {
                     this.messageTree = this.codeSessionService.buildMessageTree(this.session.messages);
                     this.toolCallPairs = this.codeSessionService.extractToolCallPairs(this.session.messages);

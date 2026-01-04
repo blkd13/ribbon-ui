@@ -1,0 +1,180 @@
+<div class="data-source-settings-container">
+    <div class="header">
+        <button mat-icon-button (click)="goBack()" class="back-button">
+            <mat-icon>arrow_back</mat-icon>
+        </button>
+        <div class="header-content">
+            <h1>
+                <mat-icon>settings</mat-icon>
+                データソース設定
+            </h1>
+            <p class="subtitle">Code Sessionsのデータソースを管理します</p>
+        </div>
+        <div class="header-actions">
+            @if (!isEditing) {
+            <button mat-raised-button color="primary" (click)="startCreate()">
+                <mat-icon>add</mat-icon>
+                データソースを追加
+            </button>
+            }
+        </div>
+    </div>
+
+    @if (loading) {
+    <div class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>データソースを読み込み中...</p>
+    </div>
+    }
+
+    @if (!loading) {
+    <div class="content">
+        <!-- Edit/Create Form -->
+        @if (isEditing) {
+        <mat-card class="form-card">
+            <mat-card-header>
+                <mat-card-title>
+                    {{ editingId ? 'データソースを編集' : '新規データソースを作成' }}
+                </mat-card-title>
+            </mat-card-header>
+
+            <mat-card-content>
+                <form [formGroup]="form" class="data-source-form">
+                    <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>表示名</mat-label>
+                        <input matInput formControlName="name" placeholder="例: My MacBook">
+                        <mat-hint>このデータソースを識別するための名前</mat-hint>
+                        @if (form.get('name')?.hasError('required')) {
+                        <mat-error>表示名は必須です</mat-error>
+                        }
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>タイプ</mat-label>
+                        <mat-select formControlName="type">
+                            @for (type of dataSourceTypes; track type.value) {
+                            <mat-option [value]="type.value">
+                                <mat-icon>{{ type.icon }}</mat-icon>
+                                {{ type.label }}
+                            </mat-option>
+                            }
+                        </mat-select>
+                    </mat-form-field>
+
+                    <div class="path-field-group">
+                        <mat-form-field appearance="outline" class="path-field">
+                            <mat-label>ベースパス</mat-label>
+                            <input matInput formControlName="basePath" placeholder="~/.claude/projects">
+                            <mat-hint>セッションデータのディレクトリパス</mat-hint>
+                            @if (form.get('basePath')?.hasError('required')) {
+                            <mat-error>パスは必須です</mat-error>
+                            }
+                        </mat-form-field>
+                        <button mat-stroked-button type="button" (click)="fillDefaultPath()"
+                            matTooltip="デフォルトパスを設定">
+                            <mat-icon>auto_fix_high</mat-icon>
+                        </button>
+                        <button mat-stroked-button type="button" (click)="validatePath()" [disabled]="validating"
+                            matTooltip="パスを検証">
+                            @if (validating) {
+                            <mat-spinner diameter="20"></mat-spinner>
+                            } @else {
+                            <mat-icon>check_circle</mat-icon>
+                            }
+                        </button>
+                    </div>
+
+                    @if (validationResult) {
+                    <div class="validation-result" [class.valid]="validationResult.valid"
+                        [class.invalid]="!validationResult.valid">
+                        @if (validationResult.valid) {
+                        <mat-icon>check_circle</mat-icon>
+                        <span>パスが有効です ({{ validationResult.projectCount }}プロジェクト検出)</span>
+                        } @else {
+                        <mat-icon>error</mat-icon>
+                        <span>{{ validationResult.error }}</span>
+                        }
+                    </div>
+                    }
+
+                    <div class="toggle-field">
+                        <mat-slide-toggle formControlName="isActive">
+                            有効
+                        </mat-slide-toggle>
+                        <span class="toggle-hint">無効にするとプロジェクト一覧に表示されません</span>
+                    </div>
+                </form>
+            </mat-card-content>
+
+            <mat-card-actions align="end">
+                <button mat-button (click)="cancelEdit()">キャンセル</button>
+                <button mat-raised-button color="primary" (click)="saveDataSource()" [disabled]="saving || form.invalid">
+                    <mat-spinner diameter="20" *ngIf="saving"></mat-spinner>
+                    <mat-icon *ngIf="!saving">save</mat-icon>
+                    <span *ngIf="!saving">保存</span>
+                </button>
+            </mat-card-actions>
+        </mat-card>
+        }
+
+        <!-- Data Sources List -->
+        <div class="data-sources-list">
+            @if (dataSources.length === 0 && !isEditing) {
+            <mat-card class="empty-state">
+                <mat-card-content>
+                    <mat-icon>folder_off</mat-icon>
+                    <h3>データソースがありません</h3>
+                    <p>「データソースを追加」ボタンからデータソースを登録してください</p>
+                    <button mat-raised-button color="primary" (click)="startCreate()">
+                        <mat-icon>add</mat-icon>
+                        データソースを追加
+                    </button>
+                </mat-card-content>
+            </mat-card>
+            }
+
+            @for (dataSource of dataSources; track dataSource.id) {
+            <mat-card class="data-source-card" [class.inactive]="!dataSource.isActive">
+                <mat-card-header>
+                    <mat-icon mat-card-avatar class="type-icon">{{ getTypeIcon(dataSource.type) }}</mat-icon>
+                    <mat-card-title>{{ dataSource.name }}</mat-card-title>
+                    <mat-card-subtitle>{{ getTypeLabel(dataSource.type) }}</mat-card-subtitle>
+                </mat-card-header>
+
+                <mat-card-content>
+                    <div class="info-row">
+                        <mat-icon>folder</mat-icon>
+                        <span class="path">{{ dataSource.basePath }}</span>
+                    </div>
+                    @if (dataSource.lastSyncAt) {
+                    <div class="info-row">
+                        <mat-icon>sync</mat-icon>
+                        <span>最終同期: {{ dataSource.lastSyncAt | relativeTime }}</span>
+                    </div>
+                    }
+                    <div class="status-row">
+                        <span class="status-badge" [class.active]="dataSource.isActive"
+                            [class.inactive]="!dataSource.isActive">
+                            {{ dataSource.isActive ? '有効' : '無効' }}
+                        </span>
+                    </div>
+                </mat-card-content>
+
+                <mat-card-actions align="end">
+                    <button mat-icon-button (click)="toggleActive(dataSource)"
+                        [matTooltip]="dataSource.isActive ? '無効化' : '有効化'">
+                        <mat-icon>{{ dataSource.isActive ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="startEdit(dataSource)" matTooltip="編集">
+                        <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteDataSource(dataSource)" matTooltip="削除">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </mat-card-actions>
+            </mat-card>
+            }
+        </div>
+    </div>
+    }
+</div>

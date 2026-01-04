@@ -7,7 +7,7 @@ import { Utils } from '../utils';
 })
 export class RelativeTimePipe implements PipeTransform {
 
-  transform(_value: Date | string): string {
+  transform(_value: Date | string | undefined | null): string {
     const value = Utils.toDateIfValid(_value);
 
     if (!value) {

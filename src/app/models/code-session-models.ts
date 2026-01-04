@@ -369,3 +369,65 @@ export interface SearchResult {
   matchedMessages: CodeSessionMessage[];
   relevanceScore: number;
 }
+
+// ============================================================================
+// データソース管理
+// ============================================================================
+
+/**
+ * データソースの種類
+ */
+export type DataSourceType = 'claude-code' | 'gemini-cli' | 'codex-cli';
+
+/**
+ * Code Session データソース設定
+ * ユーザーごとにClaude Code等のセッションデータの保存場所を管理する
+ */
+export interface CodeSessionDataSource {
+  id: string;
+  userId: string;
+  name: string;  // 表示名（例: "My MacBook", "Work PC"）
+  type: DataSourceType;
+  basePath: string;  // セッションデータのベースパス
+  pathMapping?: Record<string, string>;  // パス変換マッピング
+  isActive: boolean;
+  lastSyncAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * プロジェクト情報（API応答用）
+ */
+export interface CodeProjectResponse {
+  name: string;
+  displayName: string;
+  path: string;
+  sessionCount: number;
+  dataSourceId: string;
+  dataSourceName: string;
+  lastActivity?: string;
+}
+
+/**
+ * セッション一覧情報（API応答用）
+ */
+export interface CodeSessionListItem {
+  sessionId: string;
+  projectName: string;
+  projectPath: string;
+  startTime?: string;
+  endTime?: string;
+  messageCount: number;
+  fileSize: number;
+}
+
+/**
+ * パス検証結果
+ */
+export interface PathValidationResult {
+  valid: boolean;
+  normalizedPath?: string;
+  projectCount?: number;
+  error?: string;
+}

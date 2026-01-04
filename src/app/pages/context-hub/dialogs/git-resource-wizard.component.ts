@@ -1,38 +1,40 @@
-import { Component, Inject, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Component, Inject, OnDestroy, OnInit, inject } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subject, forkJoin, of } from 'rxjs';
-import { takeUntil, catchError, finalize } from 'rxjs/operators';
+import { catchError, finalize, takeUntil } from 'rxjs/operators';
 
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatRadioModule } from '@angular/material/radio';
 
-import { ContextHubService } from '../../../services/context-hub.service';
-import { ApiGitlabService, GitlabBranch, GitlabTag } from '../../../services/api-gitlab.service';
-import { ApiGiteaService } from '../../../services/api-gitea.service';
 import {
-  ContextResourceForView,
   ContextResourceCreateDto,
+  ContextResourceForView,
   ContextResourceUpdateDto,
-  GitLabResourceConfig,
-  GiteaResourceConfig,
-  GitRef,
-  GitLabIncludeTarget,
-  GiteaIncludeTarget,
-  GITLAB_INCLUDE_TARGET_OPTIONS,
+  ContextSearchMode,
   GITEA_INCLUDE_TARGET_OPTIONS,
+  GITLAB_INCLUDE_TARGET_OPTIONS,
+  GitLabIncludeTarget,
+  GitLabResourceConfig,
+  GitRef,
+  GiteaIncludeTarget,
+  GiteaResourceConfig,
 } from '../../../models/context-hub.models';
 import { UUID } from '../../../models/project-models';
+import { ApiGiteaService } from '../../../services/api-gitea.service';
+import { ApiGitlabService, GitlabBranch, GitlabTag } from '../../../services/api-gitlab.service';
+import { ContextHubService } from '../../../services/context-hub.service';
 
-import { GitProjectSelectorComponent, GitProjectSelection, GitProviderType } from './git-project-selector.component';
+import { GitProjectSelection, GitProjectSelectorComponent, GitProviderType } from './git-project-selector.component';
 
 export interface GitResourceWizardData {
   mode: 'create' | 'edit';
@@ -59,6 +61,7 @@ export interface GitResourceWizardData {
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatSnackBarModule,
+    MatRadioModule,
     GitProjectSelectorComponent,
   ],
   template: `
@@ -134,6 +137,32 @@ export interface GitResourceWizardData {
                            placeholder="このリソースの説明を入力...">
                   </div>
                 </div>
+              </div>
+
+              <!-- 検索モード（GitLabのみ選択可能、Giteaはvector固定） -->
+              <div class="form-section">
+                <div class="section-header">
+                  <mat-icon>search</mat-icon>
+                  <span>検索モード</span>
+                </div>
+                @if (providerType === 'gitlab') {
+                  <mat-radio-group formControlName="searchMode" class="horizontal-radio-group">
+                    <mat-radio-button value="realtime">リアルタイム検索</mat-radio-button>
+                    <mat-radio-button value="vector">ベクトル検索</mat-radio-button>
+                  </mat-radio-group>
+                  <div class="form-hint">
+                    @if (form.get('searchMode')?.value === 'realtime') {
+                      GitLab Search APIを使用して最新データを検索（推奨）
+                    } @else {
+                      事前同期したデータでセマンティック検索
+                    }
+                  </div>
+                } @else {
+                  <div class="info-box">
+                    <mat-icon>info</mat-icon>
+                    <span>Giteaは検索APIが無いため、ベクトル検索のみ対応しています。事前にコンテンツを同期してください。</span>
+                  </div>
+                }
               </div>
 
               <!-- ブランチ/タグ選択 -->
@@ -935,6 +964,34 @@ export interface GitResourceWizardData {
       }
     }
 
+    /* 横並びラジオグループ */
+    .horizontal-radio-group {
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      align-items: center;
+    }
+
+    /* 情報ボックス */
+    .info-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(33, 150, 243, 0.1);
+      border: 1px solid rgba(33, 150, 243, 0.3);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #2196f3;
+      }
+    }
+
     /* Footer */
     .wizard-footer {
       display: flex;
@@ -1061,9 +1118,13 @@ export class GitResourceWizardComponent implements OnInit, OnDestroy {
   }
 
   private initForm(): void {
+    // Giteaはリアルタイム検索非対応なのでデフォルトをvectorにする
+    const defaultSearchMode = this.providerType === 'gitea' ? 'vector' : 'realtime';
+
     this.form = this.fb.group({
       label: ['', Validators.required],
       description: [''],
+      searchMode: [defaultSearchMode],
       mrState: ['opened'],
       issueState: ['opened'],
       maxItems: [100],
@@ -1072,10 +1133,13 @@ export class GitResourceWizardComponent implements OnInit, OnDestroy {
 
   private populateFromResource(resource: ContextResourceForView): void {
     const config = resource.config as GitLabResourceConfig | GiteaResourceConfig;
+    // Giteaの場合は常にvector
+    const searchMode = this.providerType === 'gitea' ? 'vector' : (resource.searchMode || 'realtime');
 
     this.form.patchValue({
       label: resource.label,
       description: resource.description || '',
+      searchMode,
       maxItems: config.maxItems || 100,
     });
 
@@ -1151,10 +1215,10 @@ export class GitResourceWizardComponent implements OnInit, OnDestroy {
 
     if (this.providerType === 'gitlab') {
       forkJoin([
-        this.gitlabService.branches(this.providerName, this.selectedProject.projectId).pipe(
+        this.gitlabService.branches(`${this.providerType}-${this.providerName}`, this.selectedProject.projectId).pipe(
           catchError(() => of([]))
         ),
-        this.gitlabService.tags(this.providerName, this.selectedProject.projectId).pipe(
+        this.gitlabService.tags(`${this.providerType}-${this.providerName}`, this.selectedProject.projectId).pipe(
           catchError(() => of([]))
         ),
       ]).pipe(
@@ -1184,10 +1248,10 @@ export class GitResourceWizardComponent implements OnInit, OnDestroy {
       }
 
       forkJoin([
-        this.giteaService.branches(this.providerName, this.selectedProject.owner, this.selectedProject.repo).pipe(
+        this.giteaService.branches(`${this.providerType}-${this.providerName}`, this.selectedProject.owner, this.selectedProject.repo).pipe(
           catchError(() => of([]))
         ),
-        this.giteaService.tags(this.providerName, this.selectedProject.owner, this.selectedProject.repo).pipe(
+        this.giteaService.tags(`${this.providerType}-${this.providerName}`, this.selectedProject.owner, this.selectedProject.repo).pipe(
           catchError(() => of([]))
         ),
       ]).pipe(
@@ -1344,6 +1408,9 @@ export class GitResourceWizardComponent implements OnInit, OnDestroy {
     }
 
     if (this.data.mode === 'create') {
+      // Giteaはリアルタイム検索非対応なので常にvector
+      const searchMode = this.providerType === 'gitea' ? 'vector' : formValue.searchMode;
+
       const dto: ContextResourceCreateDto = {
         contextHubId: this.data.contextHubId!,
         providerType: this.providerType,
@@ -1351,6 +1418,7 @@ export class GitResourceWizardComponent implements OnInit, OnDestroy {
         label: formValue.label,
         description: formValue.description || undefined,
         config,
+        searchMode: searchMode as ContextSearchMode,
       };
 
       this.contextHubService.addResource(dto)
@@ -1367,10 +1435,14 @@ export class GitResourceWizardComponent implements OnInit, OnDestroy {
           }
         });
     } else {
+      // Giteaはリアルタイム検索非対応なので常にvector
+      const searchMode = this.providerType === 'gitea' ? 'vector' : formValue.searchMode;
+
       const dto: ContextResourceUpdateDto = {
         label: formValue.label,
         description: formValue.description || undefined,
         config,
+        searchMode: searchMode as ContextSearchMode,
       };
 
       this.contextHubService.updateResource(this.data.resource!.id, dto)

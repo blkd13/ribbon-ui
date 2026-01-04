@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -537,6 +538,7 @@ export class ContextHubComponent implements OnInit, OnDestroy {
   readonly contextHubService = inject(ContextHubService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly route = inject(ActivatedRoute);
 
   private destroy$ = new Subject<void>();
 
@@ -572,6 +574,14 @@ export class ContextHubComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
+    // ルートパラメータからprojectIdを取得（@Inputで渡されていない場合）
+    if (!this.projectId) {
+      const routeProjectId = this.route.snapshot.paramMap.get('projectId');
+      if (routeProjectId) {
+        this.projectId = routeProjectId as UUID;
+      }
+    }
+
     this.loadHub();
     this.loadAvailableProviders();
   }

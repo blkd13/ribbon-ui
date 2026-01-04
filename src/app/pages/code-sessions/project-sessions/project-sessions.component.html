@@ -43,9 +43,7 @@
                     <mat-icon>schedule</mat-icon>
                     @if (sessions.length > 0) {
                     <div class="summary-value">
-                        @if (sessions[0]) {
                         {{ sessions[0].startTime | relativeTime }}
-                        }
                     </div>
                     }
                     <div class="summary-label">最終セッション</div>
@@ -66,7 +64,7 @@
                         <td mat-cell *matCellDef="let session">
                             <div class="session-id">
                                 <code>{{ session.sessionId.substring(0, 8) }}</code>
-                                <div class="session-preview">{{ getFirstUserMessage(session) }}</div>
+                                <div class="session-preview">{{ formatFileSize(session.fileSize) }}</div>
                             </div>
                         </td>
                     </ng-container>
@@ -75,10 +73,14 @@
                     <ng-container matColumnDef="startTime">
                         <th mat-header-cell *matHeaderCellDef>開始時刻</th>
                         <td mat-cell *matCellDef="let session">
+                            @if (session.startTime) {
                             <div class="time-info">
                                 <div>{{ session.startTime | date:'yyyy/MM/dd HH:mm' }}</div>
                                 <div class="relative-time">{{ session.startTime | relativeTime }}</div>
                             </div>
+                            } @else {
+                            <span>-</span>
+                            }
                         </td>
                     </ng-container>
 
@@ -98,19 +100,6 @@
                         <th mat-header-cell *matHeaderCellDef>期間</th>
                         <td mat-cell *matCellDef="let session">
                             {{ getDuration(session) }}
-                        </td>
-                    </ng-container>
-
-                    <!-- Git Branch Column -->
-                    <ng-container matColumnDef="gitBranch">
-                        <th mat-header-cell *matHeaderCellDef>ブランチ</th>
-                        <td mat-cell *matCellDef="let session">
-                            @if (session.gitBranch) {
-                            <mat-chip class="branch-chip">
-                                <mat-icon>branch_right</mat-icon>
-                                {{ session.gitBranch || 'N/A' }}
-                            </mat-chip>
-                            }
                         </td>
                     </ng-container>
 

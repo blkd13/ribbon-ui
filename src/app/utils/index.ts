@@ -155,11 +155,11 @@ export class Utils {
     /**
      * Date型、またはDate型に変換可能な文字列をDate型に変換する。
      * 変換できない場合は undefined を返す。
-     * 
+     *
      * @param value 変換する値
      * @returns Dateオブジェクト、または undefined
      */
-    static toDateIfValid(value: Date | string | undefined): Date | undefined {
+    static toDateIfValid(value: Date | string | undefined | null): Date | undefined {
         if (value instanceof Date) {
             return value; // Date型の場合はそのまま返す
         } else if (typeof value === 'string' && !isNaN(Date.parse(value))) {

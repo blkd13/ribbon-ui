@@ -34,6 +34,7 @@ import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-ru
 import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
 import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
 import { DialogComponent } from '../../parts/dialog/dialog.component';
+import { ContextHubSidebarComponent, ResourceSelectionChange } from '../../parts/context-hub-sidebar/context-hub-sidebar.component';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { InlineSvgDirective } from "../../parts/inline-svg";
@@ -52,6 +53,8 @@ import { Utils } from '../../utils';
 import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
 import { FileManagerService, FullPathFile } from './../../services/file-manager.service';
 import { genDummyId, genInitialBaseEntity, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
+import { ContextHubService } from '../../services/context-hub.service';
+import { ContextHubForView, RAGSearchResultItem, RealtimeSearchResult } from '../../models/context-hub.models';
 
 // 例: 送信完了やクリックのタイミングで
 declare var _paq: any;
@@ -68,7 +71,7 @@ declare global { interface Window { dataLayer: any[] } }
     MatBadgeModule, MatTabsModule, ScrollingModule, TranslateModule,
     UserMarkComponent,
     ChatPanelMessageComponent, ChatPanelSystemComponent, AppMenuComponent,
-    InlineSvgDirective
+    ContextHubSidebarComponent, InlineSvgDirective
   ],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss'
@@ -100,6 +103,7 @@ export class ChatComponent implements OnInit {
 
   readonly aiModelManagerService = inject(AIModelManagerService);
   readonly extApiProviderService = inject(ExtApiProviderService);
+  readonly contextHubService = inject(ContextHubService);
 
   readonly projectService: ProjectService = inject(ProjectService);
   readonly teamService: TeamService = inject(TeamService);
@@ -176,6 +180,20 @@ export class ChatComponent implements OnInit {
   isCost = true;
   showThreadList = true; // スレッドリスト表示フラグ
   showInfo = true;
+  sidebarTab: 'threads' | 'context' = 'threads'; // サイドバータブ
+  selectedContextResourceIds: string[] = []; // 選択されたContext Hubリソース
+  lastRAGSearchResults: RAGSearchResultItem[] = []; // 最後のRAG検索結果
+  isSearchingContext = false; // RAG検索中フラグ
+  injectedContextText = ''; // 注入されたコンテキストテキスト
+  currentHub: ContextHubForView | null = null; // 現在のContext Hub
+
+  /** 選択されたリソースの情報を取得 */
+  get selectedContextResources(): { id: string; label: string; providerType: string }[] {
+    if (!this.currentHub) return [];
+    return this.currentHub.resources
+      .filter(r => this.selectedContextResourceIds.includes(r.id))
+      .map(r => ({ id: r.id, label: r.label, providerType: r.providerType }));
+  }
   sortType: number = 1;
   threadFilterText: string = ''; // スレッド検索用フィルター
   isSearchMode = false; // 検索モード中かどうか
@@ -211,6 +229,11 @@ export class ChatComponent implements OnInit {
         DomUtils.textAreaHeighAdjust(textAreaElem.nativeElement);
       } else { }
     }, 1000);
+
+    // Context Hub の購読
+    this.contextHubService.currentHub$.subscribe(hub => {
+      this.currentHub = hub;
+    });
   }
 
   changeModel(tIndex: number, args: ChatCompletionCreateParamsWithoutMessages): void {
@@ -1621,7 +1644,9 @@ export class ChatComponent implements OnInit {
 
     _paq.push(['trackEvent', 'AIチャット:メッセージ送信', threadList.length]);
 
-    return this.saveAndBuildThreadGroup(threadList.map(thread => thread.id)).pipe(
+    // RAG検索を実行してコンテキストを注入してから送信
+    return this.performRAGSearchAndInjectContext().pipe(
+      switchMap(() => this.saveAndBuildThreadGroup(threadList.map(thread => thread.id))),
       tap(_ => {
         // 対象スレッドをロック (dummy-idから本物のIDに変更する)
         beforeTreadIdList.forEach(threadId => this.threadLocks[threadId] = false);
@@ -3066,5 +3091,208 @@ export class ChatComponent implements OnInit {
         }
       });
     });
+  }
+
+  // Context Hub リソース選択変更ハンドラー
+  onContextResourceSelectionChange(change: ResourceSelectionChange): void {
+    if (change.selected) {
+      if (!this.selectedContextResourceIds.includes(change.resourceId)) {
+        this.selectedContextResourceIds = [...this.selectedContextResourceIds, change.resourceId];
+      }
+    } else {
+      this.selectedContextResourceIds = this.selectedContextResourceIds.filter(id => id !== change.resourceId);
+    }
+  }
+
+  // Context Hubリソースを選択から除外
+  removeContextResource(resourceId: string): void {
+    this.selectedContextResourceIds = this.selectedContextResourceIds.filter(id => id !== resourceId);
+    this.lastRAGSearchResults = this.lastRAGSearchResults.filter(r => r.resourceId !== resourceId);
+  }
+
+  // 全Context Hub選択をクリア
+  clearContextSelection(): void {
+    this.selectedContextResourceIds = [];
+    this.lastRAGSearchResults = [];
+    this.injectedContextText = '';
+  }
+
+  // プロバイダーのアイコンを取得
+  getProviderIcon(providerType: string): string {
+    const iconMap: Record<string, string> = {
+      'box': 'cloud',
+      'gitlab': 'code',
+      'gitea': 'code',
+      'mattermost': 'chat',
+      'confluence': 'article',
+      'jira': 'bug_report',
+      'local': 'folder',
+      'web': 'language',
+    };
+    return iconMap[providerType] || 'storage';
+  }
+
+  // ============================================
+  // RAG検索・コンテキスト注入
+  // ============================================
+
+  /**
+   * RAG検索を実行し、コンテキストを注入
+   * 検索モード（realtime / vector）に応じて適切なAPIを呼び分ける
+   * @returns Observable<void> 検索完了後に解決
+   */
+  private performRAGSearchAndInjectContext(): Observable<void> {
+    // 選択されたリソースが無いか、入力テキストが無い場合はスキップ
+    if (this.selectedContextResourceIds.length === 0 || !this.inputArea.content[0]?.text?.trim()) {
+      this.lastRAGSearchResults = [];
+      this.injectedContextText = '';
+      return of(void 0);
+    }
+
+    const query = this.inputArea.content[0].text;
+    this.isSearchingContext = true;
+
+    // リソースを検索モードで分類
+    const realtimeResourceIds: string[] = [];
+    const vectorResourceIds: string[] = [];
+
+    if (this.currentHub) {
+      for (const resourceId of this.selectedContextResourceIds) {
+        const resource = this.currentHub.resources.find(r => r.id === resourceId);
+        if (resource) {
+          // Gitea/Local は常に vector、それ以外は searchMode に従う
+          if (resource.providerType === 'gitea' || resource.providerType === 'local') {
+            vectorResourceIds.push(resourceId);
+          } else if (resource.searchMode === 'vector') {
+            vectorResourceIds.push(resourceId);
+          } else {
+            // デフォルトは realtime
+            realtimeResourceIds.push(resourceId);
+          }
+        }
+      }
+    }
+
+    // 検索リクエストを構築
+    const searchRequests: Observable<{ results: (RAGSearchResultItem | RealtimeSearchResult)[] }>[] = [];
+
+    // リアルタイム検索
+    if (realtimeResourceIds.length > 0) {
+      searchRequests.push(
+        this.contextHubService.searchRealtime(this.selectedProject.id, {
+          query,
+          resourceIds: realtimeResourceIds,
+          limit: 5,
+        }).pipe(
+          catchError(error => {
+            console.error('Realtime search error:', error);
+            return of({ results: [], query, searchMode: 'realtime' as const });
+          })
+        )
+      );
+    }
+
+    // ベクトル検索
+    if (vectorResourceIds.length > 0) {
+      searchRequests.push(
+        this.contextHubService.searchContent(this.selectedProject.id, {
+          query,
+          resourceIds: vectorResourceIds,
+          topK: 5,
+          minScore: 0.3,
+        }).pipe(
+          catchError(error => {
+            console.error('Vector search error:', error);
+            return of({ results: [], query });
+          })
+        )
+      );
+    }
+
+    // 検索リクエストが無い場合
+    if (searchRequests.length === 0) {
+      this.lastRAGSearchResults = [];
+      this.injectedContextText = '';
+      this.isSearchingContext = false;
+      return of(void 0);
+    }
+
+    // 並列で検索を実行し、結果をマージ
+    return forkJoin(searchRequests).pipe(
+      tap(responses => {
+        // 全結果をマージ
+        const allResults: RAGSearchResultItem[] = [];
+        for (const response of responses) {
+          for (const result of response.results) {
+            // RealtimeSearchResult と RAGSearchResultItem を統一形式に変換
+            const isRealtime = 'title' in result;
+            allResults.push({
+              resourceId: result.resourceId,
+              resourceLabel: result.resourceLabel,
+              contentId: 'contentId' in result ? result.contentId : '',
+              content: result.content,
+              score: result.score || 0,
+              metadata: {
+                title: isRealtime ? (result as RealtimeSearchResult).title : result.metadata?.title,
+                path: result.metadata?.path,
+                url: isRealtime ? (result as RealtimeSearchResult).url : result.metadata?.url,
+              },
+            });
+          }
+        }
+
+        this.lastRAGSearchResults = allResults;
+
+        if (allResults.length > 0) {
+          // コンテキストテキストを構築
+          this.injectedContextText = this.buildContextText(allResults);
+
+          // 元のユーザーメッセージを保存
+          const originalMessage = this.inputArea.content[0].text;
+
+          // コンテキスト付きメッセージに置換
+          this.inputArea.content[0].text = `${this.injectedContextText}\n\n---\n\n${originalMessage}`;
+        } else {
+          this.injectedContextText = '';
+        }
+
+        this.isSearchingContext = false;
+      }),
+      map(() => void 0),
+      catchError(error => {
+        console.error('RAG search error:', error);
+        this.isSearchingContext = false;
+        this.lastRAGSearchResults = [];
+        this.injectedContextText = '';
+        // エラーがあっても送信は続行
+        return of(void 0);
+      })
+    );
+  }
+
+  /**
+   * RAG検索結果からコンテキストテキストを構築
+   */
+  private buildContextText(results: RAGSearchResultItem[]): string {
+    if (results.length === 0) return '';
+
+    const contextParts = results.map(result => {
+      const title = result.metadata?.title || result.resourceLabel;
+      const path = result.metadata?.path || result.metadata?.url || '';
+      const header = path ? `### ${title} (${path})` : `### ${title}`;
+
+      return `${header}\n${result.content}`;
+    });
+
+    return `## 参照コンテキスト\n以下は質問に関連する情報です:\n\n${contextParts.join('\n\n')}`;
+  }
+
+  /**
+   * 選択されたコンテキストリソースをクリア
+   */
+  clearContextResources(): void {
+    this.selectedContextResourceIds = [];
+    this.lastRAGSearchResults = [];
+    this.injectedContextText = '';
   }
 }

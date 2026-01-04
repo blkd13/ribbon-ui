@@ -1,10 +1,18 @@
 <div class="code-sessions-container">
   <div class="header">
-    <h1>
-      <mat-icon>code</mat-icon>
-      Code Sessions
-    </h1>
-    <p class="subtitle">ClaudeCode / GeminiCli / CodexCli セッション履歴</p>
+    <div class="header-content">
+      <h1>
+        <mat-icon>code</mat-icon>
+        Code Sessions
+      </h1>
+      <p class="subtitle">ClaudeCode / GeminiCli / CodexCli セッション履歴</p>
+    </div>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="navigateToSettings()">
+        <mat-icon>settings</mat-icon>
+        データソース設定
+      </button>
+    </div>
   </div>
 
   <div class="search-bar">
@@ -44,15 +52,17 @@
                 <span class="stat-label">セッション</span>
               </div>
               <div class="stat-item">
-                <mat-icon>chat</mat-icon>
-                <span class="stat-value">{{ project.totalMessages }}</span>
-                <span class="stat-label">メッセージ</span>
+                <mat-icon>storage</mat-icon>
+                <span class="stat-value">{{ project.dataSourceName }}</span>
+                <span class="stat-label">データソース</span>
               </div>
+              @if (project.lastActivity) {
               <div class="stat-item">
                 <mat-icon>schedule</mat-icon>
                 <span class="stat-value">{{ project.lastActivity | relativeTime }}</span>
                 <span class="stat-label">最終更新</span>
               </div>
+              }
             </div>
           </mat-card-content>
 
