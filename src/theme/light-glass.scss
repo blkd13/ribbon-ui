@@ -289,4 +289,9 @@ html>body.light-glass-theme {
     --mat-sys-surface-variant: #e8f4ee;
     --mat-sys-on-surface-variant: #213931;
     --mat-sys-secondary-container: var(--hap-super-light);
+
+    /* プレースホルダーの色（薄めに設定） */
+    --mat-form-field-filled-input-text-placeholder-color: rgba(0, 0, 0, 0.4);
+    --mat-form-field-outlined-input-text-placeholder-color: rgba(0, 0, 0, 0.4);
+    --mat-select-placeholder-text-color: rgba(0, 0, 0, 0.4);
 }

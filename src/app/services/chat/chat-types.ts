@@ -9,7 +9,7 @@ export interface ChatInputArea {
 }
 
 export type ChatContent = (
-  { type: 'text', text: string } | 
+  { type: 'text', text: string } |
   { type: 'file', text: string, fileGroupId: string }
 );
 
@@ -70,7 +70,7 @@ export interface ChatModelSettings {
 }
 
 export interface ChatStreamingOptions {
-  onMessage?: (chunk: OpenAI.ChatCompletionChunk) => void;
+  onMessage?: (chunk: { content: OpenAI.ChatCompletionChunk }) => void;
   onError?: (error: any) => void;
   onComplete?: () => void;
   onTokenUpdate?: (usage: Partial<TokenUsage>) => void;

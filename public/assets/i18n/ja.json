@@ -497,6 +497,8 @@
     "SAVE_AS_TEMPLATE": "名前を付けて保存",
     "THREAD_COUNT": "スレッド数",
     "TOOLS": "ツール",
+    "CUSTOM_RESOURCES": "カスタムリソース",
+    "CREATE_CUSTOM_RESOURCE": "カスタムリソースを作成",
     "MODES": "モード",
     "OVERWRITE_WITH_CURRENT_SETTINGS": "現在の設定で上書き",
     "OVERWRITE": "上書き",

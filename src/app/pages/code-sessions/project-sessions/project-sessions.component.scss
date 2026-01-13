@@ -212,7 +212,7 @@
 }
 
 // Dark mode support
-@media (prefers-color-scheme: dark) {
+@mixin dark-mode-styles {
   .project-sessions-container {
     .header {
       .header-content {
@@ -270,6 +270,10 @@
       }
     }
   }
+}
+
+:host-context(.dark-theme) {
+  @include dark-mode-styles;
 }
 
 // Responsive design

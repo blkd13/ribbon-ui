@@ -55,7 +55,7 @@ export interface ResourceSelectionChange {
         <div class="empty-state">
           <mat-icon class="empty-icon">folder_off</mat-icon>
           <p>リソースがありません</p>
-          <a [routerLink]="['/context-hub', projectId]" class="add-link">
+          <a [routerLink]="['/project', projectId]" class="add-link">
             <mat-icon>add</mat-icon>
             リソースを追加
           </a>
@@ -73,7 +73,7 @@ export interface ResourceSelectionChange {
               <!-- Checkbox -->
               <mat-checkbox
                 [checked]="isSelected(resource.id)"
-                [disabled]="!resource.isActive || resource.syncStatus === 'error'"
+                [disabled]="!resource.isActive || (resource.searchMode !== 'realtime' && resource.syncStatus === 'error')"
                 (change)="onSelectionChange(resource, $event.checked)"
                 color="primary">
               </mat-checkbox>
@@ -94,42 +94,49 @@ export interface ResourceSelectionChange {
                 </div>
               </div>
 
-              <!-- Sync Status -->
-              <div class="sync-status" [class]="'status-' + resource.syncStatus">
-                @switch (resource.syncStatus) {
-                  @case ('syncing') {
-                    <mat-spinner diameter="16"></mat-spinner>
+              <!-- Sync Status (vector検索モードのみ表示) -->
+              @if (resource.searchMode !== 'realtime') {
+                <div class="sync-status" [class]="'status-' + resource.syncStatus">
+                  @switch (resource.syncStatus) {
+                    @case ('syncing') {
+                      <mat-spinner diameter="16"></mat-spinner>
+                    }
+                    @case ('synced') {
+                      <mat-icon matTooltip="同期済み">check_circle</mat-icon>
+                    }
+                    @case ('error') {
+                      <mat-icon [matTooltip]="resource.lastError || 'エラー'">error</mat-icon>
+                    }
+                    @case ('pending') {
+                      <mat-icon matTooltip="未同期">schedule</mat-icon>
+                    }
+                    @default {
+                      <mat-icon matTooltip="無効">block</mat-icon>
+                    }
                   }
-                  @case ('synced') {
-                    <mat-icon matTooltip="同期済み">check_circle</mat-icon>
-                  }
-                  @case ('error') {
-                    <mat-icon [matTooltip]="resource.lastError || 'エラー'">error</mat-icon>
-                  }
-                  @case ('pending') {
-                    <mat-icon matTooltip="未同期">schedule</mat-icon>
-                  }
-                  @default {
-                    <mat-icon matTooltip="無効">block</mat-icon>
-                  }
-                }
-              </div>
+                </div>
 
-              <!-- Sync Button -->
-              <button mat-icon-button
-                      class="sync-button"
-                      matTooltip="同期"
-                      (click)="onSyncResource(resource); $event.stopPropagation()"
-                      [disabled]="resource.syncStatus === 'syncing'">
-                <mat-icon>refresh</mat-icon>
-              </button>
+                <!-- Sync Button -->
+                <button mat-icon-button
+                        class="sync-button"
+                        matTooltip="同期"
+                        (click)="onSyncResource(resource); $event.stopPropagation()"
+                        [disabled]="resource.syncStatus === 'syncing'">
+                  <mat-icon>refresh</mat-icon>
+                </button>
+              } @else {
+                <!-- リアルタイム検索モードのインジケーター -->
+                <div class="realtime-indicator" matTooltip="リアルタイム検索">
+                  <mat-icon>bolt</mat-icon>
+                </div>
+              }
             </div>
           }
         </div>
 
         <!-- Footer -->
         <div class="sidebar-footer">
-          <a [routerLink]="['/context-hub', projectId]" class="manage-link">
+          <a [routerLink]="['/project', projectId]" class="manage-link">
             <mat-icon>settings</mat-icon>
             リソースを管理
           </a>
@@ -279,6 +286,18 @@ export interface ResourceSelectionChange {
     .status-error mat-icon { color: #f44336; }
     .status-pending mat-icon { color: #ff9800; }
     .status-disabled mat-icon { color: #9e9e9e; }
+
+    .realtime-indicator {
+      display: flex;
+      align-items: center;
+    }
+
+    .realtime-indicator mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #ffb300;
+    }
 
     .sync-button {
       opacity: 0;

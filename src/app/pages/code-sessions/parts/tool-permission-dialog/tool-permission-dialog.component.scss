@@ -1,0 +1,156 @@
+:host {
+    display: block;
+}
+
+.permission-dialog {
+    margin-bottom: 16px;
+    border: 2px solid #ff9800;
+    background-color: #fff8e1;
+    animation: permission-pulse 1.5s infinite;
+    overflow: hidden;
+    max-width: 100%;
+    flex-shrink: 0;
+
+    mat-card-header {
+        background-color: #fff3e0;
+        padding: 16px;
+        border-bottom: 1px solid #ffe0b2;
+
+        .avatar-icon {
+            background-color: #ff9800;
+            color: white;
+            border-radius: 50%;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+
+            mat-icon {
+                font-size: 24px;
+                width: 24px;
+                height: 24px;
+            }
+        }
+
+        mat-card-title {
+            color: #e65100;
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        mat-card-subtitle {
+            color: #f57c00;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+
+            .tool-icon {
+                font-size: 18px;
+                width: 18px;
+                height: 18px;
+                color: #ff6f00;
+            }
+
+            span {
+                font-weight: 600;
+                color: #e65100;
+            }
+        }
+    }
+
+    mat-card-content {
+        padding: 16px;
+
+        .input-section {
+            .section-label {
+                font-size: 12px;
+                font-weight: 600;
+                color: #795548;
+                margin-bottom: 8px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+        }
+
+        .tool-input-preview {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            overflow-x: hidden;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+    }
+
+    mat-card-actions {
+        padding: 8px 16px 16px;
+        gap: 8px;
+        display: flex;
+
+        button {
+            mat-icon {
+                margin-right: 4px;
+            }
+        }
+    }
+}
+
+@keyframes permission-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(255, 152, 0, 0);
+    }
+}
+
+// Dark mode
+@mixin dark-mode-styles {
+    .permission-dialog {
+        background-color: rgba(255, 152, 0, 0.1);
+        border-color: #ff9800;
+
+        mat-card-header {
+            background-color: rgba(255, 152, 0, 0.15);
+            border-bottom-color: rgba(255, 152, 0, 0.3);
+
+            .avatar-icon {
+                background-color: #ff9800;
+            }
+
+            mat-card-title {
+                color: #ffb74d;
+            }
+
+            mat-card-subtitle {
+                color: #ffa726;
+
+                span {
+                    color: #ffb74d;
+                }
+            }
+        }
+
+        mat-card-content {
+            .input-section {
+                .section-label {
+                    color: #bcaaa4;
+                }
+            }
+        }
+    }
+}
+
+:host-context(.dark-theme) {
+    @include dark-mode-styles;
+}

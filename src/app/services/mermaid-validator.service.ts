@@ -159,7 +159,7 @@ export class MermaidValidatorService {
             }
         }).pipe(
             switchMap(response => response.observer),
-            map(chunk => chunk.choices[0]?.delta?.content || ''),
+            map(chunk => chunk.content.choices[0]?.delta?.content || ''),
             // ストリーミングレスポンスを結合
             reduce((acc: string, content: string) => acc + content, ''),
             map(fullContent => Utils.mdTrim(fullContent.trim())),

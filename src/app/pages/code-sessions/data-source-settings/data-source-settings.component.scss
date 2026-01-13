@@ -264,7 +264,7 @@
 }
 
 // Dark mode support
-@media (prefers-color-scheme: dark) {
+@mixin dark-mode-styles {
     .data-source-settings-container {
         .header {
             .header-content {
@@ -320,6 +320,10 @@
             }
         }
     }
+}
+
+:host-context(.dark-theme) {
+    @include dark-mode-styles;
 }
 
 // Responsive design

@@ -2,10 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { OpenAI } from 'openai';
 import { ChatCompletionCreateParamsStreaming } from 'openai/resources';
-import { BehaviorSubject, Observable, Subject, first, map, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, first, map, of, switchMap } from 'rxjs';
 
 import { v4 as uuidv4 } from 'uuid';
 import { environment } from '../../environments/environment';
+import { ClaudeCodeOutput } from '../models/code-session-models';
 import { CachedContent, ChatCompletionCreateParamsWithoutMessages, ChatCompletionStreamInDto, GenerateContentRequestForCache } from '../models/models';
 import { Message, MessageForView, MessageGroupForView } from '../models/project-models';
 import { AuthService } from './auth.service';
@@ -186,7 +187,7 @@ export class ChatService {
   protected messageIdStreamIdMap: { [messageId: string]: string[] } = {};
 
   // データストリーム監視用のマップ
-  protected subjectMap: { [streamId: string]: Subject<OpenAI.ChatCompletionChunk> } = {};
+  protected subjectMap: { [streamId: string]: Subject<{ content: OpenAI.ChatCompletionChunk }> | Subject<ClaudeCodeOutput> } = {};
 
   // 作成したデータストリームのテキストを保持するマップ
   protected textMap: { [streamId: string]: string } = {};
@@ -255,7 +256,7 @@ export class ChatService {
   // 1回だけAPIキーを取得する（サーバー経由せずに直接OpenAIにアクセスするためのAPIキーを取得する） → 結局ダイレクトにアクセスが最速（50msとか）。サーバー経由だと遅い1秒とか。
   // this.getOpenAiApiKey().subscribe();
 
-  public getObserver(messageId: string): { text: string, observer: Subject<OpenAI.ChatCompletionChunk> | null } {
+  public getObserver(messageId: string): { text: string, observer: Subject<{ content: OpenAI.ChatCompletionChunk }> | Subject<ClaudeCodeOutput> | null } {
     // 新しいサービスを使用する場合は新しいサービスに移譲
     if (this.USE_NEW_SERVICES) {
       return this.newChatService.getObserver(messageId);
@@ -300,7 +301,34 @@ export class ChatService {
             this.logger.debug('Connected on open');
           } else if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED) {
             // ヘッダー受信時のロジック
-            this.logger.debug('Connected on headers received');
+            this.logger.debug(`Connected on headers received, status: ${xhr.status}`);
+
+            // 401エラーの場合、トークンリフレッシュを試みる
+            if (xhr.status === 401) {
+              this.logger.info('SSE connection got 401, attempting token refresh...');
+              xhr.abort(); // 現在の接続を中断
+              this.flag = false; // 接続フラグをリセット
+
+              this.authService.refresh().subscribe({
+                next: () => {
+                  this.logger.info('Token refreshed, reconnecting SSE...');
+                  // リフレッシュ成功後、再接続を試みる
+                  this.open(true).subscribe({
+                    next: (newConnectionId) => {
+                      observer.next(newConnectionId);
+                      observer.complete();
+                    },
+                    error: (err) => observer.error(err)
+                  });
+                },
+                error: (err) => {
+                  this.logger.error('Token refresh failed:', err);
+                  observer.error('Authentication failed');
+                }
+              });
+              return;
+            }
+
             observer.next(this.connectionId);
             observer.complete();
           } else if (xhr.readyState === XMLHttpRequest.LOADING) {
@@ -312,27 +340,41 @@ export class ChatService {
                   if (line.startsWith('{') && line.endsWith('}')) {
                     // json object 受信時
                     try {
-                      const { data } = JSON.parse(line) as { data: { streamId: string, content: OpenAI.ChatCompletionChunk } };
-                      this.subjectMap[data.streamId].next(data.content);
-                      this.textMap[data.streamId] += data.content;
+                      const { data } = JSON.parse(line) as { data: { streamId: string, type?: string, content: any } };
+                      console.log(`[ChatService SSE] JSON data received for streamId: ${data.streamId}`);
+                      if (!this.subjectMap[data.streamId]) {
+                        console.error(`[ChatService SSE] ERROR: No subject found for streamId: ${data.streamId}`);
+                        console.error(`[ChatService SSE] Available streamIds: ${Object.keys(this.subjectMap).join(', ')}`);
+                      } else {
+                        // data 全体を渡す（type, streamId, content を含む）
+                        this.subjectMap[data.streamId].next(data as any);
+                        // textMapにはcontentを追加（文字列の場合のみ）
+                        if (typeof data.content === 'string') {
+                          this.textMap[data.streamId] += data.content;
+                        }
+                      }
                     } catch (e) {
                       // json parse error. エラー吐いてとりあえず無視
+                      console.error(`[ChatService SSE] JSON parse error:`, e);
                       this.logger.debug(line);
                       this.logger.error(e);
                     }
                   } else if (line.startsWith('[DONE] ')) {
-
                     // 分割されたメッセージの結合
                     const lineSplit = line.split(' ');
 
                     // 終了通知受信時
                     const streamId = lineSplit[1];
+                    console.log(`[ChatService SSE] DONE received for streamId: ${streamId}`);
+                    console.log(`[ChatService SSE] Current subjectMap keys: ${Object.keys(this.subjectMap).join(', ')}`);
 
-                    // // ログ出力
-                    // this.logger.debug(this.textMap[streamId]);
-
-                    // 終了通知
-                    this.subjectMap[streamId].complete();
+                    if (!this.subjectMap[streamId]) {
+                      console.error(`[ChatService SSE] ERROR: No subject found for DONE streamId: ${streamId}`);
+                    } else {
+                      // 終了通知
+                      this.subjectMap[streamId].complete();
+                      console.log(`[ChatService SSE] Subject completed for streamId: ${streamId}`);
+                    }
 
                     // 監視オブジェクトを削除
                     delete this.subjectMap[streamId];
@@ -340,18 +382,21 @@ export class ChatService {
                       delete this.subjectMap[streamId.split('|')[0]];
                     } else { }
                     // ストリームが存在しなくなったら、XHRを中断する
+                    console.log(`[ChatService SSE] Remaining subjectMap keys after delete: ${Object.keys(this.subjectMap).join(', ') || '(none)'}`);
                     if (Object.keys(this.subjectMap).length === 0) {
+                      console.log(`[ChatService SSE] No more streams, aborting XHR`);
                       this.flag = false;
                       // チャットスレッド用にUUIDを生成
                       this.connectionId = uuidv4();
                       xhr.abort();
                     } else {
-                      // 何もしない
+                      console.log(`[ChatService SSE] Other streams remain, keeping connection open`);
                     }
                   } else if (!line) {
                     // 空行の場合は無視
                   } else {
                     // その他のメッセージ受信時
+                    console.log(`[ChatService SSE] Other message:`, line);
                     this.logger.debug(line);
                   }
                 } else if (line.startsWith('error: ')) {
@@ -396,7 +441,14 @@ export class ChatService {
               this.logger.debug('not end with \\n\\n');
             }
           } else if (xhr.readyState === XMLHttpRequest.DONE) {
-            this.logger.debug('Connected on done');
+            this.logger.debug(`Connected on done, status: ${xhr.status}`);
+
+            // 401の場合は既にHEADERS_RECEIVEDで処理済み（abort後にDONEが呼ばれる）
+            if (xhr.status === 401 || xhr.status === 0) {
+              this.logger.debug('Ignoring DONE state after 401 or abort');
+              return;
+            }
+
             observer.next(this.connectionId);
             observer.complete();
             // リクエスト完了時のロジック（onerror または oncomplete）
@@ -427,11 +479,11 @@ export class ChatService {
     connectionId: string,
     streamId: string,
     meta: { message?: Message, status: string },
-    observer: Observable<OpenAI.ChatCompletionChunk>
+    observer: Observable<{ content: OpenAI.ChatCompletionChunk }>
   }> {
     const streamId = uuidv4();
     // ストリーム受け取り用のSubjectを生成
-    const subject = new Subject<OpenAI.ChatCompletionChunk>();
+    const subject = new Subject<{ content: OpenAI.ChatCompletionChunk }>();
     this.subjectMap[streamId] = subject;
     this.textMap[streamId] = '';
     const streamObservable = subject.asObservable();
@@ -528,7 +580,7 @@ export class ChatService {
 
     // メッセージ用ストリームが来る前にタイトル用のストリームが閉じるとバグるので、ダミーとしてストリームを開いておく
     // つまり、ストリーム開いてるかの判定をするブロックの中でthis.subjectMapに登録しないと、つるっと抜ける可能性がある。
-    const subject = new Subject<OpenAI.ChatCompletionChunk>();
+    const subject = new Subject<{ content: OpenAI.ChatCompletionChunk }>();
     this.subjectMap[streamId] = subject;
     this.textMap[streamId] = '';
     return this.open(flag).pipe(
@@ -540,7 +592,7 @@ export class ChatService {
       map(messageGroupList => messageGroupList.map(messageGroup => {
         messageGroup.messages.forEach(message => {
           // ストリーム受け取り用のSubjectを生成
-          const subject = new Subject<OpenAI.ChatCompletionChunk>();
+          const subject = new Subject<{ content: OpenAI.ChatCompletionChunk }>();
           this.subjectMap[`${streamId}|${message.id}`] = subject;
           this.textMap[`${streamId}|${message.id}`] = '';
           // メッセージIdマップを作っておく
@@ -928,6 +980,38 @@ export class ChatService {
   //     });
   //   });
   // }
+
+  // ============================================================================
+  // ClaudeCode Execution Support
+  // ============================================================================
+
+  /**
+   * 外部からストリームを登録する（ClaudeCode実行用）
+   * @param streamId ストリームID
+   * @param subject データを受け取るSubject
+   */
+  registerStream(streamId: string, subject: Subject<any>): void {
+    console.log(`[ChatService] registerStream called, streamId: ${streamId}`);
+    console.log(`[ChatService] Current subjectMap keys: ${Object.keys(this.subjectMap).join(', ') || '(none)'}`);
+    this.subjectMap[streamId] = subject;
+    this.textMap[streamId] = '';
+    console.log(`[ChatService] Stream registered, new subjectMap keys: ${Object.keys(this.subjectMap).join(', ')}`);
+  }
+
+  /**
+   * SSE接続を確保する（既に接続済みならそのまま返す）
+   * @returns connectionIdのObservable
+   */
+  ensureConnection(): Observable<string> {
+    console.log(`[ChatService] ensureConnection called`);
+    console.log(`[ChatService] Current state - connectionId: ${this.connectionId}, flag: ${this.flag}`);
+    if (this.connectionId && this.flag) {
+      console.log(`[ChatService] Reusing existing connection: ${this.connectionId}`);
+      return of(this.connectionId);
+    }
+    console.log(`[ChatService] Opening new connection...`);
+    return this.open(true);
+  }
 }
 /**
  * Response returned from countTokens method.

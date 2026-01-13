@@ -217,7 +217,7 @@
 }
 
 // ダークテーマ対応
-@media (prefers-color-scheme: dark) {
+:host-context(.dark-theme) {
     .basic-info {
         background-color: var(--background-secondary, #2d2d2d);
     }

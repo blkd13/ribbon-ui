@@ -31,6 +31,7 @@ import { CodeSessionService } from '../../../services/code-session.service';
 })
 export class ProjectSessionsComponent implements OnInit {
     projectName = '';
+    projectId: string | null = null;
     sessions: CodeSessionListItem[] = [];
     loading = true;
     displayedColumns: string[] = ['sessionId', 'startTime', 'messageCount', 'duration', 'actions'];
@@ -44,6 +45,7 @@ export class ProjectSessionsComponent implements OnInit {
     ngOnInit(): void {
         this.route.params.subscribe(params => {
             this.projectName = params['projectName'];
+            this.projectId = params['projectId'] || null;
             this.loadSessions();
         });
     }
@@ -65,11 +67,19 @@ export class ProjectSessionsComponent implements OnInit {
     }
 
     navigateToSession(session: CodeSessionListItem): void {
-        this.router.navigate(['/', 'code-sessions', this.projectName, session.sessionId]);
+        if (this.projectId) {
+            this.router.navigate(['/', 'code-sessions', this.projectId, this.projectName, session.sessionId]);
+        } else {
+            this.router.navigate(['/', 'user-code-sessions', this.projectName, session.sessionId]);
+        }
     }
 
     goBack(): void {
-        this.router.navigate(['/', 'code-sessions']);
+        if (this.projectId) {
+            this.router.navigate(['/', 'code-sessions', this.projectId]);
+        } else {
+            this.router.navigate(['/', 'user-code-sessions']);
+        }
     }
 
     getDisplayName(projectName: string): string {

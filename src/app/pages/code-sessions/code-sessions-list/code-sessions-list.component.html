@@ -8,10 +8,18 @@
       <p class="subtitle">ClaudeCode / GeminiCli / CodexCli セッション履歴</p>
     </div>
     <div class="header-actions">
-      <button mat-stroked-button (click)="navigateToSettings()">
-        <mat-icon>settings</mat-icon>
-        データソース設定
-      </button>
+      @if (mode === 'all') {
+        <button mat-stroked-button (click)="navigateToSettings()">
+          <mat-icon>settings</mat-icon>
+          データソース設定
+        </button>
+      }
+      @if (mode === 'project' && projectId) {
+        <button mat-raised-button color="primary" (click)="startNewSession()">
+          <mat-icon>add</mat-icon>
+          新規セッション
+        </button>
+      }
     </div>
   </div>
 

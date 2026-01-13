@@ -1,12 +1,12 @@
 :host {
-    ::ng-deep {
-        .mat-mdc-standard-chip:not(.mdc-evolution-chip--disabled) .mdc-evolution-chip__text-label {
-            color: unset;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+  ::ng-deep {
+    .mat-mdc-standard-chip:not(.mdc-evolution-chip--disabled) .mdc-evolution-chip__text-label {
+      color: unset;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
+  }
 }
 
 .session-detail-container {
@@ -85,6 +85,143 @@
     p {
       margin-top: 16px;
       color: rgba(0, 0, 0, 0.6);
+    }
+  }
+
+  // 新規セッション用スタイル
+  .session-content.new-session {
+    .new-session-header {
+      text-align: center;
+      padding: 40px 20px;
+      margin-bottom: 24px;
+
+      mat-icon {
+        font-size: 64px;
+        width: 64px;
+        height: 64px;
+        color: #1976d2;
+        margin-bottom: 16px;
+      }
+
+      h2 {
+        font-size: 28px;
+        font-weight: 500;
+        margin: 0 0 8px 0;
+        color: #1976d2;
+      }
+
+      p {
+        font-size: 16px;
+        color: rgba(0, 0, 0, 0.6);
+        margin: 0;
+      }
+    }
+
+    .timeline-card {
+      margin-bottom: 24px;
+
+      mat-card-content {
+        padding: 24px;
+      }
+    }
+
+    // ツール許可ダイアログ
+    .permission-dialog {
+      margin-bottom: 16px;
+      border: 2px solid #ff9800;
+      background-color: #fff8e1;
+      animation: permission-pulse 1.5s infinite;
+
+      mat-card-header {
+        background-color: #fff3e0;
+        padding: 16px;
+        border-bottom: 1px solid #ffe0b2;
+
+        mat-icon[mat-card-avatar] {
+          background-color: #ff9800;
+          color: white;
+          border-radius: 50%;
+          padding: 8px;
+          font-size: 24px;
+          width: 40px;
+          height: 40px;
+        }
+
+        mat-card-title {
+          color: #e65100;
+          font-weight: 600;
+        }
+
+        mat-card-subtitle {
+          color: #f57c00;
+        }
+      }
+
+      mat-card-content {
+        padding: 16px;
+
+        .tool-input-preview {
+          background-color: #1e1e1e;
+          color: #d4d4d4;
+          padding: 12px;
+          border-radius: 4px;
+          font-size: 12px;
+          font-family: 'Courier New', monospace;
+          overflow-x: auto;
+          max-height: 200px;
+          overflow-y: auto;
+          margin: 0;
+        }
+      }
+
+      mat-card-actions {
+        padding: 8px 16px 16px;
+        gap: 8px;
+      }
+    }
+
+    @keyframes permission-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(255, 152, 0, 0);
+      }
+    }
+
+    .claude-code-input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      background: #f5f5f5;
+      border-radius: 8px;
+
+      .mode-toggle {
+        mat-chip-listbox {
+          display: flex;
+          gap: 8px;
+
+          mat-chip-option {
+            mat-icon {
+              font-size: 16px;
+              width: 16px;
+              height: 16px;
+              margin-right: 4px;
+            }
+          }
+        }
+      }
+
+      .prompt-input {
+        flex: 1;
+      }
+
+      .input-actions {
+        display: flex;
+        justify-content: flex-end;
+        padding-top: 8px;
+      }
     }
   }
 
@@ -167,7 +304,7 @@
             &.event-type-tool-execution {
               .timeline-marker {
                 border-color: #ff9800;
-                
+
                 mat-icon {
                   color: #ff9800;
                 }
@@ -177,7 +314,7 @@
             &.event-type-tool-pair {
               .tool-pair-marker {
                 border-color: #ff6f00;
-                
+
                 mat-icon {
                   color: #ff6f00;
                   font-size: 20px;
@@ -212,28 +349,36 @@
                   }
 
                   .success-chip {
+                    display: inline-flex;
+                    align-items: center;
                     background-color: #e8f5e9;
                     color: #2e7d32;
                     margin-left: auto;
                     margin-right: 16px;
 
                     mat-icon {
-                      font-size: 20px;
-                      width: 20px;
-                      height: 20px;
+                      font-size: 16px;
+                      width: 16px;
+                      height: 16px;
+                      line-height: 1;
+                      margin-right: 4px;
                     }
                   }
 
                   .error-chip {
+                    display: inline-flex;
+                    align-items: center;
                     background-color: #ffebee;
                     color: #c62828;
                     margin-left: auto;
                     margin-right: 16px;
 
                     mat-icon {
-                      font-size: 20px;
-                      width: 20px;
-                      height: 20px;
+                      font-size: 16px;
+                      width: 16px;
+                      height: 16px;
+                      line-height: 1;
+                      margin-right: 4px;
                     }
                   }
 
@@ -308,7 +453,7 @@
             &.event-type-file-history-snapshot {
               .timeline-marker {
                 border-color: #f44336;
-                
+
                 mat-icon {
                   color: #f44336;
                 }
@@ -431,7 +576,7 @@
 
               .timeline-details {
                 margin-top: 8px;
-                
+
                 pre {
                   background-color: #f5f5f5;
                   padding: 12px;
@@ -443,6 +588,105 @@
                   border-left: 3px solid #1976d2;
                 }
               }
+            }
+
+            // 実行中の表示
+            &.event-type-executing {
+              .executing-marker {
+                border-color: #ff9800;
+                background-color: #fff3e0;
+              }
+
+              .timeline-content {
+                .type-executing {
+                  background-color: #fff3e0;
+                  color: #e65100;
+                  animation: pulse 1.5s infinite;
+                }
+
+                .executing-output {
+                  background-color: #1e1e1e;
+                  color: #00ff00;
+                  padding: 12px;
+                  border-radius: 4px;
+                  font-size: 12px;
+                  font-family: 'Courier New', monospace;
+                  overflow-x: auto;
+                  margin: 8px 0 0 0;
+                  max-height: 400px;
+                  overflow-y: auto;
+                  white-space: pre-wrap;
+                  word-wrap: break-word;
+                }
+              }
+            }
+          }
+
+          @keyframes pulse {
+
+            0%,
+            100% {
+              opacity: 1;
+            }
+
+            50% {
+              opacity: 0.6;
+            }
+          }
+        }
+
+        // Timeline Tab specific layout
+        &.timeline-tab-content {
+          display: flex;
+          flex-direction: column;
+          height: calc(100vh - 400px);
+          min-height: 500px;
+
+          .timeline-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+          }
+
+          .claude-code-input-area {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            padding: 16px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            margin-top: 16px;
+            border: 1px solid #e0e0e0;
+
+            .prompt-input {
+              flex: 1;
+
+              textarea {
+                font-size: 14px;
+                line-height: 1.5;
+              }
+            }
+
+            .input-actions {
+              display: flex;
+              gap: 8px;
+              padding-top: 8px;
+            }
+          }
+
+          .no-container-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background-color: #e3f2fd;
+            border-radius: 8px;
+            margin-top: 16px;
+            color: #1565c0;
+            font-size: 14px;
+
+            mat-icon {
+              flex-shrink: 0;
             }
           }
         }
@@ -586,6 +830,8 @@
                 margin-bottom: 12px;
 
                 .success-chip {
+                  display: inline-flex;
+                  align-items: center;
                   background-color: #e8f5e9;
                   color: #2e7d32;
 
@@ -593,10 +839,14 @@
                     font-size: 16px;
                     width: 16px;
                     height: 16px;
+                    line-height: 1;
+                    margin-right: 4px;
                   }
                 }
 
                 .error-chip {
+                  display: inline-flex;
+                  align-items: center;
                   background-color: #ffebee;
                   color: #c62828;
 
@@ -604,6 +854,8 @@
                     font-size: 16px;
                     width: 16px;
                     height: 16px;
+                    line-height: 1;
+                    margin-right: 4px;
                   }
                 }
               }
@@ -705,6 +957,8 @@
         // Snapshot styles
         .snapshot-accordion {
           .update-chip {
+            display: inline-flex;
+            align-items: center;
             height: 24px;
             font-size: 11px;
             background-color: #fff3e0;
@@ -940,260 +1194,321 @@
   }
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .session-detail-container {
-    .header {
-      .header-content {
-        .session-meta {
-          color: rgba(255, 255, 255, 0.7);
-
-          code {
-            background-color: rgba(255, 255, 255, 0.05);
-          }
-        }
-      }
-    }
-
-    .loading-container {
-      p {
+// Dark mode styles mixin
+@mixin dark-mode-styles {
+  .header {
+    .header-content {
+      .session-meta {
         color: rgba(255, 255, 255, 0.7);
+
+        code {
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+      }
+    }
+  }
+
+  .loading-container {
+    p {
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+
+  // 新規セッション用スタイル
+  .session-content.new-session {
+    .new-session-header {
+      p {
+        color: rgba(255, 255, 255, 0.6);
       }
     }
 
-    .session-content {
-      .statistics-cards {
-        .stat-card {
-          mat-card-content {
-            .stat-label {
-              color: rgba(255, 255, 255, 0.7);
-            }
-          }
-        }
-      }
+    .claude-code-input-area {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  }
 
-      .session-tabs {
-        .tab-content {
-          .timeline {
-            &::before {
-              background-color: rgba(255, 255, 255, 0.1);
-            }
-
-            .timeline-item {
-              .timeline-marker {
-                background-color: #1e1e1e;
-                border-color: rgba(255, 255, 255, 0.1);
-              }
-
-              &.event-type-tool-pair {
-                .tool-pair-marker {
-                  border-color: #ff9800;
-                }
-
-                .tool-pair-accordion {
-                  mat-expansion-panel {
-                    background-color: rgba(255, 152, 0, 0.05);
-                    border-color: rgba(255, 152, 0, 0.3);
-
-                    mat-expansion-panel-header {
-                      background-color: rgba(255, 152, 0, 0.1);
-
-                      &:hover {
-                        background-color: rgba(255, 152, 0, 0.15);
-                      }
-                    }
-
-                    .tool-time {
-                      color: rgba(255, 255, 255, 0.7);
-                    }
-
-                    .tool-detail {
-                      background-color: rgba(0, 0, 0, 0.2);
-
-                      .tool-section {
-                        h4 {
-                          color: rgba(255, 255, 255, 0.9);
-
-                          mat-icon {
-                            color: #64b5f6;
-                          }
-                        }
-
-                        .timestamp-badge {
-                          background-color: rgba(33, 150, 243, 0.2);
-                          color: #90caf9;
-                        }
-
-                        pre {
-                          background-color: rgba(255, 255, 255, 0.05);
-                          border-color: rgba(255, 255, 255, 0.1);
-                          color: rgba(255, 255, 255, 0.9);
-
-                          &.error-output {
-                            background-color: rgba(244, 67, 54, 0.1);
-                            border-color: rgba(244, 67, 54, 0.3);
-                            color: #ef9a9a;
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-
-              .timeline-content {
-                .timeline-header {
-                  .timeline-time {
-                    color: rgba(255, 255, 255, 0.7);
-                  }
-                }
-
-                .timeline-description {
-                  color: rgba(255, 255, 255, 0.8);
-                }
-
-                .timeline-details {
-                  pre {
-                    background-color: rgba(255, 255, 255, 0.05);
-                  }
-                }
-              }
-            }
-          }
-
-          .message-tree {
-            .tree-node {
-              border-left-color: rgba(255, 255, 255, 0.1);
-
-              .node-content {
-                background-color: rgba(255, 255, 255, 0.05);
-
-                .node-info {
-                  .node-header {
-                    .node-time {
-                      color: rgba(255, 255, 255, 0.7);
-                    }
-                  }
-
-                  .node-content-text {
-                    color: rgba(255, 255, 255, 0.7);
-                  }
-                }
-              }
-
-              .node-children {
-                .child-node {
-                  background-color: rgba(255, 255, 255, 0.03);
-
-                  .child-icon {
-                    color: rgba(255, 255, 255, 0.6);
-                  }
-                }
-              }
-            }
-          }
-
-          .tool-accordion {
-            .tool-index {
-              color: rgba(255, 255, 255, 0.6);
-            }
-
-            .tool-detail {
-              .tool-section {
-                pre {
-                  background-color: rgba(255, 255, 255, 0.05);
-
-                  &.error-output {
-                    background-color: rgba(198, 40, 40, 0.2);
-                  }
-                }
-              }
-            }
-          }
-
-          .conversation-list {
-            .conversation-item {
-              border-left-color: rgba(255, 255, 255, 0.2);
-              background-color: rgba(255, 255, 255, 0.05);
-
-              &.user-message {
-                border-left-color: #2196f3;
-                background-color: rgba(33, 150, 243, 0.15);
-              }
-
-              &.assistant-message {
-                border-left-color: #9c27b0;
-                background-color: rgba(156, 39, 176, 0.15);
-              }
-
-              .message-header {
-                .message-time {
-                  color: rgba(255, 255, 255, 0.7);
-                }
-              }
-            }
-          }
-
-          .snapshot-accordion {
-            .snapshot-detail {
-              .snapshot-section {
-                code {
-                  background-color: rgba(255, 255, 255, 0.05);
-                }
-
-                .no-files {
-                  color: rgba(255, 255, 255, 0.6);
-                }
-
-                .file-backup-list {
-                  .backup-file-item {
-                    background-color: rgba(255, 255, 255, 0.05);
-                  }
-                }
-              }
-            }
-          }
-
-          .system-event-list {
-            .system-event-item {
-              background-color: rgba(255, 255, 255, 0.05);
-
-              &.event-summary {
-                background-color: rgba(76, 175, 80, 0.15);
-              }
-
-              &.event-system {
-                background-color: rgba(96, 125, 139, 0.15);
-              }
-
-              .event-header {
-                .event-time {
-                  color: rgba(255, 255, 255, 0.7);
-                }
-              }
-            }
-          }
-
-          .file-list {
-            .file-item {
-              background-color: rgba(255, 255, 255, 0.05);
-            }
-          }
-
-          .raw-data-card {
-            mat-card-content {
-              pre {
-                background-color: rgba(255, 255, 255, 0.05);
-              }
-            }
-          }
-
-          .no-data {
+  .session-content {
+    .statistics-cards {
+      .stat-card {
+        mat-card-content {
+          .stat-label {
             color: rgba(255, 255, 255, 0.7);
           }
         }
       }
     }
+
+    .session-tabs {
+      .tab-content {
+        .timeline {
+          &::before {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+
+          .timeline-item {
+            .timeline-marker {
+              background-color: #1e1e1e;
+              border-color: rgba(255, 255, 255, 0.1);
+            }
+
+            &.event-type-tool-pair {
+              .tool-pair-marker {
+                border-color: #ff9800;
+              }
+
+              .tool-pair-accordion {
+                mat-expansion-panel {
+                  background-color: rgba(255, 152, 0, 0.05);
+                  border-color: rgba(255, 152, 0, 0.3);
+
+                  mat-expansion-panel-header {
+                    background-color: rgba(255, 152, 0, 0.1);
+
+                    &:hover {
+                      background-color: rgba(255, 152, 0, 0.15);
+                    }
+                  }
+
+                  .tool-time {
+                    color: rgba(255, 255, 255, 0.7);
+                  }
+
+                  .success-chip {
+                    background-color: rgba(76, 175, 80, 0.2);
+                    color: #81c784;
+                  }
+
+                  .error-chip {
+                    background-color: rgba(244, 67, 54, 0.2);
+                    color: #ef9a9a;
+                  }
+
+                  .tool-detail {
+                    background-color: rgba(0, 0, 0, 0.2);
+
+                    .tool-section {
+                      h4 {
+                        color: rgba(255, 255, 255, 0.9);
+
+                        mat-icon {
+                          color: #64b5f6;
+                        }
+                      }
+
+                      .timestamp-badge {
+                        background-color: rgba(33, 150, 243, 0.2);
+                        color: #90caf9;
+                      }
+
+                      pre {
+                        background-color: rgba(255, 255, 255, 0.05);
+                        border-color: rgba(255, 255, 255, 0.1);
+                        color: rgba(255, 255, 255, 0.9);
+
+                        &.error-output {
+                          background-color: rgba(244, 67, 54, 0.1);
+                          border-color: rgba(244, 67, 54, 0.3);
+                          color: #ef9a9a;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            .timeline-content {
+              .timeline-header {
+                .timeline-time {
+                  color: rgba(255, 255, 255, 0.7);
+                }
+              }
+
+              .timeline-description {
+                color: rgba(255, 255, 255, 0.8);
+              }
+
+              .timeline-details {
+                pre {
+                  background-color: rgba(255, 255, 255, 0.05);
+                }
+              }
+            }
+
+            &.event-type-executing {
+              .executing-marker {
+                background-color: rgba(255, 152, 0, 0.2);
+              }
+            }
+          }
+        }
+
+        .claude-code-input-area {
+          background-color: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .no-container-info {
+          background-color: rgba(33, 150, 243, 0.15);
+          color: #90caf9;
+        }
+
+        .message-tree {
+          .tree-node {
+            border-left-color: rgba(255, 255, 255, 0.1);
+
+            .node-content {
+              background-color: rgba(255, 255, 255, 0.05);
+
+              .node-info {
+                .node-header {
+                  .node-time {
+                    color: rgba(255, 255, 255, 0.7);
+                  }
+                }
+
+                .node-content-text {
+                  color: rgba(255, 255, 255, 0.7);
+                }
+              }
+            }
+
+            .node-children {
+              .child-node {
+                background-color: rgba(255, 255, 255, 0.03);
+
+                .child-icon {
+                  color: rgba(255, 255, 255, 0.6);
+                }
+              }
+            }
+          }
+        }
+
+        .tool-accordion {
+          .tool-index {
+            color: rgba(255, 255, 255, 0.6);
+          }
+
+          .success-chip {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+          }
+
+          .error-chip {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: #ef9a9a;
+          }
+
+          .tool-detail {
+            .tool-section {
+              pre {
+                background-color: rgba(255, 255, 255, 0.05);
+
+                &.error-output {
+                  background-color: rgba(198, 40, 40, 0.2);
+                }
+              }
+            }
+          }
+        }
+
+        .conversation-list {
+          .conversation-item {
+            border-left-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.05);
+
+            &.user-message {
+              border-left-color: #2196f3;
+              background-color: rgba(33, 150, 243, 0.15);
+            }
+
+            &.assistant-message {
+              border-left-color: #9c27b0;
+              background-color: rgba(156, 39, 176, 0.15);
+            }
+
+            .message-header {
+              .message-time {
+                color: rgba(255, 255, 255, 0.7);
+              }
+            }
+          }
+        }
+
+        .snapshot-accordion {
+          .update-chip {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+          }
+
+          .snapshot-detail {
+            .snapshot-section {
+              code {
+                background-color: rgba(255, 255, 255, 0.05);
+              }
+
+              .no-files {
+                color: rgba(255, 255, 255, 0.6);
+              }
+
+              .file-backup-list {
+                .backup-file-item {
+                  background-color: rgba(255, 255, 255, 0.05);
+                }
+              }
+            }
+          }
+        }
+
+        .system-event-list {
+          .system-event-item {
+            background-color: rgba(255, 255, 255, 0.05);
+
+            &.event-summary {
+              background-color: rgba(76, 175, 80, 0.15);
+            }
+
+            &.event-system {
+              background-color: rgba(96, 125, 139, 0.15);
+            }
+
+            .event-header {
+              .event-time {
+                color: rgba(255, 255, 255, 0.7);
+              }
+            }
+          }
+        }
+
+        .file-list {
+          .file-item {
+            background-color: rgba(255, 255, 255, 0.05);
+          }
+        }
+
+        .raw-data-card {
+          mat-card-content {
+            pre {
+              background-color: rgba(255, 255, 255, 0.05);
+            }
+          }
+        }
+
+        .no-data {
+          color: rgba(255, 255, 255, 0.7);
+        }
+      }
+    }
+  }
+}
+
+
+// Dark mode support via theme class
+:host-context(.dark-theme) {
+  .session-detail-container {
+    @include dark-mode-styles;
   }
 }
 

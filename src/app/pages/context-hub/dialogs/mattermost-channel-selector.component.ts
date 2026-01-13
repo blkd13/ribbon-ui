@@ -1,33 +1,33 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { MatIconModule } from '@angular/material/icon';
+import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatBadgeModule } from '@angular/material/badge';
-import { MatExpansionModule } from '@angular/material/expansion';
 
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import {
   ApiMattermostService,
-  MattermostTeam,
   MattermostChannel,
+  MattermostTeam,
   MattermostTimeline,
   MattermostTimelineService,
   Preference,
 } from '../../../services/api-mattermost.service';
 import { ChatService } from '../../../services/chat.service';
 import { ToolCallService } from '../../../services/tool-call.service';
-import { of, forkJoin } from 'rxjs';
-import { catchError, switchMap, tap, map } from 'rxjs/operators';
 
 export interface MattermostSelection {
   sourceType: 'channel' | 'timeline';
@@ -1414,7 +1414,7 @@ ${JSON.stringify(channelListForAi, null, 2)}
       next: (result) => {
         result.observer.subscribe({
           next: (chunk) => {
-            const content = chunk.choices?.[0]?.delta?.content;
+            const content = chunk.content.choices?.[0]?.delta?.content;
             if (content) {
               fullResponse += content;
             }

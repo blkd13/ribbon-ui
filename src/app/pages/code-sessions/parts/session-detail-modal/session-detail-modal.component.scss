@@ -1,0 +1,687 @@
+:host {
+    display: block;
+
+    ::ng-deep {
+        .mat-mdc-standard-chip:not(.mdc-evolution-chip--disabled) .mdc-evolution-chip__text-label {
+            color: unset;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+    }
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+}
+
+.modal-content {
+    background-color: #ffffff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 1200px;
+    height: 90vh;
+    max-height: 900px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+
+    .header-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .header-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+        color: #1976d2;
+    }
+
+    .header-text {
+        h2 {
+            margin: 0 0 4px 0;
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .session-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: rgba(0, 0, 0, 0.6);
+            flex-wrap: wrap;
+
+            code {
+                background-color: #f5f5f5;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-family: monospace;
+            }
+
+            .branch-chip {
+                height: 22px;
+                font-size: 11px;
+                background-color: #f3e5f5;
+                color: #7b1fa2;
+
+                mat-icon {
+                    font-size: 14px;
+                    width: 14px;
+                    height: 14px;
+                }
+            }
+        }
+    }
+
+    .close-button {
+        margin-left: auto;
+    }
+}
+
+.statistics-section {
+    padding: 16px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.detail-tabs {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    ::ng-deep {
+        .mat-mdc-tab-body-wrapper {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .mat-mdc-tab-body-content {
+            overflow: auto;
+        }
+    }
+}
+
+.tab-content {
+    padding: 24px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+// 会話タブ
+.conversation-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.conversation-item {
+    padding: 16px;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+
+    &.user-message {
+        background-color: #e3f2fd;
+        border-left: 4px solid #1976d2;
+    }
+
+    &.assistant-message {
+        background-color: #f5f5f5;
+        border-left: 4px solid #7b1fa2;
+    }
+
+    .message-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        .message-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+        }
+
+        .message-role {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .message-time {
+            margin-left: auto;
+            font-size: 12px;
+            color: rgba(0, 0, 0, 0.5);
+            font-family: monospace;
+        }
+    }
+
+    .message-content {
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .message-meta {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+
+        .token-chip, .model-chip {
+            height: 24px;
+            font-size: 11px;
+
+            mat-icon {
+                font-size: 14px;
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        .token-chip {
+            background-color: #fff8e1;
+            color: #f57c00;
+        }
+
+        .model-chip {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+    }
+}
+
+// ツール実行タブ
+.tool-accordion {
+    mat-expansion-panel {
+        margin-bottom: 8px;
+
+        mat-expansion-panel-header {
+            .tool-icon {
+                margin-right: 8px;
+                color: #ff6f00;
+            }
+
+            .tool-name {
+                font-weight: 600;
+            }
+
+            .tool-index {
+                margin-left: 8px;
+                font-size: 12px;
+                color: rgba(0, 0, 0, 0.5);
+            }
+
+            .tool-time {
+                font-size: 12px;
+                font-family: monospace;
+                color: rgba(0, 0, 0, 0.6);
+            }
+        }
+    }
+
+    .tool-detail {
+        padding: 16px;
+        background-color: #fafafa;
+
+        .tool-section {
+            margin-bottom: 16px;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+
+            h4 {
+                font-size: 13px;
+                font-weight: 600;
+                margin: 0 0 8px 0;
+                color: rgba(0, 0, 0, 0.7);
+            }
+
+            pre {
+                background-color: #1e1e1e;
+                color: #d4d4d4;
+                padding: 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-family: 'Courier New', monospace;
+                overflow-x: auto;
+                max-height: 300px;
+                overflow-y: auto;
+                margin: 0;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+
+            .result-info {
+                margin-bottom: 8px;
+            }
+
+            .success-chip {
+                display: inline-flex;
+                align-items: center;
+                background-color: #e8f5e9;
+                color: #2e7d32;
+
+                mat-icon {
+                    font-size: 16px;
+                    width: 16px;
+                    height: 16px;
+                    line-height: 1;
+                    margin-right: 4px;
+                }
+            }
+
+            .error-chip {
+                display: inline-flex;
+                align-items: center;
+                background-color: #ffebee;
+                color: #c62828;
+
+                mat-icon {
+                    font-size: 16px;
+                    width: 16px;
+                    height: 16px;
+                    line-height: 1;
+                    margin-right: 4px;
+                }
+            }
+
+            .error-output {
+                background-color: #ffebee;
+                color: #c62828;
+            }
+        }
+    }
+}
+
+// ファイルスナップショットタブ
+.snapshot-accordion {
+    mat-expansion-panel {
+        margin-bottom: 8px;
+    }
+
+    .update-chip {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 8px;
+        height: 22px;
+        font-size: 11px;
+        background-color: #e3f2fd;
+        color: #1976d2;
+
+        mat-icon {
+            font-size: 14px;
+            width: 14px;
+            height: 14px;
+        }
+    }
+
+    .snapshot-detail {
+        padding: 16px;
+
+        .snapshot-section {
+            margin-bottom: 16px;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+
+            h4 {
+                font-size: 13px;
+                font-weight: 600;
+                margin: 0 0 8px 0;
+                color: rgba(0, 0, 0, 0.7);
+            }
+
+            code {
+                background-color: #f5f5f5;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-family: monospace;
+            }
+        }
+
+        .file-backup-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            .backup-file-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                background-color: #f5f5f5;
+                border-radius: 4px;
+                font-size: 13px;
+                font-family: monospace;
+
+                mat-icon {
+                    font-size: 18px;
+                    width: 18px;
+                    height: 18px;
+                    color: rgba(0, 0, 0, 0.5);
+                }
+            }
+        }
+
+        .no-files {
+            color: rgba(0, 0, 0, 0.5);
+            font-size: 13px;
+            margin: 0;
+        }
+    }
+}
+
+// システムイベントタブ
+.system-event-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.system-event-item {
+    padding: 16px;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+
+    &.event-summary {
+        background-color: #e8f5e9;
+        border-left: 4px solid #4caf50;
+    }
+
+    &.event-system {
+        background-color: #fff3e0;
+        border-left: 4px solid #ff9800;
+    }
+
+    .event-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+        }
+
+        .event-type {
+            font-weight: 500;
+            font-size: 14px;
+            text-transform: capitalize;
+        }
+
+        .subtype-chip {
+            height: 22px;
+            font-size: 11px;
+        }
+
+        .event-time {
+            margin-left: auto;
+            font-size: 12px;
+            color: rgba(0, 0, 0, 0.5);
+            font-family: monospace;
+        }
+    }
+
+    .event-content {
+        font-size: 14px;
+        line-height: 1.5;
+
+        p {
+            margin: 0;
+        }
+
+        .compact-metadata {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+
+            mat-chip {
+                height: 24px;
+                font-size: 11px;
+            }
+        }
+    }
+}
+
+// ファイル変更タブ
+.file-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+
+    .file-ext {
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+        text-transform: uppercase;
+    }
+
+    .file-info {
+        .file-count {
+            font-size: 14px;
+            font-weight: 500;
+        }
+    }
+}
+
+// 生データタブ
+.raw-data-tab {
+    pre {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        padding: 16px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-family: 'Courier New', monospace;
+        overflow-x: auto;
+        margin: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+}
+
+// No data state
+.no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    color: rgba(0, 0, 0, 0.5);
+
+    mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    p {
+        margin: 0;
+        font-size: 14px;
+    }
+}
+
+// Dark mode
+@mixin dark-mode-styles {
+    .modal-content {
+        background-color: #1e1e1e;
+    }
+
+    .modal-header {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+
+        .header-text {
+            h2 {
+                color: rgba(255, 255, 255, 0.87);
+            }
+
+            .session-meta {
+                color: rgba(255, 255, 255, 0.6);
+
+                code {
+                    background-color: rgba(255, 255, 255, 0.1);
+                    color: rgba(255, 255, 255, 0.87);
+                }
+            }
+        }
+    }
+
+    .conversation-item {
+        background-color: rgba(255, 255, 255, 0.05);
+
+        &.user-message {
+            background-color: rgba(25, 118, 210, 0.15);
+        }
+
+        &.assistant-message {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .message-content {
+            color: rgba(255, 255, 255, 0.87);
+        }
+    }
+
+    .tool-accordion {
+        .tool-detail {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .success-chip {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
+
+        .error-chip {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: #ef9a9a;
+        }
+
+        .error-output {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: #ef9a9a;
+        }
+    }
+
+    .snapshot-accordion {
+        .update-chip {
+            background-color: rgba(33, 150, 243, 0.2);
+            color: #90caf9;
+        }
+    }
+
+    .system-event-item {
+        background-color: rgba(255, 255, 255, 0.05);
+
+        &.event-summary {
+            background-color: rgba(76, 175, 80, 0.15);
+        }
+
+        &.event-system {
+            background-color: rgba(255, 152, 0, 0.15);
+        }
+
+        .event-content {
+            color: rgba(255, 255, 255, 0.87);
+        }
+    }
+
+    .file-item {
+        background-color: rgba(255, 255, 255, 0.05);
+
+        .file-info .file-count {
+            color: rgba(255, 255, 255, 0.87);
+        }
+    }
+
+    .no-data {
+        color: rgba(255, 255, 255, 0.5);
+    }
+}
+
+:host-context(.dark-theme) {
+    @include dark-mode-styles;
+}
+
+// レスポンシブ
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: 0;
+    }
+
+    .modal-content {
+        border-radius: 0;
+        height: 100vh;
+        max-height: none;
+    }
+
+    .modal-header {
+        padding: 16px;
+
+        .header-info {
+            gap: 12px;
+        }
+
+        .header-icon {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+        }
+
+        .header-text h2 {
+            font-size: 18px;
+        }
+    }
+
+    .tab-content {
+        padding: 16px;
+    }
+
+    .file-list {
+        grid-template-columns: 1fr;
+    }
+}

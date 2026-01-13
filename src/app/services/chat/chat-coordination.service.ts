@@ -1,33 +1,29 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subject, BehaviorSubject, forkJoin, of } from 'rxjs';
-import { map, switchMap, tap, catchError, finalize } from 'rxjs/operators';
+import { Injectable, inject } from '@angular/core';
 import { OpenAI } from 'openai';
+import { BehaviorSubject, Observable, Subject, forkJoin, of } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 
+import { environment } from '../../../environments/environment';
+import {
+  ChatCompletionCreateParamsWithoutMessages,
+  ChatCompletionStreamInDto
+} from '../../models/models';
+import { ErrorHandlerUtil } from '../../shared/utils/error-handler.util';
+import { AuthService } from '../auth.service';
+import { ToolCallService } from '../tool-call.service';
 import { ChatCommunicationService } from './chat-communication.service';
 import { ChatModelConfigurationService } from './chat-model-configuration.service';
 import { ChatPresetService } from './chat-preset.service';
 import { ChatTokenCountingService } from './chat-token-counting.service';
-import { AuthService } from '../auth.service';
-import { ToolCallService } from '../tool-call.service';
-import { 
-  ChatInputArea, 
-  ChatContent, 
-  LlmModel, 
-  ChatModelSettings, 
+import {
+  ChatContent,
+  ChatModelSettings,
+  ChatPreset,
   ChatStreamingOptions,
-  TokenUsage,
-  ChatPreset
+  LlmModel,
+  TokenUsage
 } from './chat-types';
-import { 
-  CachedContent, 
-  ChatCompletionCreateParamsWithoutMessages, 
-  ChatCompletionStreamInDto,
-  GenerateContentRequestForCache 
-} from '../../models/models';
-import { Message, MessageForView, MessageGroupForView } from '../../models/project-models';
-import { environment } from '../../../environments/environment';
-import { ErrorHandlerUtil } from '../../shared/utils/error-handler.util';
 
 /**
  * チャット調整サービス
@@ -39,7 +35,7 @@ export class ChatCoordinationService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
   private readonly toolCallService = inject(ToolCallService);
-  
+
   private readonly communicationService = inject(ChatCommunicationService);
   private readonly modelConfigService = inject(ChatModelConfigurationService);
   private readonly presetService = inject(ChatPresetService);
@@ -81,10 +77,10 @@ export class ChatCoordinationService {
     try {
       // モデル一覧を取得
       await this.modelConfigService.getAvailableModels(true).toPromise();
-      
+
       // プリセットをローカルストレージから読み込み
       this.presetService.loadPresetsFromStorage();
-      
+
       // デフォルトモデルを設定
       const defaultModel = await this.modelConfigService.getDefaultModel().toPromise();
       if (defaultModel) {
@@ -107,7 +103,7 @@ export class ChatCoordinationService {
   sendMessage(
     messages: { role: string; content: string | ChatContent[] }[],
     options?: ChatStreamingOptions
-  ): Observable<Subject<OpenAI.ChatCompletionChunk> | null> {
+  ): Observable<Subject<{ content: OpenAI.ChatCompletionChunk }> | null> {
     return this.prepareAndSendMessage(messages, options);
   }
 
@@ -119,7 +115,7 @@ export class ChatCoordinationService {
   sendChatCompletion(
     params: ChatCompletionCreateParamsWithoutMessages,
     options?: ChatStreamingOptions
-  ): Observable<Subject<OpenAI.ChatCompletionChunk> | null> {
+  ): Observable<Subject<{ content: OpenAI.ChatCompletionChunk }> | null> {
     return this.prepareChatCompletionAndSend(params, options);
   }
 
@@ -132,12 +128,12 @@ export class ChatCoordinationService {
   private prepareAndSendMessage(
     messages: { role: string; content: string | ChatContent[] }[],
     options?: ChatStreamingOptions
-  ): Observable<Subject<OpenAI.ChatCompletionChunk> | null> {
+  ): Observable<Subject<{ content: OpenAI.ChatCompletionChunk }> | null> {
     return this.getCurrentConfiguration().pipe(
       switchMap(config => {
         // メッセージを正規化
         const normalizedMessages = this.normalizeMessages(messages, config.preset);
-        
+
         // トークン数を分析
         return this.tokenCountingService.analyzeConversationTokens(
           normalizedMessages,
@@ -176,7 +172,7 @@ export class ChatCoordinationService {
   private prepareChatCompletionAndSend(
     params: ChatCompletionCreateParamsWithoutMessages,
     options?: ChatStreamingOptions
-  ): Observable<Subject<OpenAI.ChatCompletionChunk> | null> {
+  ): Observable<Subject<{ content: OpenAI.ChatCompletionChunk }> | null> {
     return this.executeChatRequest(params, options);
   }
 
@@ -189,7 +185,7 @@ export class ChatCoordinationService {
   private executeChatRequest(
     params: any,
     options?: ChatStreamingOptions
-  ): Observable<Subject<OpenAI.ChatCompletionChunk> | null> {
+  ): Observable<Subject<{ content: OpenAI.ChatCompletionChunk }> | null> {
     return this.communicationService.openConnection().pipe(
       switchMap(connectionId => {
         // ストリームを作成
@@ -278,7 +274,7 @@ export class ChatCoordinationService {
     if (!hasSystemMessage && preset.systemPrompt) {
       const userName = this.authService.getCurrentUser()?.name || '';
       const interpolatedPrompt = this.presetService.interpolateSystemPrompt(preset.systemPrompt, userName);
-      
+
       normalizedMessages.unshift({
         role: 'system',
         content: interpolatedPrompt
@@ -319,7 +315,7 @@ export class ChatCoordinationService {
    * @param messageId メッセージID
    * @returns オブザーバーとテキスト
    */
-  getObserver(messageId: string): { text: string, observer: Subject<OpenAI.ChatCompletionChunk> | null } {
+  getObserver(messageId: string): { text: string, observer: Subject<{ content: OpenAI.ChatCompletionChunk }> | null } {
     return this.communicationService.getObserver(messageId);
   }
 
@@ -353,9 +349,9 @@ export class ChatCoordinationService {
     presetId: string,
     initialMessage: string,
     options?: ChatStreamingOptions
-  ): Observable<Subject<OpenAI.ChatCompletionChunk> | null> {
+  ): Observable<Subject<{ content: OpenAI.ChatCompletionChunk }> | null> {
     this.presetService.selectPreset(presetId);
-    
+
     return this.sendMessage([
       { role: 'user', content: initialMessage }
     ], options);
@@ -371,7 +367,7 @@ export class ChatCoordinationService {
     modelId: string,
     messages: { role: string; content: string }[],
     options?: ChatStreamingOptions
-  ): Observable<Subject<OpenAI.ChatCompletionChunk> | null> {
+  ): Observable<Subject<{ content: OpenAI.ChatCompletionChunk }> | null> {
     this.modelConfigService.setSelectedModel(modelId);
     return this.sendMessage(messages, options);
   }
@@ -386,11 +382,11 @@ export class ChatCoordinationService {
     messages: { role: string; content: string; id?: string }[],
     targetTokens?: number,
     options?: ChatStreamingOptions
-  ): Observable<Subject<OpenAI.ChatCompletionChunk> | null> {
+  ): Observable<Subject<{ content: OpenAI.ChatCompletionChunk }> | null> {
     return this.getCurrentConfiguration().pipe(
       switchMap(config => {
         const target = targetTokens || Math.floor(config.model.maxInputTokens * 0.8);
-        
+
         return this.tokenCountingService.suggestHistoryTrimming(messages, config.model, target).pipe(
           switchMap(optimizedMessages => {
             return this.sendMessage(optimizedMessages, options);
@@ -408,8 +404,8 @@ export class ChatCoordinationService {
   sendBatchMessages(
     messageGroups: { id: string; messages: { role: string; content: string }[] }[],
     options?: ChatStreamingOptions
-  ): Observable<{ id: string; stream: Subject<OpenAI.ChatCompletionChunk> | null }[]> {
-    const batchRequests = messageGroups.map(group => 
+  ): Observable<{ id: string; stream: Subject<{ content: OpenAI.ChatCompletionChunk }> | null }[]> {
+    const batchRequests = messageGroups.map(group =>
       this.sendMessage(group.messages, options).pipe(
         map(stream => ({ id: group.id, stream }))
       )

@@ -436,6 +436,18 @@
     background-color: var(--tip-background-hover);
 }
 
+// ツールグループの三点メニュー表示制御
+.tool-group-wrapper {
+    .tool-group-menu-btn {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    &:hover .tool-group-menu-btn {
+        opacity: 1;
+    }
+}
+
 .small-icon {
     font-size: 14px;
     width: 14px;

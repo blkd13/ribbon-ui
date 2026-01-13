@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,7 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Router } from '@angular/router';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CodeProjectResponse } from '../../../models/code-session-models';
 import { RelativeTimePipe } from '../../../pipe/relative-time.pipe';
 import { CodeSessionService } from '../../../services/code-session.service';
@@ -25,6 +27,7 @@ import { CodeSessionService } from '../../../services/code-session.service';
     MatProgressSpinnerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSnackBarModule,
     FormsModule,
     RelativeTimePipe,
   ],
@@ -37,18 +40,35 @@ export class CodeSessionsListComponent implements OnInit {
   loading = true;
   searchQuery = '';
 
+  // モード分岐用
+  mode: 'all' | 'project' = 'all';
+  projectId: string | null = null;
+
   constructor(
     private router: Router,
-    private codeSessionService: CodeSessionService
+    private route: ActivatedRoute,
+    private codeSessionService: CodeSessionService,
+    private http: HttpClient,
+    private snackBar: MatSnackBar
   ) { }
 
   ngOnInit(): void {
-    this.loadProjects();
+    // ルートからprojectIdを取得してモード判定
+    this.route.params.subscribe(params => {
+      this.projectId = params['projectId'] || null;
+      this.mode = this.projectId ? 'project' : 'all';
+      this.loadProjects();
+    });
   }
 
   loadProjects(): void {
     this.loading = true;
-    this.codeSessionService.getProjects().subscribe({
+
+    const projects$ = this.mode === 'project' && this.projectId
+      ? this.codeSessionService.getProjectsByProjectId(this.projectId)
+      : this.codeSessionService.getProjects();
+
+    projects$.subscribe({
       next: (projects) => {
         this.projects = projects.sort((a, b) =>
           new Date(b.lastActivity || 0).getTime() - new Date(a.lastActivity || 0).getTime()
@@ -78,11 +98,34 @@ export class CodeSessionsListComponent implements OnInit {
   }
 
   navigateToProject(project: CodeProjectResponse): void {
-    this.router.navigate(['/', 'code-sessions', project.name]);
+    if (this.mode === 'project' && this.projectId) {
+      this.router.navigate(['/', 'code-sessions', this.projectId, project.name]);
+    } else {
+      this.router.navigate(['/', 'user-code-sessions', project.name]);
+    }
   }
 
   navigateToSettings(): void {
-    this.router.navigate(['/code-sessions/settings']);
+    this.router.navigate(['/user-code-sessions/settings']);
+  }
+
+  startNewSession(): void {
+    if (!this.projectId) return;
+
+    this.snackBar.open('コンテナを起動中...', '', { duration: 0 });
+
+    // コンテナを起動（既存エンドポイント）
+    this.http.get(`/user/auth/project-permission/${this.projectId}/`).subscribe({
+      next: () => {
+        this.snackBar.dismiss();
+        // session-detail画面に遷移（新規セッション用）
+        this.router.navigate(['/', 'code-sessions', this.projectId, '_new', 'new']);
+      },
+      error: (err) => {
+        console.error('Container startup failed:', err);
+        this.snackBar.open('コンテナ起動に失敗しました', '閉じる', { duration: 5000 });
+      }
+    });
   }
 
   getProjectIcon(projectName: string): string {

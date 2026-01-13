@@ -1,0 +1,263 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+.code-sessions-shell {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+
+    &.sidebar-collapsed {
+        .main-content {
+            margin-left: 0;
+        }
+    }
+}
+
+// Main Content
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: #ffffff;
+}
+
+// Breadcrumb
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #fafafa;
+    gap: 4px;
+    flex-shrink: 0;
+
+    .breadcrumb-link {
+        color: #1976d2;
+        text-decoration: none;
+        font-size: 14px;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    .breadcrumb-separator {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: rgba(0, 0, 0, 0.4);
+    }
+
+    .breadcrumb-current {
+        font-size: 14px;
+        font-weight: 500;
+        color: #212121;
+    }
+
+    .detail-button {
+        margin-left: auto;
+        color: #1976d2;
+    }
+}
+
+// Empty State
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    text-align: center;
+
+    .empty-icon {
+        font-size: 80px;
+        width: 80px;
+        height: 80px;
+        color: #e0e0e0;
+        margin-bottom: 24px;
+    }
+
+    h2 {
+        font-size: 24px;
+        font-weight: 500;
+        color: #424242;
+        margin: 0 0 12px 0;
+    }
+
+    p {
+        font-size: 14px;
+        color: rgba(0, 0, 0, 0.6);
+        margin: 0;
+    }
+}
+
+// Session View
+.session-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.loading-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+
+    p {
+        color: rgba(0, 0, 0, 0.6);
+        margin: 0;
+    }
+}
+
+.session-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    overflow: hidden;
+    gap: 16px;
+    min-height: 0;
+}
+
+// New Session Header
+.new-session-header {
+    text-align: center;
+    padding: 24px;
+    margin-bottom: 16px;
+
+    mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        color: #1976d2;
+        margin-bottom: 12px;
+    }
+
+    h2 {
+        font-size: 24px;
+        font-weight: 500;
+        margin: 0 0 8px 0;
+        color: #1976d2;
+    }
+
+    p {
+        font-size: 14px;
+        color: rgba(0, 0, 0, 0.6);
+        margin: 0;
+    }
+}
+
+// Timeline Area
+.timeline-area {
+    flex: 1;
+    min-height: 200px;
+    overflow-y: auto;
+}
+
+// No Container Info
+.no-container-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background-color: #e3f2fd;
+    border-radius: 8px;
+    color: #1565c0;
+    font-size: 14px;
+
+    mat-icon {
+        flex-shrink: 0;
+    }
+}
+
+// Dark Mode
+@mixin dark-mode-styles {
+    .main-content {
+        background-color: #121212;
+    }
+
+    .breadcrumb {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+        background-color: #1e1e1e;
+
+        .breadcrumb-link {
+            color: #64b5f6;
+        }
+
+        .breadcrumb-separator {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .breadcrumb-current {
+            color: rgba(255, 255, 255, 0.87);
+        }
+    }
+
+    .empty-state {
+        .empty-icon {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        h2 {
+            color: rgba(255, 255, 255, 0.87);
+        }
+
+        p {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    }
+
+    .loading-container p {
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .new-session-header {
+        p {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    }
+
+    .no-container-info {
+        background-color: rgba(33, 150, 243, 0.15);
+        color: #90caf9;
+    }
+}
+
+:host-context(.dark-theme) {
+    @include dark-mode-styles;
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .code-sessions-shell {
+        flex-direction: column;
+
+        app-session-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+
+            &:not(.collapsed) {
+                transform: translateX(0);
+                box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2);
+            }
+        }
+    }
+
+    .session-content {
+        padding: 16px;
+    }
+}

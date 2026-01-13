@@ -96,7 +96,7 @@ export class DataSourceSettingsComponent implements OnInit {
     }
 
     goBack(): void {
-        this.router.navigate(['/code-sessions']);
+        this.router.navigate(['/user-code-sessions']);
     }
 
     // Form actions
@@ -214,15 +214,12 @@ export class DataSourceSettingsComponent implements OnInit {
     }
 
     toggleActive(dataSource: CodeSessionDataSource): void {
-        const updated: Partial<CodeSessionDataSource> = {
-            id: dataSource.id,
-            isActive: !dataSource.isActive,
-        };
+        const newActiveState = !dataSource.isActive;
 
-        this.codeSessionService.upsertDataSource(updated).subscribe({
+        this.codeSessionService.toggleDataSourceActive(dataSource.id, newActiveState).subscribe({
             next: () => {
                 this.snackBar.open(
-                    updated.isActive ? 'データソースを有効化しました' : 'データソースを無効化しました',
+                    newActiveState ? 'データソースを有効化しました' : 'データソースを無効化しました',
                     '閉じる',
                     { duration: 3000 }
                 );

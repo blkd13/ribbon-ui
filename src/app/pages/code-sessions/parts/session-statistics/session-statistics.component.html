@@ -1,0 +1,13 @@
+@if (statistics) {
+<div class="statistics-cards">
+    @for (card of statCards; track card.label) {
+    <mat-card class="stat-card">
+        <mat-card-content>
+            <mat-icon>{{ card.icon }}</mat-icon>
+            <div class="stat-value">{{ card.value }}</div>
+            <div class="stat-label">{{ card.label }}</div>
+        </mat-card-content>
+    </mat-card>
+    }
+</div>
+}

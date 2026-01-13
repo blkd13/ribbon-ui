@@ -71,6 +71,7 @@ export interface ContextResourceProvider extends BaseEntity {
 export interface BoxResourceConfig {
   folderId: string;
   folderPath?: string;  // 表示用パス
+  folderName?: string;  // フォルダ名（編集時の復元用）
   depth: DepthConfig;
   filePatterns?: string[];  // *.pdf, *.docx など
   excludePatterns?: string[];

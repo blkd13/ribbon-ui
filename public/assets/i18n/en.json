@@ -496,6 +496,8 @@
     "SAVE_AS_TEMPLATE": "Save as template",
     "THREAD_COUNT": "Thread Count",
     "TOOLS": "Tools",
+    "CUSTOM_RESOURCES": "Custom Resources",
+    "CREATE_CUSTOM_RESOURCE": "Create Custom Resource",
     "MODES": "Modes",
     "OVERWRITE_WITH_CURRENT_SETTINGS": "Overwrite with current settings",
     "OVERWRITE": "Overwrite",

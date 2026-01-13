@@ -1,8 +1,8 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -11,15 +11,19 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatMenuModule } from '@angular/material/menu';
 
 import { ContextHubService } from '../../services/context-hub.service';
+import { ThreadService } from '../../services/core/thread.service';
+import { TeamService } from '../../services/core/team.service';
+import { ProjectCoreService } from '../../services/core/project-core.service';
 import {
   ContextHubForView,
   ContextResourceForView,
   ContextResourceProviderType,
   ProviderOption,
 } from '../../models/context-hub.models';
-import { UUID } from '../../models/project-models';
+import { Project, ProjectVisibility, ThreadGroupForView, TeamMember, UUID } from '../../models/project-models';
 
 import { ContextHubResourceDialogComponent } from './dialogs/context-hub-resource-dialog.component';
 import { MattermostResourceWizardComponent } from './dialogs/mattermost-resource-wizard.component';
@@ -28,140 +32,211 @@ import { GitResourceWizardComponent } from './dialogs/git-resource-wizard.compon
 import { ConfluenceResourceWizardComponent } from './dialogs/confluence-resource-wizard.component';
 import { JiraResourceWizardComponent } from './dialogs/jira-resource-wizard.component';
 
-interface ResourceCardConfig {
-  type: ContextResourceProviderType;
-  name: string;
-  label: string;
-  description: string;
-  icon: string;
-  colorClass: string;
-  features: string[];
-  isConnected?: boolean;
-  providerName?: string;
-}
-
 @Component({
   selector: 'app-context-hub',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatDialogModule,
     MatSnackBarModule,
+    MatMenuModule,
   ],
   template: `
-    <div class="context-hub-container">
+    <div class="project-dashboard">
       @if (isLoading) {
         <div class="loading-container">
           <mat-spinner diameter="40"></mat-spinner>
           <span>読み込み中...</span>
         </div>
       } @else {
-        <!-- 連携サービス -->
-        <section class="resource-section">
-          <h2 class="section-title">連携サービス</h2>
-          <div class="resource-grid">
-            @for (card of connectedServiceCards; track card.type) {
-              <div class="resource-card" [class]="card.colorClass"
-                   (click)="openAddResourceDialog(card.type, card.providerName)"
-                   [class.disabled]="!card.isConnected">
-                <div class="resource-icon" [style.background-color]="getCardColor(card.colorClass)">
-                  {{ card.icon }}
-                </div>
-                <div class="resource-name">{{ card.label }}</div>
-                <div class="resource-description">{{ card.description }}</div>
-                <div class="resource-features">
-                  @for (feature of card.features; track feature) {
-                    <span class="feature-tag">{{ feature }}</span>
-                  }
-                </div>
-                @if (!card.isConnected) {
-                  <div class="connection-status disconnected">
-                    <mat-icon>link_off</mat-icon>
-                    <span>未接続</span>
-                  </div>
-                }
-              </div>
+        <!-- プロジェクトヘッダー -->
+        <header class="project-header">
+          <div class="header-left">
+            <h1 class="project-name">{{ project?.label || 'プロジェクト' }}</h1>
+            @if (project && project.visibility) {
+              <span class="visibility-badge" [class]="'visibility-' + project.visibility">
+                {{ getVisibilityLabel(project.visibility) }}
+              </span>
             }
           </div>
-        </section>
-
-        <!-- 手動リソース -->
-        <section class="resource-section">
-          <h2 class="section-title">手動リソース</h2>
-          <div class="resource-grid">
-            @for (card of manualResourceCards; track card.type) {
-              <div class="resource-card" [class]="card.colorClass"
-                   (click)="openAddResourceDialog(card.type)">
-                <div class="resource-icon" [style.background-color]="getCardColor(card.colorClass)">
-                  {{ card.icon }}
-                </div>
-                <div class="resource-name">{{ card.label }}</div>
-                <div class="resource-description">{{ card.description }}</div>
-                <div class="resource-features">
-                  @for (feature of card.features; track feature) {
-                    <span class="feature-tag">{{ feature }}</span>
-                  }
-                </div>
-              </div>
-            }
+          <div class="header-actions">
+            <button mat-icon-button matTooltip="新しいスレッド" [routerLink]="['/chat', projectId, 'new-thread']">
+              <mat-icon>add_comment</mat-icon>
+            </button>
           </div>
-        </section>
+        </header>
 
-        <!-- 登録済みリソース -->
-        @if (hub && hub.resources.length > 0) {
-          <section class="registered-section">
-            <h2 class="section-title">登録済みリソース</h2>
-            <div class="registered-list">
-              <div class="registered-header">
-                <span></span>
-                <span>リソース名</span>
-                <span>タイプ</span>
-                <span>ステータス</span>
-                <span>最終同期</span>
-                <span>操作</span>
-              </div>
-              @for (resource of hub.resources; track resource.id) {
-                <div class="registered-item">
-                  <div class="resource-type-icon" [style.background-color]="getProviderColor(resource.providerType)">
-                    {{ getProviderEmoji(resource.providerType) }}
-                  </div>
-                  <div class="resource-info">
-                    <div class="resource-info-name">{{ resource.label }}</div>
-                    <div class="resource-info-path">{{ getResourceDescription(resource) }}</div>
-                  </div>
-                  <span class="resource-type-label">{{ getProviderTypeLabel(resource.providerType) }}</span>
-                  <span class="status-badge" [class]="getStatusClass(resource.syncStatus)">
-                    {{ getStatusLabel(resource.syncStatus) }}
-                  </span>
-                  <span class="last-sync">{{ formatLastSync(resource.lastSyncAt) }}</span>
-                  <div class="action-btns">
-                    <button class="action-btn" (click)="editResource(resource); $event.stopPropagation()" matTooltip="編集">
-                      <mat-icon>edit</mat-icon>
-                    </button>
-                    <button class="action-btn" (click)="syncResource(resource); $event.stopPropagation()" matTooltip="同期">
-                      <mat-icon>sync</mat-icon>
-                    </button>
-                    <button class="action-btn delete" (click)="deleteResource(resource); $event.stopPropagation()" matTooltip="削除">
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  </div>
+        <!-- ダッシュボードグリッド -->
+        <div class="dashboard-grid">
+          <!-- 最近のスレッド -->
+          <section class="dashboard-card threads-card">
+            <div class="card-header">
+              <h2>
+                <mat-icon>forum</mat-icon>
+                最近のスレッド
+              </h2>
+              <button mat-icon-button matTooltip="すべてのスレッド" [routerLink]="['/chat', projectId]">
+                <mat-icon>open_in_new</mat-icon>
+              </button>
+            </div>
+            <div class="card-content">
+              @if (threads.length === 0) {
+                <div class="empty-state">
+                  <mat-icon>chat_bubble_outline</mat-icon>
+                  <p>スレッドがありません</p>
+                  <a [routerLink]="['/chat', projectId, 'new-thread']" class="create-link">
+                    新しいスレッドを作成
+                  </a>
+                </div>
+              } @else {
+                <div class="thread-list">
+                  @for (thread of threads; track thread.id) {
+                    <a class="thread-item" [routerLink]="['/chat', projectId, thread.id]">
+                      <div class="thread-title">{{ thread.title || '無題のスレッド' }}</div>
+                      <div class="thread-meta">{{ formatDate(thread.lastUpdate) }}</div>
+                    </a>
+                  }
                 </div>
               }
             </div>
           </section>
-        }
+
+          <!-- 登録リソース -->
+          <section class="dashboard-card resources-card">
+            <div class="card-header">
+              <h2>
+                <mat-icon>hub</mat-icon>
+                登録リソース
+              </h2>
+              <button mat-icon-button [matMenuTriggerFor]="addResourceMenu" matTooltip="リソースを追加">
+                <mat-icon>add</mat-icon>
+              </button>
+              <mat-menu #addResourceMenu="matMenu">
+                @for (provider of availableProviders; track provider.type) {
+                  <button mat-menu-item
+                          [disabled]="!provider.isConnected && provider.authType !== 'none'"
+                          (click)="openAddResourceDialog(provider.type, provider.name)">
+                    <mat-icon>{{ getProviderIcon(provider.type) }}</mat-icon>
+                    <span>{{ provider.label }}</span>
+                    @if (!provider.isConnected && provider.authType !== 'none') {
+                      <span class="disconnected-hint">(未接続)</span>
+                    }
+                  </button>
+                }
+              </mat-menu>
+            </div>
+            <div class="card-content">
+              @if (!hub || hub.resources.length === 0) {
+                <div class="empty-state">
+                  <mat-icon>source</mat-icon>
+                  <p>リソースがありません</p>
+                  <span class="hint">＋ボタンからリソースを追加</span>
+                </div>
+              } @else {
+                <div class="resource-list">
+                  @for (resource of hub.resources; track resource.id) {
+                    <div class="resource-item">
+                      <div class="resource-icon" [style.background-color]="getProviderColor(resource.providerType)">
+                        {{ getProviderEmoji(resource.providerType) }}
+                      </div>
+                      <div class="resource-info">
+                        <div class="resource-name">{{ resource.label }}</div>
+                        <div class="resource-type">{{ getProviderTypeLabel(resource.providerType) }}</div>
+                      </div>
+                      @if (resource.searchMode === 'realtime') {
+                        <span class="mode-badge realtime" matTooltip="リアルタイム検索">RT</span>
+                      } @else {
+                        <span class="mode-badge vector" matTooltip="ベクトル検索">VEC</span>
+                      }
+                      <div class="resource-actions">
+                        <button mat-icon-button (click)="editResource(resource)" matTooltip="編集">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button mat-icon-button (click)="deleteResource(resource)" matTooltip="削除" class="delete-btn">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+
+          <!-- メンバー (Team可視性のみ) -->
+          @if (project?.visibility === 'Team') {
+            <section class="dashboard-card members-card">
+              <div class="card-header">
+                <h2>
+                  <mat-icon>group</mat-icon>
+                  メンバー
+                </h2>
+              </div>
+              <div class="card-content">
+                @if (members.length === 0) {
+                  <div class="empty-state">
+                    <mat-icon>person_outline</mat-icon>
+                    <p>メンバーがいません</p>
+                  </div>
+                } @else {
+                  <div class="member-list">
+                    @for (member of members; track member.id) {
+                      <div class="member-item">
+                        <div class="member-avatar">
+                          {{ getMemberInitial(member) }}
+                        </div>
+                        <div class="member-info">
+                          <div class="member-name">{{ getMemberName(member) }}</div>
+                          <div class="member-role">{{ member.role }}</div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </section>
+          }
+
+          <!-- 統計 -->
+          <section class="dashboard-card stats-card">
+            <div class="card-header">
+              <h2>
+                <mat-icon>analytics</mat-icon>
+                統計
+              </h2>
+            </div>
+            <div class="card-content">
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <div class="stat-value">{{ threads.length }}</div>
+                  <div class="stat-label">スレッド</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">{{ hub?.resources?.length || 0 }}</div>
+                  <div class="stat-label">リソース</div>
+                </div>
+                @if (project?.visibility === 'Team') {
+                  <div class="stat-item">
+                    <div class="stat-value">{{ members.length }}</div>
+                    <div class="stat-label">メンバー</div>
+                  </div>
+                }
+              </div>
+            </div>
+          </section>
+        </div>
       }
     </div>
   `,
   styles: [`
     :host {
       --primary-color: #1a73e8;
-      --primary-dark: #1557b0;
       --bg-dark: #1e2128;
       --bg-card: #282c34;
       --bg-input: #3a3f4a;
@@ -171,20 +246,14 @@ interface ResourceCardConfig {
       --success-color: #34a853;
       --warning-color: #fbbc04;
       --error-color: #ea4335;
-      --mattermost-color: #0058cc;
-      --box-color: #0061d5;
-      --jira-color: #0052cc;
-      --gitlab-color: #fc6d26;
-      --confluence-color: #0052cc;
-      --upload-color: #7c4dff;
-      --web-color: #00bcd4;
-      --gitea-color: #609926;
     }
 
-    .context-hub-container {
+    .project-dashboard {
       display: flex;
       flex-direction: column;
-      gap: 40px;
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
     }
 
     .loading-container {
@@ -197,337 +266,335 @@ interface ResourceCardConfig {
       color: var(--text-secondary);
     }
 
-    /* Section Title */
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 16px;
+    /* プロジェクトヘッダー */
+    .project-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 8px;
-      color: var(--text-primary);
-
-      &::before {
-        content: '';
-        width: 4px;
-        height: 20px;
-        background: var(--primary-color);
-        border-radius: 2px;
-      }
-    }
-
-    /* Resource Grid */
-    .resource-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-    }
-
-    .resource-card {
-      background-color: var(--bg-card);
-      border-radius: 12px;
-      padding: 24px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      border: 2px solid transparent;
-      position: relative;
-      overflow: hidden;
-
-      &:hover {
-        transform: translateY(-4px);
-        border-color: var(--card-color);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-      }
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--card-color);
-      }
-
-      &.disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-
-        &:hover {
-          transform: none;
-          border-color: transparent;
-          box-shadow: none;
-        }
-      }
-
-      &.mattermost { --card-color: var(--mattermost-color); }
-      &.box { --card-color: var(--box-color); }
-      &.jira { --card-color: var(--jira-color); }
-      &.gitlab { --card-color: var(--gitlab-color); }
-      &.gitea { --card-color: var(--gitea-color); }
-      &.confluence { --card-color: var(--confluence-color); }
-      &.upload { --card-color: var(--upload-color); }
-      &.web { --card-color: var(--web-color); }
-    }
-
-    .resource-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-      font-size: 24px;
-    }
-
-    .resource-name {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: var(--text-primary);
-    }
-
-    .resource-description {
-      color: var(--text-secondary);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .resource-features {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 16px;
-    }
-
-    .feature-tag {
-      padding: 4px 10px;
-      background-color: var(--bg-input);
-      border-radius: 12px;
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    .connection-status {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 12px;
-      font-size: 12px;
-
-      &.disconnected {
-        color: var(--warning-color);
-      }
-
-      mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-      }
-    }
-
-    /* Registered Resources Section */
-    .registered-section {
-      margin-top: 8px;
-    }
-
-    .registered-list {
-      background-color: var(--bg-card);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-
-    .registered-header {
-      display: grid;
-      grid-template-columns: 48px 1fr 120px 100px 140px 100px;
-      padding: 12px 20px;
-      background-color: var(--bg-input);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .registered-item {
-      display: grid;
-      grid-template-columns: 48px 1fr 120px 100px 140px 100px;
-      padding: 16px 20px;
-      align-items: center;
+      padding: 16px 0;
       border-bottom: 1px solid var(--border-color);
-      transition: background-color 0.2s;
-
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.05);
-      }
-
-      &:last-child {
-        border-bottom: none;
-      }
     }
 
-    .resource-type-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
+    .header-left {
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 16px;
+      gap: 12px;
     }
 
-    .resource-info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      min-width: 0;
-    }
-
-    .resource-info-name {
-      font-weight: 500;
+    .project-name {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
       color: var(--text-primary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .resource-info-path {
-      font-size: 12px;
-      color: var(--text-secondary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .resource-type-label {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    .status-badge {
+    .visibility-badge {
       padding: 4px 12px;
       border-radius: 12px;
       font-size: 12px;
       font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      width: fit-content;
 
-      &::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: currentColor;
-      }
-
-      &.synced {
-        background-color: rgba(52, 168, 83, 0.2);
-        color: var(--success-color);
-      }
-
-      &.syncing, &.pending {
-        background-color: rgba(251, 188, 4, 0.2);
-        color: var(--warning-color);
-      }
-
-      &.error {
-        background-color: rgba(234, 67, 53, 0.2);
-        color: var(--error-color);
-      }
-
-      &.disabled {
+      &.visibility-Default {
         background-color: rgba(139, 146, 154, 0.2);
         color: var(--text-secondary);
       }
+      &.visibility-Team {
+        background-color: rgba(26, 115, 232, 0.2);
+        color: var(--primary-color);
+      }
+      &.visibility-Public {
+        background-color: rgba(52, 168, 83, 0.2);
+        color: var(--success-color);
+      }
+      &.visibility-Login {
+        background-color: rgba(251, 188, 4, 0.2);
+        color: var(--warning-color);
+      }
     }
 
-    .last-sync {
-      font-size: 13px;
+    /* ダッシュボードグリッド */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* カード共通 */
+    .dashboard-card {
+      background-color: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          color: var(--primary-color);
+        }
+      }
+    }
+
+    .card-content {
+      padding: 16px 20px;
+      min-height: 150px;
+    }
+
+    /* 空状態 */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      color: var(--text-secondary);
+      text-align: center;
+
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        opacity: 0.5;
+        margin-bottom: 12px;
+      }
+
+      p {
+        margin: 0 0 8px;
+      }
+
+      .create-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-size: 14px;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      .hint {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+    }
+
+    /* スレッドリスト */
+    .thread-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .thread-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background-color: var(--bg-input);
+      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .thread-title {
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .thread-meta {
+      font-size: 12px;
       color: var(--text-secondary);
     }
 
-    .action-btns {
+    /* リソースリスト */
+    .resource-list {
       display: flex;
-      gap: 4px;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .action-btn {
+    .resource-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background-color: var(--bg-input);
+      border-radius: 8px;
+    }
+
+    .resource-icon {
       width: 32px;
       height: 32px;
-      border: none;
-      background-color: var(--bg-input);
       border-radius: 6px;
-      color: var(--text-secondary);
-      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
 
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+    .resource-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .resource-name {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .resource-type {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .mode-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+
+      &.realtime {
+        background-color: rgba(255, 179, 0, 0.2);
+        color: #ffb300;
       }
 
-      &:hover {
-        background-color: var(--primary-color);
-        color: white;
-      }
-
-      &.delete:hover {
-        background-color: var(--error-color);
+      &.vector {
+        background-color: rgba(124, 77, 255, 0.2);
+        color: #7c4dff;
       }
     }
 
-    @media (max-width: 900px) {
-      .registered-header,
-      .registered-item {
-        grid-template-columns: 48px 1fr 100px 80px;
+    .resource-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
 
-        span:nth-child(5),
-        .last-sync {
-          display: none;
+      button {
+        width: 28px;
+        height: 28px;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
         }
+      }
+
+      .delete-btn:hover {
+        color: var(--error-color);
       }
     }
 
-    @media (max-width: 600px) {
-      .registered-header {
-        display: none;
-      }
+    .resource-item:hover .resource-actions {
+      opacity: 1;
+    }
 
-      .registered-item {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 16px;
+    /* メンバーリスト */
+    .member-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-        .resource-type-icon {
-          flex-shrink: 0;
-        }
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px;
+    }
 
-        .resource-info {
-          flex: 1;
-          min-width: 150px;
-        }
+    .member-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      color: white;
+    }
 
-        .resource-type-label {
-          display: none;
-        }
+    .member-info {
+      flex: 1;
+    }
 
-        .status-badge {
-          order: 3;
-        }
+    .member-name {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
 
-        .action-btns {
-          order: 4;
-          margin-left: auto;
-        }
-      }
+    .member-role {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* 統計 */
+    .stats-grid {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      padding: 16px 0;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* メニュー */
+    .disconnected-hint {
+      color: var(--text-secondary);
+      font-size: 11px;
+      margin-left: 8px;
     }
   `]
 })
@@ -536,45 +603,24 @@ export class ContextHubComponent implements OnInit, OnDestroy {
   @Output() resourceSelected = new EventEmitter<ContextResourceForView>();
 
   readonly contextHubService = inject(ContextHubService);
+  private readonly threadService = inject(ThreadService);
+  private readonly teamService = inject(TeamService);
+  private readonly projectService = inject(ProjectCoreService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly route = inject(ActivatedRoute);
 
   private destroy$ = new Subject<void>();
 
+  // データ
+  project: Project | null = null;
   hub: ContextHubForView | null = null;
-  isLoading = false;
+  threads: ThreadGroupForView[] = [];
+  members: TeamMember[] = [];
   availableProviders: ProviderOption[] = [];
-
-  // 連携サービスカード
-  connectedServiceCards: ResourceCardConfig[] = [];
-
-  // 手動リソースカード
-  manualResourceCards: ResourceCardConfig[] = [
-    {
-      type: 'local',
-      name: 'local',
-      label: 'ファイル/ディレクトリ',
-      description: 'ローカルファイルやディレクトリを直接アップロード',
-      icon: '📁',
-      colorClass: 'upload',
-      features: ['ドラッグ&ドロップ', '複数選択', 'ZIP対応'],
-      isConnected: true,
-    },
-    {
-      type: 'web',
-      name: 'web',
-      label: 'Webリソース',
-      description: 'URLを指定してWebページやAPIを連携',
-      icon: '🌐',
-      colorClass: 'web',
-      features: ['URL指定', 'スクレイピング', 'RSS/API', '定期更新'],
-      isConnected: true,
-    },
-  ];
+  isLoading = false;
 
   ngOnInit(): void {
-    // ルートパラメータからprojectIdを取得（@Inputで渡されていない場合）
     if (!this.projectId) {
       const routeProjectId = this.route.snapshot.paramMap.get('projectId');
       if (routeProjectId) {
@@ -582,8 +628,7 @@ export class ContextHubComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.loadHub();
-    this.loadAvailableProviders();
+    this.loadDashboardData();
   }
 
   ngOnDestroy(): void {
@@ -591,172 +636,104 @@ export class ContextHubComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private loadHub(): void {
+  private loadDashboardData(): void {
     if (!this.projectId) return;
 
     this.isLoading = true;
+
+    // 並列でデータ取得
+    forkJoin({
+      project: this.projectService.getProject(this.projectId),
+      hub: this.contextHubService.getOrCreateHub(this.projectId),
+      threads: this.threadService.getThreadGroupList(this.projectId, false, 1, 5),
+      providers: this.contextHubService.getAvailableProviders(),
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: ({ project, hub, threads, providers }) => {
+        this.project = project;
+        this.hub = hub;
+        this.threads = threads;
+        this.availableProviders = providers;
+
+        // Teamの場合はメンバーも取得
+        if (project.visibility === ProjectVisibility.Team && project.teamId) {
+          this.loadMembers(project.teamId);
+        }
+
+        this.isLoading = false;
+      },
+      error: err => {
+        console.error('Failed to load dashboard:', err);
+        this.isLoading = false;
+        this.snackBar.open('データの読み込みに失敗しました', '閉じる', { duration: 3000 });
+      }
+    });
+  }
+
+  private loadMembers(teamId: string): void {
+    this.teamService.getTeamMembers(teamId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: members => {
+          this.members = members;
+        },
+        error: err => {
+          console.error('Failed to load members:', err);
+        }
+      });
+  }
+
+  private loadHub(): void {
+    if (!this.projectId) return;
     this.contextHubService.getOrCreateHub(this.projectId)
       .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: hub => {
-          this.hub = hub;
-          this.isLoading = false;
-        },
-        error: err => {
-          console.error('Failed to load context hub:', err);
-          this.isLoading = false;
-          this.snackBar.open('Context Hubの読み込みに失敗しました', '閉じる', { duration: 3000 });
-        }
-      });
+      .subscribe(hub => this.hub = hub);
   }
 
-  private loadAvailableProviders(): void {
-    this.contextHubService.getAvailableProviders()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: providers => {
-          this.availableProviders = providers;
-          this.buildConnectedServiceCards(providers);
-        },
-        error: err => {
-          console.error('Failed to load providers:', err);
-          // 静的なカード定義をフォールバックとして使用
-          this.buildDefaultServiceCards();
-        }
-      });
-  }
-
-  private buildConnectedServiceCards(providers: ProviderOption[]): void {
-    const serviceConfigs: Record<string, Partial<ResourceCardConfig>> = {
-      mattermost: {
-        label: 'Mattermost',
-        description: 'チームコミュニケーションのチャネルやメッセージを連携',
-        icon: '💬',
-        colorClass: 'mattermost',
-        features: ['チーム指定', 'チャネル指定', '期間指定', 'キーワード'],
-      },
-      box: {
-        label: 'Box',
-        description: 'クラウドストレージのファイルやフォルダを連携',
-        icon: '📦',
-        colorClass: 'box',
-        features: ['ディレクトリ指定', '拡張子', '深さ指定', 'サイズ制限'],
-      },
-      jira: {
-        label: 'Jira',
-        description: 'プロジェクト管理のチケットやスプリントを連携',
-        icon: '📋',
-        colorClass: 'jira',
-        features: ['プロジェクト指定', 'スプリント', '担当者', 'JQL'],
-      },
-      gitlab: {
-        label: 'GitLab',
-        description: 'リポジトリやCI/CDパイプラインを連携',
-        icon: '🦊',
-        colorClass: 'gitlab',
-        features: ['リポジトリ指定', 'ブランチ', 'MR/Issue', 'パイプライン'],
-      },
-      gitea: {
-        label: 'Gitea',
-        description: '軽量なGitリポジトリを連携',
-        icon: '🍵',
-        colorClass: 'gitea',
-        features: ['リポジトリ指定', 'ブランチ', 'Issue', 'PR'],
-      },
-      confluence: {
-        label: 'Confluence',
-        description: 'ドキュメントやナレッジベースを連携',
-        icon: '📖',
-        colorClass: 'confluence',
-        features: ['スペース指定', 'ページ選択', 'ラベル', '更新日'],
-      },
+  // ヘルパーメソッド
+  getVisibilityLabel(visibility: ProjectVisibility): string {
+    const labels: Record<ProjectVisibility, string> = {
+      [ProjectVisibility.Default]: '自分のみ',
+      [ProjectVisibility.Team]: 'チーム',
+      [ProjectVisibility.Public]: '公開',
+      [ProjectVisibility.Login]: 'ログインユーザー',
     };
-
-    this.connectedServiceCards = providers
-      .filter(p => p.type !== 'local' && p.type !== 'web')
-      .map(provider => {
-        const config = serviceConfigs[provider.type] || {};
-        return {
-          type: provider.type,
-          name: provider.name,
-          label: config.label || provider.label,
-          description: config.description || '',
-          icon: config.icon || '📦',
-          colorClass: config.colorClass || 'box',
-          features: config.features || [],
-          isConnected: provider.isConnected,
-          providerName: provider.name,
-        };
-      });
+    return labels[visibility] || visibility;
   }
 
-  private buildDefaultServiceCards(): void {
-    this.connectedServiceCards = [
-      {
-        type: 'mattermost',
-        name: 'mattermost',
-        label: 'Mattermost',
-        description: 'チームコミュニケーションのチャネルやメッセージを連携',
-        icon: '💬',
-        colorClass: 'mattermost',
-        features: ['チーム指定', 'チャネル指定', '期間指定', 'キーワード'],
-        isConnected: false,
-      },
-      {
-        type: 'box',
-        name: 'box',
-        label: 'Box',
-        description: 'クラウドストレージのファイルやフォルダを連携',
-        icon: '📦',
-        colorClass: 'box',
-        features: ['ディレクトリ指定', '拡張子', '深さ指定', 'サイズ制限'],
-        isConnected: false,
-      },
-      {
-        type: 'jira',
-        name: 'jira',
-        label: 'Jira',
-        description: 'プロジェクト管理のチケットやスプリントを連携',
-        icon: '📋',
-        colorClass: 'jira',
-        features: ['プロジェクト指定', 'スプリント', '担当者', 'JQL'],
-        isConnected: false,
-      },
-      {
-        type: 'gitlab',
-        name: 'gitlab',
-        label: 'GitLab',
-        description: 'リポジトリやCI/CDパイプラインを連携',
-        icon: '🦊',
-        colorClass: 'gitlab',
-        features: ['リポジトリ指定', 'ブランチ', 'MR/Issue', 'パイプライン'],
-        isConnected: false,
-      },
-      {
-        type: 'confluence',
-        name: 'confluence',
-        label: 'Confluence',
-        description: 'ドキュメントやナレッジベースを連携',
-        icon: '📖',
-        colorClass: 'confluence',
-        features: ['スペース指定', 'ページ選択', 'ラベル', '更新日'],
-        isConnected: false,
-      },
-    ];
+  formatDate(dateStr: string | undefined): string {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) return '今日';
+    if (days === 1) return '昨日';
+    if (days < 7) return `${days}日前`;
+    return `${date.getMonth() + 1}/${date.getDate()}`;
   }
 
-  getCardColor(colorClass: string): string {
-    const colors: Record<string, string> = {
-      mattermost: '#0058cc',
-      box: '#0061d5',
-      jira: '#0052cc',
-      gitlab: '#fc6d26',
-      gitea: '#609926',
-      confluence: '#0052cc',
-      upload: '#7c4dff',
-      web: '#00bcd4',
+  getMemberInitial(member: TeamMember): string {
+    const name = (member as any).user?.name || '';
+    return name.charAt(0).toUpperCase() || '?';
+  }
+
+  getMemberName(member: TeamMember): string {
+    return (member as any).user?.name || 'Unknown';
+  }
+
+  getProviderIcon(type: ContextResourceProviderType): string {
+    const icons: Record<ContextResourceProviderType, string> = {
+      box: 'cloud',
+      gitlab: 'code',
+      gitea: 'code',
+      mattermost: 'chat',
+      confluence: 'article',
+      jira: 'bug_report',
+      local: 'folder',
+      web: 'language',
     };
-    return colors[colorClass] || '#1a73e8';
+    return icons[type] || 'storage';
   }
 
   getProviderColor(type: ContextResourceProviderType): string {
@@ -791,66 +768,15 @@ export class ContextHubComponent implements OnInit, OnDestroy {
     return this.contextHubService.getProviderTypeLabel(type);
   }
 
-  getResourceDescription(resource: ContextResourceForView): string {
-    const config = resource.config as any;
-
-    switch (resource.providerType) {
-      case 'box':
-        return config.folderPath || `フォルダID: ${config.folderId}`;
-      case 'gitlab':
-        return config.projectPath || `Project ID: ${config.projectId}`;
-      case 'gitea':
-        return config.repoFullName || `${config.owner}/${config.repo}`;
-      case 'confluence':
-        return config.spaceName || `スペース: ${config.spaceKey}`;
-      case 'jira':
-        return config.jql || `プロジェクト: ${config.projectKey}`;
-      case 'mattermost':
-        return config.timelineName || config.channelNames?.join(', ') || '';
-      case 'web':
-        return config.urls?.[0] || config.sitelistPath || '';
-      default:
-        return '';
-    }
-  }
-
-  getStatusClass(status: string): string {
-    return status || 'pending';
-  }
-
-  getStatusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      synced: '同期済み',
-      syncing: '同期中...',
-      pending: '同期待ち',
-      error: 'エラー',
-      disabled: '無効',
-    };
-    return labels[status] || status;
-  }
-
-  formatLastSync(date: Date | undefined): string {
-    if (!date) return '-';
-    const d = new Date(date);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  }
-
-  /** プロバイダータイプに応じたダイアログ幅を取得 */
-  private getDialogWidth(type: ContextResourceProviderType): string {
-    // 横長UIを使うプロバイダー
-    const wideProviders: ContextResourceProviderType[] = ['mattermost', 'box', 'gitlab', 'gitea'];
-    return wideProviders.includes(type) ? '1100px' : '720px';
-  }
-
+  // リソース操作
   openAddResourceDialog(type: ContextResourceProviderType, providerName?: string): void {
-    // 未接続のプロバイダーはクリック不可
-    const card = this.connectedServiceCards.find(c => c.type === type);
-    if (card && !card.isConnected) {
-      this.snackBar.open(`${card.label}への接続が必要です`, '閉じる', { duration: 3000 });
+    const provider = this.availableProviders.find(p => p.type === type);
+    if (provider && !provider.isConnected && provider.authType !== 'none') {
+      this.snackBar.open(`${provider.label}への接続が必要です`, '閉じる', { duration: 3000 });
       return;
     }
 
-    // Mattermost/Box/GitLab/Giteaはウィザード形式で開く
+    // プロバイダー別ウィザード
     if (type === 'mattermost') {
       this.openMattermostWizard('create', providerName);
       return;
@@ -872,8 +798,9 @@ export class ContextHubComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // その他はデフォルトダイアログ
     const dialogRef = this.dialog.open(ContextHubResourceDialogComponent, {
-      width: this.getDialogWidth(type),
+      width: '720px',
       maxWidth: '95vw',
       maxHeight: '95vh',
       panelClass: 'context-hub-dialog',
@@ -886,35 +813,21 @@ export class ContextHubComponent implements OnInit, OnDestroy {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadHub();
-      }
+      if (result) this.loadHub();
     });
   }
 
-  /** Mattermostウィザードを開く */
   private openMattermostWizard(mode: 'create' | 'edit', providerName?: string, resource?: ContextResourceForView): void {
     const dialogRef = this.dialog.open(MattermostResourceWizardComponent, {
       width: '1000px',
       maxWidth: '95vw',
       maxHeight: '95vh',
       panelClass: 'context-hub-dialog',
-      data: {
-        mode,
-        contextHubId: this.hub?.id,
-        providerName: providerName || resource?.providerName,
-        resource,
-      }
+      data: { mode, contextHubId: this.hub?.id, providerName: providerName || resource?.providerName, resource }
     });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadHub();
-      }
-    });
+    dialogRef.afterClosed().subscribe(result => { if (result) this.loadHub(); });
   }
 
-  /** Boxウィザードを開く */
   private openBoxWizard(mode: 'create' | 'edit', providerName?: string, resource?: ContextResourceForView): void {
     const dialogRef = this.dialog.open(BoxResourceWizardComponent, {
       width: '90vw',
@@ -922,185 +835,94 @@ export class ContextHubComponent implements OnInit, OnDestroy {
       maxWidth: '1600px',
       maxHeight: '95vh',
       panelClass: 'context-hub-dialog',
-      data: {
-        mode,
-        contextHubId: this.hub?.id,
-        providerName: providerName || resource?.providerName,
-        existingResource: resource,
-      }
+      data: { mode, contextHubId: this.hub?.id, providerName: providerName || resource?.providerName, existingResource: resource }
     });
-
     dialogRef.afterClosed().subscribe(result => {
       if (result?.action === 'save' && result.resource) {
         if (mode === 'create') {
-          this.contextHubService.addResource(result.resource)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                this.snackBar.open('リソースを追加しました', '閉じる', { duration: 2000 });
-                this.loadHub();
-              },
-              error: (err: unknown) => {
-                console.error('Failed to create resource:', err);
-                this.snackBar.open('リソースの追加に失敗しました', '閉じる', { duration: 3000 });
-              }
-            });
+          this.contextHubService.addResource(result.resource).pipe(takeUntil(this.destroy$)).subscribe({
+            next: () => { this.snackBar.open('リソースを追加しました', '閉じる', { duration: 2000 }); this.loadHub(); },
+            error: () => this.snackBar.open('リソースの追加に失敗しました', '閉じる', { duration: 3000 })
+          });
         } else {
-          this.contextHubService.updateResource(result.resource.id!, result.resource)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                this.snackBar.open('リソースを更新しました', '閉じる', { duration: 2000 });
-                this.loadHub();
-              },
-              error: (err: unknown) => {
-                console.error('Failed to update resource:', err);
-                this.snackBar.open('リソースの更新に失敗しました', '閉じる', { duration: 3000 });
-              }
-            });
+          this.contextHubService.updateResource(result.resource.id!, result.resource).pipe(takeUntil(this.destroy$)).subscribe({
+            next: () => { this.snackBar.open('リソースを更新しました', '閉じる', { duration: 2000 }); this.loadHub(); },
+            error: () => this.snackBar.open('リソースの更新に失敗しました', '閉じる', { duration: 3000 })
+          });
         }
       }
     });
   }
 
-  /** GitLab/Giteaウィザードを開く */
-  private openGitWizard(
-    mode: 'create' | 'edit',
-    providerType: 'gitlab' | 'gitea',
-    providerName?: string,
-    resource?: ContextResourceForView
-  ): void {
+  private openGitWizard(mode: 'create' | 'edit', providerType: 'gitlab' | 'gitea', providerName?: string, resource?: ContextResourceForView): void {
     const dialogRef = this.dialog.open(GitResourceWizardComponent, {
       width: '1000px',
       height: 'calc(100vh - 80px)',
       maxWidth: '95vw',
       maxHeight: '90vh',
       panelClass: 'context-hub-dialog',
-      data: {
-        mode,
-        contextHubId: this.hub?.id,
-        providerType,
-        providerName: providerName || resource?.providerName,
-        resource,
-      }
+      data: { mode, contextHubId: this.hub?.id, providerType, providerName: providerName || resource?.providerName, resource }
     });
-
     dialogRef.afterClosed().subscribe(result => {
       if (result?.action === 'save' && result.resource) {
         if (mode === 'create') {
-          this.contextHubService.addResource(result.resource)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                this.snackBar.open('リソースを追加しました', '閉じる', { duration: 2000 });
-                this.loadHub();
-              },
-              error: (err: unknown) => {
-                console.error('Failed to create resource:', err);
-                this.snackBar.open('リソースの追加に失敗しました', '閉じる', { duration: 3000 });
-              }
-            });
+          this.contextHubService.addResource(result.resource).pipe(takeUntil(this.destroy$)).subscribe({
+            next: () => { this.snackBar.open('リソースを追加しました', '閉じる', { duration: 2000 }); this.loadHub(); },
+            error: () => this.snackBar.open('リソースの追加に失敗しました', '閉じる', { duration: 3000 })
+          });
         } else if (resource) {
-          this.contextHubService.updateResource(resource.id, result.resource)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                this.snackBar.open('リソースを更新しました', '閉じる', { duration: 2000 });
-                this.loadHub();
-              },
-              error: (err: unknown) => {
-                console.error('Failed to update resource:', err);
-                this.snackBar.open('リソースの更新に失敗しました', '閉じる', { duration: 3000 });
-              }
-            });
+          this.contextHubService.updateResource(resource.id, result.resource).pipe(takeUntil(this.destroy$)).subscribe({
+            next: () => { this.snackBar.open('リソースを更新しました', '閉じる', { duration: 2000 }); this.loadHub(); },
+            error: () => this.snackBar.open('リソースの更新に失敗しました', '閉じる', { duration: 3000 })
+          });
         }
       }
     });
   }
 
-  /** Confluenceウィザードを開く */
   private openConfluenceWizard(mode: 'create' | 'edit', providerName?: string, resource?: ContextResourceForView): void {
     const dialogRef = this.dialog.open(ConfluenceResourceWizardComponent, {
       width: '1000px',
       maxWidth: '95vw',
       maxHeight: '95vh',
       panelClass: 'context-hub-dialog',
-      data: {
-        mode,
-        contextHubId: this.hub?.id,
-        providerName: providerName || resource?.providerName,
-        resource,
-      }
+      data: { mode, contextHubId: this.hub?.id, providerName: providerName || resource?.providerName, resource }
     });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadHub();
-      }
-    });
+    dialogRef.afterClosed().subscribe(result => { if (result) this.loadHub(); });
   }
 
-  /** JIRAウィザードを開く */
   private openJiraWizard(mode: 'create' | 'edit', providerName?: string, resource?: ContextResourceForView): void {
     const dialogRef = this.dialog.open(JiraResourceWizardComponent, {
       width: '1000px',
       maxWidth: '95vw',
       maxHeight: '95vh',
       panelClass: 'context-hub-dialog',
-      data: {
-        mode,
-        contextHubId: this.hub?.id,
-        providerName: providerName || resource?.providerName,
-        resource,
-      }
+      data: { mode, contextHubId: this.hub?.id, providerName: providerName || resource?.providerName, resource }
     });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadHub();
-      }
-    });
+    dialogRef.afterClosed().subscribe(result => { if (result) this.loadHub(); });
   }
 
   editResource(resource: ContextResourceForView): void {
-    // Mattermost/Box/GitLab/Gitea/Confluenceはウィザード形式で開く
     if (resource.providerType === 'mattermost') {
       this.openMattermostWizard('edit', undefined, resource);
-      return;
-    }
-    if (resource.providerType === 'box') {
+    } else if (resource.providerType === 'box') {
       this.openBoxWizard('edit', undefined, resource);
-      return;
-    }
-    if (resource.providerType === 'gitlab' || resource.providerType === 'gitea') {
+    } else if (resource.providerType === 'gitlab' || resource.providerType === 'gitea') {
       this.openGitWizard('edit', resource.providerType, resource.providerName, resource);
-      return;
-    }
-    if (resource.providerType === 'confluence') {
+    } else if (resource.providerType === 'confluence') {
       this.openConfluenceWizard('edit', undefined, resource);
-      return;
-    }
-    if (resource.providerType === 'jira') {
+    } else if (resource.providerType === 'jira') {
       this.openJiraWizard('edit', undefined, resource);
-      return;
+    } else {
+      const dialogRef = this.dialog.open(ContextHubResourceDialogComponent, {
+        width: '720px',
+        maxWidth: '95vw',
+        maxHeight: '95vh',
+        panelClass: 'context-hub-dialog',
+        data: { mode: 'edit', resource }
+      });
+      dialogRef.afterClosed().subscribe(result => { if (result) this.loadHub(); });
     }
-
-    const dialogRef = this.dialog.open(ContextHubResourceDialogComponent, {
-      width: this.getDialogWidth(resource.providerType),
-      maxWidth: '95vw',
-      maxHeight: '95vh',
-      panelClass: 'context-hub-dialog',
-      data: {
-        mode: 'edit',
-        resource: resource,
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadHub();
-      }
-    });
   }
 
   deleteResource(resource: ContextResourceForView): void {
@@ -1112,25 +934,8 @@ export class ContextHubComponent implements OnInit, OnDestroy {
             this.snackBar.open('リソースを削除しました', '閉じる', { duration: 2000 });
             this.loadHub();
           },
-          error: err => {
-            console.error('Failed to delete resource:', err);
-            this.snackBar.open('削除に失敗しました', '閉じる', { duration: 3000 });
-          }
+          error: () => this.snackBar.open('削除に失敗しました', '閉じる', { duration: 3000 })
         });
     }
-  }
-
-  syncResource(resource: ContextResourceForView): void {
-    this.contextHubService.syncResource(resource.id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.snackBar.open('同期を開始しました', '閉じる', { duration: 2000 });
-        },
-        error: err => {
-          console.error('Failed to sync resource:', err);
-          this.snackBar.open('同期に失敗しました', '閉じる', { duration: 3000 });
-        }
-      });
   }
 }

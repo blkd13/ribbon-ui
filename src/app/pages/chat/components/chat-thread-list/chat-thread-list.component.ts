@@ -71,13 +71,22 @@ export interface ThreadListAction {
         }
 
         <!-- New Thread Button -->
-        <a 
-          class="add-thread mb-5 bg-inherit ml-2" 
-          matTooltip="新しいスレッドを作成" 
+        <a
+          class="add-thread bg-inherit ml-2"
+          matTooltip="新しいスレッドを作成"
           (click)="onNewThread()"
           [routerLink]="['/chat', selectedProject?.id, 'new-thread']">
           <mat-icon class="mr-3">add_circle</mat-icon>
           <div>新規チャット</div>
+        </a>
+
+        <!-- New Code Session Button -->
+        <a
+          class="add-thread mb-5 bg-inherit ml-2"
+          matTooltip="Code Sessionを開始"
+          [routerLink]="['/code-sessions', selectedProject?.id]">
+          <mat-icon class="mr-3">terminal</mat-icon>
+          <div>新規セッション</div>
         </a>
 
         <!-- Sort Options -->

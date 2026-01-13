@@ -15,21 +15,37 @@ export class ToolCallService {
   readonly g: GService = inject(GService);
   private readonly http: HttpClient = inject(HttpClient);
 
-  tools: { group: string, tools: MyToolType[] }[] = [];
+  tools: ToolGroup[] = [];
 
   constructor() {
-    // 定義は起動時に取得しておく
+    // 定義は起動時に取得しておく（projectIdなしで基本ツールのみ）
     this.getFunctionDefinitions().subscribe(() => { });
   }
 
-  getFunctionDefinitions(): Observable<MyToolType[]> {
-    return this.http.get<MyToolType[]>('/user/function-definitions').pipe(
+  /**
+   * 関数定義を取得
+   * @param projectId 指定するとContext Hub toolも含まれる
+   * @param reset trueの場合、既存のtools配列をリセットしてから取得
+   */
+  getFunctionDefinitions(projectId?: string, reset: boolean = false): Observable<MyToolType[]> {
+    const params: { projectId?: string } = {};
+    if (projectId) {
+      params.projectId = projectId;
+    }
+
+    if (reset) {
+      this.tools = [];
+    }
+
+    return this.http.get<MyToolType[]>('/user/function-definitions', { params }).pipe(
       tap(res => {
         res.forEach(tool => {
           const group = tool.info.group;
           const groupIndex = this.tools.findIndex(t => t.group === group);
+          // ctx- で始まるグループはカスタムリソース
+          const isCustomResource = group.startsWith('ctx-');
           if (groupIndex === -1) {
-            this.tools.push({ group, tools: [tool] });
+            this.tools.push({ group, tools: [tool], isCustomResource });
           } else {
             this.tools[groupIndex].tools.push(tool);
           }
@@ -219,4 +235,10 @@ export interface ToolCallGroupForView extends ToolCallGroup {
   // id: string;
   // status: ToolCallGroupStatus;
   toolCallList: ToolCallPart[];
+}
+
+export interface ToolGroup {
+  group: string;
+  tools: MyToolType[];
+  isCustomResource?: boolean;
 }

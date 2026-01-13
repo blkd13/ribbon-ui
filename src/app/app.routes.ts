@@ -20,28 +20,41 @@ export const routes: Routes = [
     canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
     loadChildren: () => import('./pages/automation-dashboard/automation-dashboard.routes').then(m => m.AUTOMATION_DASHBOARD_ROUTES),
   },
-  { path: 'context-hub/:projectId', canActivate: [loginGuardGenerator(UserRoleType.User, 'login'), projectGuard], loadComponent: () => import('./pages/context-hub/context-hub.component').then(m => m.ContextHubComponent) },
-  // Code Sessions
-  {
-    path: 'code-sessions',
-    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
-    loadComponent: () => import('./pages/code-sessions/code-sessions-list/code-sessions-list.component').then(m => m.CodeSessionsListComponent)
-  },
+  // プロジェクトダッシュボード（新URL）
+  { path: 'project/:projectId', canActivate: [loginGuardGenerator(UserRoleType.User, 'login'), projectGuard], loadComponent: () => import('./pages/context-hub/context-hub.component').then(m => m.ContextHubComponent) },
+  // 旧URL互換（リダイレクト）
+  { path: 'context-hub/:projectId', redirectTo: 'project/:projectId', pathMatch: 'full' },
+  // Code Sessions - 新マスター・ディテールレイアウト
   {
     path: 'code-sessions/settings',
     canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
     loadComponent: () => import('./pages/code-sessions/data-source-settings/data-source-settings.component').then(m => m.DataSourceSettingsComponent)
   },
   {
-    path: 'code-sessions/:projectName',
+    path: 'code-sessions',
     canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
-    loadComponent: () => import('./pages/code-sessions/project-sessions/project-sessions.component').then(m => m.ProjectSessionsComponent)
+    loadComponent: () => import('./pages/code-sessions/code-sessions-shell/code-sessions-shell.component').then(m => m.CodeSessionsShellComponent)
   },
   {
-    path: 'code-sessions/:projectName/:sessionId',
+    path: 'code-sessions/:projectId',
     canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
-    loadComponent: () => import('./pages/code-sessions/session-detail/session-detail.component').then(m => m.SessionDetailComponent)
+    loadComponent: () => import('./pages/code-sessions/code-sessions-shell/code-sessions-shell.component').then(m => m.CodeSessionsShellComponent)
   },
+  {
+    path: 'code-sessions/:projectId/:projectName',
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
+    loadComponent: () => import('./pages/code-sessions/code-sessions-shell/code-sessions-shell.component').then(m => m.CodeSessionsShellComponent)
+  },
+  {
+    path: 'code-sessions/:projectId/:projectName/:sessionId',
+    canActivate: [loginGuardGenerator(UserRoleType.User, 'login')],
+    loadComponent: () => import('./pages/code-sessions/code-sessions-shell/code-sessions-shell.component').then(m => m.CodeSessionsShellComponent)
+  },
+  // Legacy URLs - リダイレクト（後方互換性）
+  { path: 'user-code-sessions', redirectTo: 'code-sessions', pathMatch: 'full' },
+  { path: 'user-code-sessions/settings', redirectTo: 'code-sessions/settings', pathMatch: 'full' },
+  { path: 'user-code-sessions/:projectName', redirectTo: 'code-sessions/_/:projectName', pathMatch: 'full' },
+  { path: 'user-code-sessions/:projectName/:sessionId', redirectTo: 'code-sessions/_/:projectName/:sessionId', pathMatch: 'full' },
   // { path: 'home', canActivate: [loginGuard], loadComponent: () => import('./pages/error/error.component').then(m => m.ErrorComponent) },
   {
     path: 'mattermost/:providerName', canActivate: [oAuthGuardGenerator('mattermost')], children: [{

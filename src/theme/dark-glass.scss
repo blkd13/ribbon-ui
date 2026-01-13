@@ -323,3 +323,10 @@ html>body.dark-glass-theme {
     --mat-sys-hover-state-layer-opacity: 0.08;
     --mat-sys-pressed-state-layer-opacity: 0.12
 }
+
+html>body.dark-glass-theme {
+    /* プレースホルダーの色（薄めに設定） */
+    --mat-form-field-filled-input-text-placeholder-color: rgba(255, 255, 255, 0.4);
+    --mat-form-field-outlined-input-text-placeholder-color: rgba(255, 255, 255, 0.4);
+    --mat-select-placeholder-text-color: rgba(255, 255, 255, 0.4);
+}

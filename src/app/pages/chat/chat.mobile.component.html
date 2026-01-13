@@ -36,10 +36,15 @@
         @if(selectedTeam.teamType!=='Alone'){
         <div class="share-tag">Share:{{selectedTeam.label}}</div>
         }
-        <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Create new thread" (click)="clear();drawer.close()"
+        <a class="add-thread bg-inherit ml-2" matTooltip="Create new thread" (click)="clear();drawer.close()"
           [routerLink]="['/m/chat', selectedProject.id, 'new-thread']">
           <mat-icon class="mr-3 mat-primary">add_circle</mat-icon>
           <div>{{ 'NEW_CHAT' | translate }}</div>
+        </a>
+        <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Code Sessionを開始" (click)="drawer.close()"
+          [routerLink]="['/code-sessions', selectedProject.id]">
+          <mat-icon class="mr-3 mat-primary">terminal</mat-icon>
+          <div>新規セッション</div>
         </a>
 
         @if(g.appType==='base'){

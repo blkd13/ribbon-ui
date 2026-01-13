@@ -40,10 +40,15 @@
       @if(selectedTeam.teamType!=='Alone'){
       <div class="share-tag">Share:{{selectedTeam.label}}</div>
       }
-      <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Create new thread" (click)="clear()"
+      <a class="add-thread bg-inherit ml-2" matTooltip="Create new thread" (click)="clear()"
         [routerLink]="['/chat', selectedProject.id, 'new-thread']">
         <mat-icon class="mr-3 mat-primary">add_circle</mat-icon>
         <div>{{ 'NEW_CHAT' | translate }}</div>
+      </a>
+      <a class="add-thread mb-5 bg-inherit ml-2" matTooltip="Code Sessionを開始"
+        [routerLink]="['/code-sessions', selectedProject.id]">
+        <mat-icon class="mr-3 mat-primary">terminal</mat-icon>
+        <div>新規セッション</div>
       </a>
 
       <!-- サイドバータブ切り替え -->
@@ -220,9 +225,9 @@
           <mat-icon>settings</mat-icon>
         </button>
         -->
-        <a mat-icon-button color="primary" href="/terminal/{{selectedProject.id}}/" target="_blank" title="コンソール">
+        <button mat-icon-button color="primary" (click)="startConsoleContainer()" title="コンソール起動">
           <mat-icon>terminal</mat-icon>
-        </a>
+        </button>
         <!--
         <button mat-icon-button color="primary" (click)="openModelSetting()" [title]="'SETTINGS' | translate">
           <mat-icon>settings</mat-icon>
@@ -257,23 +262,74 @@
       <h1 style="font-size: 1.78rem;margin-top: 40px;">{{ 'TOOLS' | translate }}</h1>
       <div class="w-full flex justify-center items-center gap-5 flex-wrap">
         @for(toolGroup of toolCallService.tools; track $index){
-        <div class="course-panel text-center tool-group-panel" (click)="toggleToolGroup(toolGroup.group)"
-          [ngClass]="{selected: isToolGroupEnabled(toolGroup.group)}" style="line-height: 1.5; position: relative;">
-          <img appInlineSvg [src]="'./image/'+toolGroup.group.split('-')[0]+'-logo.svg'" alt="icon"
-            class="w-6 h-6 mb-1 mat-primary">
-          <div class="text-xs">{{toolGroup.group.replace('-', ' ')}}</div>
-          @if(toolGroupLoadingStates[toolGroup.group]) {
-          <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10 rounded-xl">
-            <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+        @if(!toolGroup.isCustomResource){
+        <div class="relative tool-group-wrapper">
+          <div class="course-panel text-center tool-group-panel" (click)="toggleToolGroup(toolGroup.group)"
+            [ngClass]="{selected: isToolGroupEnabled(toolGroup.group)}" style="line-height: 1.5; position: relative;">
+            <img appInlineSvg [src]="'./image/'+toolGroup.group.split('-')[0]+'-logo.svg'" alt="icon"
+              class="w-6 h-6 mb-1 mat-primary">
+            <div class="text-xs">{{toolGroup.group.replace('-', ' ')}}</div>
+            @if(toolGroupLoadingStates[toolGroup.group]) {
+            <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10 rounded-xl">
+              <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+            </div>
+            }
           </div>
+          <!-- ツールグループ三点メニュー（外部API系のみ表示） -->
+          @if(isExternalApiToolGroup(toolGroup.group)) {
+          <button mat-icon-button class="course-panel-close tool-group-menu-btn" [matMenuTriggerFor]="toolGroupMenu"
+            (click)="$event.stopPropagation()">
+            <mat-icon class="small-icon">more_vert</mat-icon>
+          </button>
+          <mat-menu #toolGroupMenu="matMenu">
+            <button mat-menu-item (click)="openResourceWizard(toolGroup)">
+              <mat-icon>add_circle</mat-icon>
+              <span>{{ 'CREATE_CUSTOM_RESOURCE' | translate }}</span>
+            </button>
+          </mat-menu>
           }
-          <!-- <div class="tool-status-indicator" [ngClass]="{active: isToolGroupEnabled(toolGroup.group)}">
-            <mat-icon class="status-icon">{{isToolGroupEnabled(toolGroup.group) ? 'check_circle' :
-              'radio_button_unchecked'}}</mat-icon>
-          </div> -->
+        </div>
+        }
+        }
+      </div>
+
+      <!-- カスタムリソース -->
+      @if(getCustomResourceGroups().length > 0) {
+      <h1 style="font-size: 1.78rem;margin-top: 40px;">{{ 'CUSTOM_RESOURCES' | translate }}</h1>
+      <div class="w-full flex justify-center items-center gap-5 flex-wrap">
+        @for(toolGroup of getCustomResourceGroups(); track toolGroup.group){
+        <div class="relative tool-group-wrapper">
+          <div class="course-panel text-center tool-group-panel" (click)="toggleToolGroup(toolGroup.group)"
+            [ngClass]="{selected: isToolGroupEnabled(toolGroup.group)}" style="line-height: 1.5; position: relative;">
+            <img appInlineSvg [src]="'./image/'+toolGroup.group.split('-')[1]+'-logo.svg'" alt="icon"
+              class="w-6 h-6 mb-1 mat-primary">
+            <div class="text-xs">{{ getCustomResourceLabel(toolGroup) }}</div>
+            @if(toolGroupLoadingStates[toolGroup.group]) {
+            <div class="absolute inset-0 flex items-center justify-center bg-black/25 z-10 rounded-xl">
+              <mat-spinner style="transform: scale(0.4);"></mat-spinner>
+            </div>
+            }
+          </div>
+          <!-- カスタムリソース三点メニュー -->
+          <button mat-icon-button class="course-panel-close tool-group-menu-btn" [matMenuTriggerFor]="customResourceMenu"
+            (click)="$event.stopPropagation()">
+            <mat-icon class="small-icon">more_vert</mat-icon>
+          </button>
+          <mat-menu #customResourceMenu="matMenu">
+            <button mat-menu-item (click)="editCustomResource(toolGroup)">
+              <mat-icon>edit</mat-icon>
+              <span>{{ 'EDIT' | translate }}</span>
+            </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="deleteCustomResource(toolGroup)">
+              <mat-icon style="color: #FF6666">delete</mat-icon>
+              <span style="color: #FF6666">{{ 'DELETE' | translate }}</span>
+            </button>
+          </mat-menu>
         </div>
         }
       </div>
+      }
 
       <!-- モード選択 -->
       <h1 style="font-size: 1.78rem;margin-top: 40px;">{{ 'MODES' | translate }}</h1>

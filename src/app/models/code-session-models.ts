@@ -420,6 +420,7 @@ export interface CodeSessionListItem {
   endTime?: string;
   messageCount: number;
   fileSize: number;
+  firstMessage?: string;
 }
 
 /**
@@ -430,4 +431,19 @@ export interface PathValidationResult {
   normalizedPath?: string;
   projectCount?: number;
   error?: string;
+}
+
+// ============================================================================
+// ClaudeCode実行用
+// ============================================================================
+
+/**
+ * ClaudeCode実行出力の型
+ * jsonl: セッションファイルからの構造化データ
+ * error: エラーメッセージ
+ */
+export interface ClaudeCodeOutput {
+  streamId: string;
+  type: 'jsonl' | 'error';
+  content: any;  // jsonlの場合はパース済みオブジェクト、errorの場合は文字列
 }

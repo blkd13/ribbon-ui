@@ -34,7 +34,7 @@ export class ChatCommunicationService {
 
   // ストリーム管理
   private messageIdStreamIdMap: { [messageId: string]: string[] } = {};
-  private subjectMap: { [streamId: string]: Subject<OpenAI.ChatCompletionChunk> } = {};
+  private subjectMap: { [streamId: string]: Subject<{ content: OpenAI.ChatCompletionChunk }> } = {};
   private textMap: { [streamId: string]: string } = {};
   private streamStates: { [streamId: string]: ChatStreamState } = {};
 
@@ -54,7 +54,7 @@ export class ChatCommunicationService {
    * @param messageId メッセージID
    * @returns オブザーバーとテキスト
    */
-  getObserver(messageId: string): { text: string, observer: Subject<OpenAI.ChatCompletionChunk> | null } {
+  getObserver(messageId: string): { text: string, observer: Subject<{ content: OpenAI.ChatCompletionChunk }> | null } {
     const streamIdList = this.messageIdStreamIdMap[messageId];
     if (streamIdList?.length) {
       const streamId = `${streamIdList.at(-1)}|${messageId}`;
@@ -244,7 +244,7 @@ export class ChatCommunicationService {
 
       if (this.subjectMap[streamId]) {
         // チャンクデータを送信
-        this.subjectMap[streamId].next(content);
+        this.subjectMap[streamId].next({ content });
 
         // テキストを蓄積
         if (content.choices?.[0]?.delta?.content) {
@@ -322,7 +322,7 @@ export class ChatCommunicationService {
    * @param options ストリーミングオプション
    * @returns ストリームSubject
    */
-  createStream(messageId: string, options?: ChatStreamingOptions): Subject<OpenAI.ChatCompletionChunk> {
+  createStream(messageId: string, options?: ChatStreamingOptions): Subject<{ content: OpenAI.ChatCompletionChunk }> {
     const streamId = uuidv4();
     const fullStreamId = `${streamId}|${messageId}`;
 
@@ -333,7 +333,7 @@ export class ChatCommunicationService {
     this.messageIdStreamIdMap[messageId].push(streamId);
 
     // Subjectを作成
-    const subject = new Subject<OpenAI.ChatCompletionChunk>();
+    const subject = new Subject<{ content: OpenAI.ChatCompletionChunk }>();
     this.subjectMap[fullStreamId] = subject;
     this.textMap[fullStreamId] = '';
 
@@ -385,7 +385,7 @@ export class ChatCommunicationService {
    * @param subject ストリームSubject
    * @param options オプション
    */
-  private setupStreamCallbacks(subject: Subject<OpenAI.ChatCompletionChunk>, options: ChatStreamingOptions): void {
+  private setupStreamCallbacks(subject: Subject<{ content: OpenAI.ChatCompletionChunk }>, options: ChatStreamingOptions): void {
     if (options.onMessage) {
       subject.subscribe(options.onMessage);
     }

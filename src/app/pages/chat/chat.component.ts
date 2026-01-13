@@ -1,5 +1,6 @@
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, ElementRef, inject, NgZone, OnInit, viewChild, viewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -25,16 +26,17 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { saveAs } from 'file-saver';
 import OpenAI from 'openai';
 import { ChatCompletionTool } from 'openai/resources/index.mjs';
-import { BehaviorSubject, catchError, concatMap, debounceTime, distinctUntilChanged, EMPTY, filter, forkJoin, from, map, Observable, Observer, of, Subject, Subscription, switchMap, tap, throwError, toArray } from 'rxjs';
+import { BehaviorSubject, catchError, concatMap, EMPTY, filter, forkJoin, from, map, Observable, Observer, of, Subscription, switchMap, tap, throwError, toArray } from 'rxjs';
 
+import { ContextHubForView, RAGSearchResultItem, RealtimeSearchResult } from '../../models/context-hub.models';
 import { CachedContent, ChatCompletionCreateParamsWithoutMessages, GPTModels, SafetyRating } from '../../models/models';
 import { ContentPart, ContentPartType, MessageForView, MessageGroup, MessageGroupForView, MessageStatusType, Project, ProjectVisibility, Team, TeamForView, TeamType, Thread, ThreadGroup, ThreadGroupForView, ThreadGroupType, ThreadGroupVisibility } from '../../models/project-models';
 import { AppMenuComponent } from '../../parts/app-menu/app-menu.component';
 import { BulkRunSettingComponent, BulkRunSettingData } from '../../parts/bulk-run-setting/bulk-run-setting.component';
 import { ChatPanelMessageComponent } from '../../parts/chat-panel-message/chat-panel-message.component';
 import { ChatPanelSystemComponent } from "../../parts/chat-panel-system/chat-panel-system.component";
-import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { ContextHubSidebarComponent, ResourceSelectionChange } from '../../parts/context-hub-sidebar/context-hub-sidebar.component';
+import { DialogComponent } from '../../parts/dialog/dialog.component';
 import { DocTagComponent } from '../../parts/doc-tag/doc-tag.component';
 import { FileDropDirective } from '../../parts/file-drop.directive';
 import { InlineSvgDirective } from "../../parts/inline-svg";
@@ -43,18 +45,22 @@ import { SaveThreadData, SaveThreadDialogComponent } from '../../parts/save-thre
 import { UserMarkComponent } from "../../parts/user-mark/user-mark.component";
 import { AuthService } from '../../services/auth.service';
 import { ChatContent, ChatInputArea, ChatService, CountTokensResponseForView, PresetDef } from '../../services/chat.service';
+import { ContextHubService } from '../../services/context-hub.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { GService } from '../../services/g.service';
 import { LoggerService } from '../../services/logger';
 import { AIModelManagerService } from '../../services/model-manager.service';
-import { ToolCallPartBody, ToolCallPartCall, ToolCallPartCallBody, ToolCallPartCommand, ToolCallPartInfo, ToolCallPartInfoBody, ToolCallPartResult, ToolCallPartResultBody, ToolCallPartType, ToolCallService } from '../../services/tool-call.service';
+import { ToolCallPartBody, ToolCallPartCall, ToolCallPartCallBody, ToolCallPartCommand, ToolCallPartInfo, ToolCallPartInfoBody, ToolCallPartResult, ToolCallPartResultBody, ToolCallPartType, ToolCallService, ToolGroup } from '../../services/tool-call.service';
 import { UserService } from '../../services/user.service';
 import { Utils } from '../../utils';
 import { DomUtils, safeForkJoin } from '../../utils/dom-utils';
+import { BoxResourceWizardComponent, BoxResourceWizardData } from '../context-hub/dialogs/box-resource-wizard.component';
+import { ConfluenceResourceWizardComponent, ConfluenceWizardData } from '../context-hub/dialogs/confluence-resource-wizard.component';
+import { GitResourceWizardComponent, GitResourceWizardData } from '../context-hub/dialogs/git-resource-wizard.component';
+import { JiraResourceWizardComponent, JiraWizardData } from '../context-hub/dialogs/jira-resource-wizard.component';
+import { MattermostResourceWizardComponent, MattermostWizardData } from '../context-hub/dialogs/mattermost-resource-wizard.component';
 import { FileManagerService, FullPathFile } from './../../services/file-manager.service';
 import { genDummyId, genInitialBaseEntity, MessageService, ProjectService, TeamService, ThreadService } from './../../services/project.service';
-import { ContextHubService } from '../../services/context-hub.service';
-import { ContextHubForView, RAGSearchResultItem, RealtimeSearchResult } from '../../models/context-hub.models';
 
 // 例: 送信完了やクリックのタイミングで
 declare var _paq: any;
@@ -100,6 +106,7 @@ export class ChatComponent implements OnInit {
 
   readonly authService: AuthService = inject(AuthService);
   readonly chatService: ChatService = inject(ChatService);
+  readonly http: HttpClient = inject(HttpClient);
 
   readonly aiModelManagerService = inject(AIModelManagerService);
   readonly extApiProviderService = inject(ExtApiProviderService);
@@ -297,6 +304,8 @@ export class ChatComponent implements OnInit {
           this.selectedProject = project;
           // puroject指定がある場合、指定されたプロジェクトでスレッドリストを取得
           this.isThreadGroupLoading = true;
+          // プロジェクト変更時にツール定義を再取得（カスタムリソースを含める）
+          this.toolCallService.getFunctionDefinitions(project.id, true).subscribe();
           this.loadThreadGroups(project).subscribe({
             next: threadGroupList => {
               this.isThreadGroupLoading = false;
@@ -496,6 +505,344 @@ export class ChatComponent implements OnInit {
     setTimeout(() => {
       this.syncToolGroupStatesWithSystemPanels();
     }, 100);
+  }
+
+  // ============================================
+  // カスタムリソース関連メソッド
+  // ============================================
+
+  /** カスタムリソースグループを取得 */
+  getCustomResourceGroups(): ToolGroup[] {
+    return this.toolCallService.tools.filter(group => group.isCustomResource);
+  }
+
+  /** プロバイダータイプからアイコンを取得 */
+  getResourceIcon(groupName: string): string {
+    // ctx-box-{resourceId} のような形式から providerType を抽出
+    const parts = groupName.split('-');
+    if (parts.length >= 2) {
+      const providerType = parts[1];
+      switch (providerType) {
+        case 'box': return 'cloud';  // Box用アイコン
+        case 'gitlab': return 'code';
+        case 'gitea': return 'code';
+        case 'mattermost': return 'chat';
+        case 'confluence': return 'article';
+        case 'jira': return 'bug_report';
+        case 'web': return 'language';
+        default: return 'folder';
+      }
+    }
+    return 'folder';
+  }
+
+  /** 外部APIツールグループかどうかを判定 */
+  isExternalApiToolGroup(group: string): boolean {
+    const providerType = group.split('-')[0];
+    // ai, command は外部APIではないのでfalse
+    // box, mattermost, gitlab, gitea, confluence, jira, web は外部APIなのでtrue
+    return ['box', 'mattermost', 'gitlab', 'gitea', 'confluence', 'jira', 'web'].includes(providerType);
+  }
+
+  /** カスタムリソースのラベルを取得 */
+  getCustomResourceLabel(toolGroup: ToolGroup): string {
+    // ツールのdescriptionからラベルを抽出（「xxx」内を検索します形式）
+    if (toolGroup.tools.length > 0) {
+      const tool = toolGroup.tools[0];
+      const desc = (tool.definition as any)?.function?.description || '';
+      const match = desc.match(/「(.+?)」/);
+      if (match) {
+        return match[1];
+      }
+      return tool.info.label || toolGroup.group;
+    }
+    return toolGroup.group;
+  }
+
+  /** リソース作成ウィザードを開く */
+  openResourceWizard(toolGroup: ToolGroup): void {
+    // グループ名からプロバイダータイプとプロバイダー名を抽出
+    // 例: box-default -> providerType: box, providerName: default
+    const groupName = toolGroup.group;
+    const providerType = groupName.split('-')[0];
+    const providerName = groupName.substring(groupName.indexOf('-') + 1);
+
+    // 先にプロバイダーの接続状態をチェック
+    this.contextHubService.getAvailableProviders().subscribe({
+      next: (providers) => {
+        const provider = providers.find(p => p.type === providerType && p.name === providerName);
+        if (provider && !provider.isConnected && provider.authType !== 'none') {
+          this.snackBar.open(`${provider.label}への接続が必要です。設定から接続してください。`, this.translate.instant('CLOSE'), {
+            duration: 5000,
+          });
+          return;
+        }
+
+        // Context Hub の ID を取得（なければ作成）
+        this.contextHubService.getOrCreateHub(this.selectedProject.id).subscribe({
+          next: (hub: ContextHubForView) => {
+            this.openProviderWizard(providerType, providerName, hub.id, 'create');
+          },
+          error: (err: any) => {
+            this.logger.error('Context Hub の取得に失敗しました:', err);
+            this.snackBar.open('Context Hub の取得に失敗しました', this.translate.instant('CLOSE'), {
+              duration: 3000,
+            });
+          }
+        });
+      },
+      error: (err: any) => {
+        this.logger.error('プロバイダー情報の取得に失敗しました:', err);
+        // エラーがあっても続行（接続状態のチェックをスキップ）
+        this.contextHubService.getOrCreateHub(this.selectedProject.id).subscribe({
+          next: (hub: ContextHubForView) => {
+            this.openProviderWizard(providerType, providerName, hub.id, 'create');
+          },
+          error: (hubErr: any) => {
+            this.logger.error('Context Hub の取得に失敗しました:', hubErr);
+            this.snackBar.open('Context Hub の取得に失敗しました', this.translate.instant('CLOSE'), {
+              duration: 3000,
+            });
+          }
+        });
+      }
+    });
+  }
+
+  /** カスタムリソースを編集 */
+  editCustomResource(toolGroup: ToolGroup): void {
+    // グループ名からプロバイダータイプとリソースIDを抽出
+    // ctx-box-{resourceIdShort} 形式
+    const parts = toolGroup.group.split('-');
+    if (parts.length < 3) {
+      this.snackBar.open('リソース情報の取得に失敗しました', this.translate.instant('CLOSE'), { duration: 3000 });
+      return;
+    }
+
+    const providerType = parts[1];
+    const resourceIdShort = parts[2];
+    // UUID形式に復元 (8-4-4-4-12)
+    const resourceId = resourceIdShort.replace(
+      /^([a-f0-9]{8})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{12})$/,
+      '$1-$2-$3-$4-$5'
+    );
+
+    // リソース情報を取得して編集ウィザードを開く
+    this.contextHubService.getResource(resourceId).subscribe({
+      next: (resource) => {
+        this.contextHubService.getOrCreateHub(this.selectedProject.id).subscribe({
+          next: (hub) => {
+            this.openProviderWizard(providerType, resource.providerName, hub.id, 'edit', resource);
+          },
+          error: (err: any) => {
+            this.logger.error('Context Hub の取得に失敗しました:', err);
+            this.snackBar.open('Context Hub の取得に失敗しました', this.translate.instant('CLOSE'), { duration: 3000 });
+          }
+        });
+      },
+      error: (err: any) => {
+        this.logger.error('リソース情報の取得に失敗しました:', err);
+        this.snackBar.open('リソース情報の取得に失敗しました', this.translate.instant('CLOSE'), { duration: 3000 });
+      }
+    });
+  }
+
+  /** カスタムリソースを削除 */
+  deleteCustomResource(toolGroup: ToolGroup): void {
+    // 確認ダイアログ
+    const dialogRef = this.dialog.open(DialogComponent, {
+      data: {
+        title: this.translate.instant('DELETE'),
+        message: `「${this.getCustomResourceLabel(toolGroup)}」を削除しますか？`,
+        options: ['YES', 'NO'],
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === 'YES') {
+        // グループ名からリソースIDを抽出（ctx_{resourceId}_search形式）
+        if (toolGroup.tools.length > 0) {
+          const toolName = toolGroup.tools[0].info.name;
+          // ctx_xxxx_search -> xxxx がリソースID（ハイフンなし）
+          const match = toolName?.match(/ctx_([a-f0-9]+)_search/);
+          if (match) {
+            const resourceIdNoHyphens = match[1];
+            // UUID形式に復元 (8-4-4-4-12)
+            const resourceId = resourceIdNoHyphens.replace(
+              /^([a-f0-9]{8})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{12})$/,
+              '$1-$2-$3-$4-$5'
+            );
+
+            this.contextHubService.deleteResource(resourceId).subscribe({
+              next: () => {
+                this.snackBar.open('リソースを削除しました', this.translate.instant('CLOSE'), {
+                  duration: 3000,
+                });
+                // ツール定義を再取得
+                this.reloadToolDefinitions();
+              },
+              error: (err) => {
+                this.logger.error('リソースの削除に失敗しました:', err);
+                this.snackBar.open('リソースの削除に失敗しました', this.translate.instant('CLOSE'), {
+                  duration: 3000,
+                });
+              }
+            });
+          }
+        }
+      }
+    });
+  }
+
+  /** プロバイダー別のウィザードを開く */
+  private openProviderWizard(
+    providerType: string,
+    providerName: string,
+    contextHubId: string,
+    mode: 'create' | 'edit',
+    existingResource?: any
+  ): void {
+    let dialogRef;
+
+    switch (providerType) {
+      case 'box':
+        dialogRef = this.dialog.open(BoxResourceWizardComponent, {
+          width: '90vw',
+          height: 'calc(100vh - 80px)',
+          maxWidth: '1600px',
+          maxHeight: '95vh',
+          panelClass: 'context-hub-dialog',
+          data: {
+            mode,
+            providerName,
+            contextHubId,
+            existingResource,
+          } as BoxResourceWizardData,
+        });
+        break;
+
+      case 'mattermost':
+        dialogRef = this.dialog.open(MattermostResourceWizardComponent, {
+          width: '1000px',
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          panelClass: 'context-hub-dialog',
+          data: {
+            mode,
+            providerName,
+            contextHubId,
+            existingResource,
+          } as MattermostWizardData,
+        });
+        break;
+
+      case 'gitlab':
+      case 'gitea':
+        dialogRef = this.dialog.open(GitResourceWizardComponent, {
+          width: '1000px',
+          height: 'calc(100vh - 80px)',
+          maxWidth: '95vw',
+          maxHeight: '90vh',
+          panelClass: 'context-hub-dialog',
+          data: {
+            mode,
+            providerType: providerType as 'gitlab' | 'gitea',
+            providerName,
+            contextHubId,
+            existingResource,
+          } as GitResourceWizardData,
+        });
+        break;
+
+      case 'confluence':
+        dialogRef = this.dialog.open(ConfluenceResourceWizardComponent, {
+          width: '1000px',
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          panelClass: 'context-hub-dialog',
+          data: {
+            mode,
+            providerName,
+            contextHubId,
+            existingResource,
+          } as ConfluenceWizardData,
+        });
+        break;
+
+      case 'jira':
+        dialogRef = this.dialog.open(JiraResourceWizardComponent, {
+          width: '1000px',
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          panelClass: 'context-hub-dialog',
+          data: {
+            mode,
+            providerName,
+            contextHubId,
+            existingResource,
+          } as JiraWizardData,
+        });
+        break;
+
+      default:
+        this.snackBar.open(`${providerType} のカスタムリソース作成はサポートされていません`, this.translate.instant('CLOSE'), {
+          duration: 3000,
+        });
+        return;
+    }
+
+    if (dialogRef) {
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result?.action === 'save' && result.resource) {
+          // リソースを登録
+          if (mode === 'create') {
+            this.contextHubService.addResource(result.resource).subscribe({
+              next: () => {
+                this.snackBar.open('リソースを追加しました', this.translate.instant('CLOSE'), {
+                  duration: 2000,
+                });
+                this.reloadToolDefinitions();
+              },
+              error: (err: any) => {
+                this.logger.error('リソースの追加に失敗しました:', err);
+                this.snackBar.open('リソースの追加に失敗しました', this.translate.instant('CLOSE'), {
+                  duration: 3000,
+                });
+              }
+            });
+          } else {
+            // 編集モードの場合は更新
+            this.contextHubService.updateResource(result.resource.id!, result.resource).subscribe({
+              next: () => {
+                this.snackBar.open('リソースを更新しました', this.translate.instant('CLOSE'), {
+                  duration: 2000,
+                });
+                this.reloadToolDefinitions();
+              },
+              error: (err: any) => {
+                this.logger.error('リソースの更新に失敗しました:', err);
+                this.snackBar.open('リソースの更新に失敗しました', this.translate.instant('CLOSE'), {
+                  duration: 3000,
+                });
+              }
+            });
+          }
+        }
+      });
+    }
+  }
+
+  /** ツール定義を再取得 */
+  private reloadToolDefinitions(): void {
+    this.toolCallService.getFunctionDefinitions(this.selectedProject.id, true).subscribe({
+      next: () => {
+        this.initializeToolGroupStates();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.logger.error('ツール定義の再取得に失敗しました:', err);
+      }
+    });
   }
 
   selectPreset(preset: PresetDef): void {
@@ -1382,9 +1729,10 @@ export class ChatComponent implements OnInit {
             next: next => {
               next.observer.pipe(
                 tap(text => {
-                  threadGroup.title += text.choices[0].delta.content || '';
+                  threadGroup.title += text.content.choices[0].delta.content || '';
                   // リアルタイム反映させるためにはこうするしかない
-                  this.threadGroupList[this.threadGroupList.findIndex(threadGroup => threadGroup.id === threadGroup.id)] = { ...threadGroup };
+                  const targetId = threadGroup.id;
+                  this.threadGroupList[this.threadGroupList.findIndex(tg => tg.id === targetId)] = { ...threadGroup };
                   this.rebuildThreadGroupList(this.threadGroupList);
                 }),
                 toArray(),
@@ -1783,11 +2131,11 @@ export class ChatComponent implements OnInit {
    * @param message
    * @returns
    */
-  chatStreamHandler(message: MessageForView): Partial<Observer<OpenAI.ChatCompletionChunk>> | ((value: OpenAI.ChatCompletionChunk) => void) {
+  chatStreamHandler(message: MessageForView): Partial<Observer<{ content: OpenAI.ChatCompletionChunk }>> | ((value: { content: OpenAI.ChatCompletionChunk }) => void) {
     return {
       next: _next => {
         // ここのChatStreamにはContentPartが付与されているはず
-        const next = _next as OpenAI.ChatCompletionChunk & { contentPart?: ContentPart };
+        const next = _next.content as OpenAI.ChatCompletionChunk & { contentPart?: ContentPart };
         // this.logger.debug(next);
 
         let content: ContentPart;
@@ -3294,5 +3642,32 @@ export class ChatComponent implements OnInit {
     this.selectedContextResourceIds = [];
     this.lastRAGSearchResults = [];
     this.injectedContextText = '';
+  }
+
+  /**
+   * コンソール用Dockerコンテナを起動（開発用）
+   */
+  startConsoleContainer(): void {
+    const projectId = this.selectedProject?.id;
+    if (!projectId) {
+      this.snackBar.open('プロジェクトが選択されていません', 'OK', { duration: 3000 });
+      return;
+    }
+
+    this.snackBar.open('コンテナを起動中...', '', { duration: 0 });
+
+    this.http.get(`/user/auth/project-permission/${projectId}/`).subscribe({
+      next: (res) => {
+        this.snackBar.open('コンテナ起動完了', 'OK', { duration: 3000 });
+        // コンソールを新しいタブで開く
+        window.open(`/terminal/${projectId}/`, '_blank');
+      },
+      error: (err) => {
+        console.error('コンテナ起動エラー:', err);
+        // エラーでもタブは開く（既にコンテナ起動済みの場合など）
+        this.snackBar.open('コンソールを開きます', 'OK', { duration: 3000 });
+        window.open(`/terminal/${projectId}/`, '_blank');
+      }
+    });
   }
 }

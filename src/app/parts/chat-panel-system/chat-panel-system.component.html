@@ -199,7 +199,7 @@
       <mat-accordion class="accordion custom-scroll"
         style="min-width: 0;width: 330px;height: calc(100vh - 100px);overflow-y: scroll;"
         [ngClass]="{disabled: !vm.thread.inDto.args.tool_choice || vm.thread.inDto.args.tool_choice === 'none',}">
-        @for (groupDef of this.toolCallService.tools; track $index) {
+        @for (groupDef of standardToolGroups; track $index) {
         <mat-expansion-panel
           [disabled]="!vm.thread.inDto.args.tool_choice || vm.thread.inDto.args.tool_choice === 'none'">
           <mat-expansion-panel-header>
@@ -231,6 +231,41 @@
           }
         </mat-expansion-panel>
 
+        }
+
+        <!-- カスタムリソースセクション -->
+        @if (customResourceGroups.length > 0) {
+        <div class="custom-resource-section" style="margin-top: 16px; padding-top: 8px; border-top: 1px solid #e0e0e0;">
+          <div style="font-weight: 500; margin-bottom: 8px; color: #666;">{{ 'CUSTOM_RESOURCES' | translate }}</div>
+          @for (groupDef of customResourceGroups; track $index) {
+          <mat-expansion-panel
+            [disabled]="!vm.thread.inDto.args.tool_choice || vm.thread.inDto.args.tool_choice === 'none'">
+            <mat-expansion-panel-header>
+              <div style="width: 100%;display: flex;justify-content: left;align-items: center;gap: 20px;"
+                class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                <mat-icon class="group-check" (click)="toolGroupClick($event, groupDef)"
+                  [ngClass]="{'group-check-checked': toolGroupCheckMas[groupDef.group] === 2, 'group-check-bar': toolGroupCheckMas[groupDef.group] === 1,}">
+                  {{
+                  ["", "remove", "check"][toolGroupCheckMas[groupDef.group]]
+                  }}
+                </mat-icon>
+                <img appInlineSvg [src]="'./image/' + groupDef.group.split('-')[1] + '-logo.svg'" alt="icon"
+                  class="w-8 h-8 mat-primary" style="min-width: 30px" />
+                {{providerMas[groupDef.group] ? providerMas[groupDef.group].label : groupDef.group}}
+              </div>
+            </mat-expansion-panel-header>
+
+            @for (tool of groupDef.tools; track $index) {
+            <div class="channel cursor-pointer">
+              <mat-checkbox [checked]="isChecked(tool)" (change)="toolCheck($event, tool)"
+                [disabled]="!vm.thread.inDto.args.tool_choice ||vm.thread.inDto.args.tool_choice === 'none'">
+                [{{ tool.info.name }}] {{ tool.info.label }}
+              </mat-checkbox>
+            </div>
+            }
+          </mat-expansion-panel>
+          }
+        </div>
         }
       </mat-accordion>
       <!-- ※ツール使用には事前にAPI連携の登録が必要です。右上の〇からAPI鍵を登録してください。 -->

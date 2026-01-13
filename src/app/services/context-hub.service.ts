@@ -91,6 +91,11 @@ export class ContextHubService {
     );
   }
 
+  /** リソースを取得 */
+  getResource(resourceId: UUID): Observable<ContextResourceForView> {
+    return this.http.get<ContextResourceForView>(`/user/context-hub/resource/${resourceId}`);
+  }
+
   /** リソースの同期を実行 */
   syncResource(resourceId: UUID): Observable<ContextResourceForView> {
     return this.http.post<ContextResourceForView>(`/user/context-hub/resource/${resourceId}/sync`, {}).pipe(

@@ -1,17 +1,17 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject, HostListener, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, inject, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
+import { of, Subject } from 'rxjs';
+import { catchError, debounceTime, map, switchMap, tap, toArray } from 'rxjs/operators';
 import { ApiBoxService } from '../../../services/api-box.service';
 import { ChatService } from '../../../services/chat.service';
 import { ToolCallService } from '../../../services/tool-call.service';
-import { of, Subject } from 'rxjs';
-import { catchError, debounceTime, map, switchMap, tap, toArray } from 'rxjs/operators';
 
 /** ソースタイプ */
 type SourceType = 'root' | 'collection' | 'search';
@@ -1573,6 +1573,10 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
         return a.name.localeCompare(b.name);
       });
 
+      // 読み込まれたアイテムで selections の情報を更新
+      // （古いデータでは name/path が不正確な場合があるため）
+      this.updateSelectionsFromLoadedItems(result.items);
+
       if (this.columns[colIndex]) {
         this.columns[colIndex].items = result.items;
         this.columns[colIndex].isLoading = false;
@@ -1661,6 +1665,9 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
             return a.name.localeCompare(b.name);
           });
 
+          // 読み込まれたアイテムで selections の情報を更新
+          this.updateSelectionsFromLoadedItems(newItems);
+
           // 既存アイテムのIDセットを作成
           const existingIds = new Set(col.items.map(i => i.id));
           const uniqueNewItems = newItems.filter(i => !existingIds.has(i.id));
@@ -1709,6 +1716,9 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
         if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
         return a.name.localeCompare(b.name);
       });
+
+      // 読み込まれたアイテムで selections の情報を更新
+      this.updateSelectionsFromLoadedItems(result.items);
 
       // 既存アイテムのIDセットを作成
       const existingIds = new Set(col.items.map(i => i.id));
@@ -1960,6 +1970,30 @@ export class BoxFolderSelectorComponent implements OnInit, OnChanges, AfterViewI
     this.emitSelection();
   }
 
+  /**
+   * 読み込まれたアイテムで selections の情報を更新
+   * 編集時に古いデータから復元した場合、name/path が不正確な可能性があるため
+   * APIから取得した正しい情報で上書きする
+   */
+  private updateSelectionsFromLoadedItems(items: BoxItem[]): void {
+    let updated = false;
+    for (const item of items) {
+      const selection = this.selections.find(s => s.item.id === item.id);
+      if (selection) {
+        // APIから取得した正しい name と path で更新
+        if (selection.item.name !== item.name || selection.item.path !== item.path) {
+          selection.item.name = item.name;
+          selection.item.path = item.path;
+          updated = true;
+        }
+      }
+    }
+    if (updated) {
+      this.selections = [...this.selections];
+      this.emitSelection();
+    }
+  }
+
   /** 選択数（除外は含まない） */
   get selectionCount(): number {
     return this.selections.length;
@@ -2203,7 +2237,7 @@ ${JSON.stringify(itemListForAi, null, 2)}
       next: next => {
         next.observer.pipe(
           tap(chunk => {
-            responseText += chunk.choices[0]?.delta?.content || '';
+            responseText += chunk.content.choices[0]?.delta?.content || '';
           }),
           toArray(),
         ).subscribe({
@@ -2297,6 +2331,41 @@ ${JSON.stringify(itemListForAi, null, 2)}
 
     // 選択状態を通知
     this.emitSelection();
+
+    // APIから正しいアイテム情報を取得して更新
+    // （古いデータでは name/path が不正確な場合があるため）
+    this.refreshSelectionsFromApi();
+  }
+
+  /**
+   * APIから選択アイテムの正しい情報を取得して更新
+   */
+  private refreshSelectionsFromApi(): void {
+    for (const selection of this.selections) {
+      const itemId = selection.item.id;
+      const itemType = selection.item.type;
+
+      if (itemType === 'folder') {
+        this.apiBoxService.folder(itemId, 0, 0).subscribe({
+          next: (res) => {
+            // APIから取得した正しい name で更新
+            if (selection.item.name !== res.name) {
+              selection.item.name = res.name;
+              // path_collection から正しいパスを構築
+              if (res.path_collection?.entries) {
+                const pathParts = res.path_collection.entries.map((e: { name: string }) => e.name);
+                selection.item.path = '/' + [...pathParts, res.name].filter(Boolean).join('/');
+              }
+              this.selections = [...this.selections];
+              this.emitSelection();
+            }
+          },
+          error: (err) => {
+            console.error('Failed to refresh folder info:', err);
+          }
+        });
+      }
+    }
   }
 
   /** 選択状態に追加（既存メソッドを利用） */

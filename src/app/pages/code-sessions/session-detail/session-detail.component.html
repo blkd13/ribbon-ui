@@ -32,172 +32,92 @@
     </div>
     }
 
+    <!-- 新規セッション用UI -->
+    @if (!loading && !session && projectId) {
+    <div class="session-content new-session">
+        <div class="new-session-header">
+            <mat-icon>terminal</mat-icon>
+            <h2>新規セッション</h2>
+            <p>ClaudeCodeにプロンプトを送信して、新しいセッションを開始します</p>
+        </div>
+
+        <!-- タイムライン（実行結果表示用） -->
+        @if (timeline.length > 0 || isExecuting) {
+        <app-session-timeline
+            [events]="timeline"
+            [isExecuting]="isExecuting"
+            [currentOutput]="currentOutput"
+            [showCard]="true">
+        </app-session-timeline>
+        }
+
+        <!-- ツール許可ダイアログ（対話モード時） -->
+        <app-tool-permission-dialog
+            [pendingToolUse]="pendingToolUse"
+            (respond)="respondToToolUse($event)">
+        </app-tool-permission-dialog>
+
+        <!-- ClaudeCode入力エリア -->
+        <app-session-input-area
+            [isExecuting]="isExecuting"
+            [isForkMode]="isForkMode"
+            [executionMode]="executionMode"
+            [hasPendingToolUse]="!!pendingToolUse"
+            [hasExistingSession]="false"
+            [enterMode]="userService.enterMode"
+            (execute)="onExecuteFromInput($event)"
+            (cancel)="cancelExecution()"
+            (modeChange)="executionMode = $event">
+        </app-session-input-area>
+    </div>
+    }
+
     @if (!loading && session) {
     <div class="session-content">
         <!-- Statistics Cards -->
-        <div class="statistics-cards">
-            @if (statistics) {
-            <mat-card class="stat-card">
-                <mat-card-content>
-                    <mat-icon>chat</mat-icon>
-                    <div class="stat-value">{{ statistics.totalMessages }}</div>
-                    <div class="stat-label">総メッセージ数</div>
-                </mat-card-content>
-            </mat-card>
-            }
-
-            @if (statistics) {
-            <mat-card class="stat-card">
-                <mat-card-content>
-                    <mat-icon>person</mat-icon>
-                    <div class="stat-value">{{ statistics.userMessages }}</div>
-                    <div class="stat-label">ユーザー</div>
-                </mat-card-content>
-            </mat-card>
-            }
-
-            @if (statistics) {
-            <mat-card class="stat-card">
-                <mat-card-content>
-                    <mat-icon>smart_toy</mat-icon>
-                    <div class="stat-value">{{ statistics.assistantMessages }}</div>
-                    <div class="stat-label">アシスタント</div>
-                </mat-card-content>
-            </mat-card>
-            }
-
-            @if (statistics) {
-            <mat-card class="stat-card">
-                <mat-card-content>
-                    <mat-icon>build</mat-icon>
-                    <div class="stat-value">{{ statistics.toolCalls }}</div>
-                    <div class="stat-label">ツール呼び出し</div>
-                </mat-card-content>
-            </mat-card>
-            }
-
-            @if (statistics) {
-            <mat-card class="stat-card">
-                <mat-card-content>
-                    <mat-icon>description</mat-icon>
-                    <div class="stat-value">{{ statistics.modifiedFiles }}</div>
-                    <div class="stat-label">変更ファイル</div>
-                </mat-card-content>
-            </mat-card>
-            }
-
-            @if (statistics && statistics.totalTokens && statistics.totalTokens > 0) {
-            <mat-card class="stat-card">
-                <mat-card-content>
-                    <mat-icon>paid</mat-icon>
-                    <div class="stat-value">{{ formatTokens(statistics.totalTokens!) }}</div>
-                    <div class="stat-label">トークン数</div>
-                </mat-card-content>
-            </mat-card>
-            }
-        </div>
+        <app-session-statistics [statistics]="statistics"></app-session-statistics>
 
         <!-- Main Tabs -->
         <mat-tab-group class="session-tabs">
             <!-- Timeline Tab -->
             <mat-tab label="タイムライン">
-                <div class="tab-content">
-                    <mat-card class="timeline-card">
-                        <mat-card-content>
-                            <div class="timeline">
-                                @for (event of timeline; track event.timestamp) {
-                                <div class="timeline-item" [class]="'event-type-' + event.type">
-                                    <!-- ツールペアの場合はアコーディオン形式 -->
-                                    @if (event.type === 'tool-pair') {
-                                    <div class="timeline-marker tool-pair-marker">
-                                        <mat-icon>{{ event.icon || 'build' }}</mat-icon>
-                                    </div>
-                                    <div class="timeline-content tool-pair-accordion">
-                                        <mat-expansion-panel>
-                                            <mat-expansion-panel-header>
-                                                <mat-panel-title>
-                                                    <mat-icon class="tool-icon">{{ event.icon }}</mat-icon>
-                                                    <span class="tool-name">{{ event.toolCall!.name }}</span>
-                                                    <mat-chip
-                                                        [class]="event.toolResult!.success ? 'success-chip' : 'error-chip'">
-                                                        <mat-icon>{{ event.toolResult!.success ? 'check_circle' :
-                                                            'error' }}</mat-icon>
-                                                        {{ event.toolResult!.success ? '成功' : '失敗' }}
-                                                    </mat-chip>
-                                                </mat-panel-title>
-                                                <mat-panel-description>
-                                                    <span class="tool-time">{{ event.timestamp | date:'HH:mm:ss.SSS'
-                                                        }}</span>
-                                                </mat-panel-description>
-                                            </mat-expansion-panel-header>
+                <div class="tab-content timeline-tab-content">
+                    <div class="timeline-scroll-area">
+                        <app-session-timeline
+                            [events]="timeline"
+                            [isExecuting]="isExecuting"
+                            [currentOutput]="currentOutput"
+                            [showCard]="true">
+                        </app-session-timeline>
+                    </div>
 
-                                            <div class="tool-detail">
-                                                <div class="tool-section">
-                                                    <div class="flex justify-between items-center">
-                                                        <h4>
-                                                            <mat-icon>call_made</mat-icon>
-                                                            呼び出しパラメータ
-                                                        </h4>
-                                                        <div class="timestamp-badge">{{
-                                                            event.toolCall!.timestamp |
-                                                            date:'HH:mm:ss.SSS' }}</div>
-                                                    </div>
-                                                    <markdown
-                                                        [data]="`\`\`\`json\n${event.toolCall!.input|json}\n\`\`\``">
-                                                    </markdown>
-                                                </div>
-                                                <div class="tool-section">
-                                                    <div class="flex justify-between items-center">
-                                                        <h4>
-                                                            <mat-icon>{{ event.toolResult!.success ? 'check_circle' :
-                                                                'error' }}</mat-icon>
-                                                            実行結果
-                                                        </h4>
-                                                        <div class="timestamp-badge">{{ event.toolResult!.timestamp |
-                                                            date:'HH:mm:ss.SSS' }}</div>
-                                                    </div>
-                                                    @if (event.toolResult!.output) {
-                                                    <markdown
-                                                        [data]="`\`\`\`json\n${event.toolResult!.output}\n\`\`\``">
-                                                    </markdown>
-                                                    }
-                                                    @if (event.toolResult!.error) {
-                                                    <pre class="error-output">{{ event.toolResult!.error }}</pre>
-                                                    }
-                                                </div>
-                                            </div>
-                                        </mat-expansion-panel>
-                                    </div>
-                                    } @else {
-                                    <!-- 通常のイベント表示 -->
-                                    <div class="timeline-marker">
-                                        <mat-icon [class]="'marker-' + event.type">
-                                            {{ event.icon || getMessageIcon(event.type) }}
-                                        </mat-icon>
-                                    </div>
-                                    <div class="timeline-content">
-                                        <div class="timeline-header">
-                                            <span class="timeline-type" [class]="'type-' + event.type">
-                                                {{ getEventTypeLabel(event.type) }}
-                                            </span>
-                                            <span class="timeline-time">{{ event.timestamp | date:'HH:mm:ss.SSS'
-                                                }}</span>
-                                        </div>
-                                        <div class="timeline-description">
-                                            <markdown [data]="event.description"></markdown>
-                                        </div>
-                                        @if (event.details) {
-                                        <div class="timeline-details">
-                                            <markdown [data]="event.details"></markdown>
-                                        </div>
-                                        }
-                                    </div>
-                                    }
-                                </div>
-                                }
-                            </div>
-                        </mat-card-content>
-                    </mat-card>
+                    <!-- ツール許可ダイアログ（対話モード時） -->
+                    <app-tool-permission-dialog
+                        [pendingToolUse]="pendingToolUse"
+                        (respond)="respondToToolUse($event)">
+                    </app-tool-permission-dialog>
+
+                    <!-- ClaudeCode入力エリア -->
+                    @if (projectId) {
+                    <app-session-input-area
+                        [isExecuting]="isExecuting"
+                        [isForkMode]="isForkMode"
+                        [executionMode]="executionMode"
+                        [hasPendingToolUse]="!!pendingToolUse"
+                        [hasExistingSession]="!!session"
+                        [enterMode]="userService.enterMode"
+                        (execute)="onExecuteFromInput($event)"
+                        (cancel)="cancelExecution()"
+                        (modeChange)="executionMode = $event"
+                        (startFork)="startForkMode()"
+                        (cancelFork)="cancelForkMode()">
+                    </app-session-input-area>
+                    } @else {
+                    <div class="no-container-info">
+                        <mat-icon>info</mat-icon>
+                        <span>このセッションにはコンテナが紐づいていません。ClaudeCodeを実行するにはコンテナを起動してください。</span>
+                    </div>
+                    }
                 </div>
             </mat-tab>
 

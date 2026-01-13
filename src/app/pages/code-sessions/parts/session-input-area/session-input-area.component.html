@@ -1,0 +1,62 @@
+<div class="session-input-area" [class.fork-mode]="isForkMode">
+    <!-- メニューボタン -->
+    <button mat-icon-button [matMenuTriggerFor]="optionsMenu" class="options-button" matTooltip="オプション">
+        <mat-icon>{{ executionMode === 'interactive' ? 'touch_app' : 'play_arrow' }}</mat-icon>
+    </button>
+    <mat-menu #optionsMenu="matMenu">
+        <button mat-menu-item (click)="onModeChange('interactive')">
+            <mat-icon [class.selected]="executionMode === 'interactive'">touch_app</mat-icon>
+            <span>対話モード</span>
+            @if (executionMode === 'interactive') {
+            <mat-icon class="check-icon">check</mat-icon>
+            }
+        </button>
+        <button mat-menu-item (click)="onModeChange('print')">
+            <mat-icon [class.selected]="executionMode === 'print'">play_arrow</mat-icon>
+            <span>自動モード</span>
+            @if (executionMode === 'print') {
+            <mat-icon class="check-icon">check</mat-icon>
+            }
+        </button>
+    </mat-menu>
+
+    <!-- プロンプト入力 -->
+    <mat-form-field appearance="outline" class="prompt-input">
+        <textarea matInput
+            [(ngModel)]="promptInput"
+            [placeholder]="placeholder"
+            (keydown)="onKeyDown($event)"
+            [disabled]="isInputDisabled"
+            rows="1"
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="5">
+        </textarea>
+    </mat-form-field>
+
+    <!-- アクションボタン -->
+    <div class="input-actions">
+        @if (isExecuting) {
+        <button mat-icon-button color="warn" (click)="onCancel()" matTooltip="キャンセル">
+            <mat-icon>stop</mat-icon>
+        </button>
+        } @else {
+        @if (isForkMode) {
+        <button mat-icon-button (click)="onCancelFork()" matTooltip="分岐をキャンセル">
+            <mat-icon>close</mat-icon>
+        </button>
+        }
+        @if (hasExistingSession && !isForkMode) {
+        <button mat-icon-button color="accent" (click)="onStartFork()" matTooltip="このセッションから分岐">
+            <mat-icon>call_split</mat-icon>
+        </button>
+        }
+        <button mat-icon-button [color]="isForkMode ? 'accent' : 'primary'"
+            (click)="onExecute()"
+            [disabled]="!promptInput.trim() || hasPendingToolUse"
+            [matTooltip]="sendButtonTooltip">
+            <mat-icon>{{ isForkMode ? 'call_split' : 'send' }}</mat-icon>
+        </button>
+        }
+    </div>
+</div>

@@ -17,7 +17,7 @@ import { Thread } from '../../models/project-models';
 import { CountTokensResponseForView } from '../../services/chat.service';
 import { ExtApiProviderService } from '../../services/ext-api-provider.service';
 import { AIModelManagerService } from '../../services/model-manager.service';
-import { MyToolType, ToolCallService } from '../../services/tool-call.service';
+import { MyToolType, ToolCallService, ToolGroup } from '../../services/tool-call.service';
 import { ChatPanelBaseComponent } from '../chat-panel-base/chat-panel-base.component';
 import { DocTagComponent } from '../doc-tag/doc-tag.component';
 import { InlineSvgDirective } from "../inline-svg";
@@ -49,6 +49,16 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
   readonly toolCallService = inject(ToolCallService);
   readonly aiModelManagerService = inject(AIModelManagerService);
   readonly extApiProviderService = inject(ExtApiProviderService);
+
+  /** カスタムリソースを除いた通常のツールグループを取得 */
+  get standardToolGroups(): ToolGroup[] {
+    return this.toolCallService.tools.filter(group => !group.isCustomResource);
+  }
+
+  /** カスタムリソースのツールグループを取得 */
+  get customResourceGroups(): ToolGroup[] {
+    return this.toolCallService.tools.filter(group => group.isCustomResource);
+  }
 
   showFullPrompt: boolean = false;
   // modelIdMas: { [modelId: string]: LlmModel } = {};
@@ -137,7 +147,8 @@ export class ChatPanelSystemComponent extends ChatPanelBaseComponent {
   toolGroupCheckMasRecord(obj: any): { groupName: string, label: string, checked: boolean }[] {
     return Object.keys(obj).map(key => {
       const split = key.split('-');
-      const groupName = split[0];
+      // カスタムリソースの場合は ctx-<providerType>-<resourceId> の形式なので2番目を使う
+      const groupName = split[0] === 'ctx' ? split[1] : split[0];
       split.splice(0, 1);
       const label = split.join('-');
       return { groupName, label, checked: obj[key], };

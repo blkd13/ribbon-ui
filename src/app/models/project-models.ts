@@ -338,7 +338,7 @@ export interface MessageForView extends Message {
     status: MessageStatusType;
     selected: boolean;
     contents: ContentPart[];
-    observer?: Observable<OpenAI.ChatCompletionChunk>;
+    observer?: Observable<{ content: OpenAI.ChatCompletionChunk }>;
 }
 
 export interface ContentPart extends BaseEntity {

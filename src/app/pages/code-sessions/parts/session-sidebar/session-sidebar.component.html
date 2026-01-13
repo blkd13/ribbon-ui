@@ -1,0 +1,170 @@
+<div class="session-sidebar" [class.collapsed]="collapsed">
+    <!-- Header -->
+    <div class="sidebar-header">
+        @if (!collapsed) {
+        <app-app-menu></app-app-menu>
+        <div class="project-title" (click)="openProjectMenu()">
+            <span class="title-text gradient-text">{{ currentProject?.label || 'プロジェクト' }}</span>
+            <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+        </div>
+        <button #projectMenuTrigger="matMenuTrigger" [matMenuTriggerFor]="projectMenu" style="display:none"></button>
+        }
+        <button mat-icon-button
+                class="collapse-button"
+                (click)="toggleCollapse.emit()"
+                [matTooltip]="collapsed ? '展開' : '折りたたみ'">
+            <mat-icon>{{ collapsed ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+        </button>
+    </div>
+
+    <!-- Ribbonプロジェクト選択メニュー -->
+    <mat-menu #projectMenu="matMenu" xPosition="after">
+        @for (team of teamForViewList; track team.id) {
+        <div class="gradient-text menu-team-label">{{ team.label }}</div>
+        @for (project of team.projects; track project.id) {
+        <a mat-menu-item [routerLink]="['/code-sessions', project.id]">
+            {{ project.label }}
+        </a>
+        }
+        @if (team !== teamForViewList[teamForViewList.length - 1]) {
+        <mat-divider></mat-divider>
+        }
+        }
+    </mat-menu>
+
+    @if (!collapsed) {
+    <!-- Search -->
+    <div class="sidebar-search">
+        <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput
+                   placeholder="プロジェクトを検索..."
+                   [(ngModel)]="searchQuery"
+                   (ngModelChange)="onSearchChange()">
+            @if (searchQuery) {
+            <button mat-icon-button matSuffix (click)="searchQuery = ''; onSearchChange()">
+                <mat-icon>close</mat-icon>
+            </button>
+            }
+        </mat-form-field>
+    </div>
+
+    <!-- Loading State -->
+    @if (isLoading) {
+    <div class="loading-container">
+        <mat-spinner diameter="32"></mat-spinner>
+    </div>
+    }
+
+    <!-- Empty State -->
+    @if (!isLoading && filteredNodes.length === 0) {
+    <div class="empty-state">
+        <mat-icon class="empty-icon">folder_off</mat-icon>
+        <p>プロジェクトがありません</p>
+        <a routerLink="/code-sessions/settings" class="settings-link">
+            <mat-icon>settings</mat-icon>
+            データソースを設定
+        </a>
+    </div>
+    }
+
+    <!-- Project List -->
+    @if (!isLoading && filteredNodes.length > 0) {
+    <div class="project-list">
+        @for (node of filteredNodes; track node.project.name) {
+        <div class="project-node" [class.selected]="isProjectSelected(node)">
+            <!-- Project Header -->
+            <div class="project-header" (click)="onProjectClick(node)">
+                <button mat-icon-button class="expand-button" (click)="toggleProject(node); $event.stopPropagation()">
+                    <mat-icon>{{ node.expanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+                </button>
+                <mat-icon class="project-icon">{{ getProjectIcon(node.project) }}</mat-icon>
+                <div class="project-info">
+                    <div class="project-name">{{ getDisplayName(node.project) }}</div>
+                    <div class="project-meta">
+                        <span class="session-count">{{ node.project.sessionCount }}セッション</span>
+                        @if (node.project.lastActivity) {
+                        <span class="last-activity">{{ formatRelativeTime(node.project.lastActivity) }}</span>
+                        }
+                    </div>
+                </div>
+                @if (projectId) {
+                <button mat-icon-button
+                        class="new-session-button"
+                        matTooltip="新規セッション"
+                        (click)="onNewSessionClick(node, $event)">
+                    <mat-icon>add</mat-icon>
+                </button>
+                }
+            </div>
+
+            <!-- Sessions (Expanded) -->
+            @if (node.expanded) {
+            <div class="session-list">
+                @if (node.loading) {
+                <div class="session-loading">
+                    <mat-spinner diameter="20"></mat-spinner>
+                </div>
+                } @else if (node.sessions.length === 0) {
+                <div class="no-sessions">
+                    <mat-icon>event_note</mat-icon>
+                    <span>セッションなし</span>
+                </div>
+                } @else {
+                @for (session of node.sessions; track session.sessionId) {
+                <div class="session-item"
+                     [class.selected]="isSessionSelected(session)"
+                     (click)="onSessionClick(node, session)">
+                    <div class="session-info">
+                        <div class="session-preview">{{ getSessionPreview(session) }}</div>
+                        <div class="session-meta">
+                            <span class="message-count">{{ session.messageCount }}件</span>
+                            @if (session.endTime) {
+                            <span class="session-time">{{ formatRelativeTime(session.endTime) }}</span>
+                            }
+                            <span class="session-id">{{ getSessionDisplayId(session) }}</span>
+                        </div>
+                    </div>
+                </div>
+                }
+                }
+            </div>
+            }
+        </div>
+        }
+    </div>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+        <a routerLink="/code-sessions/settings" class="settings-link">
+            <mat-icon>settings</mat-icon>
+            データソース設定
+        </a>
+    </div>
+    }
+    }
+
+    <!-- Collapsed State -->
+    @if (collapsed) {
+    <div class="collapsed-content">
+        @for (node of filteredNodes.slice(0, 10); track node.project.name) {
+        <button mat-icon-button
+                class="collapsed-project"
+                [class.selected]="isProjectSelected(node)"
+                [matTooltip]="getDisplayName(node.project)"
+                matTooltipPosition="right"
+                (click)="onProjectClick(node)">
+            <mat-icon>{{ getProjectIcon(node.project) }}</mat-icon>
+        </button>
+        }
+        @if (filteredNodes.length > 10) {
+        <button mat-icon-button
+                matTooltip="さらに表示..."
+                matTooltipPosition="right"
+                (click)="toggleCollapse.emit()">
+            <mat-icon>more_horiz</mat-icon>
+        </button>
+        }
+    </div>
+    }
+</div>

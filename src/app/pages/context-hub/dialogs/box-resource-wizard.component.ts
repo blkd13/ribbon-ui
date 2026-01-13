@@ -205,29 +205,32 @@ export interface BoxResourceWizardResult {
                       <h3>取得設定</h3>
                     </div>
                     <div class="card-body">
-                      <div class="inline-field-group">
-                        <div class="field-with-label">
-                          <span class="field-label">階層深度</span>
+                      <!-- 階層深度 -->
+                      <div class="setting-row">
+                        <span class="setting-label">階層深度</span>
+                        <div class="setting-controls">
                           <mat-radio-group formControlName="depthType" class="horizontal-radio-group compact">
                             @for (opt of depthOptions; track opt.value) {
                               <mat-radio-button [value]="opt.value">{{ opt.label }}</mat-radio-button>
                             }
                           </mat-radio-group>
+                          @if (settingsForm.get('depthType')?.value === 'limited') {
+                            <input type="number" class="simple-input narrow"
+                                   formControlName="depthValue" min="1" max="10">
+                          }
                         </div>
-                        @if (settingsForm.get('depthType')?.value === 'limited') {
-                          <div class="field-with-label">
-                            <span class="field-label">階層数</span>
-                            <mat-form-field appearance="outline" class="compact-field narrow">
-                              <input matInput type="number" formControlName="depthValue" min="1" max="10">
-                            </mat-form-field>
+                      </div>
+
+                      <!-- 最大ファイルサイズ -->
+                      <div class="setting-row">
+                        <span class="setting-label">最大サイズ</span>
+                        <div class="setting-controls">
+                          <div class="input-with-suffix">
+                            <input type="number" class="simple-input narrow"
+                                   formControlName="maxFileSizeMB" min="1" max="100" placeholder="--">
+                            <span class="input-suffix">MB</span>
                           </div>
-                        }
-                        <div class="field-with-label">
-                          <span class="field-label">最大サイズ</span>
-                          <mat-form-field appearance="outline" class="compact-field narrow">
-                            <input matInput type="number" formControlName="maxFileSizeMB" min="1" max="100" placeholder="--">
-                            <span matSuffix>MB</span>
-                          </mat-form-field>
+                          <span class="setting-hint">省略時は制限なし</span>
                         </div>
                       </div>
                     </div>
@@ -744,33 +747,80 @@ export interface BoxResourceWizardResult {
       gap: 12px;
     }
 
-    /* インラインフィールドグループ（取得設定用） */
-    .inline-field-group {
+    /* 設定行レイアウト */
+    .setting-row {
       display: flex;
-      flex-wrap: wrap;
+      align-items: center;
       gap: 16px;
-      align-items: flex-end;
+      padding: 8px 0;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
     }
 
-    .field-with-label {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    .setting-label {
+      flex-shrink: 0;
+      width: 80px;
+      font-size: 13px;
+      color: var(--text-secondary, #8b929a);
+    }
 
-      .field-label {
-        font-size: 11px;
-        font-weight: 500;
-        color: var(--text-secondary, #8b929a);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+    .setting-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .setting-hint {
+      font-size: 11px;
+      color: var(--text-muted, #666);
+    }
+
+    /* シンプルなinput */
+    .simple-input {
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: var(--text-primary, #e0e0e0);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+
+      &:focus {
+        border-color: #2196f3;
       }
 
-      .compact-field {
-        width: 140px;
+      &::placeholder {
+        color: var(--text-muted, #666);
+      }
 
-        &.narrow {
-          width: 80px;
-        }
+      &.narrow {
+        width: 70px;
+        text-align: center;
+      }
+
+      /* number inputのスピンボタンを非表示 */
+      &[type="number"]::-webkit-inner-spin-button,
+      &[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      &[type="number"] {
+        -moz-appearance: textfield;
+      }
+    }
+
+    .input-with-suffix {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .input-suffix {
+        font-size: 12px;
+        color: var(--text-secondary, #8b929a);
       }
     }
 
@@ -951,8 +1001,8 @@ export class BoxResourceWizardComponent implements OnInit {
       label: ['', [Validators.required, Validators.minLength(2)]],
       description: [''],
       searchMode: ['realtime'],
-      depthType: ['none'],
-      depthValue: [1],
+      depthType: ['limited'],
+      depthValue: [3],
       filePatterns: [''],
       excludePatterns: [''],
       maxFileSizeMB: [null],
@@ -977,9 +1027,10 @@ export class BoxResourceWizardComponent implements OnInit {
     });
 
     // 選択済みアイテムを設定
+    // folderNameが保存されていればそれを使用、なければパスから推測
     const selectedItem = {
       id: config.folderId,
-      name: config.folderPath?.split('/').pop() || 'Root',
+      name: config.folderName || config.folderPath?.split('/').pop() || 'Root',
       type: 'folder' as const,
       path: config.folderPath || '/',
     };
@@ -1040,11 +1091,12 @@ export class BoxResourceWizardComponent implements OnInit {
       return patterns.length > 0 ? patterns : undefined;
     };
 
+    // 選択アイテムの情報を使用
+    const selectedItem = this.selectedItems[0];
     const config: BoxResourceConfig = {
-      folderId: this.selectedItems.length === 1
-        ? this.selectedItems[0].id
-        : this.currentFolderId,
-      folderPath: this.currentPath,
+      folderId: selectedItem.id,
+      folderPath: selectedItem.path || this.currentPath,
+      folderName: selectedItem.name,  // 名前も保存して編集時に正しく復元できるようにする
       depth,
       filePatterns: parsePatterns(formValue.filePatterns),
       excludePatterns: parsePatterns(formValue.excludePatterns),

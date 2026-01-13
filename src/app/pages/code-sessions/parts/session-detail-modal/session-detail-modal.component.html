@@ -1,0 +1,270 @@
+@if (isOpen && session) {
+<div class="modal-overlay" (click)="onOverlayClick($event)">
+    <div class="modal-content">
+        <!-- Header -->
+        <div class="modal-header">
+            <div class="header-info">
+                <mat-icon class="header-icon">history</mat-icon>
+                <div class="header-text">
+                    <h2>セッション詳細</h2>
+                    <div class="session-meta">
+                        <code>{{ session.sessionId }}</code>
+                        <span>•</span>
+                        <span>{{ session.startTime | date:'yyyy/MM/dd HH:mm:ss' }}</span>
+                        @if (session.gitBranch) {
+                        <mat-chip class="branch-chip">
+                            <mat-icon>fork_right</mat-icon>
+                            {{ session.gitBranch }}
+                        </mat-chip>
+                        }
+                    </div>
+                </div>
+            </div>
+            <button mat-icon-button (click)="onCloseClick()" class="close-button">
+                <mat-icon>close</mat-icon>
+            </button>
+        </div>
+
+        <!-- Statistics -->
+        @if (statistics) {
+        <div class="statistics-section">
+            <app-session-statistics [statistics]="statistics"></app-session-statistics>
+        </div>
+        }
+
+        <!-- Tabs -->
+        <mat-tab-group class="detail-tabs">
+            <!-- 会話タブ -->
+            <mat-tab label="会話" [matBadge]="conversationMessages.length">
+                <div class="tab-content">
+                    <div class="conversation-list">
+                        @for (msg of conversationMessages; track msg.uuid) {
+                        <div class="conversation-item" [class.user-message]="msg.type === 'user'"
+                            [class.assistant-message]="msg.type === 'assistant'">
+                            <div class="message-header">
+                                <mat-icon class="message-icon">{{ getMessageIcon(msg.type) }}</mat-icon>
+                                <span class="message-role">{{ msg.type === 'user' ? 'ユーザー' : 'アシスタント' }}</span>
+                                <span class="message-time">{{ msg.timestamp | date:'HH:mm:ss' }}</span>
+                            </div>
+                            <div class="message-content">
+                                @if (msg.message?.content) {
+                                {{ getTextContent(msg.message.content) }}
+                                }
+                            </div>
+                            @if (msg.type === 'assistant' && msg.message?.usage) {
+                            <div class="message-meta">
+                                <mat-chip class="token-chip">
+                                    <mat-icon>paid</mat-icon>
+                                    {{ formatTokens(msg.message.usage.input_tokens) }} / {{
+                                    formatTokens(msg.message.usage.output_tokens) }}
+                                </mat-chip>
+                                @if (msg.message.model) {
+                                <mat-chip class="model-chip">
+                                    <mat-icon>psychology</mat-icon>
+                                    {{ msg.message.model }}
+                                </mat-chip>
+                                }
+                            </div>
+                            }
+                        </div>
+                        }
+                        @if (conversationMessages.length === 0) {
+                        <div class="no-data">
+                            <mat-icon>chat_bubble_outline</mat-icon>
+                            <p>会話メッセージはありません</p>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </mat-tab>
+
+            <!-- ツール実行タブ -->
+            <mat-tab label="ツール実行" [matBadge]="toolCallPairs.length">
+                <div class="tab-content">
+                    <mat-accordion class="tool-accordion">
+                        @for (pair of toolCallPairs; track pair.toolUse.id; let i = $index) {
+                        <mat-expansion-panel>
+                            <mat-expansion-panel-header>
+                                <mat-panel-title>
+                                    <mat-icon [class]="'tool-icon'">{{ pair.call ? getToolIcon(pair.call.toolName) :
+                                        'build' }}</mat-icon>
+                                    <span class="tool-name">{{ pair.call?.toolName || pair.toolUse.name }}</span>
+                                    <span class="tool-index">#{{ i + 1 }}</span>
+                                </mat-panel-title>
+                                <mat-panel-description>
+                                    <span class="tool-time">{{ (pair.call?.timestamp || pair.toolUse.timestamp) |
+                                        date:'HH:mm:ss' }}</span>
+                                </mat-panel-description>
+                            </mat-expansion-panel-header>
+
+                            <div class="tool-detail">
+                                <div class="tool-section">
+                                    <h4>入力パラメータ</h4>
+                                    <pre>{{ (pair.call?.parameters || pair.toolUse.input) | json }}</pre>
+                                </div>
+                                @if (pair.result) {
+                                <div class="tool-section">
+                                    <h4>実行結果</h4>
+                                    <div class="result-info">
+                                        <mat-chip [class]="pair.result.success ? 'success-chip' : 'error-chip'">
+                                            <mat-icon>{{ pair.result.success ? 'check_circle' : 'error' }}</mat-icon>
+                                            {{ pair.result.success ? '成功' : '失敗' }}
+                                        </mat-chip>
+                                    </div>
+                                    @if (pair.result.output) {
+                                    <pre>{{ pair.result.output }}</pre>
+                                    }
+                                    @if (pair.result.error) {
+                                    <pre class="error-output">{{ pair.result.error }}</pre>
+                                    }
+                                </div>
+                                }
+                            </div>
+                        </mat-expansion-panel>
+                        }
+                    </mat-accordion>
+
+                    @if (toolCallPairs.length === 0) {
+                    <div class="no-data">
+                        <mat-icon>build_circle</mat-icon>
+                        <p>ツール実行はありません</p>
+                    </div>
+                    }
+                </div>
+            </mat-tab>
+
+            <!-- ファイルスナップショットタブ -->
+            <mat-tab label="ファイルスナップショット" [matBadge]="fileSnapshots.length">
+                <div class="tab-content">
+                    <mat-accordion class="snapshot-accordion">
+                        @for (snapshot of fileSnapshots; track snapshot.messageId) {
+                        <mat-expansion-panel>
+                            <mat-expansion-panel-header>
+                                <mat-panel-title>
+                                    <mat-icon>history</mat-icon>
+                                    <span>スナップショット</span>
+                                </mat-panel-title>
+                                <mat-panel-description>
+                                    <span>{{ snapshot.snapshot.timestamp | date:'HH:mm:ss' }}</span>
+                                    @if (snapshot.isSnapshotUpdate) {
+                                    <mat-chip class="update-chip">
+                                        <mat-icon>update</mat-icon>
+                                        更新
+                                    </mat-chip>
+                                    }
+                                </mat-panel-description>
+                            </mat-expansion-panel-header>
+
+                            <div class="snapshot-detail">
+                                <div class="snapshot-section">
+                                    <h4>メッセージID</h4>
+                                    <code>{{ snapshot.messageId }}</code>
+                                </div>
+                                <div class="snapshot-section">
+                                    <h4>バックアップファイル</h4>
+                                    @if (getSnapshotFileCount(snapshot) > 0) {
+                                    <div class="file-backup-list">
+                                        @for (file of getSnapshotFiles(snapshot); track file.path) {
+                                        <div class="backup-file-item">
+                                            <mat-icon>description</mat-icon>
+                                            <span>{{ file.path }}</span>
+                                        </div>
+                                        }
+                                    </div>
+                                    } @else {
+                                    <p class="no-files">バックアップファイルなし</p>
+                                    }
+                                </div>
+                            </div>
+                        </mat-expansion-panel>
+                        }
+                    </mat-accordion>
+
+                    @if (fileSnapshots.length === 0) {
+                    <div class="no-data">
+                        <mat-icon>history_toggle_off</mat-icon>
+                        <p>ファイルスナップショットはありません</p>
+                    </div>
+                    }
+                </div>
+            </mat-tab>
+
+            <!-- システムイベントタブ -->
+            <mat-tab label="システムイベント" [matBadge]="systemEvents.length">
+                <div class="tab-content">
+                    <div class="system-event-list">
+                        @for (event of systemEvents; track event.uuid) {
+                        <div class="system-event-item" [class]="'event-' + event.type">
+                            <div class="event-header">
+                                <mat-icon>{{ getMessageIcon(event.type) }}</mat-icon>
+                                <span class="event-type">{{ event.type }}</span>
+                                @if (event.subtype) {
+                                <mat-chip class="subtype-chip">{{ event.subtype }}</mat-chip>
+                                }
+                                <span class="event-time">{{ event.timestamp | date:'HH:mm:ss' }}</span>
+                            </div>
+                            @if (event.type === 'summary') {
+                            <div class="event-content">
+                                <p><strong>サマリー:</strong> {{ event.summary }}</p>
+                            </div>
+                            }
+                            @if (event.type === 'system' && event.content) {
+                            <div class="event-content">
+                                <p>{{ event.content }}</p>
+                                @if (event.compactMetadata) {
+                                <div class="compact-metadata">
+                                    <mat-chip>トリガー: {{ event.compactMetadata.trigger }}</mat-chip>
+                                    <mat-chip>前トークン数: {{ formatTokens(event.compactMetadata.preTokens) }}</mat-chip>
+                                </div>
+                                }
+                            </div>
+                            }
+                        </div>
+                        }
+                        @if (systemEvents.length === 0) {
+                        <div class="no-data">
+                            <mat-icon>event_note</mat-icon>
+                            <p>システムイベントはありません</p>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </mat-tab>
+
+            <!-- ファイル変更タブ -->
+            <mat-tab label="ファイル変更" [matBadge]="statistics?.modifiedFiles || 0">
+                <div class="tab-content">
+                    @if (statistics && statistics.modifiedFiles > 0) {
+                    <div class="file-list">
+                        @for (file of statistics.filesByExtension | keyvalue; track file.key) {
+                        <div class="file-item">
+                            <div class="file-ext" [style.background-color]="getLanguageColor(file.key)">
+                                {{ file.key || 'other' }}
+                            </div>
+                            <div class="file-info">
+                                <span class="file-count">{{ file.value }}ファイル</span>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    }
+
+                    @if (!statistics || statistics.modifiedFiles === 0) {
+                    <div class="no-data">
+                        <mat-icon>folder_open</mat-icon>
+                        <p>変更されたファイルはありません</p>
+                    </div>
+                    }
+                </div>
+            </mat-tab>
+
+            <!-- 生データタブ -->
+            <mat-tab label="生データ">
+                <div class="tab-content raw-data-tab">
+                    <pre>{{ session | json }}</pre>
+                </div>
+            </mat-tab>
+        </mat-tab-group>
+    </div>
+</div>
+}

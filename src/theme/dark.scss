@@ -90,6 +90,7 @@ html>body.dark-theme {
     --mat-sys-outline: #889392;
     --mat-sys-outline-variant: #3f4948;
     --mat-sys-primary: #00dddd;
+    --mat-sys-primary-container: #004f4f;
     --mat-sys-primary-container: rgb(22, 86, 102);
     --mat-sys-primary-fixed: #00fbfb;
     --mat-sys-primary-fixed-dim: #00dddd;
@@ -225,6 +226,11 @@ html>body.dark-theme {
 
     /* 新しいプライマリカラー */
     --mat-sys-primary: rgb(105 184 205);
+
+    /* プレースホルダーの色（薄めに設定） */
+    --mat-form-field-filled-input-text-placeholder-color: rgba(255, 255, 255, 0.4);
+    --mat-form-field-outlined-input-text-placeholder-color: rgba(255, 255, 255, 0.4);
+    --mat-select-placeholder-text-color: rgba(255, 255, 255, 0.4);
 }
 
 html>body.dark-theme {

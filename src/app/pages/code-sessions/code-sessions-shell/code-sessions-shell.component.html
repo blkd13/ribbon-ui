@@ -1,0 +1,122 @@
+<div class="code-sessions-shell" [class.sidebar-collapsed]="sidebarCollapsed">
+    <!-- Sidebar -->
+    <app-session-sidebar
+        [projectId]="projectId"
+        [selectedProjectName]="selectedProjectName"
+        [selectedProjectDisplayName]="selectedProject?.displayName || selectedProjectName"
+        [selectedSessionId]="selectedSessionId"
+        [collapsed]="sidebarCollapsed"
+        (projectSelect)="onProjectSelect($event)"
+        (sessionSelect)="onSessionSelect($event)"
+        (newSession)="onNewSession($event)"
+        (toggleCollapse)="toggleSidebar()">
+    </app-session-sidebar>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb">
+            @for (item of breadcrumbItems; track item.label; let last = $last) {
+            @if (item.link && !last) {
+            <a [routerLink]="item.link" class="breadcrumb-link">{{ item.label }}</a>
+            <mat-icon class="breadcrumb-separator">chevron_right</mat-icon>
+            } @else {
+            <span class="breadcrumb-current">{{ item.label }}</span>
+            }
+            }
+
+            <!-- Detail Button (existing session only) -->
+            @if (selectedSession) {
+            <button mat-icon-button
+                    class="detail-button"
+                    matTooltip="詳細を表示"
+                    (click)="openDetailModal()">
+                <mat-icon>info</mat-icon>
+            </button>
+            }
+        </nav>
+
+        <!-- Empty State -->
+        @if (viewMode === 'empty') {
+        <div class="empty-state">
+            <mat-icon class="empty-icon">code</mat-icon>
+            <h2>Code Sessions</h2>
+            <p>左のサイドバーからプロジェクトまたはセッションを選択してください</p>
+        </div>
+        }
+
+        <!-- Session View -->
+        @if (viewMode === 'session') {
+        <div class="session-view">
+            <!-- Loading -->
+            @if (isLoading) {
+            <div class="loading-container">
+                <mat-spinner diameter="48"></mat-spinner>
+                <p>セッションを読み込み中...</p>
+            </div>
+            }
+
+            <!-- Session Content -->
+            @if (!isLoading) {
+            <div class="session-content">
+                <!-- New Session Header -->
+                @if (!selectedSession) {
+                <div class="new-session-header">
+                    <mat-icon>terminal</mat-icon>
+                    <h2>新規セッション</h2>
+                    <p>ClaudeCodeにプロンプトを送信して、新しいセッションを開始します</p>
+                </div>
+                }
+
+                <!-- Timeline -->
+                <div class="timeline-area">
+                    @if (timeline.length > 0 || isExecuting) {
+                    <app-session-timeline
+                        [events]="timeline"
+                        [isExecuting]="isExecuting"
+                        [currentOutput]="currentOutput"
+                        [showCard]="true">
+                    </app-session-timeline>
+                    }
+                </div>
+
+                <!-- Tool Permission Dialog -->
+                <app-tool-permission-dialog
+                    [pendingToolUse]="pendingToolUse"
+                    (respond)="respondToToolUse($event)">
+                </app-tool-permission-dialog>
+
+                <!-- Input Area -->
+                @if (projectId) {
+                <app-session-input-area
+                    [isExecuting]="isExecuting"
+                    [isForkMode]="isForkMode"
+                    [executionMode]="executionMode"
+                    [hasPendingToolUse]="!!pendingToolUse"
+                    [hasExistingSession]="!!selectedSession"
+                    [enterMode]="userService.enterMode"
+                    (execute)="onExecute($event)"
+                    (cancel)="cancelExecution()"
+                    (modeChange)="executionMode = $event"
+                    (startFork)="startForkMode()"
+                    (cancelFork)="cancelForkMode()">
+                </app-session-input-area>
+                } @else {
+                <div class="no-container-info">
+                    <mat-icon>info</mat-icon>
+                    <span>セッション閲覧モードです。ClaudeCodeを実行するにはコンテナプロジェクトからアクセスしてください。</span>
+                </div>
+                }
+            </div>
+            }
+        </div>
+        }
+    </main>
+</div>
+
+<!-- Session Detail Modal -->
+<app-session-detail-modal
+    [session]="selectedSession"
+    [isOpen]="isDetailModalOpen"
+    (close)="closeDetailModal()">
+</app-session-detail-modal>

@@ -142,7 +142,7 @@ export class ThreadService {
             });
         }
 
-        return this.http.get<PaginatedResponse<ThreadGroupForView> | ThreadGroupForView[]>(`/user/project/${projectId}/thread-groups`, {
+        return this.http.get<PaginatedResponse<ThreadGroupForView> | ThreadGroupForView[]>(`/user/project/${projectId}/thread-group`, {
             params: { page: page.toString(), limit: limit.toString() }
         }).pipe(
             map(response => {
@@ -171,7 +171,7 @@ export class ThreadService {
      * @returns { data: 追加取得したリスト, hasNextPage: 次ページの有無 }
      */
     loadMoreThreadGroups(projectId: string, page: number, limit: number = 20): Observable<{ data: ThreadGroupForView[], hasNextPage: boolean }> {
-        return this.http.get<PaginatedResponse<ThreadGroupForView> | ThreadGroupForView[]>(`/user/project/${projectId}/thread-groups`, {
+        return this.http.get<PaginatedResponse<ThreadGroupForView> | ThreadGroupForView[]>(`/user/project/${projectId}/thread-group`, {
             params: { page: page.toString(), limit: limit.toString() }
         }).pipe(
             map(response => {
@@ -309,7 +309,7 @@ export class ThreadService {
      * @returns 検索結果
      */
     searchThreadGroups(projectId: string, query: string): Observable<ThreadGroupForView[]> {
-        return this.http.get<ThreadGroupForView[]>(`/user/project/${projectId}/thread-groups/search`, {
+        return this.http.get<ThreadGroupForView[]>(`/user/project/${projectId}/thread-group/search`, {
             params: { q: query }
         });
     }
@@ -321,7 +321,7 @@ export class ThreadService {
      * @returns 更新完了
      */
     updateThreadGroupOrder(projectId: string, threadGroupIds: string[]): Observable<void> {
-        return this.http.patch<void>(`/user/project/${projectId}/thread-groups/order`, {
+        return this.http.patch<void>(`/user/project/${projectId}/thread-group/order`, {
             threadGroupIds
         }).pipe(
             tap(() => {
@@ -353,7 +353,7 @@ export class ThreadService {
         archivedThreadGroups: number;
         recentThreadGroups: ThreadGroupForView[];
     }> {
-        return this.http.get<any>(`/user/project/${projectId}/thread-groups/stats`);
+        return this.http.get<any>(`/user/project/${projectId}/thread-group/stats`);
     }
 
     /**

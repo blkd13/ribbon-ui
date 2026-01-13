@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import {
     AssistantMessage,
     CodeProjectResponse,
@@ -68,6 +69,16 @@ export class CodeSessionService {
     }
 
     /**
+     * データソースの有効/無効をトグル
+     */
+    toggleDataSourceActive(id: string, isActive: boolean): Observable<CodeSessionDataSource> {
+        return this.http.patch<CodeSessionDataSource>(
+            `${this.API_BASE}/data-source/${id}`,
+            { isActive }
+        );
+    }
+
+    /**
      * パスを検証
      */
     validatePath(basePath: string): Observable<PathValidationResult> {
@@ -92,11 +103,23 @@ export class CodeSessionService {
     }
 
     /**
+     * 特定プロジェクト（コンテナ）に紐づくプロジェクト一覧
+     */
+    getProjectsByProjectId(projectId: string): Observable<CodeProjectResponse[]> {
+        return this.http.get<CodeProjectResponse[]>(
+            `${this.API_BASE}/by-project/${projectId}/projects`
+        );
+    }
+
+    /**
      * プロジェクト内のセッション一覧を取得
+     * サブエージェントセッション（agent-で始まるもの）は除外
      */
     getSessions(projectName: string): Observable<CodeSessionListItem[]> {
         return this.http.get<CodeSessionListItem[]>(
             `${this.API_BASE}/projects/${encodeURIComponent(projectName)}/sessions`
+        ).pipe(
+            map(sessions => sessions.filter(s => !s.sessionId.startsWith('agent-')))
         );
     }
 
@@ -497,16 +520,16 @@ export class CodeSessionService {
                     });
                     break;
 
-                case 'summary':
-                    events.push({
-                        timestamp,
-                        type: 'summary',
-                        message: msg,
-                        description: (msg as SummaryMessage).summary,
-                        icon: 'summarize',
-                        color: 'primary',
-                    });
-                    break;
+                // case 'summary':
+                //     events.push({
+                //         timestamp,
+                //         type: 'summary',
+                //         message: msg,
+                //         description: (msg as SummaryMessage).summary,
+                //         icon: 'summarize',
+                //         color: 'primary',
+                //     });
+                //     break;
 
                 case 'system':
                     const systemContent = (msg as any).content || 'System event';
